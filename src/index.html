@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+    <title>Emscripten-Generated Code</title>
+    <link
+      rel="stylesheet"
+      data-name="vs/editor/editor.main"
+      href="https://unpkg.com/monaco-editor@0.21.2/min/vs/editor/editor.main.css"
+    />
+  </head>
+  <style>
+    body {
+      background-color: rgb(20, 20, 20);
+    }
+  </style>
+  <body>
+    <button id="btClick">Run Simulation 🚀</button>
+
+    <br />
+    <br />
+
+    <div id="monaco-results" style="width: 800px; height: 600px; border: 1px solid grey"></div>
+    <script type="module" src="../build/eesim.js"></script>
+  </body>
+</html>
