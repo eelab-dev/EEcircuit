@@ -3,21 +3,37 @@
  * Danial Chitnis
  */
 
-import Module from "./spice.js";
-import * as circuits from "./circuits.js";
+import Module from "./spice";
+import * as circuits from "./circuits";
+
+import { CodeJar } from "codejar";
 
 let pass = false;
-const commandList = ["\n", "source test.cir", "run", "set filetype=ascii", "write out.raw"];
+const commandList = [" ", "source test.cir", "run", "set filetype=ascii", "write out.raw"];
+//const commandList = [" ", "source test.cir", "run", "write out.raw"];
 let cmd = 0;
 
+const resultArea = document.getElementById("textArea");
+
+const highlight = (editor: HTMLElement) => {
+  const code = editor.textContent;
+  // Do something with code and set html.
+  editor.innerHTML = code;
+};
+
+const jar = CodeJar(document.querySelector(".editor"), highlight, {
+  indentOn: /[(\[{]$/,
+});
+
 const getInput = () => {
-  const strCmd = commandList[cmd];
-  console.log(`cmd -> ${strCmd}`);
+  let strCmd = " ";
   if (cmd < commandList.length) {
+    strCmd = commandList[cmd];
     cmd++;
   } else {
     cmd = 0;
   }
+  console.log(`cmd -> ${strCmd}`);
   return strCmd;
 };
 
@@ -25,29 +41,24 @@ const readOutputFile = (data: BufferSource) => {
   function ab2str(buf: BufferSource) {
     return new TextDecoder("utf-8").decode(buf);
   }
-  try {
-    //let data = FS.readFile("out.raw");
-    //console.log(ab2str(data));
-    //https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.istandalonecodeeditor.html
-    //editor2.setValue(ab2str(data));
-  } catch (e) {
-    console.log("No output file!");
-  }
+  resultArea.innerHTML = ab2str(data);
 };
 
 const start = async () => {
   const module = await Module({
     //arguments: ["test.cir"],
     noInitialRun: true,
+    print: () => {
+      /*do nothing*/
+    },
     preRun: [
       () => {
         console.log("from prerun");
-        //console.log(Module.FS);
       },
     ],
   });
+
   module.FS.writeFile("/proc/meminfo", "");
-  module.FS.writeFile("/test.cir", circuits.str2);
   module.FS.writeFile("/modelcard.nmos", circuits.strModelNmos);
   module.FS.writeFile("/modelcard.pmos", circuits.strModelPmos);
   //console.log(module.Asyncify);
@@ -73,7 +84,7 @@ const start = async () => {
         await new Promise((r) => setTimeout(r, 1000));
         console.log(`I am in pass loop JS -${pass} `);
       }
-      //module.FS.writeFile("/test.cir", editor1.getValue());
+      module.FS.writeFile("/test.cir", jar.toString());
 
       console.log("loop finished");
 
@@ -89,5 +100,7 @@ const bt = document.getElementById("btClick");
 bt.addEventListener("click", () => {
   pass = true;
 });
+
+jar.updateCode(circuits.cir1);
 
 start();

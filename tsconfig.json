@@ -7,13 +7,16 @@
     "allowSyntheticDefaultImports": true,
     "downlevelIteration": true,
     "sourceMap": true,
+    "lib": ["dom", "ESNext", "es5", "es2015.collection", "es2015.promise"],
     "typeRoots": ["node_modules/@types", "@types"],
     "outDir": "./build",
-    "baseUrl": "."
+    "baseUrl": "./node_modules",
+    "jsx": "preserve",
   },
   "include": [
     "src/**/*"
     //"node_modules/webgl-plot/dist/*",
     //"src/webglplot/*"
-  ]
+  ],
+  "exclude": ["node_modules"]
 }

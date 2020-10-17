@@ -22,6 +22,32 @@
     <br />
 
     <div id="monaco-results" style="width: 800px; height: 600px; border: 1px solid grey"></div>
-    <script type="module" src="../build/eesim.js"></script>
+
+    <script>
+      self.MonacoEnvironment = {
+        getWorkerUrl: function (moduleId, label) {
+          if (label === "json") {
+            return "./json.worker.bundle.js";
+          }
+          if (label === "css") {
+            return "./css.worker.bundle.js";
+          }
+          if (label === "html") {
+            return "./html.worker.bundle.js";
+          }
+          if (label === "typescript" || label === "javascript") {
+            return "./ts.worker.bundle.js";
+          }
+          return "./editor.worker.bundle.js";
+        },
+      };
+    </script>
+
+    <script src="app.bundle.js"></script>
+    <script src="editor.worker.bundle.js"></script>
+    <script src="json.worker.bundle.js"></script>
+    <script src="css.worker.bundle.js"></script>
+    <script src="html.worker.bundle.js"></script>
+    <script src="ts.worker.bundle.js"></script>
   </body>
 </html>
