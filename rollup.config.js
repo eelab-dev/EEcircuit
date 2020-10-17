@@ -25,7 +25,7 @@ export default [
           ],
         ],
       }),
-      /*terser(),*/
+      terser(),
     ],
     output: {
       /*file: "./dist/eesim.js",*/
