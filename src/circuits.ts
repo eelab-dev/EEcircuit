@@ -649,22 +649,16 @@ CL Lnot 0 10f
 
 .end`;
 
-export const str = `Basic RC circuit
-  r 1 2 1.0
-  *l 1 2 1.0
-  c 2 0 1.0
-  vin 1 0  pulse (0 1) ac 1
-  .tran  0.1 7.0
+export const cir1 = `Basic RC circuit 
+r 1 2 1.0
+l 1 2 1.0
+c 2 0 1.0
+vin 1 0  pulse (0 1) ac 1
+.tran  0.1 7.0
+.end
+`;
 
-  .control
-  set filetype=ascii
-  run
-  write out.raw
-  .endc
-  .end
-  `;
-
-export const str2 = `Mosamp2
+export const cir2 = `Mosamp2
 .options acct abstol=10n  vntol=10n
 .tran 0.1us 1us
 m1  15 15  1 32 m w=88.9u  l=25.4u
