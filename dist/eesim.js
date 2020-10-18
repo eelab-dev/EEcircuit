@@ -6388,12 +6388,66 @@ const strModelPmos = `* PMOS modelcard
 `;
 const cir1 = `Basic RC circuit 
 r 1 2 1.0
-l 1 2 1.0
+*l 1 2 1.0
 c 2 0 1.0
-vin 1 0  pulse (0 1) ac 1
-.tran  0.1 7.0
+*vin 1 0  pulse (0 1) ac 1
+vin 1 0 1
+*.tran  0.1 7.0
+.dc vin 1 1 0.1
 .end
 `;
+
+/**
+ * Read output from spice
+ */
+function readOutput(data) {
+    //
+    let str = "";
+    const resultStr = ab2str(data);
+    const offset = resultStr.indexOf("Binary:");
+    console.log(`file-> ${offset}`);
+    const text = resultStr.substring(0, offset);
+    str = text + "\n";
+    //let out: number[];
+    const out = [];
+    const out2 = new Array(4).fill(0).map(() => new Array(11).fill(0));
+    //https://gregstoll.com/~gregstoll/floattohex/
+    try {
+        const view = new DataView(data.buffer, offset + 8);
+        console.log("😬");
+        for (let i = 0; i < view.byteLength; i = i + 8) {
+            const d = view.getFloat64(i, true);
+            out.push(d);
+            //console.log(`float -> ${d}`);
+        }
+        /*const data2 = data.subarray(offset + 8, data.byteLength);
+          for (let i = 0; i < data2.byteLength; i++) {
+            const a = data2[i];
+            str = str + `${i}: ${a} -> ${String.fromCharCode(a)}\n`;
+          }*/
+        out.forEach((e, i) => {
+            out2[i % 4][Math.floor(i / 4)] = e;
+        });
+        console.log(out2);
+        for (let row = 0; row < out2[0].length; row++) {
+            for (let col = 0; col < out2.length; col++) {
+                //console.log(out2[col][row]);
+                str = str + out2[col][row].toExponential(3) + " | ";
+            }
+            str = str + "\n";
+        }
+    }
+    catch (e) {
+        console.error(e);
+    }
+    /*out.forEach((e, i) => {
+      str = str + `${i}: ${e.toExponential()}\n`;
+    });*/
+    return str;
+}
+function ab2str(buf) {
+    return new TextDecoder("utf-8").decode(buf);
+}
 
 function CodeJar(editor, highlight, opt = {}) {
     const options = Object.assign({ tab: "\t", indentOn: /{$/, spellcheck: false, addClosing: true }, opt);
@@ -6778,8 +6832,8 @@ function CodeJar(editor, highlight, opt = {}) {
  * Danial Chitnis
  */
 let pass = false;
-const commandList = [" ", "source test.cir", "run", "set filetype=ascii", "write out.raw"];
-//const commandList = [" ", "source test.cir", "run", "write out.raw"];
+//const commandList = [" ", "source test.cir", "run", "set filetype=ascii", "write out.raw"];
+const commandList = [" ", "source test.cir", "run", "write out.raw"];
 let cmd = 0;
 const resultArea = document.getElementById("textArea");
 const highlight = (editor) => {
@@ -6801,12 +6855,6 @@ const getInput = () => {
     }
     console.log(`cmd -> ${strCmd}`);
     return strCmd;
-};
-const readOutputFile = (data) => {
-    function ab2str(buf) {
-        return new TextDecoder("utf-8").decode(buf);
-    }
-    resultArea.innerHTML = ab2str(data);
 };
 const start = async () => {
     const module = await Module({
@@ -6830,10 +6878,10 @@ const start = async () => {
         module.Asyncify.handleAsync(async () => {
             console.log(pass);
             if (cmd == 0) {
-                let data;
                 try {
-                    data = module.FS.readFile("out.raw");
-                    readOutputFile(data);
+                    const data = module.FS.readFile("out.raw");
+                    const str = readOutput(data);
+                    resultArea.innerHTML = str;
                 }
                 catch (e) {
                     console.log("no file!");

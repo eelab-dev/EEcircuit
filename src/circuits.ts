@@ -651,10 +651,12 @@ CL Lnot 0 10f
 
 export const cir1 = `Basic RC circuit 
 r 1 2 1.0
-l 1 2 1.0
+*l 1 2 1.0
 c 2 0 1.0
-vin 1 0  pulse (0 1) ac 1
-.tran  0.1 7.0
+*vin 1 0  pulse (0 1) ac 1
+vin 1 0 1
+*.tran  0.1 7.0
+.dc vin 1 1 0.1
 .end
 `;
 

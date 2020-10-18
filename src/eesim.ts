@@ -5,12 +5,13 @@
 
 import Module from "./spice";
 import * as circuits from "./circuits";
+import readOutput from "./readOutput";
 
 import { CodeJar } from "codejar";
 
 let pass = false;
-const commandList = [" ", "source test.cir", "run", "set filetype=ascii", "write out.raw"];
-//const commandList = [" ", "source test.cir", "run", "write out.raw"];
+//const commandList = [" ", "source test.cir", "run", "set filetype=ascii", "write out.raw"];
+const commandList = [" ", "source test.cir", "run", "write out.raw"];
 let cmd = 0;
 
 const resultArea = document.getElementById("textArea");
@@ -37,13 +38,6 @@ const getInput = () => {
   return strCmd;
 };
 
-const readOutputFile = (data: BufferSource) => {
-  function ab2str(buf: BufferSource) {
-    return new TextDecoder("utf-8").decode(buf);
-  }
-  resultArea.innerHTML = ab2str(data);
-};
-
 const start = async () => {
   const module = await Module({
     //arguments: ["test.cir"],
@@ -68,10 +62,10 @@ const start = async () => {
     module.Asyncify.handleAsync(async () => {
       console.log(pass);
       if (cmd == 0) {
-        let data;
         try {
-          data = module.FS.readFile("out.raw");
-          readOutputFile(data);
+          const data = module.FS.readFile("out.raw");
+          const str = readOutput(data);
+          resultArea.innerHTML = str;
         } catch (e) {
           console.log("no file!");
         }
