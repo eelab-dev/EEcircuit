@@ -25,13 +25,14 @@ export default [
           ],
         ],
       }),
-      /*terser(),*/
+      terser(),
     ],
     output: {
       /*file: "./dist/eesim.js",*/
       format: "esm",
       dir: "dist/",
       name: "eesim",
+      sourcemap: true,
     },
   },
 ];
