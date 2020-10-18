@@ -2,6 +2,17 @@
  * Read output from spice
  */
 
+type ParamType = {
+  varNum: number;
+  pointNum: number;
+  variables: VariableType[];
+};
+
+type VariableType = {
+  name: string;
+  type: "voltage" | "current";
+};
+
 export default function readOutput(data: Uint8Array): string {
   //
 
@@ -12,12 +23,15 @@ export default function readOutput(data: Uint8Array): string {
   const offset = resultStr.indexOf("Binary:");
   console.log(`file-> ${offset}`);
 
-  const text = resultStr.substring(0, offset);
-  str = text + "\n";
+  const header = resultStr.substring(0, offset);
+  str = header + "\n";
 
   //let out: number[];
   const out = [] as number[];
-  const out2 = new Array(4).fill(0).map(() => new Array(11).fill(0)) as number[][];
+  const param = findParams(header);
+  const out2 = new Array(param.varNum)
+    .fill(0)
+    .map(() => new Array(param.pointNum).fill(0)) as number[][];
   //https://gregstoll.com/~gregstoll/floattohex/
   try {
     const view = new DataView(data.buffer, offset + 8);
@@ -43,7 +57,7 @@ export default function readOutput(data: Uint8Array): string {
     for (let row = 0; row < out2[0].length; row++) {
       for (let col = 0; col < out2.length; col++) {
         //console.log(out2[col][row]);
-        str = str + out2[col][row].toExponential(3) + " | ";
+        str = str + out2[col][row].toExponential(3) + ",";
       }
       str = str + "\n";
     }
@@ -60,4 +74,16 @@ export default function readOutput(data: Uint8Array): string {
 
 function ab2str(buf: BufferSource) {
   return new TextDecoder("utf-8").decode(buf);
+}
+
+function findParams(header: string): ParamType {
+  //
+  const lines = header.split("\n");
+
+  const varNum = parseInt(lines[4].split(": ")[1], 10);
+  const pointNum = parseInt(lines[5].split(": ")[1], 10);
+
+  const param = { varNum: varNum, pointNum: pointNum, variables: [] } as ParamType;
+
+  return param;
 }
