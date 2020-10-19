@@ -28,8 +28,9 @@ bt.addEventListener("click", () => {
 
 jar.updateCode(circuits.cir1);
 
-sim.setOutputEvent((out) => {
-  resultArea.innerHTML = out;
+sim.setOutputEvent(() => {
+  //resultArea.innerHTML = sim.getOutputCSV();
+  resultArea.innerHTML = sim.getOutputDisplay();
 });
 
 sim.start();
