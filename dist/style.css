@@ -65,6 +65,7 @@ textarea {
   height: 50vh;
   resize: vertical;
   margin-right: 10px;
+  tab-size: 5;
 }
 
 label {

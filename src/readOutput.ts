@@ -6,6 +6,8 @@ type ParamType = {
   varNum: number;
   pointNum: number;
   variables: VariableType[];
+  header: string;
+  data: number[][];
 };
 
 type VariableType = {
@@ -13,18 +15,14 @@ type VariableType = {
   type: "voltage" | "current";
 };
 
-export default function readOutput(data: Uint8Array): string {
+export default function readOutput(rawData: Uint8Array): ParamType {
   //
 
-  let str = "";
-
-  const resultStr = ab2str(data);
+  const resultStr = ab2str(rawData);
 
   const offset = resultStr.indexOf("Binary:");
   console.log(`file-> ${offset}`);
-
-  const header = resultStr.substring(0, offset);
-  str = header + "\n";
+  const header = resultStr.substring(0, offset) + "\n";
 
   //let out: number[];
   const out = [] as number[];
@@ -34,7 +32,7 @@ export default function readOutput(data: Uint8Array): string {
     .map(() => new Array(param.pointNum).fill(0)) as number[][];
   //https://gregstoll.com/~gregstoll/floattohex/
   try {
-    const view = new DataView(data.buffer, offset + 8);
+    const view = new DataView(rawData.buffer, offset + 8);
     console.log("😬");
 
     for (let i = 0; i < view.byteLength; i = i + 8) {
@@ -54,13 +52,7 @@ export default function readOutput(data: Uint8Array): string {
     });
     console.log(out2);
 
-    for (let row = 0; row < out2[0].length; row++) {
-      for (let col = 0; col < out2.length; col++) {
-        //console.log(out2[col][row]);
-        str = str + out2[col][row].toExponential(3) + ",";
-      }
-      str = str + "\n";
-    }
+    return { header: header, data: out2 } as ParamType;
   } catch (e) {
     console.error(e);
   }
@@ -68,22 +60,18 @@ export default function readOutput(data: Uint8Array): string {
   /*out.forEach((e, i) => {
     str = str + `${i}: ${e.toExponential()}\n`;
   });*/
-
-  return str;
 }
 
 function ab2str(buf: BufferSource) {
   return new TextDecoder("utf-8").decode(buf);
 }
 
-function findParams(header: string): ParamType {
+function findParams(header: string): { varNum: number; pointNum: number } {
   //
   const lines = header.split("\n");
 
   const varNum = parseInt(lines[4].split(": ")[1], 10);
   const pointNum = parseInt(lines[5].split(": ")[1], 10);
 
-  const param = { varNum: varNum, pointNum: pointNum, variables: [] } as ParamType;
-
-  return param;
+  return { varNum: varNum, pointNum: pointNum };
 }
