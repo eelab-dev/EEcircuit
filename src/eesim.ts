@@ -3,8 +3,9 @@
  * Danial Chitnis
  */
 import * as circuits from "./circuits";
-import Simulation from "./simulation";
+import Simulation, { ResultType } from "./simulation";
 import { CodeJar } from "codejar";
+import { printCSV, printDisplay } from "./printOutput";
 
 const resultArea = document.getElementById("textArea");
 
@@ -30,7 +31,8 @@ jar.updateCode(circuits.cir1);
 
 sim.setOutputEvent(() => {
   //resultArea.innerHTML = sim.getOutputCSV();
-  resultArea.innerHTML = sim.getOutputDisplay();
+  const results = sim.getResults();
+  resultArea.innerHTML = results.header + printDisplay(results.data);
 });
 
 sim.start();
