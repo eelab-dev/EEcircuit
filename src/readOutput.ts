@@ -2,7 +2,7 @@
  * Read output from spice
  */
 
-type ParamType = {
+export type ResultType = {
   varNum: number;
   pointNum: number;
   variables: VariableType[];
@@ -15,7 +15,7 @@ type VariableType = {
   type: "voltage" | "current";
 };
 
-export default function readOutput(rawData: Uint8Array): ParamType {
+export default function readOutput(rawData: Uint8Array): ResultType {
   //
 
   const resultStr = ab2str(rawData);
@@ -52,7 +52,13 @@ export default function readOutput(rawData: Uint8Array): ParamType {
     });
     console.log(out2);
 
-    return { header: header, data: out2 } as ParamType;
+    return {
+      varNum: param.varNum,
+      pointNum: param.pointNum,
+      variables: [],
+      header: header,
+      data: out2,
+    } as ResultType;
   } catch (e) {
     console.error(e);
   }

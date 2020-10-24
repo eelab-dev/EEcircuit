@@ -4,8 +4,10 @@
 import * as circuits from "./circuits";
 import Module from "./spice";
 
-import readOutput from "./readOutput";
+import readOutput, { ResultType } from "./readOutput";
 import { printCSV, printDisplay } from "./printOutput";
+
+export { ResultType };
 
 export default class Simulation {
   private pass = false;
@@ -13,7 +15,8 @@ export default class Simulation {
   private commandList = [" ", "source test.cir", "run", "write out.raw"];
   private cmd = 0;
   private dataRaw: Uint8Array;
-  private dataArray: number[][];
+  //private dataArray: number[][];
+  private results: ResultType;
   private output = "";
 
   private netList = "";
@@ -56,7 +59,7 @@ export default class Simulation {
         if (this.cmd == 0) {
           try {
             this.dataRaw = module.FS.readFile("out.raw");
-            this.dataArray = readOutput(this.dataRaw).data;
+            this.results = readOutput(this.dataRaw);
             this.outputEvent(this.output); //callback
           } catch (e) {
             console.log("no file!");
@@ -87,11 +90,11 @@ export default class Simulation {
   }
 
   public getOutputCSV = (): string => {
-    return printCSV(this.dataArray);
+    return printCSV(this.results.data);
   };
 
   public getOutputDisplay = (): string => {
-    return printDisplay(this.dataArray);
+    return printDisplay(this.results.data);
   };
 
   private outputEvent: (out: string) => void;
@@ -103,7 +106,7 @@ export default class Simulation {
   public setOutputEvent = (outputEvent: (out: string) => void): void => {
     this.outputEvent = outputEvent;
   };
-  public getOutputNumerical = (): number[][] => {
-    return this.dataArray;
+  public getResults = (): ResultType => {
+    return this.results;
   };
 }
