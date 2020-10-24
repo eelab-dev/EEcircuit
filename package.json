@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "codejar": "^3.2.2",
-    "monaco-editor": "^0.21.2"
+    "monaco-editor": "^0.21.2",
+    "webgl-plot": "^0.5.1"
   }
 }
