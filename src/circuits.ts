@@ -709,12 +709,12 @@ vb 32 0 dc -20
 .end 
 `;
 
-export const cirTrans = `Basic RC circuit 
+export const cirTrans = `Basic RLC circuit 
 r 1 2 1.0
 l 1 2 0.2
 c 2 0 1.0
-vin 1 0  pulse (0 1) ac 1
+vin 1 0  pulse (0 1 0 0.001 0.001 15 30) ac 1
 *vin 1 0 1
-.tran  0.02 10.0
+.tran  0.02 100
 *.dc vin 0 1 0.1
 .end`;
