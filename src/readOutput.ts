@@ -27,6 +27,9 @@ export default function readOutput(rawData: Uint8Array): ResultType {
   //let out: number[];
   const out = [] as number[];
   const param = findParams(header);
+  console.log(header);
+  console.log(param);
+
   const out2 = new Array(param.varNum)
     .fill(0)
     .map(() => new Array(param.pointNum).fill(0)) as number[][];
@@ -48,7 +51,7 @@ export default function readOutput(rawData: Uint8Array): ResultType {
       }*/
 
     out.forEach((e, i) => {
-      out2[i % 4][Math.floor(i / 4)] = e;
+      out2[i % param.varNum][Math.floor(i / param.varNum)] = e;
     });
     console.log(out2);
 

@@ -81,19 +81,29 @@
         line-height: 1.2em;
         padding: 1em;
         tab-size: 4;
+        width: 800px;
+        border: 1px solid grey;
       }
     </style>
 
-    <div
-      class="editor language-js"
-      id="editor"
-      style="width: 800px; height: 600px; border: 1px solid grey"
-    ></div>
+    <div class="editor language-js" id="editor"></div>
     <br />
 
-    <button class="button" id="btClick">Run Simulation 🚀</button>
+    <div>
+      <button class="button" id="btSim">Run Simulation 🚀</button>
+      <button class="button" id="btPlot">Plot Graph 📈</button>
+      <button class="button" id="btCSV">Download CSV 📄</button>
+    </div>
 
     <br />
+
+    <canvas class="graph" id="plot"></canvas>
+    <style>
+      .graph {
+        height: 20vh;
+        width: 50%;
+      }
+    </style>
     <textarea id="textArea" rows="5" cols="33" readonly="true" wrap="off">
       Loading...</textarea
     >

@@ -5,7 +5,6 @@ import * as circuits from "./circuits";
 import Module from "./spice";
 
 import readOutput, { ResultType } from "./readOutput";
-import { printCSV, printDisplay } from "./printOutput";
 
 export { ResultType };
 
@@ -62,7 +61,7 @@ export default class Simulation {
             this.results = readOutput(this.dataRaw);
             this.outputEvent(this.output); //callback
           } catch (e) {
-            console.log("no file!");
+            console.log(e);
           }
 
           console.log("cmd-> ready to start...");
@@ -88,14 +87,6 @@ export default class Simulation {
   public runSim(): void {
     this.pass = true;
   }
-
-  public getOutputCSV = (): string => {
-    return printCSV(this.results.data);
-  };
-
-  public getOutputDisplay = (): string => {
-    return printDisplay(this.results.data);
-  };
 
   private outputEvent: (out: string) => void;
 
