@@ -140,7 +140,7 @@ btCSV.addEventListener("click", () => {
   sim.runSim();
 });
 
-jar.updateCode(circuits.cirTrans);
+jar.updateCode(circuits.bsimTrans);
 //jar.updateCode(circuits.strBsimTest1);
 
 sim.start();
