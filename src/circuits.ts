@@ -1,4 +1,140 @@
-export const strModelNmos = `* NMOS modelcard
+export const strBsimTest1 = `NMOS Id-Vd
+
+.include modelcard.nmos
+*.include modelcard.pmos
+
+vg 1 0 1.2
+vd 2 0 1.2
+vb b 0 0.0
+
+m1 2 1 0 b N1 W=10.0u L=0.09u NF=5
+
+.dc vd 0.0 1.2 0.02 vg 0.2 1.2 0.2
+.print dc i(vd)
+
+.end`;
+
+export const strBsimComprt = `* One-Bit Comparator (tran)
+
+.option reltol=1e-3 post
+
+.include modelcard.nmos
+.include modelcard.pmos
+
+Vdd Vdd 0 1.8
+Va A 0 pulse 0 1.8 10ns .1ns .1ns 15ns 30ns
+Vb B 0 0
+
+M1 Anot A Vdd Vdd P1 W=3.6u L=0.2u
+M2 Anot A 0 0 N1 W=1.8u L=0.2u
+M3 Bnot B Vdd Vdd P1 W=3.6u L=0.2u
+M4 Bnot B 0 0 N1 W=1.8u L=0.2u
+M5 AorBnot 0 Vdd Vdd P1 W=1.8u L=3.6u
+M6 AorBnot B 1 0 N1 W=1.8u L=0.2u
+M7 1 Anot 0 0 N1 W=1.8u L=0.2u
+M8 Lnot 0 Vdd Vdd P1 W=1.8u L=3.6u
+M9 Lnot Bnot 2 0 N1 W=1.8u L=0.2u
+M10 2 A 0 0 N1 W=1.8u L=0.2u
+M11 Qnot 0 Vdd Vdd P1 W=3.6u L=3.6u
+M12 Qnot AorBnot 3 0 N1 W=1.8u L=0.2u
+M13 3 Lnot 0 0 N1 W=1.8u L=0.2u
+MQLO 8 Qnot Vdd Vdd P1 W=3.6u L=0.2u
+MQL1 8 Qnot 0 0 N1 W=1.8u L=0.2u
+MLTO 9 Lnot Vdd Vdd P1 W=3.6u L=0.2u
+MLT1 9 Lnot 0 0 N1 W=1.8u L=0.2u
+CQ Qnot 0 30f
+CL Lnot 0 10f
+
+.tran 1ns 60ns
+.print tran a b v(9) v(8)
+
+.end`;
+
+export const cir1 = `Basic RC circuit 
+r 1 2 1.0
+*l 1 2 1.0
+c 2 0 1.0
+*vin 1 0  pulse (0 1) ac 1
+vin 1 0 1
+*.tran  0.1 7.0
+.dc vin 0 1 0.1
+.end
+`;
+
+export const cir2 = `Mosamp2
+.options acct abstol=10n  vntol=10n
+.tran 0.1us 1us
+m1  15 15  1 32 m w=88.9u  l=25.4u
+m2   1  1  2 32 m w=12.7u  l=266.7u
+m3   2  2 30 32 m w=88.9u  l=25.4u
+m4  15  5  4 32 m w=12.7u  l=106.7u
+m5   4  4 30 32 m w=88.9u  l=12.7u
+m6  15 15  5 32 m w=44.5u  l=25.4u
+m7   5 20  8 32 m w=482.6u l=12.7u
+m8   8  2 30 32 m w=88.9u  l=25.4u
+m9  15 15  6 32 m w=44.5u  l=25.4u
+m10  6 21  8 32 m w=482.6u l=12.7u
+m11 15  6  7 32 m w=12.7u  l=106.7u
+m12  7  4 30 32 m w=88.9u  l=12.7u
+m13 15 10  9 32 m w=139.7u l=12.7u
+m14  9 11 30 32 m w=139.7u l=12.7u
+m15 15 15 12 32 m w=12.7u  l=207.8u
+m16 12 12 11 32 m w=54.1u  l=12.7u
+m17 11 11 30 32 m w=54.1u  l=12.7u
+m18 15 15 10 32 m w=12.7u  l=45.2u
+m19 10 12 13 32 m w=270.5u l=12.7u
+m20 13  7 30 32 m w=270.5u l=12.7u
+m21 15 10 14 32 m w=254u   l=12.7u
+m22 14 11 30 32 m w=241.3u l=12.7u
+m23 15 20 16 32 m w=19u    l=38.1u
+m24 16 14 30 32 m w=406.4u l=12.7u
+m25 15 15 20 32 m w=38.1u  l=42.7u
+m26 20 16 30 32 m w=381u   l=25.4u
+m27 20 15 66 32 m w=22.9u  l=7.6u
+cc 7 9 40pf
+cl 66 0 70pf
+vin 21 0 pulse(0 5 1ns 1ns 1ns 5us 10us)
+vccp 15 0 dc +15
+vddn 30 0 dc -15
+vb 32 0 dc -20
+.model m nmos(nsub=2.2e15 uo=575 ucrit=49k uexp=0.1 tox=0.11u xj=2.95u
++   level=2 cgso=1.5n cgdo=1.5n cbd=4.5f cbs=4.5f ld=2.4485u nss=3.2e10
++   kp=2e-5 phi=0.6 )
+*.print tran v(20) v(66)
+.plot  tran v(20) v(66)
+*.control
+*set filetype=ascii
+*run
+*write out.raw
+*.endc
+.end 
+`;
+
+export const cirTrans = `Basic RLC circuit 
+r 1 2 1.0
+l 1 2 0.2
+c 2 0 1.0
+vin 1 0  pulse (0 1 0 0.001 0.001 15 30) ac 1
+*vin 1 0 1
+.tran  0.02 100
+*.dc vin 0 1 0.1
+.end`;
+
+export const bsimTrans = `Basic RLC circuit 
+.include modelcard.CMOS90
+
+r vdd 2 100.0
+l vdd 2 1
+c vdd 2 0.01
+m1 2 1 0 0 N90 W=100.0u L=0.09u
+vdd vdd 0 1.8
+
+vin 1 0  pulse (0 1.8 0 0.1 0.1 15 30) ac 1
+.tran  0.1 50
+
+.end`;
+
+export const strModelCMOS90 = `* NMOS modelcard
 
 * The BSIM4 modelcard below was not extracted from any real technologies. It should
 * not be used for any other purposes except for benchmarking against BSIM team's
@@ -7,7 +143,7 @@ export const strModelNmos = `* NMOS modelcard
 * Authors: ChetanKumar Dabhi, Shivendra Singh Parihar, Navid Paydavosi, Tanvir Morshed,
 *          Darsen Lu, Mohan Dunga, Wenwei Yang, Ali Niknejad, and Chenming Hu.
 
-.MODEL N1 NMOS
+.MODEL N90 NMOS
 +LEVEL         = 14
 +VERSION       = 4.81
 +BINUNIT       = 1
@@ -296,9 +432,9 @@ export const strModelNmos = `* NMOS modelcard
 +XTSSWD        = 0.02
 +XTSSWGS       = 0.02
 +XTSSWGD       = 0.02
-`;
 
-export const strModelPmos = `* PMOS modelcard
+
+* PMOS modelcard
 
 * The BSIM4 modelcard below was not extracted from any real technologies. It should
 * not be used for any other purposes except for benchmarking against BSIM team's
@@ -307,7 +443,7 @@ export const strModelPmos = `* PMOS modelcard
 * Authors: ChetanKumar Dabhi, Shivendra Singh Parihar, Navid Paydavosi, Tanvir Morshed,
 *          Darsen Lu, Mohan Dunga, Wenwei Yang, Ali Niknejad, and Chenming Hu.
 
-.MODEL P1 PMOS
+.MODEL P90 PMOS
 +LEVEL         = 14
 +BINUNIT       = 1
 +PARAMCHK      = 1
@@ -596,125 +732,3 @@ export const strModelPmos = `* PMOS modelcard
 +XTSSWGS       = 0.02
 +XTSSWGD       = 0.02
 `;
-
-export const strBsimTest1 = `NMOS Id-Vd
-
-.include modelcard.nmos
-*.include modelcard.pmos
-
-vg 1 0 1.2
-vd 2 0 1.2
-vb b 0 0.0
-
-m1 2 1 0 b N1 W=10.0u L=0.09u NF=5
-
-.dc vd 0.0 1.2 0.02 vg 0.2 1.2 0.2
-.print dc i(vd)
-
-.end`;
-
-export const strBsimComprt = `* One-Bit Comparator (tran)
-
-.option reltol=1e-3 post
-
-.include modelcard.nmos
-.include modelcard.pmos
-
-Vdd Vdd 0 1.8
-Va A 0 pulse 0 1.8 10ns .1ns .1ns 15ns 30ns
-Vb B 0 0
-
-M1 Anot A Vdd Vdd P1 W=3.6u L=0.2u
-M2 Anot A 0 0 N1 W=1.8u L=0.2u
-M3 Bnot B Vdd Vdd P1 W=3.6u L=0.2u
-M4 Bnot B 0 0 N1 W=1.8u L=0.2u
-M5 AorBnot 0 Vdd Vdd P1 W=1.8u L=3.6u
-M6 AorBnot B 1 0 N1 W=1.8u L=0.2u
-M7 1 Anot 0 0 N1 W=1.8u L=0.2u
-M8 Lnot 0 Vdd Vdd P1 W=1.8u L=3.6u
-M9 Lnot Bnot 2 0 N1 W=1.8u L=0.2u
-M10 2 A 0 0 N1 W=1.8u L=0.2u
-M11 Qnot 0 Vdd Vdd P1 W=3.6u L=3.6u
-M12 Qnot AorBnot 3 0 N1 W=1.8u L=0.2u
-M13 3 Lnot 0 0 N1 W=1.8u L=0.2u
-MQLO 8 Qnot Vdd Vdd P1 W=3.6u L=0.2u
-MQL1 8 Qnot 0 0 N1 W=1.8u L=0.2u
-MLTO 9 Lnot Vdd Vdd P1 W=3.6u L=0.2u
-MLT1 9 Lnot 0 0 N1 W=1.8u L=0.2u
-CQ Qnot 0 30f
-CL Lnot 0 10f
-
-.tran 1ns 60ns
-.print tran a b v(9) v(8)
-
-.end`;
-
-export const cir1 = `Basic RC circuit 
-r 1 2 1.0
-*l 1 2 1.0
-c 2 0 1.0
-*vin 1 0  pulse (0 1) ac 1
-vin 1 0 1
-*.tran  0.1 7.0
-.dc vin 0 1 0.1
-.end
-`;
-
-export const cir2 = `Mosamp2
-.options acct abstol=10n  vntol=10n
-.tran 0.1us 1us
-m1  15 15  1 32 m w=88.9u  l=25.4u
-m2   1  1  2 32 m w=12.7u  l=266.7u
-m3   2  2 30 32 m w=88.9u  l=25.4u
-m4  15  5  4 32 m w=12.7u  l=106.7u
-m5   4  4 30 32 m w=88.9u  l=12.7u
-m6  15 15  5 32 m w=44.5u  l=25.4u
-m7   5 20  8 32 m w=482.6u l=12.7u
-m8   8  2 30 32 m w=88.9u  l=25.4u
-m9  15 15  6 32 m w=44.5u  l=25.4u
-m10  6 21  8 32 m w=482.6u l=12.7u
-m11 15  6  7 32 m w=12.7u  l=106.7u
-m12  7  4 30 32 m w=88.9u  l=12.7u
-m13 15 10  9 32 m w=139.7u l=12.7u
-m14  9 11 30 32 m w=139.7u l=12.7u
-m15 15 15 12 32 m w=12.7u  l=207.8u
-m16 12 12 11 32 m w=54.1u  l=12.7u
-m17 11 11 30 32 m w=54.1u  l=12.7u
-m18 15 15 10 32 m w=12.7u  l=45.2u
-m19 10 12 13 32 m w=270.5u l=12.7u
-m20 13  7 30 32 m w=270.5u l=12.7u
-m21 15 10 14 32 m w=254u   l=12.7u
-m22 14 11 30 32 m w=241.3u l=12.7u
-m23 15 20 16 32 m w=19u    l=38.1u
-m24 16 14 30 32 m w=406.4u l=12.7u
-m25 15 15 20 32 m w=38.1u  l=42.7u
-m26 20 16 30 32 m w=381u   l=25.4u
-m27 20 15 66 32 m w=22.9u  l=7.6u
-cc 7 9 40pf
-cl 66 0 70pf
-vin 21 0 pulse(0 5 1ns 1ns 1ns 5us 10us)
-vccp 15 0 dc +15
-vddn 30 0 dc -15
-vb 32 0 dc -20
-.model m nmos(nsub=2.2e15 uo=575 ucrit=49k uexp=0.1 tox=0.11u xj=2.95u
-+   level=2 cgso=1.5n cgdo=1.5n cbd=4.5f cbs=4.5f ld=2.4485u nss=3.2e10
-+   kp=2e-5 phi=0.6 )
-*.print tran v(20) v(66)
-.plot  tran v(20) v(66)
-*.control
-*set filetype=ascii
-*run
-*write out.raw
-*.endc
-.end 
-`;
-
-export const cirTrans = `Basic RLC circuit 
-r 1 2 1.0
-l 1 2 0.2
-c 2 0 1.0
-vin 1 0  pulse (0 1 0 0.001 0.001 15 30) ac 1
-*vin 1 0 1
-.tran  0.02 100
-*.dc vin 0 1 0.1
-.end`;

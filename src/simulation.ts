@@ -47,8 +47,7 @@ export default class Simulation {
     });
 
     module.FS.writeFile("/proc/meminfo", "");
-    module.FS.writeFile("/modelcard.nmos", circuits.strModelNmos);
-    module.FS.writeFile("/modelcard.pmos", circuits.strModelPmos);
+    module.FS.writeFile("/modelcard.CMOS90", circuits.strModelCMOS90);
     //console.log(module.Asyncify);
 
     module.setHandleThings(() => {
