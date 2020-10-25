@@ -3,7 +3,7 @@
  * Danial Chitnis
  */
 import * as circuits from "./circuits";
-import Simulation, { ResultType } from "./simulation";
+import Simulation from "./simulation";
 import { CodeJar } from "codejar";
 import { printCSV, printDisplay } from "./printOutput";
 import WebglPlot, { ColorRGBA, WebglLine } from "webgl-plot";

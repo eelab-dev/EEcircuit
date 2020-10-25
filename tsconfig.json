@@ -7,11 +7,12 @@
     "allowSyntheticDefaultImports": true,
     "downlevelIteration": true,
     "sourceMap": true,
-    "lib": ["dom", "ESNext", "es5", "es2015.collection", "es2015.promise"],
+    "lib": ["dom", "ESNext"],
     "typeRoots": ["node_modules/@types", "@types"],
     "outDir": "./build",
     "baseUrl": "./node_modules",
     "jsx": "preserve",
+    "allowJs": true,
   },
   "include": [
     "src/**/*"

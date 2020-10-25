@@ -6,7 +6,7 @@ import Module from "./spice";
 
 import readOutput, { ResultType } from "./readOutput";
 
-export { ResultType };
+//export { ResultType };
 
 export default class Simulation {
   private pass = false;

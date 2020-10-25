@@ -5,7 +5,7 @@
   "description": "Circuit Simulator",
   "scripts": {
     "start": "serve dist",
-    "build": "rollup -c",
+    "build": "tsc && rollup -c",
     "tsc": "tsc"
   },
   "author": "Danial Chitnis",
@@ -13,12 +13,12 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^15.1.0",
     "@rollup/plugin-node-resolve": "^9.0.0",
+    "@rollup/plugin-typescript": "^6.0.0",
     "@typescript-eslint/eslint-plugin": "^4.5.0",
     "@typescript-eslint/parser": "^4.5.0",
     "rollup": "^2.32.1",
     "rollup-plugin-postcss": "^3.1.8",
     "rollup-plugin-terser": "^7.0.2",
-    "rollup-plugin-typescript2": "^0.28.0",
     "serve": "^11.3.2",
     "typescript": "^4.0.3"
   },
