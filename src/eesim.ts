@@ -9,7 +9,7 @@ import { printCSV, printDisplay } from "./printOutput";
 import WebglPlot, { ColorRGBA, WebglLine } from "webgl-plot";
 import { calcContrast, calcLuminance } from "./calcContrast";
 
-const resultArea = document.getElementById("textArea");
+const divDisplay = document.getElementById("display") as HTMLDivElement;
 
 const highlight = (editor: HTMLElement) => {
   const code = editor.textContent;
@@ -28,7 +28,12 @@ btSim.addEventListener("click", () => {
   sim.setNetList(jar.toString());
 
   sim.setOutputEvent(() => {
-    //resultArea.innerHTML = sim.getOutputCSV();
+    while (divDisplay.lastChild) {
+      divDisplay.removeChild(divDisplay.lastChild);
+    }
+    const resultArea = document.createElement("textarea");
+    resultArea.className = "editor";
+    divDisplay.appendChild(resultArea);
     const results = sim.getResults();
     resultArea.innerHTML = results.header + printDisplay(results.data);
   });
@@ -54,10 +59,15 @@ btPlot.addEventListener("click", () => {
   sim.setNetList(jar.toString());
 
   sim.setOutputEvent(() => {
+    while (divDisplay.lastChild) {
+      divDisplay.removeChild(divDisplay.lastChild);
+    }
     const results = sim.getResults();
-    resultArea.innerHTML = results.header;
 
-    const canvas = document.getElementById("plot") as HTMLCanvasElement;
+    const canvas = document.createElement("canvas");
+    canvas.className = "graph";
+    divDisplay.appendChild(canvas);
+
     const devicePixelRatio = window.devicePixelRatio || 1;
     canvas.width = canvas.clientWidth * devicePixelRatio;
     canvas.height = canvas.clientHeight * devicePixelRatio;
@@ -90,6 +100,41 @@ btPlot.addEventListener("click", () => {
     wglp.gScaleY = 0.9 / Math.max(Math.abs(minY), Math.abs(maxY));
     console.log(maxY);
     wglp.update();
+  });
+
+  sim.runSim();
+});
+
+/**
+ * https://ourcodeworld.com/articles/read/189/how-to-create-a-file-and-generate-a-download-with-javascript-in-the-browser-without-a-server
+ * @param filename
+ * @param text
+ */
+function download(filename: string, text: string) {
+  const element = document.createElement("a");
+  element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(text));
+  element.setAttribute("download", filename);
+
+  element.style.display = "none";
+  document.body.appendChild(element);
+
+  element.click();
+
+  document.body.removeChild(element);
+}
+
+const btCSV = document.getElementById("btCSV") as HTMLButtonElement;
+btCSV.addEventListener("click", () => {
+  sim.setNetList(jar.toString());
+
+  sim.setOutputEvent(() => {
+    while (divDisplay.lastChild) {
+      divDisplay.removeChild(divDisplay.lastChild);
+    }
+    const data = sim.getResults().data;
+    const header = sim.getResults().header;
+
+    download("data.csv", header + printCSV(data));
   });
 
   sim.runSim();
