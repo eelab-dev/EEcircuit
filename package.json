@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "description": "Circuit Simulator",
   "scripts": {
-    "start": "serve dist",
+    "start": "serve .",
     "build": "tsc && rollup -c",
     "tsc": "tsc"
   },
