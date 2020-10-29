@@ -38,6 +38,7 @@ export default class Simulation {
       noInitialRun: true,
       print: () => {
         /*do nothing*/
+        //console.log(e);
       },
       preRun: [
         () => {
@@ -48,6 +49,7 @@ export default class Simulation {
 
     module.FS.writeFile("/proc/meminfo", "");
     module.FS.writeFile("/modelcard.CMOS90", circuits.strModelCMOS90);
+    //module.FS.writeFile("/test.cir", circuits.bsimTrans);
     //console.log(module.Asyncify);
 
     module.setHandleThings(() => {
