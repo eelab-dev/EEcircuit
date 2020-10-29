@@ -11,7 +11,7 @@ type ModuleType = {
   setHandleThings?: (handleThings: () => void) => void;
   setGetInput?: (getInput: () => void) => void;
   runThings?: () => void;
-  print?: () => void;
+  print?: (e?: any) => void;
 };
 
 /**

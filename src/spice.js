@@ -4938,6 +4938,7 @@ var Module = (function () {
       },
     };
 
+    //_sleep
     function _emscripten_sleep(ms) {
       handleThings();
       /*Asyncify.handleSleep(function (wakeUp) {

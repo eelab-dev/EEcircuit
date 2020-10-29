@@ -18,7 +18,7 @@ const highlight = (editor: HTMLElement) => {
 };
 
 const jar = CodeJar(document.querySelector(".editor"), highlight, {
-  indentOn: /[(\[{]$/,
+  indentOn: /[([{]$/,
 });
 
 const sim = new Simulation();
