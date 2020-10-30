@@ -5,3 +5,4 @@ Docker
 .cache
 .parcel-cache
 *.map
+.vercel

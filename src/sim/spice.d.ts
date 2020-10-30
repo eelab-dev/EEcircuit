@@ -4,14 +4,14 @@
 
 type ModuleType = {
   argumnets?: string;
-  noInitialRun?: boolean;
-  preRun?: [() => void];
+  noInitialRun: boolean;
+  preRun: [() => void];
   FS?: FSType;
   Asyncify?: AsyncifyType;
-  setHandleThings?: (handleThings: () => void) => void;
-  setGetInput?: (getInput: () => void) => void;
-  runThings?: () => void;
-  print?: (e?: any) => void;
+  setHandleThings: (handleThings: () => void) => void;
+  setGetInput: (getInput: () => void) => void;
+  runThings: () => void;
+  print: (e?: any) => void;
 };
 
 /**

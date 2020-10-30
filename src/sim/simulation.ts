@@ -44,6 +44,13 @@ export default class Simulation {
           console.log("from prerun");
         },
       ],
+      setGetInput: this.getInput,
+      setHandleThings: () => {
+        /** */
+      },
+      runThings: () => {
+        /** */
+      },
     });
 
     module.FS?.writeFile("/proc/meminfo", "");
@@ -88,7 +95,10 @@ export default class Simulation {
     this.pass = true;
   }
 
-  private outputEvent: (out: string) => void;
+  //private outputEvent =  (out: string) => void;
+  private outputEvent = (out: string) => {
+    /** */
+  };
 
   public setNetList = (input: string): void => {
     this.netList = input;
