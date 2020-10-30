@@ -13,9 +13,8 @@ export default class Simulation {
   //const commandList = [" ", "source test.cir", "run", "set filetype=ascii", "write out.raw"];
   private commandList = [" ", "source test.cir", "run", "write out.raw"];
   private cmd = 0;
-  private dataRaw: Uint8Array;
-  //private dataArray: number[][];
-  private results: ResultType;
+  private dataRaw = new Uint8Array();
+  private results = {} as ResultType;
   private output = "";
 
   private netList = "";
@@ -36,9 +35,9 @@ export default class Simulation {
     const module = await Module({
       //arguments: ["test.cir"],
       noInitialRun: true,
-      print: () => {
+      print: (e) => {
         /*do nothing*/
-        //console.log(e);
+        console.log(e);
       },
       preRun: [
         () => {
@@ -47,18 +46,18 @@ export default class Simulation {
       ],
     });
 
-    module.FS.writeFile("/proc/meminfo", "");
-    module.FS.writeFile("/modelcard.CMOS90", circuits.strModelCMOS90);
+    module.FS?.writeFile("/proc/meminfo", "");
+    module.FS?.writeFile("/modelcard.CMOS90", circuits.strModelCMOS90);
     //module.FS.writeFile("/test.cir", circuits.bsimTrans);
     //console.log(module.Asyncify);
 
     module.setHandleThings(() => {
       console.log("handle other things!!!!!");
-      module.Asyncify.handleAsync(async () => {
+      module.Asyncify?.handleAsync(async () => {
         console.log(this.pass);
         if (this.cmd == 0) {
           try {
-            this.dataRaw = module.FS.readFile("out.raw");
+            this.dataRaw = module.FS?.readFile("out.raw") ?? new Uint8Array();
             this.results = readOutput(this.dataRaw);
             this.outputEvent(this.output); //callback
           } catch (e) {
@@ -73,7 +72,7 @@ export default class Simulation {
           await new Promise((r) => setTimeout(r, 1000));
           console.log(`I am in pass loop JS -${this.pass} `);
         }
-        module.FS.writeFile("/test.cir", this.netList);
+        module.FS?.writeFile("/test.cir", this.netList);
 
         console.log("loop finished");
 

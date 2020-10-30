@@ -34,37 +34,34 @@ export default function readOutput(rawData: Uint8Array): ResultType {
     .fill(0)
     .map(() => new Array(param.pointNum).fill(0)) as number[][];
   //https://gregstoll.com/~gregstoll/floattohex/
-  try {
-    const view = new DataView(rawData.buffer, offset + 8);
-    console.log("😬");
 
-    for (let i = 0; i < view.byteLength; i = i + 8) {
-      const d = view.getFloat64(i, true);
-      out.push(d);
-      //console.log(`float -> ${d}`);
-    }
+  const view = new DataView(rawData.buffer, offset + 8);
+  console.log("😬");
 
-    /*const data2 = data.subarray(offset + 8, data.byteLength);
+  for (let i = 0; i < view.byteLength; i = i + 8) {
+    const d = view.getFloat64(i, true);
+    out.push(d);
+    //console.log(`float -> ${d}`);
+  }
+
+  /*const data2 = data.subarray(offset + 8, data.byteLength);
       for (let i = 0; i < data2.byteLength; i++) {
         const a = data2[i];
         str = str + `${i}: ${a} -> ${String.fromCharCode(a)}\n`;
       }*/
 
-    out.forEach((e, i) => {
-      out2[i % param.varNum][Math.floor(i / param.varNum)] = e;
-    });
-    console.log(out2);
+  out.forEach((e, i) => {
+    out2[i % param.varNum][Math.floor(i / param.varNum)] = e;
+  });
+  console.log(out2);
 
-    return {
-      varNum: param.varNum,
-      pointNum: param.pointNum,
-      variables: [],
-      header: header,
-      data: out2,
-    } as ResultType;
-  } catch (e) {
-    console.error(e);
-  }
+  return {
+    varNum: param.varNum,
+    pointNum: param.pointNum,
+    variables: [],
+    header: header,
+    data: out2,
+  } as ResultType;
 
   /*out.forEach((e, i) => {
     str = str + `${i}: ${e.toExponential()}\n`;
