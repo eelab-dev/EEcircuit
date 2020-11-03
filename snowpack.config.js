@@ -13,13 +13,13 @@ module.exports = {
     /* ... */
   ],
   installOptions: {
-    /* ... */
+    treeshake: false,
   },
   devOptions: {
     /* ... */
   },
   buildOptions: {
-    /* ... */
+    clean: true,
   },
   proxy: {
     /* ... */

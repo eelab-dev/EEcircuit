@@ -72,7 +72,7 @@ export default function EEsim(): JSX.Element {
         />
 
         <Button variant="contained" color="primary" onClick={btClick}>
-          Run
+          Plot 📈
         </Button>
       </div>
       <div>
