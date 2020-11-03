@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import WebGlPlot, { WebglLine, ColorRGBA } from "webgl-plot";
+import WebGlPlot, { ColorRGBA, WebglLine } from "webgl-plot";
 import { calcContrast, calcLuminance } from "./calcContrast";
 
 type PlotType = {
