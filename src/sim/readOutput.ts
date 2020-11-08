@@ -58,7 +58,7 @@ export default function readOutput(rawData: Uint8Array): ResultType {
   return {
     varNum: param.varNum,
     pointNum: param.pointNum,
-    variables: [],
+    variables: param.variables,
     header: header,
     data: out2,
   } as ResultType;
@@ -72,12 +72,26 @@ function ab2str(buf: BufferSource) {
   return new TextDecoder("utf-8").decode(buf);
 }
 
-function findParams(header: string): { varNum: number; pointNum: number } {
+function findParams(
+  header: string
+): { varNum: number; pointNum: number; variables: VariableType[] } {
   //
   const lines = header.split("\n");
 
   const varNum = parseInt(lines[4].split(": ")[1], 10);
   const pointNum = parseInt(lines[5].split(": ")[1], 10);
 
-  return { varNum: varNum, pointNum: pointNum };
+  //console.log("🤔", lines);
+  //console.log(lines.indexOf("Variables:"));
+
+  const varList = [] as VariableType[];
+  for (let i = 0; i < varNum; i++) {
+    let str = lines[i + lines.indexOf("Variables:") + 1];
+    let str2 = str.split("\t");
+    //console.log(str2);
+    varList.push({ name: str2[2], type: str2[3] == "voltage" ? "voltage" : "current" });
+  }
+  //console.log(varList);
+
+  return { varNum: varNum, pointNum: pointNum, variables: varList };
 }

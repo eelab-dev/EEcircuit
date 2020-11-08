@@ -3,7 +3,8 @@ import Simulation from "./sim/simulation";
 import * as circuits from "./sim/circuits";
 
 import Plot from "./plot";
-import { ColorRGBA } from "webgl-plot";
+import Box from "./box";
+import type { ResultType } from "./sim/readOutput";
 
 let sim: Simulation;
 
@@ -11,15 +12,21 @@ export default function EEsim(): JSX.Element {
   // Create the count state.
 
   const [open, setOpen] = React.useState(false);
-  const [data, setData] = React.useState([[]] as number[][]);
+  const [results, setResults] = React.useState<ResultType>({
+    varNum: 0,
+    pointNum: 0,
+    variables: [],
+    header: "",
+    data: [],
+  });
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
 
   useEffect(() => {
     sim = new Simulation();
     console.log(sim);
     sim.setOutputEvent(() => {
-      setData(sim.getResults().data);
-      console.log(data);
+      setResults(sim.getResults());
+      console.log(sim.getResults().variables);
     });
     sim.start();
   }, []);
@@ -66,7 +73,8 @@ export default function EEsim(): JSX.Element {
         </button>
       </div>
       <div>
-        <Plot data={data} />
+        <Box results={results} />
+        <Plot data={results.data} />
       </div>
     </div>
   );
