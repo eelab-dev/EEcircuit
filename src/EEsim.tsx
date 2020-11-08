@@ -1,16 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import Simulation from "./sim/simulation";
 import * as circuits from "./sim/circuits";
-import TextField from "@material-ui/core/TextField";
-import {
-  Button,
-  createMuiTheme,
-  Snackbar,
-  SnackbarCloseReason,
-  ThemeProvider,
-} from "@material-ui/core";
-import { Alert } from "@material-ui/lab";
+
 import Plot from "./plot";
+import { ColorRGBA } from "webgl-plot";
 
 let sim: Simulation;
 
@@ -20,12 +13,6 @@ export default function EEsim(): JSX.Element {
   const [open, setOpen] = React.useState(false);
   const [data, setData] = React.useState([[]] as number[][]);
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
-
-  const darkTheme = createMuiTheme({
-    palette: {
-      type: "dark",
-    },
-  });
 
   useEffect(() => {
     sim = new Simulation();
@@ -47,41 +34,40 @@ export default function EEsim(): JSX.Element {
     }
   };
 
-  const handleClose = (event: React.SyntheticEvent, reason: SnackbarCloseReason) => {
-    if (reason === "clickaway") {
-      return;
-    }
-    setOpen(false);
-  };
+  const btStyle = {
+    borderRadius: "0.3em",
+    border: "none",
+    padding: "1em 2em",
+    backgroundColor: "#0070f3",
+    color: "white",
+    cursor: "pointer",
+  } as React.CSSProperties;
 
   return (
-    <ThemeProvider theme={darkTheme}>
+    <div>
       <div style={{ width: "60%" }}>
-        <TextField
-          id="filled-multiline-static"
-          label="Netlist"
-          multiline
+        <textarea
+          style={{
+            width: "100%",
+            backgroundColor: "rgb(20,20,20)",
+            color: "white",
+            borderRadius: "0.5em",
+          }}
           rows={15}
           value={netList}
           onChange={(e) => {
             setNetList(e.target.value);
           }}
-          variant="filled"
-          fullWidth={true}
           spellCheck={false}
         />
 
-        <Button variant="contained" color="primary" onClick={btClick}>
+        <button style={btStyle} onClick={btClick}>
           Plot 📈
-        </Button>
+        </button>
       </div>
       <div>
         <Plot data={data} />
-
-        <Snackbar open={open} autoHideDuration={3000} onClose={handleClose}>
-          <Alert severity="success">This is a success message!</Alert>
-        </Snackbar>
       </div>
-    </ThemeProvider>
+    </div>
   );
 }
