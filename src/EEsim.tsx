@@ -73,8 +73,7 @@ export default function EEsim(): JSX.Element {
         </button>
       </div>
       <div>
-        <Box results={results} />
-        <Plot data={results.data} />
+        <Plot results={results} />
       </div>
     </div>
   );

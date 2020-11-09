@@ -1,9 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import WebGlPlot, { ColorRGBA, WebglLine } from "webgl-plot";
+import Box from "./box";
 import { calcContrast, calcLuminance } from "./calcContrast";
+import type { ResultType } from "./sim/readOutput";
 
 type PlotType = {
-  data: number[][];
+  results: ResultType;
+};
+
+type TypeLineMinMax = {
+  min: number;
+  max: number;
 };
 
 type MouseDrag = {
@@ -24,11 +31,11 @@ type ZoomStatus = {
 };
 
 let wglp: WebGlPlot;
-let minY = 0;
-let maxY = 0;
+let lineMinMax = [{ min: 0, max: 1 }] as TypeLineMinMax[];
+
 const RectZ = new WebglLine(new ColorRGBA(1, 1, 1, 1), 4);
 
-export default function Plot({ data }: PlotType): JSX.Element {
+export default function Plot({ results }: PlotType): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
 
   const [zoomStatus, setZoomStatus] = useState<ZoomStatus>({ scale: 1, offset: 0 });
@@ -92,7 +99,7 @@ export default function Plot({ data }: PlotType): JSX.Element {
 
   useEffect(() => {
     setZoomStatus({ scale: wglp.gScaleX, offset: wglp.gOffsetX / wglp.gScaleX });
-  }, [mouseDrag, mouseZoom]);
+  }, [mouseDrag]);
 
   useEffect(() => {
     wglp.removeAllLines();
@@ -103,10 +110,18 @@ export default function Plot({ data }: PlotType): JSX.Element {
     wglp.gOffsetX = -1;
     wglp.gScaleX = 2;
 
+    const data = results.data;
+
+    lineMinMax = [];
+
     for (let col = 1; col < data.length; col++) {
       const color = getColor();
       const line = new WebglLine(color, data[0].length);
       const maxX = data[0][data[0].length - 1];
+
+      //?????????????????????
+      let minY = 100000;
+      let maxY = -100000;
 
       for (let i = 0; i < data[0].length; i++) {
         line.setX(i, data[0][i] / maxX);
@@ -116,6 +131,7 @@ export default function Plot({ data }: PlotType): JSX.Element {
         minY = minY < y ? minY : y;
       }
       wglp.addLine(line);
+      lineMinMax.push({ min: minY, max: maxY });
     }
 
     // add test rectangle
@@ -125,22 +141,58 @@ export default function Plot({ data }: PlotType): JSX.Element {
     Rect.visible = true;
     wglp.addLine(Rect);*/
 
-    wglp.gScaleY = 1.8 / Math.max(Math.abs(minY), Math.abs(maxY));
-    wglp.gOffsetY = minY + minY - 1 / 1.8;
-    wglp.update();
-  }, [data]);
+    scaleUpdate(findMinMax());
+  }, [results]);
+
+  type ScaleType = {
+    minY: number;
+    maxY: number;
+  };
+
+  const findMinMax = (): ScaleType => {
+    //???????????????????????
+    let minY = 10000;
+    let maxY = -10000;
+    // first line[0] is RectZ
+    for (let i = 1; i < wglp.lines.length; i++) {
+      if (wglp.lines[i].visible) {
+        const e = lineMinMax[i - 1];
+        maxY = maxY > e.max ? maxY : e.max;
+        minY = minY < e.min ? minY : e.min;
+      }
+    }
+    return { minY: minY, maxY: maxY };
+  };
+
+  const scaleUpdate = (scale: ScaleType) => {
+    let diffY = 0;
+    let avgY = 0;
+    if (scale.minY == scale.maxY) {
+      const c = scale.minY;
+      diffY = 0.1 * c;
+      avgY = c;
+    } else {
+      diffY = scale.maxY - scale.minY;
+      avgY = (scale.minY + scale.maxY) / 2;
+    }
+    wglp.gScaleY = 1.9 / Math.abs(diffY);
+    wglp.gOffsetY = -1 * avgY * wglp.gScaleY;
+    console.log("diff", diffY, "avg", avgY);
+    console.log(scale, wglp.gScaleY, wglp.gOffsetY);
+    //wglp.update();
+  };
 
   const mouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
     console.log(e.clientX - eOffset); //offset from the edge of the element
-    //const cStyle = (e.target as HTMLCanvasElement).style;
+
     if (e.button == 0) {
       (e.target as HTMLCanvasElement).style.cursor = "pointer";
       const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
       const cursorDownX = (2 * (e.clientX - eOffset - width / 2)) / width;
       setMouseZoom({ started: true, cursorDownX: cursorDownX, cursorOffsetX: 0 });
-      //RectZ.visible = true;
+      RectZ.visible = true;
     }
     if (e.button == 2) {
       (e.target as HTMLCanvasElement).style.cursor = "grabbing";
@@ -148,8 +200,6 @@ export default function Plot({ data }: PlotType): JSX.Element {
       const dragOffsetOld = wglp.gOffsetX;
       setMouseDrag({ started: true, dragInitialX: dragInitialX, dragOffsetOld: dragOffsetOld });
     }
-
-    //const canvas = canvasMain.current;
   };
 
   const mouseMove = (e: React.MouseEvent) => {
@@ -164,13 +214,13 @@ export default function Plot({ data }: PlotType): JSX.Element {
       });
       RectZ.xy = new Float32Array([
         (mouseZoom.cursorDownX - wglp.gOffsetX) / wglp.gScaleX,
-        minY,
+        -100,
         (mouseZoom.cursorDownX - wglp.gOffsetX) / wglp.gScaleX,
-        maxY,
+        100,
         (cursorOffsetX - wglp.gOffsetX) / wglp.gScaleX,
-        maxY,
+        100,
         (cursorOffsetX - wglp.gOffsetX) / wglp.gScaleX,
-        minY,
+        -100,
       ]);
       RectZ.visible = true;
     }
@@ -216,6 +266,14 @@ export default function Plot({ data }: PlotType): JSX.Element {
     e.preventDefault();
   };
 
+  const change = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const index = parseInt(event.target.name);
+    //index 0 is time
+    wglp.lines[index + 1].visible = event.target.checked;
+    const minmax = findMinMax();
+    scaleUpdate(minmax);
+  }, []);
+
   const canvasStyle = {
     width: "100%",
     height: "60vh",
@@ -223,6 +281,7 @@ export default function Plot({ data }: PlotType): JSX.Element {
 
   return (
     <div>
+      <Box results={results} onChange={change} />
       <canvas
         ref={canvasMain}
         style={canvasStyle}
