@@ -3,16 +3,21 @@
  */
 
 export type ResultType = {
-  varNum: number;
-  pointNum: number;
-  variables: VariableType[];
+  param: ParamType;
   header: string;
   data: number[][];
 };
 
-type VariableType = {
+export type ParamType = {
+  varNum: number;
+  pointNum: number;
+  variables: VariableType[];
+};
+
+export type VariableType = {
   name: string;
-  type: "voltage" | "current";
+  type: "voltage" | "current" | "time";
+  visible: boolean;
 };
 
 export default function readOutput(rawData: Uint8Array): ResultType {
@@ -56,9 +61,7 @@ export default function readOutput(rawData: Uint8Array): ResultType {
   console.log(out2);
 
   return {
-    varNum: param.varNum,
-    pointNum: param.pointNum,
-    variables: param.variables,
+    param: param,
     header: header,
     data: out2,
   } as ResultType;
@@ -72,9 +75,7 @@ function ab2str(buf: BufferSource) {
   return new TextDecoder("utf-8").decode(buf);
 }
 
-function findParams(
-  header: string
-): { varNum: number; pointNum: number; variables: VariableType[] } {
+function findParams(header: string): ParamType {
   //
   const lines = header.split("\n");
 
@@ -88,10 +89,18 @@ function findParams(
   for (let i = 0; i < varNum; i++) {
     let str = lines[i + lines.indexOf("Variables:") + 1];
     let str2 = str.split("\t");
-    //console.log(str2);
-    varList.push({ name: str2[2], type: str2[3] == "voltage" ? "voltage" : "current" });
+    console.log("str2->", str2);
+    varList.push({ name: str2[2], type: str2[3] as "voltage" | "current" | "time", visible: true });
   }
-  //console.log(varList);
+  //console.log("varlist->", varList);
 
-  return { varNum: varNum, pointNum: pointNum, variables: varList };
+  const param = {
+    varNum: varNum,
+    pointNum: pointNum,
+    // why????????????????
+    // https://www.digitalocean.com/community/tutorials/copying-objects-in-javascript
+    variables: [...varList],
+  } as ParamType;
+
+  return param;
 }

@@ -130,6 +130,11 @@ export default function Plot({ results }: PlotType): JSX.Element {
         maxY = maxY > y ? maxY : y;
         minY = minY < y ? minY : y;
       }
+      //????????? not efficent
+      if (results.param.variables[1]) {
+        console.log("col", results.param.variables[col - 1]);
+        line.visible = results.param.variables[col - 1].visible;
+      }
       wglp.addLine(line);
       lineMinMax.push({ min: minY, max: maxY });
     }
@@ -266,14 +271,6 @@ export default function Plot({ results }: PlotType): JSX.Element {
     e.preventDefault();
   };
 
-  const change = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const index = parseInt(event.target.name);
-    //index 0 is time
-    wglp.lines[index + 1].visible = event.target.checked;
-    const minmax = findMinMax();
-    scaleUpdate(minmax);
-  }, []);
-
   const canvasStyle = {
     width: "100%",
     height: "60vh",
@@ -281,7 +278,6 @@ export default function Plot({ results }: PlotType): JSX.Element {
 
   return (
     <div>
-      <Box results={results} onChange={change} />
       <canvas
         ref={canvasMain}
         style={canvasStyle}
