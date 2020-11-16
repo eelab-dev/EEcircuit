@@ -19,28 +19,28 @@
     "@babel/preset-typescript": "^7.12.1",
     "@snowpack/app-scripts-react": "^1.12.6",
     "@snowpack/plugin-dotenv": "^2.0.4",
-    "@snowpack/plugin-optimize": "^0.2.8",
-    "@snowpack/plugin-react-refresh": "^2.3.6",
+    "@snowpack/plugin-optimize": "^0.2.9",
+    "@snowpack/plugin-react-refresh": "^2.3.7",
     "@snowpack/plugin-typescript": "^1.1.0",
     "@snowpack/web-test-runner-plugin": "^0.1.4",
-    "@testing-library/react": "^11.1.1",
+    "@testing-library/react": "^11.1.2",
     "@types/chai": "^4.2.14",
     "@types/react": "^16.9.56",
     "@types/react-dom": "^16.9.9",
-    "@types/snowpack-env": "^2.3.1",
-    "@web/test-runner": "^0.9.7",
+    "@types/snowpack-env": "^2.3.2",
+    "@typescript-eslint/eslint-plugin": "^4.7.0",
+    "@web/test-runner": "^0.9.10",
     "chai": "^4.2.0",
     "eslint": "^7.13.0",
     "prettier": "^2.1.2",
     "serve": "^11.3.2",
-    "snowpack": "^2.17.0",
+    "snowpack": "^2.17.1",
     "typescript": "^4.0.5",
-    "vercel": "^20.1.2",
-    "@typescript-eslint/eslint-plugin": "^4.7.0"
+    "vercel": "^20.1.4"
   },
   "dependencies": {
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
-    "webgl-plot": "^0.5.2"
+    "webgl-plot": "^0.5.3"
   }
 }

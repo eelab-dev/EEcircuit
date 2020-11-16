@@ -4,18 +4,26 @@ import * as circuits from "./sim/circuits";
 
 import Plot from "./plot";
 import Box from "./box";
-import type { ResultType } from "./sim/readOutput";
+import type { ResultType, VariableType } from "./sim/readOutput";
 
 let sim: Simulation;
+
+export type DisplayDataType = {
+  name: string;
+  index: number;
+  checked: boolean;
+};
 
 export default function EEsim(): JSX.Element {
   // Create the count state.
 
   const [open, setOpen] = React.useState(false);
   const [results, setResults] = React.useState<ResultType>({
-    varNum: 0,
-    pointNum: 0,
-    variables: [],
+    param: {
+      varNum: 0,
+      pointNum: 0,
+      variables: [{ name: "", type: "time", visible: false }] as VariableType[],
+    },
     header: "",
     data: [],
   });
@@ -24,12 +32,27 @@ export default function EEsim(): JSX.Element {
   useEffect(() => {
     sim = new Simulation();
     console.log(sim);
-    sim.setOutputEvent(() => {
-      setResults(sim.getResults());
-      console.log(sim.getResults().variables);
-    });
+
     sim.start();
   }, []);
+
+  useEffect(() => {
+    sim.setOutputEvent(() => {
+      console.log("🚀", sim.getResults());
+      setResults(sim.getResults());
+      //displayData = makeDD(sim.getResults());
+
+      console.log("🥳", results);
+    });
+  }, [results]);
+
+  const makeDD = (res: ResultType): DisplayDataType[] => {
+    const dd = [] as DisplayDataType[];
+    res.param.variables.forEach((e, i) => {
+      dd.push({ name: e.name, index: i, checked: true });
+    });
+    return dd;
+  };
 
   const btClick = () => {
     if (sim) {
@@ -40,6 +63,20 @@ export default function EEsim(): JSX.Element {
       //
     }
   };
+
+  const change = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const index = parseInt(event.target.name);
+      console.log("change->", results);
+      //index 0 is time
+      const res = { ...results };
+      console.log("change->", res);
+      res.param.variables[index].visible = event.target.checked;
+
+      setResults(res);
+    },
+    [results]
+  );
 
   const btStyle = {
     borderRadius: "0.3em",
@@ -52,10 +89,10 @@ export default function EEsim(): JSX.Element {
 
   return (
     <div>
-      <div style={{ width: "60%" }}>
+      <div style={{ display: "flex", width: "100%" }}>
         <textarea
           style={{
-            width: "100%",
+            width: "60%",
             backgroundColor: "rgb(20,20,20)",
             color: "white",
             borderRadius: "0.5em",
@@ -67,11 +104,13 @@ export default function EEsim(): JSX.Element {
           }}
           spellCheck={false}
         />
-
-        <button style={btStyle} onClick={btClick}>
-          Plot 📈
-        </button>
+        <div style={{ width: "30%", marginLeft: "5%" }}>
+          <Box results={results} onChange={change} />
+        </div>
       </div>
+      <button style={btStyle} onClick={btClick}>
+        Plot 📈
+      </button>
       <div>
         <Plot results={results} />
       </div>
