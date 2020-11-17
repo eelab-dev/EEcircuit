@@ -17,7 +17,6 @@ export type ParamType = {
 export type VariableType = {
   name: string;
   type: "voltage" | "current" | "time";
-  visible: boolean;
 };
 
 export default function readOutput(rawData: Uint8Array): ResultType {
@@ -90,7 +89,7 @@ function findParams(header: string): ParamType {
     let str = lines[i + lines.indexOf("Variables:") + 1];
     let str2 = str.split("\t");
     console.log("str2->", str2);
-    varList.push({ name: str2[2], type: str2[3] as "voltage" | "current" | "time", visible: true });
+    varList.push({ name: str2[2], type: str2[3] as "voltage" | "current" | "time" });
   }
   //console.log("varlist->", varList);
 
