@@ -10,8 +10,8 @@ let sim: Simulation;
 
 export type DisplayDataType = {
   name: string;
-  index: number;
-  checked: boolean;
+  index: number; //result index
+  visible: boolean;
 };
 
 export default function EEsim(): JSX.Element {
@@ -22,12 +22,15 @@ export default function EEsim(): JSX.Element {
     param: {
       varNum: 0,
       pointNum: 0,
-      variables: [{ name: "", type: "time", visible: false }] as VariableType[],
+      variables: [{ name: "", type: "time" }] as VariableType[],
     },
     header: "",
     data: [],
   });
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
+  const [displayData, setDisplayData] = React.useState<DisplayDataType[]>([
+    { name: "", index: 0, visible: false },
+  ]);
 
   useEffect(() => {
     sim = new Simulation();
@@ -40,17 +43,19 @@ export default function EEsim(): JSX.Element {
     sim.setOutputEvent(() => {
       console.log("🚀", sim.getResults());
       setResults(sim.getResults());
-      //displayData = makeDD(sim.getResults());
-
-      console.log("🥳", results);
+      const dd = makeDD(sim.getResults());
+      setDisplayData(dd);
     });
   }, [results]);
 
   const makeDD = (res: ResultType): DisplayDataType[] => {
     const dd = [] as DisplayDataType[];
     res.param.variables.forEach((e, i) => {
-      dd.push({ name: e.name, index: i, checked: true });
+      if (i > 0) {
+        dd.push({ name: e.name, index: i, visible: true });
+      }
     });
+    console.log("makeDD->", dd);
     return dd;
   };
 
@@ -66,16 +71,23 @@ export default function EEsim(): JSX.Element {
 
   const change = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const index = parseInt(event.target.name);
-      console.log("change->", results);
-      //index 0 is time
-      const res = { ...results };
-      console.log("change->", res);
-      res.param.variables[index].visible = event.target.checked;
+      const name = event.target.name;
 
-      setResults(res);
+      //index 0 is time
+
+      const dd = displayData;
+
+      dd.forEach((e) => {
+        if (e.name == name) {
+          e.visible = event.target.checked;
+          console.log("change->", e, name);
+        }
+      });
+      //console.log("change->", dd);
+
+      setDisplayData([...dd]);
     },
-    [results]
+    [displayData]
   );
 
   const btStyle = {
@@ -105,14 +117,14 @@ export default function EEsim(): JSX.Element {
           spellCheck={false}
         />
         <div style={{ width: "30%", marginLeft: "5%" }}>
-          <Box results={results} onChange={change} />
+          <Box displayData={displayData} onChange={change} />
         </div>
       </div>
       <button style={btStyle} onClick={btClick}>
         Plot 📈
       </button>
       <div>
-        <Plot results={results} />
+        <Plot results={results} displayData={displayData} />
       </div>
     </div>
   );

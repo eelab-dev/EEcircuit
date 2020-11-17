@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from "react";
 import WebGlPlot, { ColorRGBA, WebglLine } from "webgl-plot";
 import Box from "./box";
 import { calcContrast, calcLuminance } from "./calcContrast";
+import type { DisplayDataType } from "./EEsim";
 import type { ResultType } from "./sim/readOutput";
 
 type PlotType = {
   results: ResultType;
+  displayData: DisplayDataType[];
 };
 
 type TypeLineMinMax = {
@@ -35,7 +37,7 @@ let lineMinMax = [{ min: 0, max: 1 }] as TypeLineMinMax[];
 
 const RectZ = new WebglLine(new ColorRGBA(1, 1, 1, 1), 4);
 
-export default function Plot({ results }: PlotType): JSX.Element {
+export default function Plot({ results, displayData }: PlotType): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
 
   const [zoomStatus, setZoomStatus] = useState<ZoomStatus>({ scale: 1, offset: 0 });
@@ -130,11 +132,7 @@ export default function Plot({ results }: PlotType): JSX.Element {
         maxY = maxY > y ? maxY : y;
         minY = minY < y ? minY : y;
       }
-      //????????? not efficent
-      if (results.param.variables[1]) {
-        console.log("col", results.param.variables[col - 1]);
-        line.visible = results.param.variables[col - 1].visible;
-      }
+
       wglp.addLine(line);
       lineMinMax.push({ min: minY, max: maxY });
     }
@@ -148,6 +146,14 @@ export default function Plot({ results }: PlotType): JSX.Element {
 
     scaleUpdate(findMinMax());
   }, [results]);
+
+  useEffect(() => {
+    console.log("plot->DD->", displayData);
+    displayData.forEach((e) => {
+      wglp.lines[e.index].visible = e.visible;
+    });
+    scaleUpdate(findMinMax());
+  }, [displayData]);
 
   type ScaleType = {
     minY: number;

@@ -1,27 +1,28 @@
 import React, { useState, useEffect, useRef } from "react";
+import type { DisplayDataType } from "./EEsim";
 import type { ResultType, VariableType } from "./sim/readOutput";
 
 type Props = {
-  results: ResultType;
+  displayData: DisplayDataType[];
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
-function Box({ results, onChange }: Props): JSX.Element {
-  const list = results.param.variables;
+function Box({ displayData, onChange }: Props): JSX.Element {
+  //const list = results.param.variables;
+  const list = displayData;
 
-  if (list.length == results.param.varNum) {
+  /*if (list.length == results.param.varNum) {
     list.shift();
-  }
-  console.log("box->", list);
+  }*/
 
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", flexWrap: "wrap" }}>
       {list.map((e, i) => (
-        <div key={i}>
+        <div key={e.index}>
           <input
             type="checkbox"
-            name={i.toString()}
-            key={i}
+            name={e.name}
+            key={e.index}
             onChange={onChange}
             defaultChecked={true}></input>
           <label> {e.name}</label>
