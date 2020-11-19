@@ -1,0 +1,42 @@
+name: EEsim EMCC Build
+
+on: 
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'     
+        required: true
+        default: 'warning'
+ 
+      
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build the Docker image
+      run: |
+        cd ./Docker
+        docker build -t ngspice:eesim .
+        
+    - name: Run Docker
+      run: |
+        mkdir image
+        cd image
+        docker run -t -v $(realpath .):/mnt ngspice:eesim
+    
+    - name: test
+      run: |
+        pwd
+        ls
+        ls image
+        ls image/build
+        
+    - name: Archive Output
+      uses: actions/upload-artifact@v2
+      with:
+        name: EEsim output
+        path: image/build
