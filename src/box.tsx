@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import type { DisplayDataType } from "./EEsim";
-import type { ResultType, VariableType } from "./sim/readOutput";
 
 type Props = {
   displayData: DisplayDataType[];
@@ -15,8 +14,16 @@ function Box({ displayData, onChange }: Props): JSX.Element {
     list.shift();
   }*/
 
+  const boxStyle = {
+    display: "flex",
+    flexDirection: "column",
+    flexWrap: "wrap",
+    backgroundColor: "rgb(30,30,30)",
+    padding: "1em",
+  } as React.CSSProperties;
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", flexWrap: "wrap" }}>
+    <div style={boxStyle}>
       {list.map((e, i) => (
         <div key={e.index}>
           <input
