@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import WebGlPlot, { ColorRGBA, WebglLine } from "webgl-plot";
-import Box from "./box";
+import WebGlPlot, { ColorRGBA, WebglLine } from "./webglplot/webglplot";
 import { calcContrast, calcLuminance } from "./calcContrast";
 import type { DisplayDataType } from "./EEsim";
 import type { ResultType } from "./sim/readOutput";
@@ -153,7 +152,7 @@ export default function Plot({ results, displayData }: PlotType): JSX.Element {
       wglp.lines[e.index].visible = e.visible;
     });
     scaleUpdate(findMinMax());
-  }, [displayData]);
+  }, [results, displayData]);
 
   type ScaleType = {
     minY: number;

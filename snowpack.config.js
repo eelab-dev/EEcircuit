@@ -13,7 +13,7 @@ module.exports = {
     /* ... */
   ],
   installOptions: {
-    //treeshake: false,
+    treeshake: true,
   },
   devOptions: {
     /* ... */

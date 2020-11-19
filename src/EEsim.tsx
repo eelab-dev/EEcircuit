@@ -28,9 +28,7 @@ export default function EEsim(): JSX.Element {
     data: [],
   });
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
-  const [displayData, setDisplayData] = React.useState<DisplayDataType[]>([
-    { name: "", index: 0, visible: false },
-  ]);
+  const [displayData, setDisplayData] = React.useState<DisplayDataType[]>([]);
 
   useEffect(() => {
     sim = new Simulation();
@@ -43,13 +41,22 @@ export default function EEsim(): JSX.Element {
     sim.setOutputEvent(() => {
       console.log("🚀", sim.getResults());
       setResults(sim.getResults());
-      const dd = makeDD(sim.getResults());
-      setDisplayData(dd);
+      //const dd = makeDD(sim.getResults());
+      //setDisplayData(dd);
     });
   }, [results]);
 
+  useEffect(() => {
+    console.log("makeDD->", displayData[0]);
+    //??????????????????????????????????????????????????doesn't change when changing circiut
+    if (displayData[0] == undefined) {
+      let dd = makeDD(results);
+      setDisplayData(dd);
+    }
+  }, [results]);
+
   const makeDD = (res: ResultType): DisplayDataType[] => {
-    const dd = [] as DisplayDataType[];
+    let dd = [] as DisplayDataType[];
     res.param.variables.forEach((e, i) => {
       if (i > 0) {
         dd.push({ name: e.name, index: i, visible: true });
