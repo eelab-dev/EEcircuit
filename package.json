@@ -14,9 +14,10 @@
     "@rollup/plugin-commonjs": "^16.0.0",
     "@rollup/plugin-node-resolve": "^10.0.0",
     "@rollup/plugin-typescript": "^6.1.0",
-    "@typescript-eslint/eslint-plugin": "^4.6.0",
-    "@typescript-eslint/parser": "^4.6.0",
-    "rollup": "^2.32.1",
+    "@typescript-eslint/eslint-plugin": "^4.8.1",
+    "@typescript-eslint/parser": "^4.8.1",
+    "chalk": "^4.1.0",
+    "rollup": "^2.33.3",
     "rollup-plugin-postcss": "^3.1.8",
     "rollup-plugin-terser": "^7.0.2",
     "serve": "^11.3.2",
@@ -25,6 +26,6 @@
   "dependencies": {
     "codejar": "^3.2.2",
     "monaco-editor": "^0.21.2",
-    "webgl-plot": "^0.5.1"
+    "webgl-plot": "^0.5.3"
   }
 }
