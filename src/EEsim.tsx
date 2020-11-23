@@ -5,6 +5,7 @@ import * as circuits from "./sim/circuits";
 import Plot from "./plot";
 import Box from "./box";
 import type { ResultType, VariableType } from "./sim/readOutput";
+import DownCSV from "./downCSV";
 
 let sim: Simulation;
 
@@ -46,13 +47,29 @@ export default function EEsim(): JSX.Element {
     });
   }, [results]);
 
+  //DisplayData logic
   useEffect(() => {
-    console.log("makeDD->", displayData[0]);
+    const newDD = makeDD(results);
+    let tempDD = [] as DisplayDataType[];
+    newDD.forEach((newData, i) => {
+      let match = false;
+      let visible = true;
+      displayData.forEach((oldData) => {
+        if (newData.name == oldData.name) {
+          match = true;
+          visible = oldData.visible;
+        }
+      });
+      if (match) {
+        tempDD.push({ name: newData.name, index: newData.index, visible: visible });
+      } else {
+        tempDD.push({ name: newData.name, index: newData.index, visible: true });
+      }
+    });
+    console.log("makeDD->", tempDD);
+    setDisplayData([...tempDD]);
+
     //??????????????????????????????????????????????????doesn't change when changing circiut
-    if (displayData[0] == undefined) {
-      let dd = makeDD(results);
-      setDisplayData(dd);
-    }
   }, [results]);
 
   const makeDD = (res: ResultType): DisplayDataType[] => {
@@ -66,7 +83,7 @@ export default function EEsim(): JSX.Element {
     return dd;
   };
 
-  const btClick = () => {
+  const btPlot = () => {
     if (sim) {
       sim.setNetList(netList);
       sim.runSim();
@@ -75,6 +92,10 @@ export default function EEsim(): JSX.Element {
       //
     }
   };
+
+  const btInfo = () => {};
+
+  const btCSV = () => {};
 
   const change = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,6 +125,8 @@ export default function EEsim(): JSX.Element {
     backgroundColor: "#0070f3",
     color: "white",
     cursor: "pointer",
+    marginRight: "0.5em",
+    fontSize: "1em",
   } as React.CSSProperties;
 
   return (
@@ -115,6 +138,7 @@ export default function EEsim(): JSX.Element {
             backgroundColor: "rgb(20,20,20)",
             color: "white",
             borderRadius: "0.5em",
+            marginBottom: "1em",
           }}
           rows={15}
           value={netList}
@@ -127,8 +151,14 @@ export default function EEsim(): JSX.Element {
           <Box displayData={displayData} onChange={change} />
         </div>
       </div>
-      <button style={btStyle} onClick={btClick}>
+      <button style={btStyle} onClick={btPlot}>
         Plot 📈
+      </button>
+      <button style={btStyle} onClick={btInfo}>
+        Info 📄
+      </button>
+      <button style={btStyle} onClick={btCSV}>
+        <DownCSV dataIn={results.data} />
       </button>
       <div>
         <Plot results={results} displayData={displayData} />
