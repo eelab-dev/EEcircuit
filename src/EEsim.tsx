@@ -22,7 +22,7 @@ export type DisplayDataType = {
 export default function EEsim(): JSX.Element {
   // Create the count state.
 
-  const [open, setOpen] = React.useState(false);
+  const [simLoaded, setSimLoaded] = React.useState(false);
   const [results, setResults] = React.useState<ResultType>({
     param: {
       varNum: 0,
@@ -35,21 +35,23 @@ export default function EEsim(): JSX.Element {
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>([]);
 
-  useEffect(() => {
+  /*useEffect(() => {
     sim = new Simulation();
     console.log(sim);
 
     sim.start();
-  }, []);
+  }, []);*/
 
   useEffect(() => {
-    sim.setOutputEvent(() => {
-      console.log("🚀", sim.getResults());
-      setResults(sim.getResults());
-      //const dd = makeDD(sim.getResults());
-      //setDisplayData(dd);
-    });
-  }, [results]);
+    if (simLoaded) {
+      sim.setOutputEvent(() => {
+        console.log("🚀", sim.getResults());
+        setResults(sim.getResults());
+        //const dd = makeDD(sim.getResults());
+        //setDisplayData(dd);
+      });
+    }
+  }, [simLoaded, results]);
 
   //DisplayData logic
   useEffect(() => {
@@ -91,9 +93,12 @@ export default function EEsim(): JSX.Element {
     if (sim) {
       sim.setNetList(netList);
       sim.runSim();
-      setOpen(true);
     } else {
-      //
+      sim = new Simulation();
+      console.log(sim);
+      sim.start();
+      btPlot();
+      setSimLoaded(true);
     }
   };
 
