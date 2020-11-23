@@ -3,9 +3,13 @@ import Simulation from "./sim/simulation";
 import * as circuits from "./sim/circuits";
 
 import Plot from "./plot";
-import Box from "./box";
+import DisplayBox from "./box";
 import type { ResultType, VariableType } from "./sim/readOutput";
 import DownCSV from "./downCSV";
+
+import { Box, ChakraProvider, Divider, Textarea, useColorMode } from "@chakra-ui/react";
+import { Button, ButtonGroup } from "@chakra-ui/react";
+import { extendTheme } from "@chakra-ui/react";
 
 let sim: Simulation;
 
@@ -129,40 +133,49 @@ export default function EEsim(): JSX.Element {
     fontSize: "1em",
   } as React.CSSProperties;
 
+  const config = {
+    useSystemColorMode: false,
+    initialColorMode: "dark",
+  };
+
+  const customTheme = extendTheme({ config });
+
   return (
-    <div>
-      <div style={{ display: "flex", width: "100%" }}>
-        <textarea
-          style={{
-            width: "60%",
-            backgroundColor: "rgb(20,20,20)",
-            color: "white",
-            borderRadius: "0.5em",
-            marginBottom: "1em",
-          }}
-          rows={15}
-          value={netList}
-          onChange={(e) => {
-            setNetList(e.target.value);
-          }}
-          spellCheck={false}
-        />
-        <div style={{ width: "30%", marginLeft: "5%" }}>
-          <Box displayData={displayData} onChange={change} />
+    <ChakraProvider theme={customTheme}>
+      <div>
+        <div style={{ display: "flex", width: "100%" }}>
+          <Textarea
+            bg="gray.900"
+            fontSize="0.9em"
+            rows={15}
+            value={netList}
+            onChange={(e) => {
+              setNetList(e.target.value);
+            }}
+            spellCheck={false}
+          />
+          <div style={{ width: "30%", marginLeft: "5%" }}>
+            <DisplayBox displayData={displayData} onChange={change} />
+          </div>
+        </div>
+        <Box p={4}>
+          <ButtonGroup variant="outline" spacing="4">
+            <Button colorScheme="blue" variant="solid" size="lg" onClick={btPlot}>
+              Plot 📈
+            </Button>
+            <Button colorScheme="blue" variant="solid" size="lg" onClick={btInfo}>
+              Info 📄
+            </Button>
+            <Button colorScheme="blue" variant="solid" size="lg" onClick={btCSV}>
+              CSV
+            </Button>
+          </ButtonGroup>
+        </Box>
+
+        <div>
+          <Plot results={results} displayData={displayData} />
         </div>
       </div>
-      <button style={btStyle} onClick={btPlot}>
-        Plot 📈
-      </button>
-      <button style={btStyle} onClick={btInfo}>
-        Info 📄
-      </button>
-      <button style={btStyle} onClick={btCSV}>
-        <DownCSV dataIn={results.data} />
-      </button>
-      <div>
-        <Plot results={results} displayData={displayData} />
-      </div>
-    </div>
+    </ChakraProvider>
   );
 }
