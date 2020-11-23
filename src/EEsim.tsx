@@ -3,8 +3,13 @@ import Simulation from "./sim/simulation";
 import * as circuits from "./sim/circuits";
 
 import Plot from "./plot";
-import Box from "./box";
+import DisplayBox from "./box";
 import type { ResultType, VariableType } from "./sim/readOutput";
+import DownCSV from "./downCSV";
+
+import { Box, ChakraProvider, Divider, Textarea, useColorMode } from "@chakra-ui/react";
+import { Button, ButtonGroup } from "@chakra-ui/react";
+import { extendTheme } from "@chakra-ui/react";
 
 let sim: Simulation;
 
@@ -46,13 +51,29 @@ export default function EEsim(): JSX.Element {
     });
   }, [results]);
 
+  //DisplayData logic
   useEffect(() => {
-    console.log("makeDD->", displayData[0]);
+    const newDD = makeDD(results);
+    let tempDD = [] as DisplayDataType[];
+    newDD.forEach((newData, i) => {
+      let match = false;
+      let visible = true;
+      displayData.forEach((oldData) => {
+        if (newData.name == oldData.name) {
+          match = true;
+          visible = oldData.visible;
+        }
+      });
+      if (match) {
+        tempDD.push({ name: newData.name, index: newData.index, visible: visible });
+      } else {
+        tempDD.push({ name: newData.name, index: newData.index, visible: true });
+      }
+    });
+    console.log("makeDD->", tempDD);
+    setDisplayData([...tempDD]);
+
     //??????????????????????????????????????????????????doesn't change when changing circiut
-    if (displayData[0] == undefined) {
-      let dd = makeDD(results);
-      setDisplayData(dd);
-    }
   }, [results]);
 
   const makeDD = (res: ResultType): DisplayDataType[] => {
@@ -66,7 +87,7 @@ export default function EEsim(): JSX.Element {
     return dd;
   };
 
-  const btClick = () => {
+  const btPlot = () => {
     if (sim) {
       sim.setNetList(netList);
       sim.runSim();
@@ -75,6 +96,10 @@ export default function EEsim(): JSX.Element {
       //
     }
   };
+
+  const btInfo = () => {};
+
+  const btCSV = () => {};
 
   const change = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,35 +129,53 @@ export default function EEsim(): JSX.Element {
     backgroundColor: "#0070f3",
     color: "white",
     cursor: "pointer",
+    marginRight: "0.5em",
+    fontSize: "1em",
   } as React.CSSProperties;
 
+  const config = {
+    useSystemColorMode: false,
+    initialColorMode: "dark",
+  };
+
+  const customTheme = extendTheme({ config });
+
   return (
-    <div>
-      <div style={{ display: "flex", width: "100%" }}>
-        <textarea
-          style={{
-            width: "60%",
-            backgroundColor: "rgb(20,20,20)",
-            color: "white",
-            borderRadius: "0.5em",
-          }}
-          rows={15}
-          value={netList}
-          onChange={(e) => {
-            setNetList(e.target.value);
-          }}
-          spellCheck={false}
-        />
-        <div style={{ width: "30%", marginLeft: "5%" }}>
-          <Box displayData={displayData} onChange={change} />
+    <ChakraProvider theme={customTheme}>
+      <div>
+        <div style={{ display: "flex", width: "100%" }}>
+          <Textarea
+            bg="gray.900"
+            fontSize="0.9em"
+            rows={15}
+            value={netList}
+            onChange={(e) => {
+              setNetList(e.target.value);
+            }}
+            spellCheck={false}
+          />
+          <div style={{ width: "30%", marginLeft: "5%" }}>
+            <DisplayBox displayData={displayData} onChange={change} />
+          </div>
+        </div>
+        <Box p={4}>
+          <ButtonGroup variant="outline" spacing="4">
+            <Button colorScheme="blue" variant="solid" size="lg" onClick={btPlot}>
+              Plot 📈
+            </Button>
+            <Button colorScheme="blue" variant="solid" size="lg" onClick={btInfo}>
+              Info 📄
+            </Button>
+            <Button colorScheme="blue" variant="solid" size="lg" onClick={btCSV}>
+              CSV
+            </Button>
+          </ButtonGroup>
+        </Box>
+
+        <div>
+          <Plot results={results} displayData={displayData} />
         </div>
       </div>
-      <button style={btStyle} onClick={btClick}>
-        Plot 📈
-      </button>
-      <div>
-        <Plot results={results} displayData={displayData} />
-      </div>
-    </div>
+    </ChakraProvider>
   );
 }
