@@ -37,6 +37,10 @@
     "vercel": "^21.0.1"
   },
   "dependencies": {
+    "@chakra-ui/react": "^1.0.1",
+    "@emotion/react": "^11.1.1",
+    "@emotion/styled": "^11.0.0",
+    "framer-motion": "^2.9.4",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "webgl-plot": "^0.5.3"

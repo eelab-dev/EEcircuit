@@ -3,6 +3,7 @@ import WebGlPlot, { ColorRGBA, WebglLine } from "./webglplot/webglplot";
 import { calcContrast, calcLuminance } from "./calcContrast";
 import type { DisplayDataType } from "./EEsim";
 import type { ResultType } from "./sim/readOutput";
+import { Box } from "@chakra-ui/react";
 
 type PlotType = {
   results: ResultType;
@@ -57,12 +58,14 @@ export default function Plot({ results, displayData }: PlotType): JSX.Element {
     let r = 0,
       g = 0,
       b = 0;
-    while (contrast < 7) {
+    while (contrast < 4) {
       r = Math.random();
       g = Math.random();
       b = Math.random();
 
-      contrast = calcContrast(calcLuminance(b, g, r), calcLuminance(0.2, 0.2, 0.2));
+      //change the color versus background be careful of infinite loops
+
+      contrast = calcContrast(calcLuminance(b, g, r), calcLuminance(0.23, 0.25, 0.35));
     }
     return new ColorRGBA(r, g, b, 1);
   };
@@ -282,7 +285,7 @@ export default function Plot({ results, displayData }: PlotType): JSX.Element {
   };
 
   return (
-    <div>
+    <Box bg="gray.900">
       <canvas
         ref={canvasMain}
         style={canvasStyle}
@@ -291,6 +294,6 @@ export default function Plot({ results, displayData }: PlotType): JSX.Element {
         onMouseUp={mouseUp}
         onDoubleClick={doubleClick}
         onContextMenu={contextMenu}></canvas>
-    </div>
+    </Box>
   );
 }
