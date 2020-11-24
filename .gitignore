@@ -4,3 +4,4 @@ temp
 .cache
 .parcel-cache
 *.map
+.vercel
