@@ -97,6 +97,7 @@ export default function EEsim(): JSX.Element {
       sim = new Simulation();
       console.log(sim);
       sim.start();
+      console.log("🧨🧨🧨🧨🧨🧨🧨🧨");
       btPlot();
       setSimLoaded(true);
     }
