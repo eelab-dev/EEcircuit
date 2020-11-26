@@ -1,4 +1,4 @@
-![Build](https://github.com/danchitnis/EEsim/workflows/Build/badge.svg) ![CodeQL](https://github.com/danchitnis/EEsim/workflows/CodeQL/badge.svg)
+![Build App](https://github.com/danchitnis/EEsim/workflows/Build%20App/badge.svg) ![EMCC Build](https://github.com/danchitnis/EEsim/workflows/EEsim%20EMCC%20Build/badge.svg) ![CodeQL](https://github.com/danchitnis/EEsim/workflows/CodeQL/badge.svg)
 
 # EEsim
 
@@ -51,6 +51,10 @@ vdd vdd 0 1.8
 
 .end
 ```
+
+## Usage
+
+Use your mouse to pan & zoom on the plot. left click for area **zoom** and right click hold and drag for **pan**. To reset the view **double click**.
 
 ## Transistor Models
 
