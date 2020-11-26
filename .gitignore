@@ -1,7 +1,6 @@
 node_modules
 build
 temp
-Docker
 .cache
 .parcel-cache
 *.map
