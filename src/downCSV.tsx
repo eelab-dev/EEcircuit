@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import { Button } from "@chakra-ui/react";
+import React from "react";
 
 type Prop = {
   dataIn: number[][];
@@ -24,7 +25,7 @@ export default function DownCSV({ dataIn }: Prop): JSX.Element {
       <a
         href={`data:text/plain;charset=utf-8,${encodeURIComponent(printCSV(dataIn))}`}
         download={"eesim.csv"}>
-        Download
+        <Button colorScheme="blue">Download</Button>
       </a>
     </>
   );
