@@ -1,5 +1,5 @@
 import { Box, Checkbox, Stack } from "@chakra-ui/react";
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import type { DisplayDataType } from "./EEsim";
 
 type Props = {
@@ -27,7 +27,7 @@ function DisplayBox({ displayData, onChange }: Props): JSX.Element {
     <Box borderWidth="1px" borderRadius="md" maxW="sm" p={4} bg="gray.700" width="80%">
       <Stack spacing={1} direction="column">
         {list.map((e, i) => (
-          <Checkbox key={e.index} onChange={onChange} name={e.name} defaultIsChecked>
+          <Checkbox key={e.index} onChange={onChange} name={e.name} isChecked={e.visible}>
             {e.name}
           </Checkbox>
           /*<div key={e.index}>
@@ -45,5 +45,6 @@ function DisplayBox({ displayData, onChange }: Props): JSX.Element {
   );
 }
 
-export default React.memo(DisplayBox);
+//export default React.memo(DisplayBox);
 //don't use memo and see why it returns empty?
+export default DisplayBox;

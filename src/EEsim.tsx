@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import Simulation from "./sim/simulation";
 import * as circuits from "./sim/circuits";
 
@@ -7,11 +7,22 @@ import DisplayBox from "./box";
 import type { ResultType, VariableType } from "./sim/readOutput";
 import DownCSV from "./downCSV";
 
-import { Box, ChakraProvider, Divider, Textarea, useColorMode } from "@chakra-ui/react";
+import {
+  Box,
+  ChakraProvider,
+  Divider,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
+  Textarea,
+} from "@chakra-ui/react";
 import { Button, ButtonGroup } from "@chakra-ui/react";
 import { extendTheme } from "@chakra-ui/react";
 
 let sim: Simulation;
+const store = window.localStorage;
 
 export type DisplayDataType = {
   name: string;
@@ -22,8 +33,8 @@ export type DisplayDataType = {
 export default function EEsim(): JSX.Element {
   // Create the count state.
 
-  const [simLoaded, setSimLoaded] = React.useState(false);
-  const [results, setResults] = React.useState<ResultType>({
+  const [isSimLoaded, setIsSimLoaded] = React.useState(false);
+  /*const [results, setResults] = React.useState<ResultType>({
     param: {
       varNum: 0,
       pointNum: 0,
@@ -31,19 +42,25 @@ export default function EEsim(): JSX.Element {
     },
     header: "",
     data: [],
-  });
+  });*/
+  const [results, setResults] = React.useState<ResultType>();
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
-  const [displayData, setDisplayData] = React.useState<DisplayDataType[]>([]);
-
-  /*useEffect(() => {
-    sim = new Simulation();
-    console.log(sim);
-
-    sim.start();
-  }, []);*/
+  const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
+  const [tabIndex, setTabIndex] = React.useState(0);
 
   useEffect(() => {
-    if (simLoaded) {
+    const loadedNetList = store.getItem("netList");
+    setNetList(loadedNetList ? loadedNetList : circuits.bsimTrans);
+
+    const loadedDisplayDataString = store.getItem("displayData");
+    const loadedDisplayData = JSON.parse(
+      loadedDisplayDataString ? loadedDisplayDataString : ""
+    ) as DisplayDataType[];
+    setDisplayData(loadedDisplayData);
+  }, []);
+
+  useEffect(() => {
+    if (isSimLoaded) {
       sim.setOutputEvent(() => {
         console.log("🚀", sim.getResults());
         setResults(sim.getResults());
@@ -51,29 +68,35 @@ export default function EEsim(): JSX.Element {
         //setDisplayData(dd);
       });
     }
-  }, [simLoaded, results]);
+  }, [isSimLoaded, results]);
 
   //DisplayData logic
   useEffect(() => {
-    const newDD = makeDD(results);
-    let tempDD = [] as DisplayDataType[];
-    newDD.forEach((newData, i) => {
-      let match = false;
-      let visible = true;
-      displayData.forEach((oldData) => {
-        if (newData.name == oldData.name) {
-          match = true;
-          visible = oldData.visible;
+    if (results) {
+      const newDD = makeDD(results);
+      let tempDD = [] as DisplayDataType[];
+      newDD.forEach((newData, i) => {
+        let match = false;
+        let visible = true;
+        if (displayData) {
+          displayData.forEach((oldData) => {
+            if (newData.name == oldData.name) {
+              match = true;
+              visible = oldData.visible;
+            }
+          });
+          if (match) {
+            tempDD.push({ name: newData.name, index: newData.index, visible: visible });
+          } else {
+            tempDD.push({ name: newData.name, index: newData.index, visible: true });
+          }
+        } else {
+          tempDD.push({ name: newData.name, index: newData.index, visible: true });
         }
       });
-      if (match) {
-        tempDD.push({ name: newData.name, index: newData.index, visible: visible });
-      } else {
-        tempDD.push({ name: newData.name, index: newData.index, visible: true });
-      }
-    });
-    console.log("makeDD->", tempDD);
-    setDisplayData([...tempDD]);
+      console.log("makeDD->", tempDD);
+      setDisplayData([...tempDD]);
+    }
 
     //??????????????????????????????????????????????????doesn't change when changing circiut
   }, [results]);
@@ -89,7 +112,8 @@ export default function EEsim(): JSX.Element {
     return dd;
   };
 
-  const btPlot = () => {
+  const btRun = () => {
+    store.setItem("netList", netList);
     if (sim) {
       sim.setNetList(netList);
       sim.runSim();
@@ -98,14 +122,10 @@ export default function EEsim(): JSX.Element {
       console.log(sim);
       sim.start();
       console.log("🧨🧨🧨🧨🧨🧨🧨🧨");
-      btPlot();
-      setSimLoaded(true);
+      btRun();
+      setIsSimLoaded(true);
     }
   };
-
-  const btInfo = () => {};
-
-  const btCSV = () => {};
 
   const change = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,31 +133,24 @@ export default function EEsim(): JSX.Element {
 
       //index 0 is time
 
-      const dd = displayData;
+      if (isSimLoaded && displayData) {
+        const dd = displayData;
 
-      dd.forEach((e) => {
-        if (e.name == name) {
-          e.visible = event.target.checked;
-          console.log("change->", e, name);
-        }
-      });
-      //console.log("change->", dd);
+        dd.forEach((e) => {
+          if (e.name == name) {
+            e.visible = event.target.checked;
+            console.log("change->", e, name);
+          }
+        });
+        //console.log("change->", dd);
 
-      setDisplayData([...dd]);
+        setDisplayData([...dd]);
+        const stringDD = JSON.stringify(dd);
+        store.setItem("displayData", stringDD);
+      }
     },
-    [displayData]
+    [displayData, isSimLoaded]
   );
-
-  const btStyle = {
-    borderRadius: "0.3em",
-    border: "none",
-    padding: "1em 2em",
-    backgroundColor: "#0070f3",
-    color: "white",
-    cursor: "pointer",
-    marginRight: "0.5em",
-    fontSize: "1em",
-  } as React.CSSProperties;
 
   const config = {
     useSystemColorMode: false,
@@ -146,41 +159,69 @@ export default function EEsim(): JSX.Element {
 
   const customTheme = extendTheme({ config });
 
+  const handleTabChange = (index: number) => {
+    setTabIndex(index);
+  };
+
   return (
     <ChakraProvider theme={customTheme}>
       <div>
-        <div style={{ display: "flex", width: "100%" }}>
-          <Textarea
-            bg="gray.900"
-            fontSize="0.9em"
-            rows={15}
-            value={netList}
-            onChange={(e) => {
-              setNetList(e.target.value);
-            }}
-            spellCheck={false}
-          />
-          <div style={{ width: "30%", marginLeft: "5%" }}>
-            <DisplayBox displayData={displayData} onChange={change} />
+        <Box p={2}>
+          <div style={{ display: "flex", width: "100%" }}>
+            <Textarea
+              aria-label="netlist"
+              bg="gray.900"
+              fontSize="0.9em"
+              rows={15}
+              value={netList}
+              onChange={(e) => {
+                setNetList(e.target.value);
+              }}
+              spellCheck={false}
+            />
+            <div style={{ width: "30%", marginLeft: "5%" }}>
+              <DisplayBox displayData={displayData ? displayData : []} onChange={change} />
+            </div>
           </div>
-        </div>
-        <Box p={4}>
-          <ButtonGroup variant="outline" spacing="4">
-            <Button colorScheme="blue" variant="solid" size="lg" onClick={btPlot}>
-              Plot 📈
-            </Button>
-            <Button colorScheme="blue" variant="solid" size="lg" onClick={btInfo}>
-              Info 📄
-            </Button>
-            <Button colorScheme="blue" variant="solid" size="lg" onClick={btCSV}>
-              CSV
-            </Button>
-          </ButtonGroup>
         </Box>
 
-        <div>
-          <Plot results={results} displayData={displayData} />
-        </div>
+        <Box p={2}>
+          <Button colorScheme="blue" variant="solid" size="lg" onClick={btRun}>
+            Run 🚀
+          </Button>
+        </Box>
+        <Box p={2}>
+          <Divider />
+        </Box>
+
+        <Tabs variant="soft-rounded" colorScheme="teal">
+          <TabList>
+            <Tab>Plot 📈</Tab>
+            <Tab>Info 🧙‍♂️</Tab>
+            <Tab>CSV 🧾</Tab>
+          </TabList>
+
+          <TabPanels>
+            <TabPanel>
+              <Plot results={results} displayData={displayData} />
+            </TabPanel>
+
+            <TabPanel>
+              <Textarea
+                readOnly={true}
+                aria-label="info"
+                bg="gray.900"
+                fontSize="0.9em"
+                rows={15}
+                value={results ? results.header : ""}
+              />
+            </TabPanel>
+
+            <TabPanel>
+              <DownCSV dataIn={results ? results.data : []} />
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
       </div>
     </ChakraProvider>
   );
