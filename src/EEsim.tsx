@@ -53,10 +53,10 @@ export default function EEsim(): JSX.Element {
     setNetList(loadedNetList ? loadedNetList : circuits.bsimTrans);
 
     const loadedDisplayDataString = store.getItem("displayData");
-    const loadedDisplayData = JSON.parse(
-      loadedDisplayDataString ? loadedDisplayDataString : ""
-    ) as DisplayDataType[];
-    setDisplayData(loadedDisplayData);
+    if (loadedDisplayDataString) {
+      const loadedDisplayData = JSON.parse(loadedDisplayDataString) as DisplayDataType[];
+      setDisplayData(loadedDisplayData);
+    }
   }, []);
 
   useEffect(() => {
