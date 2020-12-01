@@ -34,6 +34,7 @@ type ZoomStatus = {
 
 let wglp: WebGlPlot;
 let lineMinMax = [{ min: 0, max: 1 }] as TypeLineMinMax[];
+let sweepIndices = [] as number[]; //already has one
 
 const RectZ = new WebglLine(new ColorRGBA(1, 1, 1, 1), 4);
 
@@ -106,25 +107,15 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
     setZoomStatus({ scale: wglp.gScaleX, offset: wglp.gOffsetX / wglp.gScaleX });
   }, [mouseDrag]);
 
-  useEffect(() => {
-    wglp.removeAllLines();
-    RectZ.loop = true;
-    wglp.addLine(RectZ);
+  /////////////////////////////////////////////////////////////////////
 
-    /* x axis is [0,1]*/
-    wglp.gOffsetX = -1;
-    wglp.gScaleX = 2;
-
-    const data = results ? results.data : [[]];
-
+  const normalLine = (data: number[][]) => {
     lineMinMax = [];
 
     for (let col = 1; col < data.length; col++) {
       const color = getColor();
       const line = new WebglLine(color, data[0].length);
       const maxX = data[0][data[0].length - 1];
-
-      //?????????????????????
       let minY = 100000;
       let maxY = -100000;
 
@@ -139,6 +130,96 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
       wglp.addLine(line);
       lineMinMax.push({ min: minY, max: maxY });
     }
+  };
+
+  const sweepLine = (data: number[][]) => {
+    //isSweep = true;
+    let dataSweep = [[[]]] as number[][][];
+
+    for (let i = 0; i < data[0].length; i++) {
+      if (i > 1 && data[0][i] < data[0][i - 1]) {
+        sweepIndices.push(i);
+      }
+    }
+    //add last set
+    sweepIndices.push(data[0].length - 1);
+
+    if (sweepIndices == []) {
+      sweepIndices = [data[0].length];
+    }
+
+    dataSweep = [...Array(data.length)].map(() =>
+      [...Array(sweepIndices.length)].map(() => Array(sweepIndices[0]).fill(0))
+    );
+
+    for (let col = 0; col < dataSweep.length; col++) {
+      for (let sweep = 0; sweep < dataSweep[0].length; sweep++) {
+        for (let i = 0; i < dataSweep[0][0].length; i++) {
+          dataSweep[col][sweep][i] = data[col][sweep * sweepIndices[0] + i];
+        }
+      }
+    }
+    console.log("sweep-->", sweepIndices);
+    console.log("sweep-->", dataSweep);
+
+    //?????????????????????
+
+    lineMinMax = [];
+
+    for (let col = 1; col < dataSweep.length; col++) {
+      let minY = 100000;
+      let maxY = -100000;
+      for (let sweep = 0; sweep < dataSweep[0].length; sweep++) {
+        const color = getColor();
+        const line = new WebglLine(color, dataSweep[0][0].length);
+        const maxX = dataSweep[0][sweep][dataSweep[0][sweep].length - 1];
+
+        for (let i = 0; i < dataSweep[0][sweep].length; i++) {
+          line.setX(i, dataSweep[0][sweep][i] / maxX);
+          const y = dataSweep[col][sweep][i];
+          line.setY(i, y);
+          maxY = maxY > y ? maxY : y;
+          minY = minY < y ? minY : y;
+        }
+        wglp.addLine(line);
+        lineMinMax.push({ min: minY, max: maxY });
+      }
+    }
+
+    /*sweepIndices.forEach((e) => {
+      console.log("sweep->", data[0][e]);
+    });*/
+
+    /*for (let i = 0; i < data[0].length; i++) {
+      dataSweep[0][sweepIndex][i] = data[0][i + sweepOffset];
+      if (i > 1 && data[0][i] < data[0][i - 1]) {
+        sweepIndex++;
+        sweepOffset = i;
+      }
+    }*/
+  };
+
+  useEffect(() => {
+    sweepIndices = [];
+    wglp.removeAllLines();
+    RectZ.loop = true;
+    wglp.addLine(RectZ);
+
+    /* x axis is [0,1]*/
+    wglp.gOffsetX = -1;
+    wglp.gScaleX = 2;
+
+    const data = results ? results.data : [[]];
+
+    const possibleSweep = results ? results.header.indexOf("sweep") > 0 : false;
+    if (possibleSweep) {
+      sweepLine(data);
+      //normalLine(data);
+    } else {
+      normalLine(data);
+    }
+
+    //?????????????????????
 
     // add test rectangle
     /*const Rect = new WebglLine(new ColorRGBA(0.9, 0.9, 0.9, 1), 4);
@@ -146,20 +227,31 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
     Rect.xy = new Float32Array([0, minY, 0, maxY, 0.5, maxY, 0.5, minY]);
     Rect.visible = true;
     wglp.addLine(Rect);*/
+    console.log("line-->", lineMinMax);
 
     scaleUpdate(findMinMax());
   }, [results]);
 
   useEffect(() => {
-    //console.log("plot->DD->", displayData);
-    console.log(wglp.lines);
-    console.log(displayData);
+    console.log("plot->DD->", displayData);
+    console.log("plot->DD->", wglp.lines);
+
     //????????????????????????????????????????????? +1
-    if (displayData && wglp.lines.length == displayData.length + 1) {
-      displayData.forEach((e) => {
-        wglp.lines[e.index].visible = e.visible;
-      });
-      scaleUpdate(findMinMax());
+    if (displayData && wglp.lines.length >= displayData.length + 1) {
+      if (sweepIndices.length > 0) {
+        console.log("plot->DD->", "it is sweep");
+        displayData.forEach((e) => {
+          for (let i = 0; i < sweepIndices.length; i++) {
+            wglp.lines[(e.index - 1) * sweepIndices.length + i + 1].visible = e.visible;
+          }
+        });
+        scaleUpdate(findMinMax());
+      } else {
+        displayData.forEach((e) => {
+          wglp.lines[e.index].visible = e.visible;
+        });
+        scaleUpdate(findMinMax());
+      }
     }
 
     //console.log("CANVAS CANVAS!!!!!!!!!", wglp.lines);
