@@ -159,8 +159,8 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
         }
       }
     }
-    console.log("sweep-->", sweepIndices);
-    console.log("sweep-->", dataSweep);
+    //console.log("sweep-->", sweepIndices);
+    //console.log("sweep-->", dataSweep);
 
     //?????????????????????
 
@@ -233,12 +233,13 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
   }, [results]);
 
   useEffect(() => {
-    console.log("plot->DD->", displayData);
-    console.log("plot->DD->", wglp.lines);
+    //console.log("plot->DD->", displayData);
+    //console.log("plot->DD->", wglp.lines);
 
     //????????????????????????????????????????????? +1
-    if (displayData && wglp.lines.length >= displayData.length + 1) {
-      if (sweepIndices.length > 0) {
+
+    if (sweepIndices.length > 0) {
+      if (displayData && wglp.lines.length == sweepIndices.length * displayData.length + 1) {
         console.log("plot->DD->", "it is sweep");
         displayData.forEach((e) => {
           for (let i = 0; i < sweepIndices.length; i++) {
@@ -246,7 +247,9 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
           }
         });
         scaleUpdate(findMinMax());
-      } else {
+      }
+    } else {
+      if (displayData && wglp.lines.length == displayData.length + 1) {
         displayData.forEach((e) => {
           wglp.lines[e.index].visible = e.visible;
         });
