@@ -6,7 +6,7 @@ EEsim is a circuit simulator based on [ngspice](https://sourceforge.net/p/ngspic
 
 ## Example
 
-The examples are also compatible with [ngspice](https://sourceforge.net/p/ngspice/ngspice/)
+These examples are also compatible with [ngspice](https://sourceforge.net/p/ngspice/ngspice/). Copy and paste them into the netlist editor and press Run!
 
 ### Basic RCL circuit
 
@@ -22,6 +22,21 @@ vdd vdd 0 1.8
 
 vin 1 0  pulse (0 1.8 0 0.1 0.1 15 30) ac 1
 .tran  0.1 50
+
+.end
+```
+
+### DC Sweep
+
+```plaintext
+Basic DC Sweep
+.include modelcard.CMOS90
+
+m1 2 1 0 0 N90 W=100.0u L=0.09u
+Vds 2 0 DC 1.8
+Vg 1 0 DC 1
+
+.dc vds 0 1.8 0.01 vg 0.2 1 0.2
 
 .end
 ```
