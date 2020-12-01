@@ -218,7 +218,7 @@ export default function EEsim(): JSX.Element {
             </TabPanel>
 
             <TabPanel>
-              <DownCSV dataIn={results ? results.data : []} />
+              <DownCSV results={results} />
             </TabPanel>
           </TabPanels>
         </Tabs>

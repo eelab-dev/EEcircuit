@@ -1,15 +1,24 @@
 import { Button } from "@chakra-ui/react";
 import React from "react";
+import type { ResultType, VariableType } from "./sim/readOutput";
 
 type Prop = {
-  dataIn: number[][];
+  results?: ResultType;
 };
 
-export default function DownCSV({ dataIn }: Prop): JSX.Element {
-  function printCSV(data: number[][]): string {
+export default function DownCSV({ results }: Prop): JSX.Element {
+  function printCSV(results?: ResultType): string {
     let str = "";
+    let strTop = "";
 
-    data = data.length == 0 ? [[0], [1]] : data;
+    const data = results ? results.data : [[]];
+    const vars = results ? results.param.variables : ([] as VariableType[]);
+    vars.forEach((e) => {
+      strTop = strTop + e.name + ",";
+    });
+    strTop = strTop + "\n";
+
+    //data = data.length == 0 ? [[0], [1]] : data;
 
     for (let row = 0; row < data[0].length; row++) {
       for (let col = 0; col < data.length; col++) {
@@ -18,12 +27,12 @@ export default function DownCSV({ dataIn }: Prop): JSX.Element {
       }
       str = str + "\n";
     }
-    return str;
+    return strTop + str;
   }
   return (
     <>
       <a
-        href={`data:text/plain;charset=utf-8,${encodeURIComponent(printCSV(dataIn))}`}
+        href={`data:text/plain;charset=utf-8,${encodeURIComponent(printCSV(results))}`}
         download={"eesim.csv"}>
         <Button colorScheme="blue">Download</Button>
       </a>
