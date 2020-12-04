@@ -2,6 +2,8 @@
  * SPICE simulation
  */
 import * as circuits from "./circuits";
+import * as freePDK45 from "./freePDK";
+import * as ptm from "./ptm";
 import Module from "./spice";
 
 import readOutput, { ResultType } from "./readOutput";
@@ -54,6 +56,9 @@ export default class Simulation {
     });
 
     module.FS?.writeFile("/proc/meminfo", "");
+    module.FS?.writeFile("/modelcard.PDK45", freePDK45.PDK45);
+    module.FS?.writeFile("/modelcard.PDK15", freePDK45.PDK15);
+    module.FS?.writeFile("/modelcard.PTM16", ptm.ptm16);
     module.FS?.writeFile("/modelcard.CMOS90", circuits.strModelCMOS90);
     //module.FS.writeFile("/test.cir", circuits.bsimTrans);
     //console.log(module.Asyncify);

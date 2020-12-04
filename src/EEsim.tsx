@@ -2,6 +2,8 @@ import React, { useEffect } from "react";
 import Simulation from "./sim/simulation";
 import * as circuits from "./sim/circuits";
 
+import Editor, { monaco } from "@monaco-editor/react";
+
 import Plot from "./plot";
 import DisplayBox from "./box";
 import type { ResultType, VariableType } from "./sim/readOutput";
@@ -113,9 +115,13 @@ export default function EEsim(): JSX.Element {
   };
 
   const btRun = () => {
-    store.setItem("netList", netList);
+    const monacoValue = (monacoValueGetter.current() as unknown) as string;
+    console.log("Monaco 🎨:", monacoValue);
+
+    //setNetList(monacoValue);
+    store.setItem("netList", monacoValue);
     if (sim) {
-      sim.setNetList(netList);
+      sim.setNetList(monacoValue);
       sim.runSim();
     } else {
       sim = new Simulation();
@@ -163,22 +169,25 @@ export default function EEsim(): JSX.Element {
     setTabIndex(index);
   };
 
+  const monacoValueGetter = React.useRef(() => {});
+
+  const handleMonaco = (valueGetFunction: () => {}, e: object) => {
+    monacoValueGetter.current = valueGetFunction;
+  };
+
   return (
     <ChakraProvider theme={customTheme}>
       <div>
         <Box p={2}>
           <div style={{ display: "flex", width: "100%" }}>
-            <Textarea
-              aria-label="netlist"
-              bg="gray.900"
-              fontSize="0.9em"
-              rows={15}
+            <Editor
+              height="30vh"
+              language="plaintext"
+              editorDidMount={handleMonaco}
               value={netList}
-              onChange={(e) => {
-                setNetList(e.target.value);
-              }}
-              spellCheck={false}
+              theme="vs-dark"
             />
+
             <div style={{ width: "30%", marginLeft: "5%" }}>
               <DisplayBox displayData={displayData ? displayData : []} onChange={change} />
             </div>
