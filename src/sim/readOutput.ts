@@ -5,19 +5,23 @@
 export type ResultType = {
   param: ParamType;
   header: string;
-  data: number[][];
+  data: RealDataType | ComplexDataType;
 };
 
 export type ParamType = {
   varNum: number;
   pointNum: number;
   variables: VariableType[];
+  dataType: "real" | "complex";
 };
 
 export type VariableType = {
   name: string;
   type: "voltage" | "current" | "time";
 };
+
+export type RealDataType = number[][];
+export type ComplexDataType = { real: number; img: number }[][];
 
 export default function readOutput(rawData: Uint8Array): ResultType {
   //
@@ -34,11 +38,6 @@ export default function readOutput(rawData: Uint8Array): ResultType {
   console.log(header);
   console.log(param);
 
-  const out2 = new Array(param.varNum)
-    .fill(0)
-    .map(() => new Array(param.pointNum).fill(0)) as number[][];
-  //https://gregstoll.com/~gregstoll/floattohex/
-
   const view = new DataView(rawData.buffer, offset + 8);
   console.log("😬");
 
@@ -48,22 +47,42 @@ export default function readOutput(rawData: Uint8Array): ResultType {
     //console.log(`float -> ${d}`);
   }
 
-  /*const data2 = data.subarray(offset + 8, data.byteLength);
-      for (let i = 0; i < data2.byteLength; i++) {
-        const a = data2[i];
-        str = str + `${i}: ${a} -> ${String.fromCharCode(a)}\n`;
-      }*/
+  if (param.dataType == "complex") {
+    const out2 = new Array(param.varNum)
+      .fill(0)
+      .map(() => new Array(param.pointNum).fill(0)) as ComplexDataType;
+    //https://gregstoll.com/~gregstoll/floattohex/
+    //
+    for (let i = 0; i < out.length; i = i + 2) {
+      const complex = { real: out[i], img: out[i + 1] };
+      const index = i / 2;
+      out2[index % param.varNum][Math.floor(index / param.varNum)] = { ...complex };
+    }
+    console.log(out2);
 
-  out.forEach((e, i) => {
-    out2[i % param.varNum][Math.floor(i / param.varNum)] = e;
-  });
-  console.log(out2);
+    return {
+      param: param,
+      header: header,
+      data: out2 as ComplexDataType,
+    } as ResultType;
+  } else {
+    // Real
+    const out2 = new Array(param.varNum)
+      .fill(0)
+      .map(() => new Array(param.pointNum).fill(0)) as RealDataType;
+    //https://gregstoll.com/~gregstoll/floattohex/
+    //
+    out.forEach((e, i) => {
+      out2[i % param.varNum][Math.floor(i / param.varNum)] = e;
+    });
+    //console.log(out2);
 
-  return {
-    param: param,
-    header: header,
-    data: out2,
-  } as ResultType;
+    return {
+      param: param,
+      header: header,
+      data: out2 as RealDataType,
+    } as ResultType;
+  }
 
   /*out.forEach((e, i) => {
     str = str + `${i}: ${e.toExponential()}\n`;
@@ -80,6 +99,7 @@ function findParams(header: string): ParamType {
 
   const varNum = parseInt(lines[4].split(": ")[1], 10);
   const pointNum = parseInt(lines[5].split(": ")[1], 10);
+  const dataType = lines[3].split(": ")[1].indexOf("complex") > -1 ? "complex" : "real";
 
   //console.log("🤔", lines);
   //console.log(lines.indexOf("Variables:"));
@@ -99,7 +119,10 @@ function findParams(header: string): ParamType {
     // why????????????????
     // https://www.digitalocean.com/community/tutorials/copying-objects-in-javascript
     variables: [...varList],
+    dataType: dataType,
   } as ParamType;
+
+  console.log("param->", param);
 
   return param;
 }

@@ -19,7 +19,7 @@ module.exports = {
     /* ... */
   },
   buildOptions: {
-    clean: false,
+    clean: true,
   },
   proxy: {
     /* ... */
