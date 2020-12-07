@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import WebGlPlot, { ColorRGBA, WebglLine } from "./webglplot/webglplot";
 import { calcContrast, calcLuminance } from "./calcContrast";
 import type { DisplayDataType } from "./EEsim";
-import type { ResultType } from "./sim/readOutput";
+import type { RealDataType, ResultType } from "./sim/readOutput";
 import { Box } from "@chakra-ui/react";
 
 type PlotType = {
@@ -213,10 +213,10 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
 
     const possibleSweep = results ? results.header.indexOf("sweep") > 0 : false;
     if (possibleSweep) {
-      sweepLine(data);
+      sweepLine(data as RealDataType);
       //normalLine(data);
     } else {
-      normalLine(data);
+      normalLine(data as RealDataType);
     }
 
     //?????????????????????
