@@ -73,7 +73,7 @@ Use your mouse to pan & zoom on the plot. left click for area **zoom** and right
 
 ## Transistor Models
 
-See [Transistor Models]() for more information.
+See [Transistor Models](https://github.com/danchitnis/EEsim/blob/main/models.md) for more information.
 
 ## Documentation
 
