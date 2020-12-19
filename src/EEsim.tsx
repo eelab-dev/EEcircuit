@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import Simulation from "./sim/simulation";
 import * as circuits from "./sim/circuits";
 
-import Editor, { monaco } from "@monaco-editor/react";
+import EditorCustom from "./editor/editorCustom";
 
 import Plot from "./plot";
 import DisplayBox from "./box";
@@ -115,13 +115,13 @@ export default function EEsim(): JSX.Element {
   };
 
   const btRun = () => {
-    const monacoValue = (monacoValueGetter.current() as unknown) as string;
-    console.log("Monaco 🎨:", monacoValue);
+    //const monacoValue = (monacoValueGetter.current() as unknown) as string;
+    //console.log("Monaco 🎨:", monacoValue);
 
     //setNetList(monacoValue);
-    store.setItem("netList", monacoValue);
+    store.setItem("netList", netList);
     if (sim) {
-      sim.setNetList(monacoValue);
+      sim.setNetList(netList);
       sim.runSim();
     } else {
       sim = new Simulation();
@@ -169,21 +169,15 @@ export default function EEsim(): JSX.Element {
     setTabIndex(index);
   };
 
-  const monacoValueGetter = React.useRef(() => {});
-
-  const handleMonaco = (valueGetFunction: () => {}, e: object) => {
-    monacoValueGetter.current = valueGetFunction;
-  };
-
   return (
     <ChakraProvider theme={customTheme}>
       <div>
         <Box p={2}>
           <div style={{ display: "flex", width: "100%" }}>
-            <Editor
+            <EditorCustom
               height="30vh"
-              language="plaintext"
-              editorDidMount={handleMonaco}
+              width="100%"
+              language="spice"
               value={netList}
               theme="vs-dark"
             />
