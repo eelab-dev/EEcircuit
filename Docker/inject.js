@@ -2,7 +2,7 @@
 //https://stackoverflow.com/questions/14177087/replace-a-string-in-a-file-with-nodejs
 const chalk = require("chalk");
 
-const filename = "./Docker/build/spice.js";
+const filename = "./build/spice.js";
 
 const text1 = `result = window.prompt("Input: ");`;
 const text1rep = `
@@ -59,7 +59,6 @@ let fs = require("fs");
 fs.readFile(filename, "utf8", function (err, data) {
   if (err) {
     return console.log(err);
-    process.exit(1);
   }
   let result = data;
 
