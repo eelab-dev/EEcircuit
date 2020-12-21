@@ -36,7 +36,8 @@ jobs:
     - name: Inject JS
       run: |
         yarn install
-        node ./Docker/inject.js
+        cd image
+        node ~/Docker/inject.js
 
         
     - name: Archive Output
