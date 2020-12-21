@@ -169,6 +169,10 @@ export default function EEsim(): JSX.Element {
     setTabIndex(index);
   };
 
+  const handleEditor = (value: string | undefined) => {
+    value ? setNetList(value) : {};
+  };
+
   return (
     <ChakraProvider theme={customTheme}>
       <div>
@@ -179,6 +183,7 @@ export default function EEsim(): JSX.Element {
               width="100%"
               language="spice"
               value={netList}
+              valueChanged={handleEditor}
               theme="vs-dark"
             />
 
