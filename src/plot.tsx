@@ -37,6 +37,11 @@ type CrossXY = {
   y: number;
 };
 
+type PlotOptions = {
+  crosshair: boolean;
+  info: boolean;
+};
+
 let wglp: WebGlPlot;
 let lineMinMax = [{ min: 0, max: 1 }] as TypeLineMinMax[];
 let sweepIndices = [] as number[]; //already has one
@@ -47,6 +52,7 @@ const crossYLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 
 function Plot({ results, displayData }: PlotType): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
+  const [plotOptions, setPlotOptions] = useState<PlotOptions>({ crosshair: true, info: false });
 
   const [crossXY, setCrossXY] = useState<CrossXY>({ x: 0, y: 0 });
 
@@ -194,18 +200,6 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
         lineMinMax.push({ min: minY, max: maxY });
       }
     }
-
-    /*sweepIndices.forEach((e) => {
-      console.log("sweep->", data[0][e]);
-    });*/
-
-    /*for (let i = 0; i < data[0].length; i++) {
-      dataSweep[0][sweepIndex][i] = data[0][i + sweepOffset];
-      if (i > 1 && data[0][i] < data[0][i - 1]) {
-        sweepIndex++;
-        sweepOffset = i;
-      }
-    }*/
   };
 
   useEffect(() => {
@@ -353,7 +347,7 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
     }
     /*****************cross hair************** */
     const canvas = canvasMain.current;
-    if (canvas) {
+    if (canvas && plotOptions.crosshair) {
       const x =
         (1 / wglp.gScaleX) *
         ((2 * ((e.pageX - canvas.offsetLeft) * devicePixelRatio - canvas.width / 2)) /
@@ -407,6 +401,21 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
     e.preventDefault();
   };
 
+  const crosshairBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let o = { ...plotOptions };
+    o.crosshair = e.target.checked;
+    setPlotOptions(o);
+  };
+
+  useEffect(() => {
+    crossXLine.visible = plotOptions.crosshair;
+    crossYLine.visible = plotOptions.crosshair;
+    const canvas = canvasMain.current;
+    if (canvas) {
+      canvas.style.cursor = plotOptions.crosshair ? "crosshair" : "hand";
+    }
+  }, [plotOptions]);
+
   const canvasStyle = {
     width: "100%",
     height: "60vh",
@@ -415,9 +424,17 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
   return (
     <>
       <HStack>
-        <Checkbox defaultIsChecked>Crosshair</Checkbox>
-        <Tag>{`X: ${crossXY.x.toExponential(3)}`}</Tag>
-        <Tag>{`Y: ${crossXY.y.toExponential(3)}`}</Tag>
+        <Checkbox defaultIsChecked onChange={crosshairBoxHandle}>
+          Crosshair
+        </Checkbox>
+        {plotOptions.crosshair ? (
+          <>
+            <Tag colorScheme="teal">{`X: ${crossXY.x.toExponential(3)}`}</Tag>
+            <Tag colorScheme="teal">{`Y: ${crossXY.y.toExponential(3)}`}</Tag>
+          </>
+        ) : (
+          <></>
+        )}
       </HStack>
 
       <Box bg="gray.900">
