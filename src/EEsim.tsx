@@ -14,6 +14,7 @@ import {
   ChakraProvider,
   Checkbox,
   Divider,
+  Stack,
   Tab,
   TabList,
   TabPanel,
@@ -174,6 +175,26 @@ export default function EEsim(): JSX.Element {
     value ? setNetList(value) : {};
   };
 
+  const handleDeSelectButton = () => {
+    if (displayData) {
+      const disp = [...displayData];
+      disp.forEach((e) => {
+        e.visible = false;
+      });
+      setDisplayData(disp);
+    }
+  };
+
+  const handleSelectAllButton = () => {
+    if (displayData) {
+      const disp = [...displayData];
+      disp.forEach((e) => {
+        e.visible = true;
+      });
+      setDisplayData(disp);
+    }
+  };
+
   return (
     <ChakraProvider theme={customTheme}>
       <div>
@@ -189,6 +210,14 @@ export default function EEsim(): JSX.Element {
             />
 
             <div style={{ width: "30%", marginLeft: "5%" }}>
+              <Stack direction="row" spacing={2} align="stretch" width="100%" marginBottom="0.5em">
+                <Button colorScheme="blue" onClick={handleSelectAllButton}>
+                  Select all
+                </Button>
+                <Button colorScheme="blue" onClick={handleDeSelectButton}>
+                  De-select all
+                </Button>
+              </Stack>
               <DisplayBox displayData={displayData ? displayData : []} onChange={change} />
             </div>
           </div>
