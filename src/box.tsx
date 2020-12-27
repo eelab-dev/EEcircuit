@@ -24,7 +24,15 @@ function DisplayBox({ displayData, onChange }: Props): JSX.Element {
   } as React.CSSProperties;
 
   return (
-    <Box borderWidth="1px" borderRadius="md" maxW="sm" p={4} bg="gray.700" width="80%">
+    <Box
+      borderWidth="1px"
+      borderRadius="md"
+      maxW="sm"
+      p={4}
+      bg="gray.700"
+      width="80%"
+      maxHeight="25vh"
+      overflowY="scroll">
       <Stack spacing={1} direction="column">
         {list.map((e, i) => (
           <Checkbox key={e.index} onChange={onChange} name={e.name} isChecked={e.visible}>
