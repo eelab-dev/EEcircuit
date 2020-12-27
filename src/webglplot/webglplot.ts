@@ -210,6 +210,14 @@ export default class WebGLPlot {
     this.updateLines(this.linesAux);
   }
 
+  public updateData(): void {
+    this.updateLines(this.linesData);
+  }
+
+  public updateAux(): void {
+    this.updateLines(this.linesAux);
+  }
+
   public clear(): void {
     // Clear the canvas  //??????????????????
     //this.webgl.clearColor(0.1, 0.1, 0.1, 1.0);
