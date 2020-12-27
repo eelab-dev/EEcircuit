@@ -142,7 +142,7 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
         minY = minY < y ? minY : y;
       }
 
-      wglp.addLine(line);
+      wglp.addDataLine(line);
       lineMinMax.push({ min: minY, max: maxY });
     }
   };
@@ -196,7 +196,7 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
           maxY = maxY > y ? maxY : y;
           minY = minY < y ? minY : y;
         }
-        wglp.addLine(line);
+        wglp.addDataLine(line);
         lineMinMax.push({ min: minY, max: maxY });
       }
     }
@@ -206,7 +206,7 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
     sweepIndices = [];
     wglp.removeAllLines();
     zoomRect.loop = true;
-    wglp.addLine(zoomRect); //change this to Aux !!!!!!
+    wglp.addAuxLine(zoomRect); //change this to Aux !!!!!!
     wglp.addAuxLine(crossXLine);
     wglp.addAuxLine(crossYLine);
 
@@ -226,7 +226,7 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
 
     //?????????????????????
 
-    console.log("line-->", lineMinMax);
+    console.log("line-->", wglp.linesData);
 
     scaleUpdate(findMinMax());
   }, [results]);
@@ -235,22 +235,21 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
     //console.log("plot->DD->", displayData);
     //console.log("plot->DD->", wglp.lines);
 
-    //????????????????????????????????????????????? +1
-
     if (sweepIndices.length > 0) {
-      if (displayData && wglp.linesData.length == sweepIndices.length * displayData.length + 1) {
+      if (displayData && wglp.linesData.length == sweepIndices.length * displayData.length) {
         console.log("plot->DD->", "it is sweep");
         displayData.forEach((e) => {
           for (let i = 0; i < sweepIndices.length; i++) {
-            wglp.linesData[(e.index - 1) * sweepIndices.length + i + 1].visible = e.visible;
+            wglp.linesData[(e.index - 1) * sweepIndices.length + i].visible = e.visible;
           }
         });
         scaleUpdate(findMinMax());
       }
     } else {
-      if (displayData && wglp.linesData.length == displayData.length + 1) {
+      if (displayData && wglp.linesData.length == displayData.length) {
         displayData.forEach((e) => {
-          wglp.linesData[e.index].visible = e.visible;
+          //first item is time
+          wglp.linesData[e.index - 1].visible = e.visible;
         });
         scaleUpdate(findMinMax());
       }
@@ -268,10 +267,10 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
     //???????????????????????
     let minY = 10000;
     let maxY = -10000;
-    // first line[0] is RectZ
-    for (let i = 1; i < wglp.linesData.length; i++) {
+
+    for (let i = 0; i < wglp.linesData.length; i++) {
       if (wglp.linesData[i].visible) {
-        const e = lineMinMax[i - 1];
+        const e = lineMinMax[i];
         maxY = maxY > e.max ? maxY : e.max;
         minY = minY < e.min ? minY : e.min;
       }
