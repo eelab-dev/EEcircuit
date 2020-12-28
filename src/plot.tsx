@@ -4,6 +4,8 @@ import { calcContrast, calcLuminance } from "./calcContrast";
 import type { DisplayDataType } from "./EEsim";
 import type { RealDataType, ResultType } from "./sim/readOutput";
 import { Box, Checkbox, HStack, Tag } from "@chakra-ui/react";
+import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/react";
+import type { ReactJSXElement } from "@emotion/react/types/jsx-namespace";
 
 type PlotType = {
   results?: ResultType;
@@ -39,7 +41,7 @@ type CrossXY = {
 
 type PlotOptions = {
   crosshair: boolean;
-  info: boolean;
+  sweepSlider: boolean;
 };
 
 let wglp: WebGlPlot;
@@ -52,7 +54,11 @@ const crossYLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 
 function Plot({ results, displayData }: PlotType): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
-  const [plotOptions, setPlotOptions] = useState<PlotOptions>({ crosshair: true, info: false });
+  const [plotOptions, setPlotOptions] = useState<PlotOptions>({
+    crosshair: true,
+    sweepSlider: false,
+  });
+  const [isSweep, SetIsSweep] = useState(false);
 
   const [crossXY, setCrossXY] = useState<CrossXY>({ x: 0, y: 0 });
 
@@ -173,6 +179,9 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
           dataSweep[col][sweep][i] = data[col][sweep * sweepIndices[0] + i];
         }
       }
+    }
+    if (sweepIndices.length > 0) {
+      SetIsSweep(true);
     }
     //console.log("sweep-->", sweepIndices);
     //console.log("sweep-->", dataSweep);
@@ -415,14 +424,54 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
     }
   }, [plotOptions]);
 
+  const sweepCheckBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let o = { ...plotOptions };
+    o.sweepSlider = e.target.checked;
+    setPlotOptions(o);
+  };
+
+  const handleSweepSlider = (value: number) => {
+    if (displayData) {
+      displayData.forEach((e) => {
+        if (e.visible) {
+          for (let i = 0; i < sweepIndices.length; i++) {
+            wglp.linesData[(e.index - 1) * sweepIndices.length + i].color = new ColorRGBA(
+              0,
+              0.3,
+              0.3,
+              0.5
+            );
+          }
+          wglp.linesData[(e.index - 1) * sweepIndices.length + value].color = new ColorRGBA(
+            0.9,
+            0.9,
+            0,
+            1
+          );
+        }
+      });
+    }
+  };
+
   const canvasStyle = {
     width: "100%",
     height: "60vh",
   };
 
+  const SliderSweep = (): ReactJSXElement => {
+    return <div></div>;
+  };
+
   return (
     <>
       <HStack>
+        {isSweep ? (
+          <Checkbox defaultIsChecked={false} onChange={sweepCheckBoxHandle}>
+            Sweep slider
+          </Checkbox>
+        ) : (
+          <></>
+        )}
         <Checkbox defaultIsChecked onChange={crosshairBoxHandle}>
           Crosshair
         </Checkbox>
@@ -435,6 +484,21 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
           <></>
         )}
       </HStack>
+      {plotOptions.sweepSlider ? (
+        <Slider
+          aria-label="slider-ex-1"
+          defaultValue={0}
+          min={0}
+          max={sweepIndices.length}
+          onChange={handleSweepSlider}>
+          <SliderTrack>
+            <SliderFilledTrack />
+          </SliderTrack>
+          <SliderThumb />
+        </Slider>
+      ) : (
+        <></>
+      )}
 
       <Box bg="gray.900">
         <canvas
