@@ -11,6 +11,7 @@
 export type ParserType = {
   dc: boolean;
   sweep: boolean;
+  sweepVar: string;
   sweepStart: number;
   sweepEnd: number;
   sweepStep: number;
@@ -20,6 +21,7 @@ const getParser = (netList: string): ParserType => {
   const parseResults = {
     dc: false,
     sweep: false,
+    sweepVar: "",
     sweepStart: 0,
     sweepEnd: 0,
     sweepStep: 0,
@@ -29,14 +31,16 @@ const getParser = (netList: string): ParserType => {
 
   if (dcLine) {
     parseResults.dc = true;
-    const dcLineDigits = (dcLine[0] + " ").match(/-?\d*\.?\d+?[\sGMkmunp]/g);
-    console.log("parser->dcsweep", dcLineDigits);
-    if (dcLineDigits && dcLineDigits.length == 6) {
+    //const dcLineDigits = (dcLine[0] + " ").match(/-?\d*\.?\d+?[\sGMkmunp]/g);
+    const s = dcLine[0].toString().split(" ");
+    if (s.length == 9) {
       parseResults.sweep = true;
-      parseResults.sweepStart = parseFloat(dcLineDigits[3]);
-      parseResults.sweepEnd = parseFloat(dcLineDigits[4]);
-      parseResults.sweepStep = parseFloat(dcLineDigits[5]);
+      parseResults.sweepVar = s[5];
+      parseResults.sweepStart = parseFloat(s[6]);
+      parseResults.sweepEnd = parseFloat(s[7]);
+      parseResults.sweepStep = parseFloat(s[8]);
     }
+    console.log("parser->", s);
   }
 
   console.log("parser->", parseResults);

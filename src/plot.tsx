@@ -483,7 +483,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         )}
         {plotOptions.sweepSlider ? (
           <>
-            <Tag colorScheme="teal">{`X: ${sliderValue.toExponential(3)}`}</Tag>
+            <Tag colorScheme="teal">{`${parser?.sweepVar}= ${sliderValue.toExponential(3)}`}</Tag>
           </>
         ) : (
           <></>
