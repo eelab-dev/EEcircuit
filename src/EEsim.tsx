@@ -24,6 +24,7 @@ import {
 } from "@chakra-ui/react";
 import { Button, ButtonGroup } from "@chakra-ui/react";
 import { extendTheme } from "@chakra-ui/react";
+import getParser, { ParserType } from "./parser";
 
 let sim: Simulation;
 const store = window.localStorage;
@@ -48,6 +49,7 @@ export default function EEsim(): JSX.Element {
     data: [],
   });*/
   const [results, setResults] = React.useState<ResultType>();
+  const [parser, setParser] = React.useState<ParserType>();
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
   const [tabIndex, setTabIndex] = React.useState(0);
@@ -121,6 +123,7 @@ export default function EEsim(): JSX.Element {
     //console.log("Monaco 🎨:", monacoValue);
 
     //setNetList(monacoValue);
+    setParser(getParser(netList));
     store.setItem("netList", netList);
     if (sim) {
       sim.setNetList(netList);
@@ -241,7 +244,7 @@ export default function EEsim(): JSX.Element {
 
           <TabPanels>
             <TabPanel>
-              <Plot results={results} displayData={displayData} />
+              <Plot results={results} parser={parser} displayData={displayData} />
             </TabPanel>
 
             <TabPanel>
