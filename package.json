@@ -26,7 +26,7 @@
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
     "@types/snowpack-env": "^2.3.3",
-    "@typescript-eslint/eslint-plugin": "^4.11.0",
+    "@typescript-eslint/eslint-plugin": "^4.11.1",
     "eslint": "^7.16.0",
     "prettier": "^2.2.1",
     "serve": "^11.3.2",
@@ -35,7 +35,7 @@
     "vercel": "^21.0.1"
   },
   "dependencies": {
-    "@chakra-ui/react": "^1.0.4",
+    "@chakra-ui/react": "^1.1.0",
     "@emotion/react": "^11.1.4",
     "@emotion/styled": "^11.0.0",
     "framer-motion": "^3.1.1",

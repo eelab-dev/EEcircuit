@@ -6,9 +6,11 @@ import type { RealDataType, ResultType } from "./sim/readOutput";
 import { Box, Checkbox, HStack, Tag } from "@chakra-ui/react";
 import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/react";
 import type { ReactJSXElement } from "@emotion/react/types/jsx-namespace";
+import type { ParserType } from "./parser";
 
 type PlotType = {
   results?: ResultType;
+  parser?: ParserType;
   displayData?: DisplayDataType[];
 };
 
@@ -52,13 +54,15 @@ const zoomRect = new WebglLine(new ColorRGBA(1, 1, 1, 1), 4);
 const crossXLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 const crossYLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 
-function Plot({ results, displayData }: PlotType): JSX.Element {
+function Plot({ results, parser, displayData }: PlotType): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
   const [plotOptions, setPlotOptions] = useState<PlotOptions>({
     crosshair: true,
     sweepSlider: false,
   });
   const [isSweep, SetIsSweep] = useState(false);
+
+  const [sliderValue, SetSliderValue] = useState(0);
 
   const [crossXY, setCrossXY] = useState<CrossXY>({ x: 0, y: 0 });
 
@@ -151,6 +155,7 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
       wglp.addDataLine(line);
       lineMinMax.push({ min: minY, max: maxY });
     }
+    SetIsSweep(false);
   };
 
   const sweepLine = (data: number[][]) => {
@@ -451,6 +456,10 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
         }
       });
     }
+    if (parser) {
+      const n = parser.sweepStart + parser.sweepStep * value;
+      SetSliderValue(n);
+    }
   };
 
   const canvasStyle = {
@@ -469,6 +478,13 @@ function Plot({ results, displayData }: PlotType): JSX.Element {
           <Checkbox defaultIsChecked={false} onChange={sweepCheckBoxHandle}>
             Sweep slider
           </Checkbox>
+        ) : (
+          <></>
+        )}
+        {plotOptions.sweepSlider ? (
+          <>
+            <Tag colorScheme="teal">{`X: ${sliderValue.toExponential(3)}`}</Tag>
+          </>
         ) : (
           <></>
         )}
