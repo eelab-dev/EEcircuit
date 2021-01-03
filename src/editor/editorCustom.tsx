@@ -142,7 +142,15 @@ const EditorCustom = ({
         // here you could do a server side lookup
         return [
           {
-            label: "tran",
+            label: ".include",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "The Lodash library exported as Node.js modules.",
+            insertText: "include ${1:model_file} ",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
+          {
+            label: ".tran",
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "The Lodash library exported as Node.js modules.",
             insertText: "tran ${1:step} ${2:max_time} ",
@@ -150,7 +158,7 @@ const EditorCustom = ({
             range: range,
           },
           {
-            label: "dc",
+            label: ".dc",
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText: "dc ${1:source} ${2:min_voltage} ${3:max_voltage} ${4:step} ",
@@ -158,26 +166,27 @@ const EditorCustom = ({
             range: range,
           },
           {
-            label: "dc (sweep)",
+            label: ".dc (sweep)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText:
-              "dc ${1:source} ${2:min_voltage} ${3:max_voltage} ${4:step} ${5:source} ${6:min_voltage} ${7:max_voltage} ${8:step} ",
+              "dc ${1:source_1st} ${2:min_voltage} ${3:max_voltage} ${4:step} ${5:source_2nd} ${6:min_voltage} ${7:max_voltage} ${8:step} ",
             insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range: range,
           },
-          {
+          /*{
             label: "m (mosfet)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText: "m${1:number} ${2:d} ${3:g} ${4:s} ${5:b} ${6:model} W=${7:w} L=${8:l} ",
             insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range: range,
-          },
+          },*/
         ];
       };
 
       monacoEditor.languages.registerCompletionItemProvider("spice", {
+        triggerCharacters: ["."],
         provideCompletionItems: function (model, position) {
           // find out if we are completing a property in the 'dependencies' object.
           let textUntilPosition = model.getValueInRange({
@@ -186,10 +195,6 @@ const EditorCustom = ({
             endLineNumber: position.lineNumber,
             endColumn: position.column,
           });
-          let match = true;
-          if (!match) {
-            return { suggestions: [] };
-          }
           let word = model.getWordUntilPosition(position);
           let range = {
             startLineNumber: position.lineNumber,
@@ -197,6 +202,12 @@ const EditorCustom = ({
             startColumn: word.startColumn,
             endColumn: word.endColumn,
           };
+          console.log("monaco->", position, word);
+          let match = word.startColumn == 2;
+          if (!match) {
+            return { suggestions: [] };
+          }
+
           return {
             suggestions: createDependencyProposals(range),
           };

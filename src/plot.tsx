@@ -14,8 +14,10 @@ type PlotType = {
   displayData?: DisplayDataType[];
 };
 
-type TypeLineMinMax = {
+type LineMinMaxType = {
   min: number;
+  maxNeg: number;
+  minPos: number;
   max: number;
 };
 
@@ -47,7 +49,7 @@ type PlotOptions = {
 };
 
 let wglp: WebGlPlot;
-let lineMinMax = [{ min: 0, max: 1 }] as TypeLineMinMax[];
+let lineMinMax = [{ min: 0, max: 1 }] as LineMinMaxType[];
 let sweepIndices = [] as number[]; //already has one
 
 const zoomRect = new WebglLine(new ColorRGBA(1, 1, 1, 1), 4);
@@ -136,25 +138,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
 
   const normalLine = (data: number[][]) => {
     lineMinMax = [];
-
-    for (let col = 1; col < data.length; col++) {
-      const color = getColor();
-      const line = new WebglLine(color, data[0].length);
-      const maxX = data[0][data[0].length - 1];
-      let minY = 100000;
-      let maxY = -100000;
-
-      for (let i = 0; i < data[0].length; i++) {
-        line.setX(i, data[0][i] / maxX);
-        const y = data[col][i];
-        line.setY(i, y);
-        maxY = maxY > y ? maxY : y;
-        minY = minY < y ? minY : y;
-      }
-
-      wglp.addDataLine(line);
-      lineMinMax.push({ min: minY, max: maxY });
-    }
+    getLineMinMaxNormal(data);
     SetIsSweep(false);
   };
 
@@ -192,12 +176,41 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     //console.log("sweep-->", dataSweep);
 
     //?????????????????????
-
     lineMinMax = [];
+    getLineMinMaxSweep(dataSweep);
+  };
 
+  const getLineMinMaxNormal = (data: number[][]) => {
+    for (let col = 1; col < data.length; col++) {
+      const color = getColor();
+      const line = new WebglLine(color, data[0].length);
+      const maxX = data[0][data[0].length - 1];
+      let minY = 100000;
+      let maxY = -100000;
+      let minPos = maxY;
+      let maxNeg = minY;
+
+      for (let i = 0; i < data[0].length; i++) {
+        line.setX(i, data[0][i] / maxX);
+        const y = data[col][i];
+        line.setY(i, y);
+        maxY = maxY > y ? maxY : y;
+        minY = minY < y ? minY : y;
+        minPos = minY < y && y > 0 ? minPos : y;
+        maxNeg = maxY > y && y < 0 ? maxNeg : y;
+      }
+
+      wglp.addDataLine(line);
+      lineMinMax.push({ min: minY, max: maxY, minPos: minPos, maxNeg: maxNeg });
+    }
+  };
+
+  const getLineMinMaxSweep = (dataSweep: number[][][]) => {
     for (let col = 1; col < dataSweep.length; col++) {
       let minY = 100000;
       let maxY = -100000;
+      let minPos = 10000;
+      let maxNeg = -10000;
       for (let sweep = 0; sweep < dataSweep[0].length; sweep++) {
         const color = getColor();
         const line = new WebglLine(color, dataSweep[0][0].length);
@@ -209,9 +222,15 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
           line.setY(i, y);
           maxY = maxY > y ? maxY : y;
           minY = minY < y ? minY : y;
+          if (y > 0) {
+            minPos = minPos < y ? minPos : y;
+          }
+          if (y < 0) {
+            maxNeg = maxNeg > y ? maxNeg : y;
+          }
         }
         wglp.addDataLine(line);
-        lineMinMax.push({ min: minY, max: maxY });
+        lineMinMax.push({ min: minY, max: maxY, minPos: minPos, maxNeg: maxNeg });
       }
     }
   };
@@ -242,7 +261,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
 
     console.log("line-->", wglp.linesData);
 
-    scaleUpdate(findMinMax());
+    scaleUpdate(findMinMaxGlobal());
   }, [results]);
 
   useEffect(() => {
@@ -257,7 +276,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
             wglp.linesData[(e.index - 1) * sweepIndices.length + i].visible = e.visible;
           }
         });
-        scaleUpdate(findMinMax());
+        scaleUpdate(findMinMaxGlobal());
       }
     } else {
       if (displayData && wglp.linesData.length == displayData.length) {
@@ -265,7 +284,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
           //first item is time
           wglp.linesData[e.index - 1].visible = e.visible;
         });
-        scaleUpdate(findMinMax());
+        scaleUpdate(findMinMaxGlobal());
       }
     }
 
@@ -277,7 +296,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     maxY: number;
   };
 
-  const findMinMax = (): ScaleType => {
+  const findMinMaxGlobal = (): ScaleType => {
     //???????????????????????
     let minY = 10000;
     let maxY = -10000;
@@ -471,6 +490,34 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     return <div></div>;
   };
 
+  const handleLog10YCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
+    wglp.gLog10Y = e.target.checked;
+
+    if (e.target.checked) {
+      const a = { ...findMinMaxGlobalLog10() };
+      console.log("log->", a);
+      scaleUpdate({ minY: Math.log10(a.minY), maxY: Math.log10(a.maxY) } as ScaleType);
+    } else {
+      const a = { ...findMinMaxGlobal() };
+      scaleUpdate({ minY: a.minY, maxY: a.maxY } as ScaleType);
+    }
+  };
+
+  const findMinMaxGlobalLog10 = (): ScaleType => {
+    //???????????????????????
+    let minPos = 10000;
+    let maxY = -10000;
+
+    for (let i = 0; i < wglp.linesData.length; i++) {
+      if (wglp.linesData[i].visible) {
+        const e = lineMinMax[i];
+        maxY = maxY > e.max ? maxY : e.max;
+        minPos = minPos < e.minPos ? minPos : e.minPos;
+      }
+    }
+    return { minY: minPos, maxY: maxY };
+  };
+
   return (
     <>
       <HStack>
@@ -493,12 +540,17 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         </Checkbox>
         {plotOptions.crosshair ? (
           <>
-            <Tag colorScheme="teal">{`X: ${crossXY.x.toExponential(3)}`}</Tag>
-            <Tag colorScheme="teal">{`Y: ${crossXY.y.toExponential(3)}`}</Tag>
+            <Tag w="7em" colorScheme="teal">{`X: ${crossXY.x.toExponential(3)}`}</Tag>
+            <Tag w="7em" colorScheme="teal">{`Y: ${crossXY.y.toExponential(3)}`}</Tag>
           </>
         ) : (
           <></>
         )}
+        <Checkbox defaultIsChecked={false}>Neg</Checkbox>
+        <Checkbox defaultIsChecked={false}>Log10X</Checkbox>
+        <Checkbox defaultIsChecked={false} onChange={handleLog10YCheckbox}>
+          Log10Y
+        </Checkbox>
       </HStack>
       {plotOptions.sweepSlider ? (
         <Slider
