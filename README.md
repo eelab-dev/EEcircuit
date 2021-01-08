@@ -67,6 +67,34 @@ vdd vdd 0 1.8
 .end
 ```
 
+### Sub-Circuits (subckt)
+
+```plaintext
+Ring Oscillator (Subckt)
+.include modelcard.CMOS90
+
+xinv1 1 2 vdd inv
+xinv2 2 3 vdd inv
+xinv3 3 1 vdd inv
+
+vdd vdd 0 1.8
+
+* Inverter block sub-circuit
+.subckt inv vin vout vdd
+	.param l = 90n
+	.param wp = 10.0u
+	.param wn = {wp * 1.5}
+
+	m1 vout vin 0 0 N90 W=wn L=l M=1
+	m2 vout vin vdd vdd P90 W=wp L=l M=1
+	c1 vout 0 0.1p
+.ends
+
+.tran  1p 5n
+
+.end
+```
+
 ## Usage
 
 Use your mouse to pan & zoom on the plot. left click for area **zoom** and right click hold and drag for **pan**. To reset the view **double click**.
