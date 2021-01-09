@@ -3,10 +3,11 @@ import WebGlPlot, { ColorRGBA, WebglLine } from "./webglplot/webglplot";
 import { calcContrast, calcLuminance } from "./calcContrast";
 import type { DisplayDataType } from "./EEsim";
 import type { RealDataType, ResultType } from "./sim/readOutput";
-import { Box, Checkbox, HStack, Tag } from "@chakra-ui/react";
+import { Box, Checkbox, Grid, GridItem, HStack, Tag } from "@chakra-ui/react";
 import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/react";
 import type { ReactJSXElement } from "@emotion/react/types/jsx-namespace";
 import type { ParserType } from "./parser";
+import Axis from "./axis";
 
 type PlotType = {
   results?: ResultType;
@@ -568,16 +569,25 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         <></>
       )}
 
-      <Box bg="gray.900">
-        <canvas
-          ref={canvasMain}
-          style={canvasStyle}
-          onMouseDown={mouseDown}
-          onMouseMove={mouseMove}
-          onMouseUp={mouseUp}
-          onDoubleClick={doubleClick}
-          onContextMenu={contextMenu}></canvas>
-      </Box>
+      <Grid templateRows="1fr 1.5em" templateColumns="1.5em 1fr" gap={0}>
+        <GridItem row={1} col={1} bg="tomato" />
+        <GridItem row={1} col={2} bg="papayawhip">
+          <Box bg="gray.900">
+            <canvas
+              ref={canvasMain}
+              style={canvasStyle}
+              onMouseDown={mouseDown}
+              onMouseMove={mouseMove}
+              onMouseUp={mouseUp}
+              onDoubleClick={doubleClick}
+              onContextMenu={contextMenu}></canvas>
+          </Box>
+        </GridItem>
+        <GridItem row={2} col={1} bg="papayawhip" />
+        <GridItem row={2} col={2} bg="tomato">
+          <Axis />
+        </GridItem>
+      </Grid>
     </>
   );
 }
