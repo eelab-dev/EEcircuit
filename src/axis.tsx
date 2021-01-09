@@ -39,14 +39,18 @@ const Axis = ({ scale, offset }: AxisType): JSX.Element => {
 
   useEffect(() => {
     if (ctx) {
-      const midpoint = -offset / scale;
       ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
-      ctx.font = "16px serif";
-      ctx.fillText(midpoint.toExponential(2), canvasSize.width / 2, 15);
-      //ctx.fillRect(10, 10, 100, 100);
-      ctx.moveTo(canvasSize.width / 2, 0);
-      ctx.lineTo(canvasSize.width / 2, 10);
-      ctx.stroke();
+      for (let i = 0; i < 6; i++) {
+        const midpoint = -(offset - i / 3 + 1) / scale;
+        const x = (i / 6) * canvasSize.width;
+
+        ctx.font = "16px serif";
+        ctx.fillText(midpoint.toExponential(2), x, 15);
+        //ctx.fillRect(10, 10, 100, 100);
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 10);
+        ctx.stroke();
+      }
     }
   }, [scale, offset]);
 
