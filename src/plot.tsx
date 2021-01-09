@@ -585,7 +585,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         </GridItem>
         <GridItem row={2} col={1} bg="papayawhip" />
         <GridItem row={2} col={2} bg="tomato">
-          <Axis />
+          <Axis scale={wglp ? wglp.gScaleX : 1} offset={wglp ? wglp.gOffsetX : 0} />
         </GridItem>
       </Grid>
     </>
