@@ -64,6 +64,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     sweepSlider: false,
   });
   const [isSweep, SetIsSweep] = useState(false);
+  const [isAxis, SetIsAxis] = useState(false);
 
   const [sliderValue, SetSliderValue] = useState(0);
 
@@ -375,7 +376,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     /************Mouse Drag Evenet********* */
     if (mouseDrag.started) {
       const moveX = (e.clientX - eOffset) * devicePixelRatio - mouseDrag.dragInitialX;
-      const offsetX = (wglp.gScaleY * moveX) / width;
+      const offsetX = moveX / width;
       wglp.gOffsetX = offsetX + mouseDrag.dragOffsetOld;
     }
     /*****************cross hair************** */
@@ -448,6 +449,10 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
       canvas.style.cursor = plotOptions.crosshair ? "crosshair" : "hand";
     }
   }, [plotOptions]);
+
+  const axisBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    SetIsAxis(e.target.checked);
+  };
 
   const sweepCheckBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
     let o = { ...plotOptions };
@@ -536,6 +541,9 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         ) : (
           <></>
         )}
+        <Checkbox defaultIsChecked={false} onChange={axisBoxHandle}>
+          Axis
+        </Checkbox>
         <Checkbox defaultIsChecked onChange={crosshairBoxHandle}>
           Crosshair
         </Checkbox>
@@ -569,8 +577,13 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         <></>
       )}
 
-      <Grid templateRows="1fr 1.5em" templateColumns="1.5em 1fr" gap={0}>
-        <GridItem row={1} col={1} bg="tomato" />
+      <Grid
+        templateRows={`1fr ${isAxis ? 1.5 : 0}em`}
+        templateColumns={`${isAxis ? 4 : 0}em 1fr`}
+        gap={0}>
+        <GridItem row={1} col={1} bg="tomato">
+          <Axis scale={wglp ? wglp.gScaleY : 1} offset={wglp ? wglp.gOffsetY : 0} axis="y" />
+        </GridItem>
         <GridItem row={1} col={2} bg="papayawhip">
           <Box bg="gray.900">
             <canvas
@@ -585,7 +598,11 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         </GridItem>
         <GridItem row={2} col={1} bg="papayawhip" />
         <GridItem row={2} col={2} bg="tomato">
-          <Axis scale={wglp ? wglp.gScaleX : 1} offset={wglp ? wglp.gOffsetX : 0} />
+          {isAxis ? (
+            <Axis scale={wglp ? wglp.gScaleX : 1} offset={wglp ? wglp.gOffsetX : 0} axis="x" />
+          ) : (
+            <></>
+          )}
         </GridItem>
       </Grid>
     </>
