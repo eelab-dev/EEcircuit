@@ -124,6 +124,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         { passive: false }
       );
     }
+    console.log("canvas->", "I am here! 🧨");
     ////bug fix see https://github.com/facebook/react/issues/14856#issuecomment-586781399
     return () => {
       canvasMain.current?.removeEventListener("wheel", (e) => {
@@ -380,8 +381,16 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
       wglp.gOffsetX = offsetX + mouseDrag.dragOffsetOld;
     }
     /*****************cross hair************** */
+
     const canvas = canvasMain.current;
+
     if (canvas && plotOptions.crosshair) {
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      canvas.width = canvas.clientWidth * devicePixelRatio;
+      canvas.height = canvas.clientHeight * devicePixelRatio;
+      console.log("canvas->", canvas.width / devicePixelRatio, ",", canvas.offsetLeft);
+      //???????????????????????????????????????????????????????????????????????????????????????
+
       const x =
         (1 / wglp.gScaleX) *
         ((2 * ((e.pageX - canvas.offsetLeft) * devicePixelRatio - canvas.width / 2)) /
@@ -426,7 +435,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
 
   const doubleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    wglp.gScaleX = 2;
+    wglp.gScaleX = 1;
     wglp.gOffsetX = -1;
     setZoomStatus({ scale: wglp.gScaleX, offset: wglp.gOffsetX });
   };
@@ -490,7 +499,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
   const canvasStyle = {
     width: "100%",
     height: "60vh",
-  };
+  } as React.CSSProperties;
 
   const SliderSweep = (): ReactJSXElement => {
     return <div></div>;
@@ -527,20 +536,6 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
   return (
     <>
       <HStack>
-        {isSweep ? (
-          <Checkbox defaultIsChecked={false} onChange={sweepCheckBoxHandle}>
-            Sweep slider
-          </Checkbox>
-        ) : (
-          <></>
-        )}
-        {plotOptions.sweepSlider ? (
-          <>
-            <Tag colorScheme="teal">{`${parser?.sweepVar}= ${sliderValue.toExponential(3)}`}</Tag>
-          </>
-        ) : (
-          <></>
-        )}
         <Checkbox defaultIsChecked={false} onChange={axisBoxHandle}>
           Axis
         </Checkbox>
@@ -555,6 +550,21 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         ) : (
           <></>
         )}
+        {isSweep ? (
+          <Checkbox defaultIsChecked={false} onChange={sweepCheckBoxHandle}>
+            Sweep slider
+          </Checkbox>
+        ) : (
+          <></>
+        )}
+        {plotOptions.sweepSlider ? (
+          <>
+            <Tag colorScheme="teal">{`${parser?.sweepVar}= ${sliderValue.toExponential(3)}`}</Tag>
+          </>
+        ) : (
+          <></>
+        )}
+
         <Checkbox defaultIsChecked={false}>Neg</Checkbox>
         <Checkbox defaultIsChecked={false}>Log10X</Checkbox>
         <Checkbox defaultIsChecked={false} onChange={handleLog10YCheckbox}>
@@ -579,10 +589,19 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
 
       <Grid
         templateRows={`1fr ${isAxis ? 1.5 : 0}em`}
-        templateColumns={`${isAxis ? 4 : 0}em 1fr`}
+        templateColumns={`${isAxis ? 5 : 0}em 1fr`}
         gap={0}>
-        <GridItem row={1} col={1} bg="tomato">
-          <Axis scale={wglp ? wglp.gScaleY : 1} offset={wglp ? wglp.gOffsetY : 0} axis="y" />
+        <GridItem row={1} col={1} bg="gray.900" borderRight="solid 2px">
+          {isAxis ? (
+            <Axis
+              scale={wglp ? wglp.gScaleY : 1}
+              offset={wglp ? wglp.gOffsetY : 0}
+              axis="y"
+              yHeight={canvasStyle.height as string}
+            />
+          ) : (
+            <></>
+          )}
         </GridItem>
         <GridItem row={1} col={2} bg="papayawhip">
           <Box bg="gray.900">
@@ -596,10 +615,15 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
               onContextMenu={contextMenu}></canvas>
           </Box>
         </GridItem>
-        <GridItem row={2} col={1} bg="papayawhip" />
-        <GridItem row={2} col={2} bg="tomato">
+        <GridItem row={2} col={1} bg="gray.900" borderTop="solid 2px" borderRight="solid 2px" />
+        <GridItem row={2} col={2} bg="gray.900" borderTop={`${isAxis ? "solid 2px" : ""}`}>
           {isAxis ? (
-            <Axis scale={wglp ? wglp.gScaleX : 1} offset={wglp ? wglp.gOffsetX : 0} axis="x" />
+            <Axis
+              scale={wglp ? wglp.gScaleX : 1}
+              offset={wglp ? wglp.gOffsetX : 0}
+              axis="x"
+              yHeight={canvasStyle.height as string}
+            />
           ) : (
             <></>
           )}
