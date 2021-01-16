@@ -16,10 +16,19 @@ type PlotType = {
 };
 
 type LineMinMaxType = {
-  min: number;
-  maxNeg: number;
-  minPos: number;
-  max: number;
+  minY: number;
+  maxYNeg: number;
+  minYPos: number;
+  maxY: number;
+  minX: number;
+  maxX: number;
+};
+
+type ScaleType = {
+  minY: number;
+  maxY: number;
+  minX: number;
+  maxX: number;
 };
 
 type MouseDrag = {
@@ -50,7 +59,7 @@ type PlotOptions = {
 };
 
 let wglp: WebGlPlot;
-let lineMinMax = [{ min: 0, max: 1 }] as LineMinMaxType[];
+let lineMinMax = [{ minY: 0, maxY: 1 }] as LineMinMaxType[];
 let sweepIndices = [] as number[]; //already has one
 
 const zoomRect = new WebglLine(new ColorRGBA(1, 1, 1, 1), 4);
@@ -187,14 +196,14 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     for (let col = 1; col < data.length; col++) {
       const color = getColor();
       const line = new WebglLine(color, data[0].length);
-      const maxX = data[0][data[0].length - 1];
+      //const maxX = data[0][data[0].length - 1];
       let minY = 100000;
       let maxY = -100000;
       let minPos = maxY;
       let maxNeg = minY;
 
       for (let i = 0; i < data[0].length; i++) {
-        line.setX(i, data[0][i] / maxX);
+        line.setX(i, data[0][i]);
         const y = data[col][i];
         line.setY(i, y);
         maxY = maxY > y ? maxY : y;
@@ -204,7 +213,14 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
       }
 
       wglp.addDataLine(line);
-      lineMinMax.push({ min: minY, max: maxY, minPos: minPos, maxNeg: maxNeg });
+      lineMinMax.push({
+        minY: minY,
+        maxY: maxY,
+        minYPos: minPos,
+        maxYNeg: maxNeg,
+        minX: data[0][0],
+        maxX: data[0][data[0].length - 1],
+      });
     }
   };
 
@@ -217,10 +233,10 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
       for (let sweep = 0; sweep < dataSweep[0].length; sweep++) {
         const color = getColor();
         const line = new WebglLine(color, dataSweep[0][0].length);
-        const maxX = dataSweep[0][sweep][dataSweep[0][sweep].length - 1];
+        //const maxX = dataSweep[0][sweep][dataSweep[0][sweep].length - 1];
 
         for (let i = 0; i < dataSweep[0][sweep].length; i++) {
-          line.setX(i, dataSweep[0][sweep][i] / maxX);
+          line.setX(i, dataSweep[0][sweep][i]);
           const y = dataSweep[col][sweep][i];
           line.setY(i, y);
           maxY = maxY > y ? maxY : y;
@@ -233,7 +249,14 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
           }
         }
         wglp.addDataLine(line);
-        lineMinMax.push({ min: minY, max: maxY, minPos: minPos, maxNeg: maxNeg });
+        lineMinMax.push({
+          minY: minY,
+          maxY: maxY,
+          minYPos: minPos,
+          maxYNeg: maxNeg,
+          minX: dataSweep[0][0][0],
+          maxX: dataSweep[0][0][dataSweep[0][0].length - 1],
+        });
       }
     }
   };
@@ -294,24 +317,26 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     //console.log("CANVAS CANVAS!!!!!!!!!", wglp.lines);
   }, [results, displayData]);
 
-  type ScaleType = {
-    minY: number;
-    maxY: number;
-  };
-
   const findMinMaxGlobal = (): ScaleType => {
     //???????????????????????
     let minY = 10000;
     let maxY = -10000;
+    let minX = 0;
+    let maxX = 1;
 
     for (let i = 0; i < wglp.linesData.length; i++) {
       if (wglp.linesData[i].visible) {
         const e = lineMinMax[i];
-        maxY = maxY > e.max ? maxY : e.max;
-        minY = minY < e.min ? minY : e.min;
+        maxY = maxY > e.maxY ? maxY : e.maxY;
+        minY = minY < e.minY ? minY : e.minY;
       }
     }
-    return { minY: minY, maxY: maxY };
+    if (lineMinMax[0]) {
+      minX = lineMinMax[0].minX;
+      maxX = lineMinMax[0].maxX;
+    }
+
+    return { minY: minY, maxY: maxY, minX: minX, maxX: maxX };
   };
 
   const scaleUpdate = (scale: ScaleType) => {
@@ -330,6 +355,8 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     //console.log("diff", diffY, "avg", avgY);
     //console.log(scale, wglp.gScaleY, wglp.gOffsetY);
     //wglp.update();
+    wglp.gScaleX = 2 / (scale.maxX - scale.minX);
+    wglp.gOffsetX = -wglp.gScaleX * scale.minX - 1;
   };
 
   const mouseDown = (e: React.MouseEvent) => {
@@ -386,16 +413,18 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
 
     if (canvas && plotOptions.crosshair) {
       const devicePixelRatio = window.devicePixelRatio || 1;
-      canvas.width = canvas.clientWidth * devicePixelRatio;
-      canvas.height = canvas.clientHeight * devicePixelRatio;
+      //canvas.width = canvas.clientWidth * devicePixelRatio;
+      //canvas.height = canvas.clientHeight * devicePixelRatio;
       console.log("canvas->", canvas.width / devicePixelRatio, ",", canvas.offsetLeft);
       //???????????????????????????????????????????????????????????????????????????????????????
 
-      const x =
-        (1 / wglp.gScaleX) *
-        ((2 * ((e.pageX - canvas.offsetLeft) * devicePixelRatio - canvas.width / 2)) /
-          canvas.width -
-          wglp.gOffsetX);
+      //const x1 = 2 * ((e.pageX - canvas.offsetLeft) * devicePixelRatio - canvas.width / 2);
+      const xPosRel =
+        ((e.pageX - canvas.offsetLeft) * devicePixelRatio) / (width * devicePixelRatio);
+
+      //const x = (1 / wglp.gScaleX) * (x1 / canvas.width) - wglp.gOffsetX;
+      const x = (2 * xPosRel) / wglp.gScaleX - (wglp.gOffsetX + 1) / wglp.gScaleX;
+      console.log("cross-->", xPosRel, "--> ", x);
       const y =
         (1 / wglp.gScaleY) *
         ((2 * (canvas.height / 2 - (e.pageY - canvas.offsetTop) * devicePixelRatio)) /
@@ -526,11 +555,11 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     for (let i = 0; i < wglp.linesData.length; i++) {
       if (wglp.linesData[i].visible) {
         const e = lineMinMax[i];
-        maxY = maxY > e.max ? maxY : e.max;
-        minPos = minPos < e.minPos ? minPos : e.minPos;
+        maxY = maxY > e.maxY ? maxY : e.maxY;
+        minPos = minPos < e.minYPos ? minPos : e.minYPos;
       }
     }
-    return { minY: minPos, maxY: maxY };
+    return { minY: minPos, maxY: maxY, minX: lineMinMax[0].minX, maxX: lineMinMax[0].maxX };
   };
 
   return (
