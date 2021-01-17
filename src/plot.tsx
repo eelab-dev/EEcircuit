@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-//import WebGlPlot, { ColorRGBA, WebglLine } from "./webglplot/webglplot";
-import WebGlPlot, { ColorRGBA, WebglLine } from "webgl-plot";
+import WebGlPlot, { ColorRGBA, WebglLine } from "./webglplot/webglplot";
+//import WebGlPlot, { ColorRGBA, WebglLine } from "webgl-plot";
 import { calcContrast, calcLuminance } from "./calcContrast";
 import type { DisplayDataType } from "./EEsim";
 import type { RealDataType, ResultType } from "./sim/readOutput";
