@@ -9,20 +9,11 @@ module.exports = {
     "@snowpack/plugin-typescript",
     "@snowpack/plugin-optimize",
   ],
-  install: [
-    /* ... */
-  ],
-  installOptions: {
-    treeshake: true,
-  },
   devOptions: {
     /* ... */
   },
   buildOptions: {
     clean: true,
-  },
-  proxy: {
-    /* ... */
   },
   alias: {
     /* ... */
