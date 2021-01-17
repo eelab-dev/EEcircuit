@@ -1790,10 +1790,10 @@
     dotenv "^8.2.0"
     dotenv-expand "^5.1.0"
 
-"@snowpack/plugin-optimize@^0.2.12":
-  version "0.2.12"
-  resolved "https://registry.yarnpkg.com/@snowpack/plugin-optimize/-/plugin-optimize-0.2.12.tgz#8ce3fbf06291cea7ecc1eb220899626155a41bf9"
-  integrity sha512-I2DNs735jwrYl+ov3e4Z2QACUadnI1VsKQDPaFCACsOEBQQ8OwviiBYn1VadU+x6tCJorWw7I9UPEVvxzqO4mQ==
+"@snowpack/plugin-optimize@^0.2.13":
+  version "0.2.13"
+  resolved "https://registry.yarnpkg.com/@snowpack/plugin-optimize/-/plugin-optimize-0.2.13.tgz#29cac194f0b5479afc3908a45fca01ad263bab4e"
+  integrity sha512-DW0+iaSc80vWZKDIKbdR5pqDkNDsv3ZbH8eVB8yppK/JlBmOqmsUGdKlZ2eq8XDxE23/V5+gmA9RXLWcTMJ1eQ==
   dependencies:
     csso "^4.1.0"
     es-module-lexer "^0.3.25"
@@ -1802,6 +1802,7 @@
     html-minifier "^4.0.0"
     hypertag "^0.0.3"
     kleur "^4.1.3"
+    mkdirp "^1.0.4"
     node-inject-html "^0.0.5"
     object.fromentries "^2.0.2"
     p-queue "^6.6.1"
@@ -1832,10 +1833,10 @@
     execa "^4.0.3"
     npm-run-path "^4.0.1"
 
-"@snowpack/plugin-typescript@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@snowpack/plugin-typescript/-/plugin-typescript-1.2.0.tgz#ead8ceb84e292c760e15919a043c7f2351759f7c"
-  integrity sha512-wInBjziR0rzu1J6Avvy1K2dXn21iYuak/Klk9XLvntwJaALqaB1eRpgqTDJFnX7748OrOlEsYJb3rb1ZnXyHJA==
+"@snowpack/plugin-typescript@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@snowpack/plugin-typescript/-/plugin-typescript-1.2.1.tgz#7170b039d16d41963cc61a714fe7c37f3fdd9d51"
+  integrity sha512-wU+JNaMVkqGsqTaUY7TnEMhGt/3URTgA9dpMCtZX6wn/ceA7Gwlmue/sOLynf0OTNLygHPvjiQECQYkEi3LTtg==
   dependencies:
     execa "^5.0.0"
     npm-run-path "^4.0.1"
@@ -3467,6 +3468,11 @@ fsevents@^2.2.0:
   resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-2.3.1.tgz#b209ab14c61012636c8863507edf7fb68cc54e9f"
   integrity sha512-YR47Eg4hChJGAB1O3yEAOkGO+rlzutoICGqGo9EZ4lKWokzZRSyIW1QmTzqjtw8MJdj9srP869CuWw/hyzSiBw==
 
+fsevents@~2.1.2:
+  version "2.1.3"
+  resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-2.1.3.tgz#fb738703ae8d2f9fe900c33836ddebee8b97f23e"
+  integrity sha512-Auw9a4AxqWpa9GUfj370BMPzzyncfBABW8Mab7BGWBYDj4Isgq+cDKtx0i6u9jcX9pQDnswsaaOTgTmA5pEjuQ==
+
 function-bind@^1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/function-bind/-/function-bind-1.1.1.tgz#a56899d3ea3c9bab874bb9773b7c5ede92f4895d"
@@ -4376,6 +4382,11 @@ mixin-deep@^1.2.0:
     for-in "^1.0.2"
     is-extendable "^1.0.1"
 
+mkdirp@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/mkdirp/-/mkdirp-1.0.4.tgz#3eb5ed62622756d79a5f0e2a221dfebad75c2f7e"
+  integrity sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==
+
 monaco-editor@^0.21.2:
   version "0.21.2"
   resolved "https://registry.yarnpkg.com/monaco-editor/-/monaco-editor-0.21.2.tgz#37054e63e480d51a2dd17d609dcfb192304d5605"
@@ -5091,6 +5102,13 @@ rimraf@^3.0.2:
   dependencies:
     glob "^7.1.3"
 
+rollup@^2.34.0:
+  version "2.36.2"
+  resolved "https://registry.yarnpkg.com/rollup/-/rollup-2.36.2.tgz#883fc793c70c8481ad604f1065cd79ab0a4e9c49"
+  integrity sha512-qjjiuJKb+/8n0EZyQYVW+gFU4bNRBcZaXVzUgSVrGw0HlQBlK2aWyaOMMs1Ufic1jV69b9kW3u3i9B+hISDm3A==
+  optionalDependencies:
+    fsevents "~2.1.2"
+
 rsvp@^4.8.4:
   version "4.8.5"
   resolved "https://registry.yarnpkg.com/rsvp/-/rsvp-4.8.5.tgz#c8f155311d167f68f21e168df71ec5b083113734"
@@ -5282,13 +5300,14 @@ snapdragon@^0.8.1:
     source-map-resolve "^0.5.0"
     use "^3.1.0"
 
-snowpack@^3.0.10:
-  version "3.0.10"
-  resolved "https://registry.yarnpkg.com/snowpack/-/snowpack-3.0.10.tgz#3ff9c12d44830d5c294006b43633b1a76452c909"
-  integrity sha512-1boFvYMQ5EEkyvr6yA0XTkJWyQoIuPBSeY/ViR1DhuesspUHiQXFAiS/FF1AOWUj8Zju3VfRyyo3GLud0P80+g==
+snowpack@^3.0.11:
+  version "3.0.11"
+  resolved "https://registry.yarnpkg.com/snowpack/-/snowpack-3.0.11.tgz#95f69f95367116e3a9bb5112d090d6328f2d3a28"
+  integrity sha512-lBxgkvWTgdg0szE31JUt01wQkA9Lnmm+6lxqeV9rxDfflpx7ASnldVHFvu7Se70QJmPTQB0UJjfKI+xmYGwiiQ==
   dependencies:
     esbuild "^0.8.7"
     open "^7.0.4"
+    rollup "^2.34.0"
   optionalDependencies:
     fsevents "^2.2.0"
 
@@ -5769,10 +5788,10 @@ warning@^4.0.3:
   dependencies:
     loose-envify "^1.0.0"
 
-webgl-plot@^0.5.5:
-  version "0.5.5"
-  resolved "https://registry.yarnpkg.com/webgl-plot/-/webgl-plot-0.5.5.tgz#8467f447a77ac08adc8922da8a9b9222453f1a93"
-  integrity sha512-yMLuRHdSftY9rZStAikGcS8gYpMSTGhGsnvJpKYtG/vhH3XggZjRd1Yb5twYaOks/JUQrosgUY3rg5abyIS5Yw==
+webgl-plot@^0.5.6:
+  version "0.5.6"
+  resolved "https://registry.yarnpkg.com/webgl-plot/-/webgl-plot-0.5.6.tgz#2eb15a3b63b220ef312282d045cc971a105e12e6"
+  integrity sha512-gg1jmft5ZOQ7tQhbf1BIqkuUMNzF5wnYwRMUf1GU2/gxlA2qOK3TrwjVeJiSFLr8OZC1myVY50fvlyEG7lrffA==
 
 whatwg-fetch@^3.0.0:
   version "3.5.0"
