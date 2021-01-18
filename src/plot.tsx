@@ -6,9 +6,9 @@ import type { DisplayDataType } from "./EEsim";
 import type { RealDataType, ResultType } from "./sim/readOutput";
 import { Box, Checkbox, Grid, GridItem, HStack, Tag } from "@chakra-ui/react";
 import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/react";
-import type { ReactJSXElement } from "@emotion/react/types/jsx-namespace";
 import type { ParserType } from "./parser";
 import Axis from "./axis";
+import unitConvert from "./sim/unitConverter";
 
 type PlotType = {
   results?: ResultType;
@@ -465,8 +465,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
 
   const doubleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    wglp.gScaleX = 1;
-    wglp.gOffsetX = -1;
+    scaleUpdate(findMinMaxGlobal());
     setZoomStatus({ scale: wglp.gScaleX, offset: wglp.gOffsetX });
   };
 
@@ -531,10 +530,6 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     height: "60vh",
   } as React.CSSProperties;
 
-  const SliderSweep = (): ReactJSXElement => {
-    return <div></div>;
-  };
-
   const handleLog10YCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
     wglp.gLog10Y = e.target.checked;
 
@@ -574,8 +569,8 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         </Checkbox>
         {plotOptions.crosshair ? (
           <>
-            <Tag w="7em" colorScheme="teal">{`X: ${crossXY.x.toExponential(3)}`}</Tag>
-            <Tag w="7em" colorScheme="teal">{`Y: ${crossXY.y.toExponential(3)}`}</Tag>
+            <Tag w="7em" colorScheme="teal">{`X: ${unitConvert(crossXY.x, 3)}`}</Tag>
+            <Tag w="7em" colorScheme="teal">{`Y: ${unitConvert(crossXY.y, 3)}`}</Tag>
           </>
         ) : (
           <></>
@@ -595,11 +590,11 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
           <></>
         )}
 
-        <Checkbox defaultIsChecked={false}>Neg</Checkbox>
+        {/*<Checkbox defaultIsChecked={false}>Neg</Checkbox>
         <Checkbox defaultIsChecked={false}>Log10X</Checkbox>
         <Checkbox defaultIsChecked={false} onChange={handleLog10YCheckbox}>
           Log10Y
-        </Checkbox>
+        </Checkbox>*/}
       </HStack>
       {plotOptions.sweepSlider ? (
         <Slider
