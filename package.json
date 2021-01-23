@@ -26,7 +26,7 @@
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
     "@types/snowpack-env": "^2.3.3",
-    "@typescript-eslint/eslint-plugin": "^4.13.0",
+    "@typescript-eslint/eslint-plugin": "^4.14.0",
     "eslint": "^7.18.0",
     "prettier": "^2.2.1",
     "serve": "^11.3.2",
@@ -39,7 +39,7 @@
     "@emotion/react": "^11.1.4",
     "@emotion/styled": "^11.0.0",
     "framer-motion": "^3.2.1",
-    "monaco-editor": "^0.21.2",
+    "monaco-editor": "^0.21.3",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "webgl-plot": "^0.5.6"

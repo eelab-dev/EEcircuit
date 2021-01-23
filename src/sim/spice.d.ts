@@ -12,6 +12,7 @@ type ModuleType = {
   setGetInput: (getInput: () => void) => void;
   runThings: () => void;
   print: (e?: any) => void;
+  printErr: (e?: any) => void;
 };
 
 /**

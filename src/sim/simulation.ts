@@ -18,6 +18,8 @@ export default class Simulation {
   private dataRaw = new Uint8Array();
   private results = {} as ResultType;
   private output = "";
+  private info = "";
+  private error = [] as string[];
 
   private netList = "";
 
@@ -40,6 +42,14 @@ export default class Simulation {
       print: (e) => {
         /*do nothing*/
         console.log(e);
+        this.info += e + "\n";
+      },
+      printErr: (e) => {
+        console.warn(e);
+        this.info += e + "\n\n";
+        if (e != "Note: can't find init file.") {
+          this.error.push(e);
+        }
       },
       preRun: [
         () => {
@@ -54,7 +64,7 @@ export default class Simulation {
         /** */
       },
     });
-
+    module.FS?.writeFile("/spinit", "* Standard ngspice init file\n");
     module.FS?.writeFile("/proc/meminfo", "");
     module.FS?.writeFile("/modelcard.FreePDK45", freePDK45.PDK45);
     module.FS?.writeFile("/modelcard.PDK15", freePDK45.PDK15);
@@ -97,6 +107,9 @@ export default class Simulation {
   }
 
   public runSim(): void {
+    this.info = "";
+    this.error = [] as string[];
+    this.results = {} as ResultType;
     this.pass = true;
   }
 
@@ -114,5 +127,11 @@ export default class Simulation {
   };
   public getResults = (): ResultType => {
     return this.results;
+  };
+  public getInfo = (): string => {
+    return this.info;
+  };
+  public getError = (): string[] => {
+    return this.error;
   };
 }

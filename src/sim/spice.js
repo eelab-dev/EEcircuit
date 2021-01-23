@@ -75,14 +75,14 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
   scriptDirectory = "";
  }
  {
-  read_ = function shell_read(url) {
+  read_ = function(url) {
    var xhr = new XMLHttpRequest();
    xhr.open("GET", url, false);
    xhr.send(null);
    return xhr.responseText;
   };
   if (ENVIRONMENT_IS_WORKER) {
-   readBinary = function readBinary(url) {
+   readBinary = function(url) {
     var xhr = new XMLHttpRequest();
     xhr.open("GET", url, false);
     xhr.responseType = "arraybuffer";
@@ -90,11 +90,11 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
     return new Uint8Array(xhr.response);
    };
   }
-  readAsync = function readAsync(url, onload, onerror) {
+  readAsync = function(url, onload, onerror) {
    var xhr = new XMLHttpRequest();
    xhr.open("GET", url, true);
    xhr.responseType = "arraybuffer";
-   xhr.onload = function xhr_onload() {
+   xhr.onload = function() {
     if (xhr.status == 200 || xhr.status == 0 && xhr.response) {
      onload(xhr.response);
      return;
@@ -486,6 +486,12 @@ var runtimeInitialized = false;
 
 var runtimeExited = false;
 
+__ATINIT__.push({
+ func: function() {
+  ___wasm_call_ctors();
+ }
+});
+
 function preRun() {
  if (Module["preRun"]) {
   if (typeof Module["preRun"] == "function") Module["preRun"] = [ Module["preRun"] ];
@@ -618,17 +624,19 @@ function getBinary(file) {
 }
 
 function getBinaryPromise() {
- if (!wasmBinary && (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) && typeof fetch === "function") {
-  return fetch(wasmBinaryFile, {
-   credentials: "same-origin"
-  }).then(function(response) {
-   if (!response["ok"]) {
-    throw "failed to load wasm binary file at '" + wasmBinaryFile + "'";
-   }
-   return response["arrayBuffer"]();
-  }).catch(function() {
-   return getBinary(wasmBinaryFile);
-  });
+ if (!wasmBinary && (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER)) {
+  if (typeof fetch === "function") {
+   return fetch(wasmBinaryFile, {
+    credentials: "same-origin"
+   }).then(function(response) {
+    if (!response["ok"]) {
+     throw "failed to load wasm binary file at '" + wasmBinaryFile + "'";
+    }
+    return response["arrayBuffer"]();
+   }).catch(function() {
+    return getBinary(wasmBinaryFile);
+   });
+  }
  }
  return Promise.resolve().then(function() {
   return getBinary(wasmBinaryFile);
@@ -829,6 +837,81 @@ function _clock_gettime(clk_id, tp) {
 
 function ___clock_gettime(a0, a1) {
  return _clock_gettime(a0, a1);
+}
+
+var ExceptionInfoAttrs = {
+ DESTRUCTOR_OFFSET: 0,
+ REFCOUNT_OFFSET: 4,
+ TYPE_OFFSET: 8,
+ CAUGHT_OFFSET: 12,
+ RETHROWN_OFFSET: 13,
+ SIZE: 16
+};
+
+function ___cxa_allocate_exception(size) {
+ return _malloc(size + ExceptionInfoAttrs.SIZE) + ExceptionInfoAttrs.SIZE;
+}
+
+function ExceptionInfo(excPtr) {
+ this.excPtr = excPtr;
+ this.ptr = excPtr - ExceptionInfoAttrs.SIZE;
+ this.set_type = function(type) {
+  HEAP32[this.ptr + ExceptionInfoAttrs.TYPE_OFFSET >> 2] = type;
+ };
+ this.get_type = function() {
+  return HEAP32[this.ptr + ExceptionInfoAttrs.TYPE_OFFSET >> 2];
+ };
+ this.set_destructor = function(destructor) {
+  HEAP32[this.ptr + ExceptionInfoAttrs.DESTRUCTOR_OFFSET >> 2] = destructor;
+ };
+ this.get_destructor = function() {
+  return HEAP32[this.ptr + ExceptionInfoAttrs.DESTRUCTOR_OFFSET >> 2];
+ };
+ this.set_refcount = function(refcount) {
+  HEAP32[this.ptr + ExceptionInfoAttrs.REFCOUNT_OFFSET >> 2] = refcount;
+ };
+ this.set_caught = function(caught) {
+  caught = caught ? 1 : 0;
+  HEAP8[this.ptr + ExceptionInfoAttrs.CAUGHT_OFFSET >> 0] = caught;
+ };
+ this.get_caught = function() {
+  return HEAP8[this.ptr + ExceptionInfoAttrs.CAUGHT_OFFSET >> 0] != 0;
+ };
+ this.set_rethrown = function(rethrown) {
+  rethrown = rethrown ? 1 : 0;
+  HEAP8[this.ptr + ExceptionInfoAttrs.RETHROWN_OFFSET >> 0] = rethrown;
+ };
+ this.get_rethrown = function() {
+  return HEAP8[this.ptr + ExceptionInfoAttrs.RETHROWN_OFFSET >> 0] != 0;
+ };
+ this.init = function(type, destructor) {
+  this.set_type(type);
+  this.set_destructor(destructor);
+  this.set_refcount(0);
+  this.set_caught(false);
+  this.set_rethrown(false);
+ };
+ this.add_ref = function() {
+  var value = HEAP32[this.ptr + ExceptionInfoAttrs.REFCOUNT_OFFSET >> 2];
+  HEAP32[this.ptr + ExceptionInfoAttrs.REFCOUNT_OFFSET >> 2] = value + 1;
+ };
+ this.release_ref = function() {
+  var prev = HEAP32[this.ptr + ExceptionInfoAttrs.REFCOUNT_OFFSET >> 2];
+  HEAP32[this.ptr + ExceptionInfoAttrs.REFCOUNT_OFFSET >> 2] = prev - 1;
+  return prev === 1;
+ };
+}
+
+var exceptionLast = 0;
+
+var uncaughtExceptionCount = 0;
+
+function ___cxa_throw(ptr, type, destructor) {
+ var info = new ExceptionInfo(ptr);
+ info.init(type, destructor);
+ exceptionLast = ptr;
+ uncaughtExceptionCount++;
+ throw ptr;
 }
 
 function _localtime_r(time, tmPtr) {
@@ -1203,6 +1286,7 @@ var MEMFS = {
   node.timestamp = Date.now();
   if (parent) {
    parent.contents[name] = node;
+   parent.timestamp = node.timestamp;
   }
   return node;
  },
@@ -1306,12 +1390,15 @@ var MEMFS = {
     }
    }
    delete old_node.parent.contents[old_node.name];
+   old_node.parent.timestamp = Date.now();
    old_node.name = new_name;
    new_dir.contents[new_name] = old_node;
+   new_dir.timestamp = old_node.parent.timestamp;
    old_node.parent = new_dir;
   },
   unlink: function(parent, name) {
    delete parent.contents[name];
+   parent.timestamp = Date.now();
   },
   rmdir: function(parent, name) {
    var node = FS.lookupNode(parent, name);
@@ -1319,6 +1406,7 @@ var MEMFS = {
     throw new FS.ErrnoError(55);
    }
    delete parent.contents[name];
+   parent.timestamp = Date.now();
   },
   readdir: function(node) {
    var entries = [ ".", ".." ];
@@ -1405,7 +1493,9 @@ var MEMFS = {
    stream.node.usedBytes = Math.max(stream.node.usedBytes, offset + length);
   },
   mmap: function(stream, address, length, position, prot, flags) {
-   assert(address === 0);
+   if (address !== 0) {
+    throw new FS.ErrnoError(28);
+   }
    if (!FS.isFile(stream.node.mode)) {
     throw new FS.ErrnoError(43);
    }
@@ -2557,11 +2647,11 @@ var FS = {
  },
  createSpecialDirectories: function() {
   FS.mkdir("/proc");
-  FS.mkdir("/proc/self");
+  var proc_self = FS.mkdir("/proc/self");
   FS.mkdir("/proc/self/fd");
   FS.mount({
    mount: function() {
-    var node = FS.createNode("/proc/self", "fd", 16384 | 511, 73);
+    var node = FS.createNode(proc_self, "fd", 16384 | 511, 73);
     node.node_ops = {
      lookup: function(parent, name) {
       var fd = +name;
@@ -4860,8 +4950,6 @@ function _sysconf(name) {
  case 77:
  case 78:
  case 139:
- case 80:
- case 81:
  case 82:
  case 68:
  case 67:
@@ -4874,7 +4962,6 @@ function _sysconf(name) {
  case 52:
  case 51:
  case 46:
- case 79:
   return 200809;
 
  case 27:
@@ -4909,6 +4996,9 @@ function _sysconf(name) {
  case 32:
  case 173:
  case 35:
+ case 80:
+ case 81:
+ case 79:
   return -1;
 
  case 176:
@@ -5269,16 +5359,12 @@ function intArrayFromString(stringy, dontAddNull, length) {
  return u8array;
 }
 
-__ATINIT__.push({
- func: function() {
-  ___wasm_call_ctors();
- }
-});
-
 var asmLibraryArg = {
  "__asctime_r": ___asctime_r,
  "__assert_fail": ___assert_fail,
  "__clock_gettime": ___clock_gettime,
+ "__cxa_allocate_exception": ___cxa_allocate_exception,
+ "__cxa_throw": ___cxa_throw,
  "__localtime_r": ___localtime_r,
  "__sys_access": ___sys_access,
  "__sys_chdir": ___sys_chdir,
@@ -5455,10 +5541,6 @@ var dynCall_iiii = Module["dynCall_iiii"] = function() {
  return (dynCall_iiii = Module["dynCall_iiii"] = Module["asm"]["dynCall_iiii"]).apply(null, arguments);
 };
 
-var dynCall_vii = Module["dynCall_vii"] = function() {
- return (dynCall_vii = Module["dynCall_vii"] = Module["asm"]["dynCall_vii"]).apply(null, arguments);
-};
-
 var dynCall_iiiiiii = Module["dynCall_iiiiiii"] = function() {
  return (dynCall_iiiiiii = Module["dynCall_iiiiiii"] = Module["asm"]["dynCall_iiiiiii"]).apply(null, arguments);
 };
@@ -5471,6 +5553,10 @@ var dynCall_iiiiiiiiii = Module["dynCall_iiiiiiiiii"] = function() {
  return (dynCall_iiiiiiiiii = Module["dynCall_iiiiiiiiii"] = Module["asm"]["dynCall_iiiiiiiiii"]).apply(null, arguments);
 };
 
+var dynCall_vii = Module["dynCall_vii"] = function() {
+ return (dynCall_vii = Module["dynCall_vii"] = Module["asm"]["dynCall_vii"]).apply(null, arguments);
+};
+
 var dynCall_iiiidd = Module["dynCall_iiiidd"] = function() {
  return (dynCall_iiiidd = Module["dynCall_iiiidd"] = Module["asm"]["dynCall_iiiidd"]).apply(null, arguments);
 };
@@ -5481,6 +5567,34 @@ var dynCall_viddii = Module["dynCall_viddii"] = function() {
 
 var dynCall_iiiiiiiii = Module["dynCall_iiiiiiiii"] = function() {
  return (dynCall_iiiiiiiii = Module["dynCall_iiiiiiiii"] = Module["asm"]["dynCall_iiiiiiiii"]).apply(null, arguments);
+};
+
+var dynCall_viiiiiiiii = Module["dynCall_viiiiiiiii"] = function() {
+ return (dynCall_viiiiiiiii = Module["dynCall_viiiiiiiii"] = Module["asm"]["dynCall_viiiiiiiii"]).apply(null, arguments);
+};
+
+var dynCall_viiiiii = Module["dynCall_viiiiii"] = function() {
+ return (dynCall_viiiiii = Module["dynCall_viiiiii"] = Module["asm"]["dynCall_viiiiii"]).apply(null, arguments);
+};
+
+var dynCall_viiii = Module["dynCall_viiii"] = function() {
+ return (dynCall_viiii = Module["dynCall_viiii"] = Module["asm"]["dynCall_viiii"]).apply(null, arguments);
+};
+
+var dynCall_viiiii = Module["dynCall_viiiii"] = function() {
+ return (dynCall_viiiii = Module["dynCall_viiiii"] = Module["asm"]["dynCall_viiiii"]).apply(null, arguments);
+};
+
+var dynCall_viiiiiiiiiiiii = Module["dynCall_viiiiiiiiiiiii"] = function() {
+ return (dynCall_viiiiiiiiiiiii = Module["dynCall_viiiiiiiiiiiii"] = Module["asm"]["dynCall_viiiiiiiiiiiii"]).apply(null, arguments);
+};
+
+var dynCall_viiiiiiiiiiiiiii = Module["dynCall_viiiiiiiiiiiiiii"] = function() {
+ return (dynCall_viiiiiiiiiiiiiii = Module["dynCall_viiiiiiiiiiiiiii"] = Module["asm"]["dynCall_viiiiiiiiiiiiiii"]).apply(null, arguments);
+};
+
+var dynCall_viiiiiiii = Module["dynCall_viiiiiiii"] = function() {
+ return (dynCall_viiiiiiii = Module["dynCall_viiiiiiii"] = Module["asm"]["dynCall_viiiiiiii"]).apply(null, arguments);
 };
 
 var dynCall_iidiii = Module["dynCall_iidiii"] = function() {
