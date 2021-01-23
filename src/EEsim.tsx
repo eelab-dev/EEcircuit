@@ -13,6 +13,7 @@ import {
   Box,
   ChakraProvider,
   Checkbox,
+  createStandaloneToast,
   Divider,
   Stack,
   Tab,
@@ -21,6 +22,7 @@ import {
   TabPanels,
   Tabs,
   Textarea,
+  useToast,
 } from "@chakra-ui/react";
 import { Button, ButtonGroup } from "@chakra-ui/react";
 import { extendTheme } from "@chakra-ui/react";
@@ -54,6 +56,9 @@ export default function EEsim(): JSX.Element {
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
   const [tabIndex, setTabIndex] = React.useState(0);
 
+  //const toast = useToast();
+  const toast = createStandaloneToast();
+
   useEffect(() => {
     const loadedNetList = store.getItem("netList");
     setNetList(loadedNetList ? loadedNetList : circuits.bsimTrans);
@@ -72,6 +77,21 @@ export default function EEsim(): JSX.Element {
         setResults(sim.getResults());
         //const dd = makeDD(sim.getResults());
         //setDisplayData(dd);
+      });
+    }
+  }, [isSimLoaded, results]);
+
+  useEffect(() => {
+    if (isSimLoaded) {
+      const errors = sim.getError();
+      errors.forEach((e) => {
+        toast({
+          title: "ngspice error",
+          description: e,
+          status: "error",
+          duration: 9000,
+          isClosable: true,
+        });
       });
     }
   }, [isSimLoaded, results]);
@@ -254,7 +274,8 @@ export default function EEsim(): JSX.Element {
                 bg="gray.900"
                 fontSize="0.9em"
                 rows={15}
-                value={results ? results.header : ""}
+                //value={results ? results.header : ""}
+                value={sim ? sim.getInfo() + "\n\n" + results?.header : ""}
               />
             </TabPanel>
 

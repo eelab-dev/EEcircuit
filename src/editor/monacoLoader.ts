@@ -3,7 +3,7 @@
  * https://github.com/microsoft/monaco-editor-samples/blob/master/browser-amd-shared-model/index.html
  * https://github.com/suren-atoyan/monaco-react/blob/master/src/utils/monaco.js
  */
-import type * as MonacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
+import type * as MonacoEditor from "monaco-editor/esm/vs/editor/editor.api";
 
 const monacoLoader = (): Promise<typeof MonacoEditor> => {
   return new Promise((resolve) => {
@@ -11,23 +11,22 @@ const monacoLoader = (): Promise<typeof MonacoEditor> => {
       resolve(e.detail);
     };
 
-    document.addEventListener('monacoLoaded', loaded2 as EventListener);
+    document.addEventListener("monacoLoaded", loaded2 as EventListener);
 
-    const monacoLoader = document.createElement('script') as HTMLScriptElement;
+    const monacoLoader = document.createElement("script") as HTMLScriptElement;
     //script3.async = true;
     //script3.src = 'https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js';
     monacoLoader.async = true;
-    monacoLoader.src =
-      'https://cdn.jsdelivr.net/npm/monaco-editor@0.21.2/min/vs/loader.js';
+    monacoLoader.src = "https://cdn.jsdelivr.net/npm/monaco-editor@0.21.3/min/vs/loader.js";
 
-    monacoLoader.crossOrigin = 'anonymous';
+    monacoLoader.crossOrigin = "anonymous";
     const scriptLoaded = () => {
       document.body.appendChild(monacoRequire);
     };
-    monacoLoader.addEventListener('load', scriptLoaded);
+    monacoLoader.addEventListener("load", scriptLoaded);
     document.body.appendChild(monacoLoader);
 
-    const monacoRequire = document.createElement('script') as HTMLScriptElement;
+    const monacoRequire = document.createElement("script") as HTMLScriptElement;
     monacoRequire.async = true;
     //script2.type = 'module';
     monacoRequire.innerHTML = `

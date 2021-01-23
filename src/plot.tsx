@@ -286,7 +286,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
 
     //?????????????????????
 
-    console.log("line-->", wglp.linesData);
+    //console.log("line-->", wglp.linesData);
 
     scaleUpdate(findMinMaxGlobal());
   }, [results]);
@@ -297,7 +297,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
 
     if (sweepIndices.length > 0) {
       if (displayData && wglp.linesData.length == sweepIndices.length * displayData.length) {
-        console.log("plot->DD->", "it is sweep");
+        //console.log("plot->DD->", "it is sweep");
         displayData.forEach((e) => {
           for (let i = 0; i < sweepIndices.length; i++) {
             wglp.linesData[(e.index - 1) * sweepIndices.length + i].visible = e.visible;
@@ -416,7 +416,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
       const devicePixelRatio = window.devicePixelRatio || 1;
       //canvas.width = canvas.clientWidth * devicePixelRatio;
       //canvas.height = canvas.clientHeight * devicePixelRatio;
-      console.log("canvas->", canvas.width / devicePixelRatio, ",", canvas.offsetLeft);
+      //console.log("canvas->", canvas.width / devicePixelRatio, ",", canvas.offsetLeft);
       //???????????????????????????????????????????????????????????????????????????????????????
 
       //const x1 = 2 * ((e.pageX - canvas.offsetLeft) * devicePixelRatio - canvas.width / 2);
@@ -425,7 +425,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
 
       //const x = (1 / wglp.gScaleX) * (x1 / canvas.width) - wglp.gOffsetX;
       const x = (2 * xPosRel) / wglp.gScaleX - (wglp.gOffsetX + 1) / wglp.gScaleX;
-      console.log("cross-->", xPosRel, "--> ", x);
+      //console.log("cross-->", xPosRel, "--> ", x);
       const y =
         (1 / wglp.gScaleY) *
         ((2 * (canvas.height / 2 - (e.pageY - canvas.offsetTop) * devicePixelRatio)) /
@@ -535,7 +535,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
 
     if (e.target.checked) {
       const a = { ...findMinMaxGlobalLog10() };
-      console.log("log->", a);
+      //console.log("log->", a);
       scaleUpdate({ minY: Math.log10(a.minY), maxY: Math.log10(a.maxY) } as ScaleType);
     } else {
       const a = { ...findMinMaxGlobal() };
