@@ -174,6 +174,22 @@ const EditorCustom = ({
             insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range: range,
           },
+          {
+            label: ".ac",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText: "ac ${1:dec | oct | lin} ${2:number_point} ${3:fstart} ${4:fstop} ",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
+          {
+            label: ".save",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText: "save ${1:v(node) or i(node)}",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
           /*{
             label: "m (mosfet)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
