@@ -29,16 +29,44 @@ add `.include modelcard.FreePDK45` in your netlist.
 
 add `.include modelcard.ptmLP` in your netlist.
 
+| Model name | Node | Type | Nom Vdd |                          Reference |
+| ---------- | :--: | ---: | ------: | ---------------------------------: |
+| PTMLP16N   | 16nm |    N |    0.9V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMLP16P   | 16nm |    P |    0.9V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMLP22N   | 22nm |    N |   0.95V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMLP22P   | 22nm |    P |   0.95V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMLP32N   | 32nm |    N |    1.0V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMLP32P   | 32nm |    P |    1.0V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMLP45N   | 45nm |    N |    1.1V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMLP45P   | 45nm |    P |    1.1V | [ptm.asu.edu](http://ptm.asu.edu/) |
+
+## PTM HP (High Performance)
+
+add `.include modelcard.ptmHP` in your netlist.
+
+| Model name | Node | Type | Nom vdd |                          Reference |
+| ---------- | :--: | ---: | ------: | ---------------------------------: |
+| PTMHP16N   | 16nm |    N |    0.7V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMHP16P   | 16nm |    P |    0.7V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMHPP22N  | 22nm |    N |    0.8V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMHP22P   | 22nm |    P |    0.8V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMHP32N   | 32nm |    N |    0.9V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMHP32P   | 32nm |    P |    0.9V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMHP45N   | 45nm |    N |    1.0V | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTMHP45P   | 45nm |    P |    1.0V | [ptm.asu.edu](http://ptm.asu.edu/) |
+
+## PTM
+
+add `.include modelcard.ptm` in your netlist.
+
 | Model name | Node | Type |                          Reference |
 | ---------- | :--: | ---: | ---------------------------------: |
-| PTMLP16N   | 16nm |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
-| PTMLP16P   | 16nm |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
-| PTMLP22N   | 22nm |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
-| PTMLP22P   | 22nm |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
-| PTMLP32N   | 32nm |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
-| PTMLP32P   | 32nm |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
-| PTMLP45N   | 45nm |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
-| PTMLP45P   | 45nm |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTM65N     | 45nm |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTM65P     | 45nm |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTM90N     | 45nm |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTM90P     | 45nm |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTM130N    | 45nm |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTM130P    | 45nm |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
 
 ## BSIM4 Benchmark
 
