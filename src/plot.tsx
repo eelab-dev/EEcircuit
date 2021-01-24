@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import WebGlPlot, { ColorRGBA, WebglLine } from "./webglplot/webglplot";
+import WebGlPlot, { ColorRGBA, WebglLine, WebglSquare } from "./webglplot/webglplot";
 //import WebGlPlot, { ColorRGBA, WebglLine } from "webgl-plot";
 import { calcContrast, calcLuminance } from "./calcContrast";
 import type { DisplayDataType } from "./EEsim";
@@ -63,7 +63,7 @@ let wglp: WebGlPlot;
 let lineMinMax = [{ minY: 0, maxY: 1 }] as LineMinMaxType[];
 let sweepIndices = [] as number[]; //already has one
 
-const zoomRect = new WebglLine(new ColorRGBA(1, 1, 1, 1), 4);
+const zoomRect = new WebglSquare(new ColorRGBA(0.8, 0.8, 0.2, 0.25));
 const crossXLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 const crossYLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 
@@ -265,8 +265,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
   useEffect(() => {
     sweepIndices = [];
     wglp.removeAllLines();
-    zoomRect.loop = true;
-    wglp.addAuxLine(zoomRect); //change this to Aux !!!!!!
+    wglp.addSurface(zoomRect); //change this to Aux !!!!!!
     wglp.addAuxLine(crossXLine);
     wglp.addAuxLine(crossYLine);
 
@@ -390,7 +389,10 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         cursorDownX: mouseZoom.cursorDownX,
         cursorOffsetX: cursorOffsetX,
       });
-      zoomRect.xy = new Float32Array([
+      const z1 = (mouseZoom.cursorDownX - wglp.gOffsetX) / wglp.gScaleX;
+      const z2 = (cursorOffsetX - wglp.gOffsetX) / wglp.gScaleX;
+      zoomRect.setSquare(z1, -1000, z2, 1000);
+      /*zoomRect.xy = new Float32Array([
         (mouseZoom.cursorDownX - wglp.gOffsetX) / wglp.gScaleX,
         -100,
         (mouseZoom.cursorDownX - wglp.gOffsetX) / wglp.gScaleX,
@@ -399,7 +401,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         100,
         (cursorOffsetX - wglp.gOffsetX) / wglp.gScaleX,
         -100,
-      ]);
+      ]);*/
       zoomRect.visible = true;
     }
     /************Mouse Drag Evenet********* */
