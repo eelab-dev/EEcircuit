@@ -69,6 +69,8 @@ export default class Simulation {
     module.FS?.writeFile("/modelcard.FreePDK45", freePDK45.PDK45);
     module.FS?.writeFile("/modelcard.PDK15", freePDK45.PDK15);
     module.FS?.writeFile("/modelcard.ptmLP", ptm.ptmLP);
+    module.FS?.writeFile("/modelcard.ptmHP", ptm.ptmHP);
+    module.FS?.writeFile("/modelcard.ptm", ptm.ptm);
     module.FS?.writeFile("/modelcard.CMOS90", circuits.strModelCMOS90);
     //module.FS.writeFile("/test.cir", circuits.bsimTrans);
     //console.log(module.Asyncify);
