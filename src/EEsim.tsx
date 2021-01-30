@@ -15,6 +15,8 @@ import {
   Checkbox,
   createStandaloneToast,
   Divider,
+  Flex,
+  Spacer,
   Stack,
   Tab,
   TabList,
@@ -218,6 +220,11 @@ export default function EEsim(): JSX.Element {
     }
   };
 
+  const btReset = () => {
+    setResults(undefined);
+    setDisplayData(undefined);
+  };
+
   return (
     <ChakraProvider theme={customTheme}>
       <div>
@@ -245,12 +252,18 @@ export default function EEsim(): JSX.Element {
             </div>
           </div>
         </Box>
-
-        <Box p={2}>
-          <Button colorScheme="blue" variant="solid" size="lg" onClick={btRun}>
-            Run 🚀
-          </Button>
+        <Box p={2} width="72.5%">
+          <Flex>
+            <Button colorScheme="blue" variant="solid" size="lg" onClick={btRun}>
+              Run 🚀
+            </Button>
+            <Spacer />
+            <Button colorScheme="blue" variant="solid" size="lg" onClick={btReset}>
+              Reset 🧼
+            </Button>
+          </Flex>
         </Box>
+
         <Box p={2}>
           <Divider />
         </Box>

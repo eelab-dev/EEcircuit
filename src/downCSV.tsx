@@ -7,7 +7,7 @@ type Prop = {
 };
 
 export default function DownCSV({ results }: Prop): JSX.Element {
-  function printCSVReal(results?: ResultType): string {
+  function printCSVReal(results: ResultType): string {
     let str = "";
     let strTop = "";
 
@@ -30,7 +30,7 @@ export default function DownCSV({ results }: Prop): JSX.Element {
     return strTop + str;
   }
 
-  function printCSVComplex(results?: ResultType): string {
+  function printCSVComplex(results: ResultType): string {
     let str = "";
     let strTop = "";
 
@@ -57,10 +57,14 @@ export default function DownCSV({ results }: Prop): JSX.Element {
   }
 
   function printCSV(results?: ResultType): string {
-    if (results?.param.dataType == "complex") {
-      return printCSVComplex(results);
+    if (results) {
+      if (results.param.dataType == "complex") {
+        return printCSVComplex(results);
+      } else {
+        return printCSVReal(results);
+      }
     } else {
-      return printCSVReal(results);
+      return "";
     }
   }
 
