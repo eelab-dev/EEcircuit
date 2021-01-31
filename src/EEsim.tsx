@@ -143,7 +143,6 @@ export default function EEsim(): JSX.Element {
   const btRun = () => {
     //const monacoValue = (monacoValueGetter.current() as unknown) as string;
     //console.log("Monaco 🎨:", monacoValue);
-
     //setNetList(monacoValue);
     setParser(getParser(netList));
     store.setItem("netList", netList);

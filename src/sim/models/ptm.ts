@@ -1168,7 +1168,7 @@ export const ptm = `
 
 * PTM 65nm NMOS 
  
-.model  PTMLP65N   nmos  level = 54
+.model  PTM65N   nmos  level = 54
 
 +version = 4.8          binunit = 1            paramchk= 1            mobmod  = 0          
 +capmod  = 2            igcmod  = 1            igbmod  = 1            geomod  = 1          
@@ -1239,7 +1239,7 @@ export const ptm = `
 
 * PTM 65nm PMOS
  
-.model  PTMLP65P   pmos  level = 54
+.model  PTM65P   pmos  level = 54
 
 +version = 4.8          binunit = 1            paramchk= 1            mobmod  = 0          
 +capmod  = 2            igcmod  = 1            igbmod  = 1            geomod  = 1          
@@ -1315,7 +1315,7 @@ export const ptm = `
 
 * PTM 90nm NMOS 
  
-.model  PTMLP90N  nmos  level = 54
+.model  PTM90N  nmos  level = 54
 
 +version = 4.8          binunit = 1            paramchk= 1            mobmod  = 0          
 +capmod  = 2            igcmod  = 1            igbmod  = 1            geomod  = 1          
@@ -1386,7 +1386,7 @@ export const ptm = `
 
 * PTM 90nm PMOS
  
-.model  PTMLP90P  pmos  level = 54
+.model  PTM90P  pmos  level = 54
 
 +version = 4.8          binunit = 1            paramchk= 1            mobmod  = 0          
 +capmod  = 2            igcmod  = 1            igbmod  = 1            geomod  = 1          
@@ -1462,7 +1462,7 @@ export const ptm = `
 
 * PTM 130nm NMOS 
  
-.model  PTMLP130N  nmos  level = 54
+.model  PTM130N  nmos  level = 54
 
 +version = 4.8          binunit = 1            paramchk= 1            mobmod  = 0          
 +capmod  = 2            igcmod  = 1            igbmod  = 1            geomod  = 1          
@@ -1533,7 +1533,7 @@ export const ptm = `
 
 * PTM 130nm PMOS
  
-.model  PTMLP130P  pmos  level = 54
+.model  PTM130P  pmos  level = 54
 
 +version = 4.8          binunit = 1            paramchk= 1            mobmod  = 0          
 +capmod  = 2            igcmod  = 1            igbmod  = 1            geomod  = 1          

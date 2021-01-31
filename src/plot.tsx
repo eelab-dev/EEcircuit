@@ -584,7 +584,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
         ) : (
           <></>
         )}
-        {plotOptions.sweepSlider ? (
+        {plotOptions.sweepSlider && isSweep ? (
           <>
             <Tag colorScheme="teal">{`${parser?.sweepVar}= ${unitConvert(sliderValue, 3)}`}</Tag>
           </>
@@ -598,7 +598,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
           Log10Y
         </Checkbox>*/}
       </HStack>
-      {plotOptions.sweepSlider ? (
+      {plotOptions.sweepSlider && isSweep ? (
         <Slider
           aria-label="slider-ex-1"
           defaultValue={0}
