@@ -93,23 +93,6 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     dragOffsetOld: 0,
   });
 
-  const getColor = (): ColorRGBA => {
-    let contrast = 0;
-    let r = 0,
-      g = 0,
-      b = 0;
-    while (contrast < 4) {
-      r = Math.random();
-      g = Math.random();
-      b = Math.random();
-
-      //change the color versus background be careful of infinite loops
-
-      contrast = calcContrast(calcLuminance(b, g, r), calcLuminance(0.23, 0.25, 0.35));
-    }
-    return new ColorRGBA(r, g, b, 1);
-  };
-
   useEffect(() => {
     if (canvasMain.current) {
       const devicePixelRatio = window.devicePixelRatio || 1;
@@ -195,7 +178,18 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
 
   const getLineMinMaxNormal = (data: number[][]) => {
     for (let col = 1; col < data.length; col++) {
-      const color = getColor();
+      //const color = getColor();
+      let color: ColorRGBA;
+      if (displayData) {
+        color = new ColorRGBA(
+          displayData[col - 1].color.r,
+          displayData[col - 1].color.g,
+          displayData[col - 1].color.b,
+          1
+        );
+      } else {
+        color = new ColorRGBA(0.5, 0.5, 0.5, 1);
+      }
       const line = new WebglLine(color, data[0].length);
       //const maxX = data[0][data[0].length - 1];
       let minY = 100000;
@@ -232,7 +226,18 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
       let minPos = 10000;
       let maxNeg = -10000;
       for (let sweep = 0; sweep < dataSweep[0].length; sweep++) {
-        const color = getColor();
+        //const color = getColor();
+        let color: ColorRGBA;
+        if (displayData) {
+          color = new ColorRGBA(
+            displayData[col - 1].color.r,
+            displayData[col - 1].color.g,
+            displayData[col - 1].color.b,
+            1
+          );
+        } else {
+          color = new ColorRGBA(0.5, 0.5, 0.5, 1);
+        }
         const line = new WebglLine(color, dataSweep[0][0].length);
         //const maxX = dataSweep[0][sweep][dataSweep[0][sweep].length - 1];
 

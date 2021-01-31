@@ -5,7 +5,7 @@ import * as circuits from "./sim/circuits";
 import EditorCustom from "./editor/editorCustom";
 
 import Plot from "./plot";
-import DisplayBox from "./box";
+import DisplayBox from "./displayBox";
 import type { ResultType, VariableType } from "./sim/readOutput";
 import DownCSV from "./downCSV";
 
@@ -29,13 +29,21 @@ import {
 import { Button, ButtonGroup } from "@chakra-ui/react";
 import { extendTheme } from "@chakra-ui/react";
 import getParser, { ParserType } from "./parser";
+import { calcContrast, calcLuminance } from "./calcContrast";
 
 let sim: Simulation;
 const store = window.localStorage;
 
+export type ColorType = {
+  r: number;
+  g: number;
+  b: number;
+};
+
 export type DisplayDataType = {
   name: string;
   index: number; //result index
+  color: ColorType;
   visible: boolean;
 };
 
@@ -76,9 +84,10 @@ export default function EEsim(): JSX.Element {
     if (isSimLoaded) {
       sim.setOutputEvent(() => {
         console.log("🚀", sim.getResults());
-        setResults(sim.getResults());
-        //const dd = makeDD(sim.getResults());
-        //setDisplayData(dd);
+        const res = sim.getResults();
+        //set the display data before results for coloring
+        handleDisplayData(res);
+        setResults(res);
       });
     }
   }, [isSimLoaded, results]);
@@ -98,42 +107,70 @@ export default function EEsim(): JSX.Element {
     }
   }, [isSimLoaded, results]);
 
-  //DisplayData logic
-  useEffect(() => {
-    if (results) {
-      const newDD = makeDD(results);
-      let tempDD = [] as DisplayDataType[];
-      newDD.forEach((newData, i) => {
-        let match = false;
-        let visible = true;
-        if (displayData) {
-          displayData.forEach((oldData) => {
-            if (newData.name == oldData.name) {
-              match = true;
-              visible = oldData.visible;
-            }
-          });
-          if (match) {
-            tempDD.push({ name: newData.name, index: newData.index, visible: visible });
-          } else {
-            tempDD.push({ name: newData.name, index: newData.index, visible: true });
-          }
-        } else {
-          tempDD.push({ name: newData.name, index: newData.index, visible: true });
-        }
-      });
-      console.log("makeDD->", tempDD);
-      setDisplayData([...tempDD]);
-    }
+  const getColor = (): ColorType => {
+    let contrast = 0;
+    let r = 0,
+      g = 0,
+      b = 0;
+    while (contrast < 4) {
+      r = Math.random();
+      g = Math.random();
+      b = Math.random();
 
-    //??????????????????????????????????????????????????doesn't change when changing circiut
-  }, [results]);
+      //change the color versus background be careful of infinite loops
+
+      contrast = calcContrast(calcLuminance(b, g, r), calcLuminance(23 / 255, 25 / 255, 35 / 255));
+    }
+    return { r: r, g: g, b: b } as ColorType;
+  };
+
+  //DisplayData logic
+  const handleDisplayData = (result: ResultType) => {
+    const newDD = makeDD(result);
+    let tempDD = [] as DisplayDataType[];
+    newDD.forEach((newData, i) => {
+      let match = false;
+      let visible = true;
+      if (displayData) {
+        displayData.forEach((oldData) => {
+          if (newData.name == oldData.name) {
+            match = true;
+            visible = oldData.visible;
+          }
+        });
+        if (match) {
+          tempDD.push({
+            name: newData.name,
+            index: newData.index,
+            visible: visible,
+            color: newData.color,
+          });
+        } else {
+          tempDD.push({
+            name: newData.name,
+            index: newData.index,
+            visible: true,
+            color: newData.color,
+          });
+        }
+      } else {
+        tempDD.push({
+          name: newData.name,
+          index: newData.index,
+          visible: true,
+          color: newData.color,
+        });
+      }
+    });
+    console.log("makeDD->", tempDD);
+    setDisplayData([...tempDD]);
+  };
 
   const makeDD = (res: ResultType): DisplayDataType[] => {
     let dd = [] as DisplayDataType[];
     res.param.variables.forEach((e, i) => {
       if (i > 0) {
-        dd.push({ name: e.name, index: i, visible: true });
+        dd.push({ name: e.name, index: i, visible: true, color: getColor() });
       }
     });
     console.log("makeDD->", dd);
