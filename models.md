@@ -59,14 +59,14 @@ add `.include modelcard.ptmHP` in your netlist.
 
 add `.include modelcard.ptm` in your netlist.
 
-| Model name | Node | Type |                          Reference |
-| ---------- | :--: | ---: | ---------------------------------: |
-| PTM65N     | 45nm |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
-| PTM65P     | 45nm |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
-| PTM90N     | 45nm |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
-| PTM90P     | 45nm |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
-| PTM130N    | 45nm |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
-| PTM130P    | 45nm |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
+| Model name | Node  | Type |                          Reference |
+| ---------- | :---: | ---: | ---------------------------------: |
+| PTM65N     | 65nm  |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTM65P     | 65nm  |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTM90N     | 90nm  |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTM90P     | 90nm  |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTM130N    | 130nm |    N | [ptm.asu.edu](http://ptm.asu.edu/) |
+| PTM130P    | 130nm |    P | [ptm.asu.edu](http://ptm.asu.edu/) |
 
 ## BSIM4 Benchmark
 
