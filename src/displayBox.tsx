@@ -41,7 +41,11 @@ function DisplayBox({ displayData, onChange }: Props): JSX.Element {
             onChange={onChange}
             name={e.name}
             isChecked={e.visible}
-            color={`rgb(${e.color.r * 255},${e.color.g * 255},${e.color.b * 255})`}>
+            color={
+              e.color
+                ? `rgb(${e.color.r * 255},${e.color.g * 255},${e.color.b * 255})`
+                : `rgb(200,200,200)`
+            }>
             {e.name}
           </Checkbox>
           /*<div key={e.index}>

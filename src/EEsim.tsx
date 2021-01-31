@@ -13,6 +13,7 @@ import {
   Box,
   ChakraProvider,
   Checkbox,
+  color,
   createStandaloneToast,
   Divider,
   Flex,
@@ -131,11 +132,14 @@ export default function EEsim(): JSX.Element {
     newDD.forEach((newData, i) => {
       let match = false;
       let visible = true;
+      let color = getColor();
       if (displayData) {
         displayData.forEach((oldData) => {
-          if (newData.name == oldData.name) {
+          //account for new color type
+          if (newData.name == oldData.name && oldData.color) {
             match = true;
             visible = oldData.visible;
+            color = oldData.color;
           }
         });
         if (match) {
@@ -143,14 +147,14 @@ export default function EEsim(): JSX.Element {
             name: newData.name,
             index: newData.index,
             visible: visible,
-            color: newData.color,
+            color: color,
           });
         } else {
           tempDD.push({
             name: newData.name,
             index: newData.index,
             visible: true,
-            color: newData.color,
+            color: getColor(),
           });
         }
       } else {
@@ -158,7 +162,7 @@ export default function EEsim(): JSX.Element {
           name: newData.name,
           index: newData.index,
           visible: true,
-          color: newData.color,
+          color: getColor(),
         });
       }
     });
