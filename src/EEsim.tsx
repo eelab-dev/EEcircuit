@@ -227,7 +227,7 @@ export default function EEsim(): JSX.Element {
 
   const config = {
     useSystemColorMode: false,
-    initialColorMode: "dark",
+    initialColorMode: "dark" as "dark" | "light" | undefined,
   };
 
   const customTheme = extendTheme({ config });
