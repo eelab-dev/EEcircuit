@@ -277,6 +277,17 @@ export default function EEsim(): JSX.Element {
     store.removeItem("displayData");
   };
 
+  const btColor = () => {
+    if (results && displayData) {
+      const d = [...displayData];
+      d.forEach((e) => {
+        e.color = getColor();
+      });
+      setDisplayData(d);
+      setResults({ ...results });
+    }
+  };
+
   return (
     <ChakraProvider theme={customTheme}>
       <div>
@@ -304,13 +315,16 @@ export default function EEsim(): JSX.Element {
             </div>
           </div>
         </Box>
-        <Box p={2} width="72.5%">
+        <Box p={1} width="72.5%">
           <Flex>
-            <Button colorScheme="blue" variant="solid" size="lg" onClick={btRun}>
+            <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btRun}>
               Run 🚀
             </Button>
             <Spacer />
-            <Button colorScheme="blue" variant="solid" size="lg" onClick={btReset}>
+            <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btColor}>
+              Color 🌈
+            </Button>
+            <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btReset}>
               Reset 🧼
             </Button>
           </Flex>
