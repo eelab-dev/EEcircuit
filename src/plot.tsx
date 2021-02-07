@@ -3,7 +3,7 @@ import WebGlPlot, { ColorRGBA, WebglLine, WebglSquare } from "./webglplot/webglp
 //import WebGlPlot, { ColorRGBA, WebglLine } from "webgl-plot";
 import { calcContrast, calcLuminance } from "./calcContrast";
 import type { DisplayDataType } from "./EEsim";
-import type { RealDataType, ResultType } from "./sim/readOutput";
+import type { ComplexDataType, RealDataType, ResultType } from "./sim/readOutput";
 import { Box, Checkbox, Grid, GridItem, HStack, Tag } from "@chakra-ui/react";
 import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/react";
 import type { ParserType } from "./parser";
@@ -267,6 +267,70 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     }
   };
 
+  const complexLine = (data: ComplexDataType) => {
+    lineMinMax = [];
+    getLineMinMaxComplex(data);
+    SetIsSweep(false);
+  };
+
+  const getLineMinMaxComplex = (data: ComplexDataType) => {
+    const drawLine = (dataY: number[], dataX: number[], index: number) => {
+      let color: ColorRGBA;
+      if (displayData) {
+        color = new ColorRGBA(
+          displayData[index - 1].color.r,
+          displayData[index - 1].color.g,
+          displayData[index - 1].color.b,
+          1
+        );
+      } else {
+        color = new ColorRGBA(0.5, 0.5, 0.5, 1);
+      }
+      const line = new WebglLine(color, dataX.length);
+      let minY = 100000;
+      let maxY = -100000;
+      let minPos = maxY;
+      let maxNeg = minY;
+
+      for (let i = 0; i < dataX.length; i++) {
+        line.setX(i, dataX[i]);
+        const y = dataY[i];
+        line.setY(i, y);
+        maxY = maxY > y ? maxY : y;
+        minY = minY < y ? minY : y;
+        minPos = minY < y && y > 0 ? minPos : y;
+        maxNeg = maxY > y && y < 0 ? maxNeg : y;
+      }
+
+      wglp.addDataLine(line);
+      lineMinMax.push({
+        minY: minY,
+        maxY: maxY,
+        minYPos: minPos,
+        maxYNeg: maxNeg,
+        minX: dataX[0],
+        maxX: dataX[dataX.length - 1],
+      });
+    };
+
+    let dataXReal = [] as number[];
+
+    data[0].forEach((e) => {
+      dataXReal.push(e.real);
+    });
+
+    for (let col = 1; col < data.length; col++) {
+      let dataYReal = [] as number[];
+      let dataYImg = [] as number[];
+      data[col].forEach((e) => {
+        dataYReal.push(e.real);
+        dataYImg.push(e.img);
+      });
+      drawLine(dataYReal, dataXReal, 2 * col - 1);
+      drawLine(dataYImg, dataXReal, 2 * col);
+    }
+  };
+
   useEffect(() => {
     sweepIndices = [];
     wglp.removeAllLines();
@@ -278,44 +342,52 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     wglp.gOffsetX = -1;
     wglp.gScaleX = 2;
 
-    const data = results ? results.data : [[]];
-
-    const possibleSweep = results ? results.header.indexOf("sweep") > 0 : false;
-    if (possibleSweep) {
-      sweepLine(data as RealDataType);
-      //normalLine(data);
-    } else {
-      normalLine(data as RealDataType);
+    if (results) {
+      if (results.param.dataType == "real") {
+        const data = results ? results.data : [[]];
+        const possibleSweep = results ? results.header.indexOf("sweep") > 0 : false;
+        if (possibleSweep) {
+          sweepLine(data as RealDataType);
+          //normalLine(data);
+        } else {
+          normalLine(data as RealDataType);
+        }
+      }
+      if (results.param.dataType == "complex") {
+        const data = results ? results.data : [[]];
+        complexLine(data as ComplexDataType);
+      }
+      scaleUpdate(findMinMaxGlobal());
     }
 
     //?????????????????????
 
     //console.log("line-->", wglp.linesData);
-
-    scaleUpdate(findMinMaxGlobal());
   }, [results]);
 
   useEffect(() => {
     //console.log("plot->DD->", displayData);
     //console.log("plot->DD->", wglp.lines);
-
-    if (sweepIndices.length > 0) {
-      if (displayData && wglp.linesData.length == sweepIndices.length * displayData.length) {
-        //console.log("plot->DD->", "it is sweep");
-        displayData.forEach((e) => {
-          for (let i = 0; i < sweepIndices.length; i++) {
-            wglp.linesData[(e.index - 1) * sweepIndices.length + i].visible = e.visible;
-          }
-        });
-        scaleUpdate(findMinMaxGlobal());
-      }
-    } else {
-      if (displayData && wglp.linesData.length == displayData.length) {
-        displayData.forEach((e) => {
-          //first item is time
-          wglp.linesData[e.index - 1].visible = e.visible;
-        });
-        scaleUpdate(findMinMaxGlobal());
+    if (results && displayData) {
+      if (sweepIndices.length > 0) {
+        if (wglp.linesData.length == sweepIndices.length * displayData.length) {
+          //console.log("plot->DD->", "it is sweep");
+          displayData.forEach((e) => {
+            for (let i = 0; i < sweepIndices.length; i++) {
+              wglp.linesData[(e.index - 1) * sweepIndices.length + i].visible = e.visible;
+            }
+          });
+          scaleUpdate(findMinMaxGlobal());
+        }
+      } else {
+        if (wglp.linesData.length == displayData.length) {
+          displayData.forEach((e) => {
+            //first item is time (offset=1) or frequency (offset=2)
+            const offset = results.param.dataType == "complex" ? 2 : 1;
+            wglp.linesData[e.index - offset].visible = e.visible;
+          });
+          scaleUpdate(findMinMaxGlobal());
+        }
       }
     }
 
@@ -357,11 +429,16 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     }
     wglp.gScaleY = 1.9 / Math.abs(diffY);
     wglp.gOffsetY = -1 * avgY * wglp.gScaleY;
-    //console.log("diff", diffY, "avg", avgY);
-    //console.log(scale, wglp.gScaleY, wglp.gOffsetY);
-    //wglp.update();
+
     wglp.gScaleX = 2 / (scale.maxX - scale.minX);
     wglp.gOffsetX = -wglp.gScaleX * scale.minX - 1;
+
+    //??????????????????????????????????????????????????????????????????????
+
+    /*wglp.gScaleY = 0.1;
+    wglp.gOffsetY = 0;
+    wglp.gScaleX = 0.1;
+    wglp.gOffsetX = 0;*/
   };
 
   const mouseDown = (e: React.MouseEvent) => {
