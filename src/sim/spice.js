@@ -1290,14 +1290,6 @@ var MEMFS = {
   }
   return node;
  },
- getFileDataAsRegularArray: function(node) {
-  if (node.contents && node.contents.subarray) {
-   var arr = [];
-   for (var i = 0; i < node.usedBytes; ++i) arr.push(node.contents[i]);
-   return arr;
-  }
-  return node.contents;
- },
  getFileDataAsTypedArray: function(node) {
   if (!node.contents) return new Uint8Array(0);
   if (node.contents.subarray) return node.contents.subarray(0, node.usedBytes);
@@ -1312,27 +1304,20 @@ var MEMFS = {
   var oldContents = node.contents;
   node.contents = new Uint8Array(newCapacity);
   if (node.usedBytes > 0) node.contents.set(oldContents.subarray(0, node.usedBytes), 0);
-  return;
  },
  resizeFileStorage: function(node, newSize) {
   if (node.usedBytes == newSize) return;
   if (newSize == 0) {
    node.contents = null;
    node.usedBytes = 0;
-   return;
-  }
-  if (!node.contents || node.contents.subarray) {
+  } else {
    var oldContents = node.contents;
    node.contents = new Uint8Array(newSize);
    if (oldContents) {
     node.contents.set(oldContents.subarray(0, Math.min(newSize, node.usedBytes)));
    }
    node.usedBytes = newSize;
-   return;
   }
-  if (!node.contents) node.contents = [];
-  if (node.contents.length > newSize) node.contents.length = newSize; else while (node.contents.length < newSize) node.contents.push(0);
-  node.usedBytes = newSize;
  },
  node_ops: {
   getattr: function(node) {
@@ -3167,19 +3152,25 @@ var SYSCALLS = {
  mappings: {},
  DEFAULT_POLLMASK: 5,
  umask: 511,
- calculateAt: function(dirfd, path) {
-  if (path[0] !== "/") {
-   var dir;
-   if (dirfd === -100) {
-    dir = FS.cwd();
-   } else {
-    var dirstream = FS.getStream(dirfd);
-    if (!dirstream) throw new FS.ErrnoError(8);
-    dir = dirstream.path;
-   }
-   path = PATH.join2(dir, path);
+ calculateAt: function(dirfd, path, allowEmpty) {
+  if (path[0] === "/") {
+   return path;
   }
-  return path;
+  var dir;
+  if (dirfd === -100) {
+   dir = FS.cwd();
+  } else {
+   var dirstream = FS.getStream(dirfd);
+   if (!dirstream) throw new FS.ErrnoError(8);
+   dir = dirstream.path;
+  }
+  if (path.length == 0) {
+   if (!allowEmpty) {
+    throw new FS.ErrnoError(44);
+   }
+   return dir;
+  }
+  return PATH.join2(dir, path);
  },
  doStat: function(func, path, buf) {
   try {
@@ -4451,54 +4442,17 @@ var Browser = {
   var RAF = Browser.fakeRequestAnimationFrame;
   RAF(func);
  },
- safeCallback: function(func) {
-  return function() {
-   if (!ABORT) return func.apply(null, arguments);
-  };
- },
- allowAsyncCallbacks: true,
- queuedAsyncCallbacks: [],
- pauseAsyncCallbacks: function() {
-  Browser.allowAsyncCallbacks = false;
- },
- resumeAsyncCallbacks: function() {
-  Browser.allowAsyncCallbacks = true;
-  if (Browser.queuedAsyncCallbacks.length > 0) {
-   var callbacks = Browser.queuedAsyncCallbacks;
-   Browser.queuedAsyncCallbacks = [];
-   callbacks.forEach(function(func) {
-    func();
-   });
-  }
- },
  safeRequestAnimationFrame: function(func) {
   return Browser.requestAnimationFrame(function() {
    if (ABORT) return;
-   if (Browser.allowAsyncCallbacks) {
-    func();
-   } else {
-    Browser.queuedAsyncCallbacks.push(func);
-   }
+   func();
   });
  },
  safeSetTimeout: function(func, timeout) {
   noExitRuntime = true;
   return setTimeout(function() {
    if (ABORT) return;
-   if (Browser.allowAsyncCallbacks) {
-    func();
-   } else {
-    Browser.queuedAsyncCallbacks.push(func);
-   }
-  }, timeout);
- },
- safeSetInterval: function(func, timeout) {
-  noExitRuntime = true;
-  return setInterval(function() {
-   if (ABORT) return;
-   if (Browser.allowAsyncCallbacks) {
-    func();
-   }
+   func();
   }, timeout);
  },
  getMimetype: function(name) {
@@ -5806,7 +5760,9 @@ function run(args) {
   return;
  }
  preRun();
- if (runDependencies > 0) return;
+ if (runDependencies > 0) {
+  return;
+ }
  function doRun() {
   //EEsim
 //if (calledRun) return;
