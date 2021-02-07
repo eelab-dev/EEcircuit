@@ -320,14 +320,14 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     });
 
     for (let col = 1; col < data.length; col++) {
-      let dataYReal = [] as number[];
-      let dataYImg = [] as number[];
+      let dataYMag = [] as number[];
+      let dataYPhase = [] as number[];
       data[col].forEach((e) => {
-        dataYReal.push(e.real);
-        dataYImg.push(e.img);
+        dataYMag.push(Math.sqrt(Math.pow(e.real, 2) + Math.pow(e.img, 2)));
+        dataYPhase.push((Math.sin(e.img / e.real) * 180) / Math.PI);
       });
-      drawLine(dataYReal, dataXReal, 2 * col - 1);
-      drawLine(dataYImg, dataXReal, 2 * col);
+      drawLine(dataYMag, dataXReal, 2 * col - 1);
+      drawLine(dataYPhase, dataXReal, 2 * col);
     }
   };
 
