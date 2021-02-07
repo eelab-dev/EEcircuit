@@ -154,7 +154,7 @@ export default function EEsim(): JSX.Element {
             name: newData.name,
             index: newData.index,
             visible: true,
-            color: getColor(),
+            color: newData.color,
           });
         }
       } else {
@@ -162,7 +162,7 @@ export default function EEsim(): JSX.Element {
           name: newData.name,
           index: newData.index,
           visible: true,
-          color: getColor(),
+          color: newData.color,
         });
       }
     });
@@ -172,11 +172,22 @@ export default function EEsim(): JSX.Element {
 
   const makeDD = (res: ResultType): DisplayDataType[] => {
     let dd = [] as DisplayDataType[];
-    res.param.variables.forEach((e, i) => {
-      if (i > 0) {
-        dd.push({ name: e.name, index: i, visible: true, color: getColor() });
-      }
-    });
+    if (res.param.dataType == "complex") {
+      res.param.variables.forEach((e, i) => {
+        if (i > 0) {
+          const color1 = getColor();
+          dd.push({ name: e.name + " (mag)", index: 2 * i, visible: true, color: color1 });
+          dd.push({ name: e.name + " (phase)", index: 2 * i + 1, visible: true, color: color1 });
+        }
+      });
+    } else {
+      res.param.variables.forEach((e, i) => {
+        if (i > 0) {
+          dd.push({ name: e.name, index: i, visible: true, color: getColor() });
+        }
+      });
+    }
+
     console.log("makeDD->", dd);
     return dd;
   };
@@ -263,6 +274,7 @@ export default function EEsim(): JSX.Element {
   const btReset = () => {
     setResults(undefined);
     setDisplayData(undefined);
+    store.removeItem("displayData");
   };
 
   return (
