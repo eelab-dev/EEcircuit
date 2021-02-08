@@ -322,7 +322,7 @@ export default function EEsim(): JSX.Element {
             </Button>
             <Spacer />
             <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btColor}>
-              Color 🌈
+              Colorize 🌈
             </Button>
             <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btReset}>
               Reset 🧼

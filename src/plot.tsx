@@ -553,6 +553,44 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     setZoomStatus({ scale: wglp.gScaleX, offset: wglp.gOffsetX });
   };
 
+  function wheelEvent(e: React.WheelEvent) {
+    //e.preventDefault();
+    const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
+    const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
+    const cursorOffsetX = (2 * (e.clientX - eOffset - width / 2)) / width;
+    if (e.shiftKey) {
+      //offset += e.deltaY * 0.1;
+      //wglp.gOffsetX = 0.1 * offset;
+    } else {
+      let scale = wglp.gScaleX;
+      if (e.deltaY < 0) {
+        scale = wglp.gScaleX + -1 * e.deltaY * (wglp.gScaleX * 0.001);
+      } else {
+        scale = wglp.gScaleX - e.deltaY * (wglp.gScaleX * 0.001);
+      }
+
+      //let scale = wglp.gScaleX;
+      //scale = Math.min(100, scale);
+      //scale = Math.max(1, scale);
+      const gScaleXOld = wglp.gScaleX;
+
+      //wglp.gScaleX = 1 * Math.pow(scale, 1.5);
+
+      //if (scale > 1 && scale < 100) {
+      //const offsetFactor = cursorOffsetX * gScaleXOld;
+
+      wglp.gScaleX = 1 * scale;
+      //wglp.gOffsetX = -offsetFactor;
+      //}
+      /*if (scale <= 1) {
+        //wglp.gOffsetX = 0;
+        scaleUpdate(findMinMaxGlobal());
+      }*/
+      //console.log("wheel->", cursorOffsetX, offsetFactor, wglp.gOffsetX);
+      //console.log("wheel->", scale, wglp.gScaleX);
+    }
+  }
+
   const contextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -721,6 +759,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
               onMouseMove={mouseMove}
               onMouseUp={mouseUp}
               onDoubleClick={doubleClick}
+              onWheel={wheelEvent}
               onContextMenu={contextMenu}></canvas>
           </Box>
         </GridItem>
