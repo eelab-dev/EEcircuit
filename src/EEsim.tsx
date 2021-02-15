@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import Simulation from "./sim/simulation";
+import type { simulation } from "./sim/simulationLink";
 import * as circuits from "./sim/circuits";
 
 import EditorCustom from "./editor/editorCustom";
@@ -8,6 +8,8 @@ import Plot from "./plot";
 import DisplayBox from "./displayBox";
 import type { ResultType, VariableType } from "./sim/readOutput";
 import DownCSV from "./downCSV";
+
+import * as Comlink from "comlink";
 
 import {
   Box,
@@ -32,7 +34,8 @@ import { extendTheme } from "@chakra-ui/react";
 import getParser, { ParserType } from "./parser";
 import { calcContrast, calcLuminance } from "./calcContrast";
 
-let sim: Simulation;
+//let sim: Simulation;
+let sim: Comlink.Remote<typeof simulation>;
 const store = window.localStorage;
 
 export type ColorType = {
@@ -82,21 +85,21 @@ export default function EEsim(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    if (isSimLoaded) {
+    /*if (isSimLoaded) {
       sim.setOutputEvent(() => {
-        console.log("🚀", sim.getResults());
+        console.log("🚀", await sim.getResults());
         const res = sim.getResults();
         //set the display data before results for coloring
         handleDisplayData(res);
         setResults(res);
       });
-    }
+    }*/
   }, [isSimLoaded, results]);
 
   useEffect(() => {
     if (isSimLoaded) {
       const errors = sim.getError();
-      errors.forEach((e) => {
+      /*errors.forEach((e) => {
         toast({
           title: "ngspice error",
           description: e,
@@ -104,7 +107,7 @@ export default function EEsim(): JSX.Element {
           duration: 9000,
           isClosable: true,
         });
-      });
+      });*/
     }
   }, [isSimLoaded, results]);
 
@@ -192,19 +195,27 @@ export default function EEsim(): JSX.Element {
     return dd;
   };
 
-  const btRun = () => {
-    //const monacoValue = (monacoValueGetter.current() as unknown) as string;
-    //console.log("Monaco 🎨:", monacoValue);
-    //setNetList(monacoValue);
+  const btRun = async () => {
     setParser(getParser(netList));
     store.setItem("netList", netList);
     if (sim) {
-      sim.setNetList(netList);
-      sim.runSim();
+      await sim.setNetList(netList);
+      await sim.runSim();
     } else {
-      sim = new Simulation();
-      console.log(sim);
-      sim.start();
+      //sim = new Simulation();
+      //console.log(sim);
+      //???????????????????????????????????????????????????????????????????????????????????????????????
+      const worker = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
+      sim = Comlink.wrap<typeof simulation>(worker);
+      const callback = async () => {
+        console.log("🚀", await sim.getResults());
+        const res = await sim.getResults();
+        //set the display data before results for coloring
+        handleDisplayData(res);
+        setResults(res);
+      };
+      await sim.setOutputEvent(Comlink.proxy(callback));
+      await sim.start();
       console.log("🧨🧨🧨🧨🧨🧨🧨🧨");
       btRun();
       setIsSimLoaded(true);
@@ -275,6 +286,26 @@ export default function EEsim(): JSX.Element {
     setResults(undefined);
     setDisplayData(undefined);
     store.removeItem("displayData");
+
+    //worker test
+    /*const myWorker = new Worker(new URL("./worker.js", import.meta.url));
+    myWorker.postMessage([10, 34]);
+    myWorker.onmessage = function (e) {
+      console.log("Message received from worker", e.data);
+    };*/
+
+    async function init() {
+      // WebWorkers use `postMessage` and therefore work with Comlink.
+
+      //alert(`Counter: ${await obj.counter}`);
+
+      await sim.setNetList(netList);
+      await sim.start();
+      await sim.runSim();
+
+      //alert(`Counter: ${await obj.counter}`);
+    }
+    init();
   };
 
   const btColor = () => {
@@ -354,7 +385,7 @@ export default function EEsim(): JSX.Element {
                 fontSize="0.9em"
                 rows={15}
                 //value={results ? results.header : ""}
-                value={sim ? sim.getInfo() + "\n\n" + results?.header : ""}
+                //value={sim ? sim.getInfo() + "\n\n" + results?.header : ""}
               />
             </TabPanel>
 
