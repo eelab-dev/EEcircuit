@@ -55,15 +55,7 @@ export default function EEsim(): JSX.Element {
   // Create the count state.
 
   const [isSimLoaded, setIsSimLoaded] = React.useState(false);
-  /*const [results, setResults] = React.useState<ResultType>({
-    param: {
-      varNum: 0,
-      pointNum: 0,
-      variables: [{ name: "", type: "time" }] as VariableType[],
-    },
-    header: "",
-    data: [],
-  });*/
+  const [isSimRunning, setIsSimRunning] = React.useState(false);
   const [results, setResults] = React.useState<ResultType>();
   const [parser, setParser] = React.useState<ParserType>();
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
@@ -196,14 +188,13 @@ export default function EEsim(): JSX.Element {
   };
 
   const btRun = async () => {
+    setIsSimRunning(true);
     setParser(getParser(netList));
     store.setItem("netList", netList);
     if (sim) {
       await sim.setNetList(netList);
       await sim.runSim();
     } else {
-      //sim = new Simulation();
-      //console.log(sim);
       //???????????????????????????????????????????????????????????????????????????????????????????????
       const worker = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
       sim = Comlink.wrap<typeof simulation>(worker);
@@ -213,6 +204,7 @@ export default function EEsim(): JSX.Element {
         //set the display data before results for coloring
         handleDisplayData(res);
         setResults(res);
+        setIsSimRunning(false);
       };
       await sim.setOutputEvent(Comlink.proxy(callback));
       await sim.start();
@@ -348,14 +340,33 @@ export default function EEsim(): JSX.Element {
         </Box>
         <Box p={1} width="72.5%">
           <Flex>
-            <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btRun}>
+            <Button
+              colorScheme="blue"
+              variant="solid"
+              size="lg"
+              m={1}
+              onClick={btRun}
+              isLoading={isSimRunning}
+              loadingText="Running">
               Run 🚀
             </Button>
             <Spacer />
-            <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btColor}>
+            <Button
+              colorScheme="blue"
+              variant="solid"
+              size="lg"
+              m={1}
+              onClick={btColor}
+              isDisabled={isSimRunning}>
               Colorize 🌈
             </Button>
-            <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btReset}>
+            <Button
+              colorScheme="blue"
+              variant="solid"
+              size="lg"
+              m={1}
+              onClick={btReset}
+              isDisabled={isSimRunning}>
               Reset 🧼
             </Button>
           </Flex>
