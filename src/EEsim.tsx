@@ -57,6 +57,7 @@ export default function EEsim(): JSX.Element {
   const [isSimLoaded, setIsSimLoaded] = React.useState(false);
   const [isSimRunning, setIsSimRunning] = React.useState(false);
   const [results, setResults] = React.useState<ResultType>();
+  const [info, setInfo] = React.useState("");
   const [parser, setParser] = React.useState<ParserType>();
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
@@ -77,21 +78,9 @@ export default function EEsim(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    /*if (isSimLoaded) {
-      sim.setOutputEvent(() => {
-        console.log("🚀", await sim.getResults());
-        const res = sim.getResults();
-        //set the display data before results for coloring
-        handleDisplayData(res);
-        setResults(res);
-      });
-    }*/
-  }, [isSimLoaded, results]);
-
-  useEffect(() => {
-    if (isSimLoaded) {
-      const errors = sim.getError();
-      /*errors.forEach((e) => {
+    const displayErrors = async () => {
+      const errors = await sim.getError();
+      errors.forEach((e) => {
         toast({
           title: "ngspice error",
           description: e,
@@ -99,7 +88,11 @@ export default function EEsim(): JSX.Element {
           duration: 9000,
           isClosable: true,
         });
-      });*/
+      });
+    };
+
+    if (isSimLoaded) {
+      displayErrors();
     }
   }, [isSimLoaded, results]);
 
@@ -204,6 +197,7 @@ export default function EEsim(): JSX.Element {
         //set the display data before results for coloring
         handleDisplayData(res);
         setResults(res);
+        setInfo(res.header + "\n\n" + (await sim.getInfo()));
         setIsSimRunning(false);
       };
       await sim.setOutputEvent(Comlink.proxy(callback));
@@ -278,26 +272,6 @@ export default function EEsim(): JSX.Element {
     setResults(undefined);
     setDisplayData(undefined);
     store.removeItem("displayData");
-
-    //worker test
-    /*const myWorker = new Worker(new URL("./worker.js", import.meta.url));
-    myWorker.postMessage([10, 34]);
-    myWorker.onmessage = function (e) {
-      console.log("Message received from worker", e.data);
-    };*/
-
-    async function init() {
-      // WebWorkers use `postMessage` and therefore work with Comlink.
-
-      //alert(`Counter: ${await obj.counter}`);
-
-      await sim.setNetList(netList);
-      await sim.start();
-      await sim.runSim();
-
-      //alert(`Counter: ${await obj.counter}`);
-    }
-    init();
   };
 
   const btColor = () => {
@@ -397,6 +371,7 @@ export default function EEsim(): JSX.Element {
                 rows={15}
                 //value={results ? results.header : ""}
                 //value={sim ? sim.getInfo() + "\n\n" + results?.header : ""}
+                value={info}
               />
             </TabPanel>
 
