@@ -86,7 +86,6 @@ export default class Simulation {
             this.dataRaw = module.FS?.readFile("out.raw") ?? new Uint8Array();
             this.results = readOutput(this.dataRaw);
             this.outputEvent(this.output); //callback
-            console.log("😱", "got output", this.cmd);
           } catch (e) {
             console.log(e);
           }
@@ -100,8 +99,6 @@ export default class Simulation {
           console.log(`I am in pass loop JS -${this.pass} `);
         }
         module.FS?.writeFile("/test.cir", this.netList);
-
-        console.log("😱", this.cmd);
 
         console.log("loop finished");
 
