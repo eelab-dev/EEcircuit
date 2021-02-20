@@ -1,6 +1,8 @@
 /**
  * SPICE simulation
  */
+import * as Comlink from "comlink";
+
 import * as circuits from "./circuits";
 import * as freePDK45 from "./models/freepdk/freePDK";
 import * as ptm from "./models/ptm";
@@ -88,7 +90,7 @@ export default class Simulation {
             console.log(e);
           }
 
-          console.log("cmd-> ready to start...");
+          console.log("cmd-> -> ready to start...");
           //pass = false;
         }
         while (!this.pass && this.cmd == 0) {
@@ -103,6 +105,7 @@ export default class Simulation {
         this.pass = false;
       });
     });
+
     module.setGetInput(this.getInput);
 
     module.runThings();
@@ -137,3 +140,6 @@ export default class Simulation {
     return this.error;
   };
 }
+
+export const simulation = new Simulation();
+Comlink.expose(simulation);

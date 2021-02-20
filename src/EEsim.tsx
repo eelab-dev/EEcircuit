@@ -1,13 +1,15 @@
 import React, { useEffect } from "react";
-import Simulation from "./sim/simulation";
+import type { simulation } from "./sim/simulationLink";
 import * as circuits from "./sim/circuits";
 
 import EditorCustom from "./editor/editorCustom";
 
 import Plot from "./plot";
 import DisplayBox from "./displayBox";
-import type { ResultType, VariableType } from "./sim/readOutput";
+import type { ResultType } from "./sim/readOutput";
 import DownCSV from "./downCSV";
+
+import * as Comlink from "comlink";
 
 import {
   Box,
@@ -32,7 +34,8 @@ import { extendTheme } from "@chakra-ui/react";
 import getParser, { ParserType } from "./parser";
 import { calcContrast, calcLuminance } from "./calcContrast";
 
-let sim: Simulation;
+//let sim: Simulation;
+let sim: Comlink.Remote<typeof simulation>;
 const store = window.localStorage;
 
 export type ColorType = {
@@ -52,16 +55,9 @@ export default function EEsim(): JSX.Element {
   // Create the count state.
 
   const [isSimLoaded, setIsSimLoaded] = React.useState(false);
-  /*const [results, setResults] = React.useState<ResultType>({
-    param: {
-      varNum: 0,
-      pointNum: 0,
-      variables: [{ name: "", type: "time" }] as VariableType[],
-    },
-    header: "",
-    data: [],
-  });*/
+  const [isSimRunning, setIsSimRunning] = React.useState(false);
   const [results, setResults] = React.useState<ResultType>();
+  const [info, setInfo] = React.useState("");
   const [parser, setParser] = React.useState<ParserType>();
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
@@ -82,20 +78,8 @@ export default function EEsim(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    if (isSimLoaded) {
-      sim.setOutputEvent(() => {
-        console.log("🚀", sim.getResults());
-        const res = sim.getResults();
-        //set the display data before results for coloring
-        handleDisplayData(res);
-        setResults(res);
-      });
-    }
-  }, [isSimLoaded, results]);
-
-  useEffect(() => {
-    if (isSimLoaded) {
-      const errors = sim.getError();
+    const displayErrors = async () => {
+      const errors = await sim.getError();
       errors.forEach((e) => {
         toast({
           title: "ngspice error",
@@ -105,6 +89,10 @@ export default function EEsim(): JSX.Element {
           isClosable: true,
         });
       });
+    };
+
+    if (isSimLoaded) {
+      displayErrors();
     }
   }, [isSimLoaded, results]);
 
@@ -192,19 +180,28 @@ export default function EEsim(): JSX.Element {
     return dd;
   };
 
-  const btRun = () => {
-    //const monacoValue = (monacoValueGetter.current() as unknown) as string;
-    //console.log("Monaco 🎨:", monacoValue);
-    //setNetList(monacoValue);
+  const btRun = async () => {
+    setIsSimRunning(true);
     setParser(getParser(netList));
     store.setItem("netList", netList);
     if (sim) {
-      sim.setNetList(netList);
-      sim.runSim();
+      await sim.setNetList(netList);
+      await sim.runSim();
     } else {
-      sim = new Simulation();
-      console.log(sim);
-      sim.start();
+      //spawn worker thread
+      const worker = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
+      sim = Comlink.wrap<typeof simulation>(worker);
+      const callback = async () => {
+        console.log("🚀", await sim.getResults());
+        const res = await sim.getResults();
+        //set the display data before results for coloring
+        handleDisplayData(res);
+        setResults(res);
+        setInfo(res.header + "\n\n" + (await sim.getInfo()));
+        setIsSimRunning(false);
+      };
+      await sim.setOutputEvent(Comlink.proxy(callback));
+      await sim.start();
       console.log("🧨🧨🧨🧨🧨🧨🧨🧨");
       btRun();
       setIsSimLoaded(true);
@@ -317,14 +314,33 @@ export default function EEsim(): JSX.Element {
         </Box>
         <Box p={1} width="72.5%">
           <Flex>
-            <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btRun}>
+            <Button
+              colorScheme="blue"
+              variant="solid"
+              size="lg"
+              m={1}
+              onClick={btRun}
+              isLoading={isSimRunning}
+              loadingText="Running">
               Run 🚀
             </Button>
             <Spacer />
-            <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btColor}>
+            <Button
+              colorScheme="blue"
+              variant="solid"
+              size="lg"
+              m={1}
+              onClick={btColor}
+              isDisabled={isSimRunning}>
               Colorize 🌈
             </Button>
-            <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btReset}>
+            <Button
+              colorScheme="blue"
+              variant="solid"
+              size="lg"
+              m={1}
+              onClick={btReset}
+              isDisabled={isSimRunning}>
               Reset 🧼
             </Button>
           </Flex>
@@ -354,7 +370,8 @@ export default function EEsim(): JSX.Element {
                 fontSize="0.9em"
                 rows={15}
                 //value={results ? results.header : ""}
-                value={sim ? sim.getInfo() + "\n\n" + results?.header : ""}
+                //value={sim ? sim.getInfo() + "\n\n" + results?.header : ""}
+                value={info}
               />
             </TabPanel>
 
