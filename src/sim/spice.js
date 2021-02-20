@@ -250,9 +250,7 @@ var wasmBinary;
 
 if (Module["wasmBinary"]) wasmBinary = Module["wasmBinary"];
 
-var noExitRuntime;
-
-if (Module["noExitRuntime"]) noExitRuntime = Module["noExitRuntime"];
+var noExitRuntime = Module["noExitRuntime"] || true;
 
 if (typeof WebAssembly !== "object") {
  abort("no native wasm support detected");
@@ -1146,12 +1144,15 @@ var TTY = {
   get_char: function(tty) {
    if (!tty.input.length) {
     var result = null;
-    if (typeof window != "undefined" && typeof window.prompt == "function") {
+    //EEsim
+
+if (true)
+ {
      //EEsim
 
 //result = window.prompt("Input: ");
 result = getInput();
-
+;
      if (result !== null) {
       result += "\n";
      }
@@ -3983,17 +3984,15 @@ function emscripten_realloc_buffer(size) {
 }
 
 function _emscripten_resize_heap(requestedSize) {
- requestedSize = requestedSize >>> 0;
  var oldSize = _emscripten_get_heap_size();
  var maxHeapSize = 2147483648;
  if (requestedSize > maxHeapSize) {
   return false;
  }
- var minHeapSize = 16777216;
  for (var cutDown = 1; cutDown <= 4; cutDown *= 2) {
   var overGrownHeapSize = oldSize * (1 + .2 / cutDown);
   overGrownHeapSize = Math.min(overGrownHeapSize, requestedSize + 100663296);
-  var newSize = Math.min(maxHeapSize, alignUp(Math.max(minHeapSize, requestedSize, overGrownHeapSize), 65536));
+  var newSize = Math.min(maxHeapSize, alignUp(Math.max(requestedSize, overGrownHeapSize), 65536));
   var replacement = emscripten_realloc_buffer(newSize);
   if (replacement) {
    return true;
@@ -5838,8 +5837,6 @@ if (Module["preInit"]) {
 var shouldRunNow = true;
 
 if (Module["noInitialRun"]) shouldRunNow = false;
-
-noExitRuntime = true;
 
 run();
 
