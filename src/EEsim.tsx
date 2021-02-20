@@ -6,7 +6,7 @@ import EditorCustom from "./editor/editorCustom";
 
 import Plot from "./plot";
 import DisplayBox from "./displayBox";
-import type { ResultType, VariableType } from "./sim/readOutput";
+import type { ResultType } from "./sim/readOutput";
 import DownCSV from "./downCSV";
 
 import * as Comlink from "comlink";

@@ -4,29 +4,34 @@ const chalk = require("chalk");
 
 const filename = "./build/spice.js";
 
-const text1 = `result = window.prompt("Input: ");`;
+const text1 = `if (typeof window != "undefined" && typeof window.prompt == "function")`;
 const text1rep = `
+if (true)
+`;
+
+const text2 = `result = window.prompt("Input: ")`;
+const text2rep = `
 //result = window.prompt("Input: ");
 result = getInput();
 `;
 
-const text2 = `
+const text3 = `
 function _emscripten_sleep(ms) {
  Asyncify.handleSleep(function(wakeUp) {
   Browser.safeSetTimeout(wakeUp, ms);
  });
 }`;
 
-const text2rep = `
+const text3rep = `
 function _emscripten_sleep(ms) {
  handleThings();
 }`;
 
-const text3 = `if (calledRun) return`;
-const text3rep = `//if (calledRun) return`;
+const text4 = `if (calledRun) return`;
+const text4rep = `//if (calledRun) return`;
 
-const text4 = `Module["run"] = run;`;
-const text4rep = `
+const text5 = `Module["run"] = run;`;
+const text5rep = `
 var getInput;
 
  Module["setGetInput"] = setGetInput;
@@ -51,8 +56,8 @@ function runThings() {
 Module["run"] = run;
 `;
 
-const textAll = [text1, text2, text3, text4];
-const textAllrep = [text1rep, text2rep, text3rep, text4rep];
+const textAll = [text1, text2, text3, text4, text5];
+const textAllrep = [text1rep, text2rep, text3rep, text4rep, text5rep];
 
 let fs = require("fs");
 
