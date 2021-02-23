@@ -37,6 +37,7 @@ import { calcContrast, calcLuminance } from "./calcContrast";
 //let sim: Simulation;
 let sim: Comlink.Remote<typeof simulation>;
 const store = window.localStorage;
+let initialSimInfo = "";
 
 export type ColorType = {
   r: number;
@@ -197,11 +198,12 @@ export default function EEsim(): JSX.Element {
         //set the display data before results for coloring
         handleDisplayData(res);
         setResults(res);
-        setInfo(res.header + "\n\n" + (await sim.getInfo()));
+        setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n" + res.header);
         setIsSimRunning(false);
       };
       await sim.setOutputEvent(Comlink.proxy(callback));
       await sim.start();
+      initialSimInfo = await sim.getInfo();
       console.log("🧨🧨🧨🧨🧨🧨🧨🧨");
       btRun();
       setIsSimLoaded(true);
@@ -321,7 +323,7 @@ export default function EEsim(): JSX.Element {
               m={1}
               onClick={btRun}
               isLoading={isSimRunning}
-              loadingText="Running">
+              loadingText={isSimLoaded ? "Running 🏃" : "Loading 🚚"}>
               Run 🚀
             </Button>
             <Spacer />
