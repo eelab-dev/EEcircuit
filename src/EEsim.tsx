@@ -9,7 +9,7 @@ import DisplayBox from "./displayBox";
 import type { ResultType } from "./sim/readOutput";
 import DownCSV from "./downCSV";
 
-import * as Comlink from "comlink";
+import * as ComLink from "comlink";
 
 import {
   Box,
@@ -34,8 +34,7 @@ import { extendTheme } from "@chakra-ui/react";
 import getParser, { ParserType } from "./parser";
 import { calcContrast, calcLuminance } from "./calcContrast";
 
-//let sim: Simulation;
-let sim: Comlink.Remote<typeof simulation>;
+let sim: ComLink.Remote<typeof simulation>;
 const store = window.localStorage;
 let initialSimInfo = "";
 
@@ -62,6 +61,7 @@ export default function EEsim(): JSX.Element {
   const [parser, setParser] = React.useState<ParserType>();
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
+  const [newDisplayData, setNewDisplayData] = React.useState<DisplayDataType[]>();
   const [tabIndex, setTabIndex] = React.useState(0);
 
   //const toast = useToast();
@@ -114,30 +114,40 @@ export default function EEsim(): JSX.Element {
     return { r: r, g: g, b: b } as ColorType;
   };
 
-  //DisplayData logic
-  const handleDisplayData = (result: ResultType) => {
-    const newDD = makeDD(result);
-    let tempDD = [] as DisplayDataType[];
-    newDD.forEach((newData, i) => {
-      let match = false;
-      let visible = true;
-      let color = getColor();
-      if (displayData) {
-        displayData.forEach((oldData) => {
-          //account for new color type
-          if (newData.name == oldData.name && oldData.color) {
-            match = true;
-            visible = oldData.visible;
-            color = oldData.color;
-          }
-        });
-        if (match) {
-          tempDD.push({
-            name: newData.name,
-            index: newData.index,
-            visible: visible,
-            color: color,
+  useEffect(() => {
+    //DisplayData logic
+    if (results) {
+      const newDD = makeDD(results);
+      let tempDD = [] as DisplayDataType[];
+      newDD.forEach((newData, i) => {
+        let match = false;
+        let visible = true;
+        let color = getColor();
+
+        if (displayData) {
+          displayData.forEach((oldData) => {
+            //account for new color type
+            if (newData.name == oldData.name) {
+              match = true;
+              visible = oldData.visible;
+              color = oldData.color;
+            }
           });
+          if (match) {
+            tempDD.push({
+              name: newData.name,
+              index: newData.index,
+              visible: visible,
+              color: color,
+            });
+          } else {
+            tempDD.push({
+              name: newData.name,
+              index: newData.index,
+              visible: true,
+              color: newData.color,
+            });
+          }
         } else {
           tempDD.push({
             name: newData.name,
@@ -146,18 +156,11 @@ export default function EEsim(): JSX.Element {
             color: newData.color,
           });
         }
-      } else {
-        tempDD.push({
-          name: newData.name,
-          index: newData.index,
-          visible: true,
-          color: newData.color,
-        });
-      }
-    });
-    console.log("makeDD->", tempDD);
-    setDisplayData([...tempDD]);
-  };
+      });
+      console.log("makeDD->", tempDD);
+      setDisplayData([...tempDD]);
+    }
+  }, [results]);
 
   const makeDD = (res: ResultType): DisplayDataType[] => {
     let dd = [] as DisplayDataType[];
@@ -181,31 +184,31 @@ export default function EEsim(): JSX.Element {
     return dd;
   };
 
+  const simOutputCallback = React.useCallback(async () => {
+    //none of the React.State are accessible in the callback
+    const res = await sim.getResults();
+    console.log("🚀", res);
+    setResults(res);
+    setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n" + res.header);
+    setIsSimRunning(false);
+  }, []);
+
   const btRun = async () => {
-    setIsSimRunning(true);
-    setParser(getParser(netList));
-    store.setItem("netList", netList);
     if (sim) {
+      setIsSimRunning(true);
+      setParser(getParser(netList));
+      store.setItem("netList", netList);
       await sim.setNetList(netList);
       await sim.runSim();
     } else {
       //spawn worker thread
       const worker = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
-      sim = Comlink.wrap<typeof simulation>(worker);
-      const callback = async () => {
-        console.log("🚀", await sim.getResults());
-        const res = await sim.getResults();
-        //set the display data before results for coloring
-        handleDisplayData(res);
-        setResults(res);
-        setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n" + res.header);
-        setIsSimRunning(false);
-      };
-      await sim.setOutputEvent(Comlink.proxy(callback));
+      sim = ComLink.wrap<typeof simulation>(worker);
+      await sim.setOutputEvent(ComLink.proxy(simOutputCallback));
       await sim.start();
       initialSimInfo = await sim.getInfo();
       console.log("🧨🧨🧨🧨🧨🧨🧨🧨");
-      btRun();
+      await btRun();
       setIsSimLoaded(true);
     }
   };
@@ -246,11 +249,11 @@ export default function EEsim(): JSX.Element {
     setTabIndex(index);
   };
 
-  const handleEditor = (value: string | undefined) => {
+  const handleEditor = React.useCallback((value: string | undefined) => {
     value ? setNetList(value) : {};
-  };
+  }, []);
 
-  const handleDeSelectButton = () => {
+  const handleDeSelectButton = React.useCallback(() => {
     if (displayData) {
       const disp = [...displayData];
       disp.forEach((e) => {
@@ -258,9 +261,9 @@ export default function EEsim(): JSX.Element {
       });
       setDisplayData(disp);
     }
-  };
+  }, [displayData]);
 
-  const handleSelectAllButton = () => {
+  const handleSelectAllButton = React.useCallback(() => {
     if (displayData) {
       const disp = [...displayData];
       disp.forEach((e) => {
@@ -268,15 +271,15 @@ export default function EEsim(): JSX.Element {
       });
       setDisplayData(disp);
     }
-  };
+  }, [displayData]);
 
-  const btReset = () => {
+  const btReset = React.useCallback(() => {
     setResults(undefined);
     setDisplayData(undefined);
     store.removeItem("displayData");
-  };
+  }, []);
 
-  const btColor = () => {
+  const btColor = React.useCallback(() => {
     if (results && displayData) {
       const d = [...displayData];
       d.forEach((e) => {
@@ -285,7 +288,8 @@ export default function EEsim(): JSX.Element {
       setDisplayData(d);
       setResults({ ...results });
     }
-  };
+    console.log("🌈", "hi", displayData);
+  }, [displayData]);
 
   return (
     <ChakraProvider theme={customTheme}>
