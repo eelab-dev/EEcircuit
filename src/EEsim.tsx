@@ -14,8 +14,6 @@ import * as ComLink from "comlink";
 import {
   Box,
   ChakraProvider,
-  Checkbox,
-  color,
   createStandaloneToast,
   Divider,
   Flex,
@@ -29,7 +27,7 @@ import {
   Textarea,
   useToast,
 } from "@chakra-ui/react";
-import { Button, ButtonGroup } from "@chakra-ui/react";
+import { Button } from "@chakra-ui/react";
 import { extendTheme } from "@chakra-ui/react";
 import getParser, { ParserType } from "./parser";
 import { calcContrast, calcLuminance } from "./calcContrast";
@@ -61,7 +59,6 @@ export default function EEsim(): JSX.Element {
   const [parser, setParser] = React.useState<ParserType>();
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
-  const [newDisplayData, setNewDisplayData] = React.useState<DisplayDataType[]>();
   const [tabIndex, setTabIndex] = React.useState(0);
 
   //const toast = useToast();
@@ -127,7 +124,7 @@ export default function EEsim(): JSX.Element {
         if (displayData) {
           displayData.forEach((oldData) => {
             //account for new color type
-            if (newData.name == oldData.name) {
+            if (newData.name == oldData.name && oldData.color) {
               match = true;
               visible = oldData.visible;
               color = oldData.color;
