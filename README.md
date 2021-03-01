@@ -44,6 +44,8 @@ Please see [Ngspice manual](http://ngspice.sourceforge.net/docs/ngspice-manual.p
 
 ## Acknowledgments
 
+Thanks to [Konstantinos Bantounos](https://www.linkedin.com/in/kbantounos?originalSubdomain=uk) for testing.
+
 ## Contributions
 
 [Ngspice](https://sourceforge.net/p/ngspice/ngspice/), [SPICE3f5](https://ptolemy.berkeley.edu/projects/embedded/pubs/), [Emscripten](https://emscripten.org/), [Docker](https://www.docker.com/), [Fedora](https://getfedora.org/), [Snowpack](https://www.snowpack.dev/), [Vercel](https://vercel.com/)

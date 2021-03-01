@@ -113,5 +113,5 @@ here are some useful command which helps in using EEsim. For mor details see ngs
 Only plots the signals which are in the `save` command.
 
 ```plaintext
-save node1 node2 ...
+save v(node1) v(node2) ...
 ```
