@@ -17,7 +17,7 @@ const monacoLoader = (): Promise<typeof MonacoEditor> => {
     //script3.async = true;
     //script3.src = 'https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js';
     monacoLoader.async = true;
-    monacoLoader.src = "https://cdn.jsdelivr.net/npm/monaco-editor@0.22.3/min/vs/loader.js";
+    monacoLoader.src = "https://cdn.jsdelivr.net/npm/monaco-editor@0.23.0/min/vs/loader.js";
 
     monacoLoader.crossOrigin = "anonymous";
     const scriptLoaded = () => {
