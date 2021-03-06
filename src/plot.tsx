@@ -180,7 +180,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     for (let col = 1; col < data.length; col++) {
       //const color = getColor();
       let color: ColorRGBA;
-      if (displayData) {
+      if (displayData && displayData[col - 1]) {
         color = new ColorRGBA(
           displayData[col - 1].color.r,
           displayData[col - 1].color.g,
@@ -228,7 +228,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
       for (let sweep = 0; sweep < dataSweep[0].length; sweep++) {
         //const color = getColor();
         let color: ColorRGBA;
-        if (displayData) {
+        if (displayData && displayData[col - 1]) {
           color = new ColorRGBA(
             displayData[col - 1].color.r,
             displayData[col - 1].color.g,
@@ -276,7 +276,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
   const getLineMinMaxComplex = (data: ComplexDataType) => {
     const drawLine = (dataY: number[], dataX: number[], index: number) => {
       let color: ColorRGBA;
-      if (displayData) {
+      if (displayData && displayData[index - 1]) {
         color = new ColorRGBA(
           displayData[index - 1].color.r,
           displayData[index - 1].color.g,
