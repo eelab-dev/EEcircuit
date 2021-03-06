@@ -342,7 +342,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     wglp.gOffsetX = -1;
     wglp.gScaleX = 2;
 
-    if (results) {
+    if (results && displayData) {
       if (results.param.dataType == "real") {
         const data = results ? results.data : [[]];
         const possibleSweep = results ? results.header.indexOf("sweep") > 0 : false;
@@ -363,7 +363,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
     //?????????????????????
 
     //console.log("line-->", wglp.linesData);
-  }, [results]);
+  }, [results, displayData]);
 
   useEffect(() => {
     //console.log("plot->DD->", displayData);
