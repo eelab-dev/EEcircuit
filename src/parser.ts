@@ -32,7 +32,8 @@ const getParser = (netList: string): ParserType => {
   if (dcLine) {
     parseResults.dc = true;
     //const dcLineDigits = (dcLine[0] + " ").match(/-?\d*\.?\d+?[\sGMkmunp]/g);
-    const s = dcLine[0].toString().split(" ");
+    //split by whitespace
+    const s = dcLine[0].toString().split(/[ ]+/);
     if (s.length == 9) {
       parseResults.sweep = true;
       parseResults.sweepVar = s[5];
@@ -40,7 +41,6 @@ const getParser = (netList: string): ParserType => {
       parseResults.sweepEnd = parseFloat(s[7]);
       parseResults.sweepStep = parseFloat(s[8]);
     }
-    console.log("parser->", s);
   }
 
   console.log("parser->", parseResults);
