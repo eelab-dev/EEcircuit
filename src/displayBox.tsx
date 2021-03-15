@@ -1,7 +1,7 @@
 import { Box, Checkbox, Stack } from "@chakra-ui/react";
 import React from "react";
 import type { DisplayDataType } from "./EEsim";
-import { ColorRGBA } from "./webglplot/ColorRGBA";
+import { ColorRGBA } from "webgl-plot";
 
 type Props = {
   displayData: DisplayDataType[];

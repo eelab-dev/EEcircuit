@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import WebGlPlot, { ColorRGBA, WebglLine, WebglSquare } from "./webglplot/webglplot";
-//import WebGlPlot, { ColorRGBA, WebglLine } from "webgl-plot";
-import { calcContrast, calcLuminance } from "./calcContrast";
+import { WebglPlot, ColorRGBA, WebglLine, WebglSquare } from "webgl-plot";
+//import { calcContrast, calcLuminance } from "./calcContrast";
 import type { DisplayDataType } from "./EEsim";
 import type { ComplexDataType, RealDataType, ResultType } from "./sim/readOutput";
 import { Box, Checkbox, Grid, GridItem, HStack, Tag } from "@chakra-ui/react";
@@ -59,7 +58,7 @@ type PlotOptions = {
   sweepSlider: boolean;
 };
 
-let wglp: WebGlPlot;
+let wglp: WebglPlot;
 let lineMinMax = [{ minY: 0, maxY: 1 }] as LineMinMaxType[];
 let sweepIndices = [] as number[]; //already has one
 
@@ -99,7 +98,7 @@ function Plot({ results, parser, displayData }: PlotType): JSX.Element {
       canvasMain.current.width = canvasMain.current.clientWidth * devicePixelRatio;
       canvasMain.current.height = canvasMain.current.clientHeight * devicePixelRatio;
 
-      wglp = new WebGlPlot(canvasMain.current, { powerPerformance: "high-performance" });
+      wglp = new WebglPlot(canvasMain.current, { powerPerformance: "high-performance" });
 
       const newFrame = () => {
         wglp.update();
