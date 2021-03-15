@@ -8,6 +8,7 @@ module.exports = {
     "@snowpack/plugin-dotenv",
     "@snowpack/plugin-typescript",
     "@snowpack/plugin-optimize",
+    //"@snowpack/plugin-webpack",
   ],
   devOptions: {
     /* ... */
@@ -17,5 +18,11 @@ module.exports = {
   },
   alias: {
     /* ... */
+  },
+  optimize: {
+    //bundle: true,
+    minify: true,
+    treeshake: true,
+    target: "es2020",
   },
 };
