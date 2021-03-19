@@ -1,6 +1,6 @@
-![Build App](https://github.com/danchitnis/EEsim/workflows/Build%20App/badge.svg) ![EMCC Build](https://github.com/danchitnis/EEsim/workflows/EEsim%20EMCC%20Build/badge.svg) ![CodeQL](https://github.com/danchitnis/EEsim/workflows/CodeQL/badge.svg)
+![Build App](https://github.com/danchitnis/EEsim/workflows/Build%20App/badge.svg) ![CodeQL](https://github.com/danchitnis/EEsim/workflows/CodeQL/badge.svg)
 
-⚠ Currently working on Chrome and Edge only. More info [here...](https://github.com/danchitnis/EEsim/issues/9)
+⚠ Currently working on Chrome and Edge. Availability on Safari coming soon. Check latest [status](https://wpt.fyi/results/workers/modules/dedicated-worker-import.any.html?label=master&product=chrome%5Bstable%5D&product=firefox%5Bstable%5D&product=safari%5Bstable%5D&product=chrome%5Bexperimental%5D&product=firefox%5Bexperimental%5D&product=safari%5Bexperimental%5D&aligned). More info [here...](https://github.com/danchitnis/EEsim/issues/9)
 
 # EEsim
 
@@ -22,11 +22,13 @@ c vdd 2 0.01
 m1 2 1 0 0 N90 W=100.0u L=0.09u
 vdd vdd 0 1.8
 
-vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30) ac 1
-.tran  0.1 50
+vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
+.tran 0.1 50
 
 .end
 ```
+
+## Examples
 
 💥See [here](https://github.com/danchitnis/EEsim/blob/main/examples.md) for more examples.
 
@@ -34,13 +36,15 @@ vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30) ac 1
 
 Use your mouse to pan & zoom on the plot. left click for area **zoom** and right click hold and drag for **pan**. To reset the view **double click**.
 
+## Documentation
+
+A brief [presentation](https://youtu.be/BZLsTAZr1tY) on the origins of EEsim and how it was developed. ([slides](https://docs.google.com/presentation/d/e/2PACX-1vROdrVB1vpGM1tqHSvA2HpPmH6B2HpILzLM8kaqnePEtZ8UP_To8q5GsWh90YOtBjYZCUov2rnOzis7/pub?start=false&loop=false&delayms=3000))
+
+To learn more about SPICE netlits refer to [ngspice manual](http://ngspice.sourceforge.net/docs/ngspice-manual.pdf)
+
 ## Transistor Models
 
 See [Transistor Models](https://github.com/danchitnis/EEsim/blob/main/models.md) for more information.
-
-## Documentation
-
-Please see [Ngspice manual](http://ngspice.sourceforge.net/docs/ngspice-manual.pdf)
 
 ## Acknowledgments
 
