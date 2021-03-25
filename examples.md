@@ -20,8 +20,6 @@ vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30) ac 1
 .end
 ```
 
-See [here]() for more examples.
-
 ### DC Sweep
 
 ```plaintext
@@ -110,8 +108,8 @@ here are some useful command which helps in using EEsim. For mor details see ngs
 
 ### save
 
-Only plots the signals which are in the `save` command.
+Only plots the signals which are in the `.save` command.
 
 ```plaintext
-save v(node1) v(node2) ...
+.save v(node1) v(node2) ...
 ```
