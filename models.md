@@ -73,3 +73,7 @@ add `.include modelcard.ptm` in your netlist.
 add `.include modelcard.CMOS90` in your netlist.
 
 Currently `N90` and `P90` models from [BSIM4](https://bsim.berkeley.edu/models/bsim4/) test models are implemented.
+
+## Skywater
+
+Work in progress - for examples see [here](https://github.com/danchitnis/EEsim/blob/main/skywater.md)

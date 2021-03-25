@@ -24,9 +24,9 @@
     "@snowpack/plugin-webpack": "^2.3.1",
     "@testing-library/react": "^11.2.5",
     "@types/react": "^17.0.3",
-    "@types/react-dom": "^17.0.2",
+    "@types/react-dom": "^17.0.3",
     "@types/snowpack-env": "^2.3.3",
-    "@typescript-eslint/eslint-plugin": "^4.18.0",
+    "@typescript-eslint/eslint-plugin": "^4.19.0",
     "eslint": "^7.22.0",
     "prettier": "^2.2.1",
     "serve": "^11.3.2",
@@ -39,10 +39,10 @@
     "@emotion/react": "^11.1.5",
     "@emotion/styled": "^11.1.5",
     "comlink": "^4.3.0",
-    "framer-motion": "^4.0.0",
+    "framer-motion": "^4.0.3",
     "monaco-editor": "^0.23.0",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
     "webgl-plot": "^0.6.1"
   }
 }
