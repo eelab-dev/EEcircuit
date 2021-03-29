@@ -6,7 +6,7 @@ import * as Comlink from "comlink";
 import * as circuits from "./circuits";
 import * as freePDK45 from "./models/freepdk/freePDK";
 import * as ptm from "./models/ptm";
-import * as skyWater from "./models/skywater/mosfet";
+import * as skyWater from "./models/skywater/models";
 import Module from "./spice";
 
 import readOutput, { ResultType } from "./readOutput";
@@ -74,7 +74,7 @@ export default class Simulation {
     module.FS?.writeFile("/modelcard.ptmLP", ptm.ptmLP);
     module.FS?.writeFile("/modelcard.ptmHP", ptm.ptmHP);
     module.FS?.writeFile("/modelcard.ptm", ptm.ptm);
-    module.FS?.writeFile("/modelcard.skywater", skyWater.nfet18);
+    module.FS?.writeFile("/modelcard.skywater", skyWater.models);
     module.FS?.writeFile("/modelcard.CMOS90", circuits.strModelCMOS90);
     //module.FS.writeFile("/test.cir", circuits.bsimTrans);
     //console.log(module.Asyncify);
