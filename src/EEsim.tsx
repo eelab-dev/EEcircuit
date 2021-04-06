@@ -26,7 +26,6 @@ import {
 } from "@chakra-ui/react";
 import { Button } from "@chakra-ui/react";
 import { extendTheme } from "@chakra-ui/react";
-import getParser, { ParserType } from "./parserDC";
 import { calcContrast, calcLuminance } from "./calcContrast";
 import { SimArray } from "./sim/simulationArray";
 
@@ -54,7 +53,7 @@ export default function EEsim(): JSX.Element {
   const [isSimRunning, setIsSimRunning] = React.useState(false);
   const [results, setResults] = React.useState<ResultType>();
   const [info, setInfo] = React.useState("");
-  const [parser, setParser] = React.useState<ParserType>();
+  //const [parser, setParser] = React.useState<ParserType>();
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
   const [tabIndex, setTabIndex] = React.useState(0);
@@ -179,6 +178,16 @@ export default function EEsim(): JSX.Element {
     return dd;
   };
 
+  const simArrayOutputCallback = () => {
+    const res = sim.getResults();
+    console.log("🚀", "yessssssssssssssss", res);
+    if (res) {
+      setResults(res);
+      //setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n" + res.header);
+    }
+    setIsSimRunning(false);
+  };
+
   /*const simOutputCallback = React.useCallback(async () => {
     //none of the React.State are accessible in the callback
     const res = await sim.getResults();
@@ -198,6 +207,7 @@ export default function EEsim(): JSX.Element {
     } else {
       //spawn worker thread
       sim = new SimArray();
+      sim.simArrayOutputCallback = simArrayOutputCallback;
       setIsSimLoaded(true);
       btRun();
     }
@@ -355,7 +365,7 @@ export default function EEsim(): JSX.Element {
 
           <TabPanels>
             <TabPanel>
-              <Plot results={results} parser={parser} displayData={displayData} />
+              <Plot results={results} displayData={displayData} />
             </TabPanel>
 
             <TabPanel>

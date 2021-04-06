@@ -26,6 +26,7 @@ export class SimArray {
   private async init() {
     const simOutputCallback = async () => {
       this.results = await this.sim.getResults();
+      this.simArrayOutputCallback();
     };
 
     await this.sim.setOutputEvent(ComLink.proxy(simOutputCallback));
@@ -49,4 +50,6 @@ export class SimArray {
   public getResults(): ResultType | null {
     return this.results;
   }
+
+  public simArrayOutputCallback() {}
 }
