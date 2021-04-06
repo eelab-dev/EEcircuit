@@ -13,7 +13,7 @@ import readOutput, { ResultType } from "./readOutput";
 
 //export { ResultType };
 
-export default class Simulation {
+export class Simulation {
   private pass = false;
   //const commandList = [" ", "source test.cir", "run", "set filetype=ascii", "write out.raw"];
   private commandList = [" ", "source test.cir", "run", "write out.raw"];
