@@ -5,7 +5,7 @@ import type { DisplayDataType } from "./EEsim";
 import type { ComplexDataType, RealDataType, ResultType } from "./sim/readOutput";
 import { Box, Checkbox, Grid, GridItem, HStack, Tag } from "@chakra-ui/react";
 import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/react";
-import type { ParserType } from "./parser";
+import type { ParserType } from "./parserDC";
 import Axis from "./axis";
 import unitConvert from "./sim/unitConverter";
 

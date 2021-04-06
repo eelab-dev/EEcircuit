@@ -1,5 +1,4 @@
 import React, { useEffect } from "react";
-import type { simulation } from "./sim/simulationLink";
 import * as circuits from "./sim/circuits";
 
 import EditorCustom from "./editor/editorCustom";
@@ -8,8 +7,6 @@ import Plot from "./plot";
 import DisplayBox from "./displayBox";
 import type { ResultType } from "./sim/readOutput";
 import DownCSV from "./downCSV";
-
-import * as ComLink from "comlink";
 
 import {
   Box,
@@ -29,10 +26,11 @@ import {
 } from "@chakra-ui/react";
 import { Button } from "@chakra-ui/react";
 import { extendTheme } from "@chakra-ui/react";
-import getParser, { ParserType } from "./parser";
+import getParser, { ParserType } from "./parserDC";
 import { calcContrast, calcLuminance } from "./calcContrast";
+import { SimArray } from "./sim/simulationArray";
 
-let sim: ComLink.Remote<typeof simulation>;
+let sim: SimArray;
 const store = window.localStorage;
 let initialSimInfo = "";
 
@@ -76,7 +74,7 @@ export default function EEsim(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    const displayErrors = async () => {
+    /*const displayErrors = async () => {
       const errors = await sim.getError();
       errors.forEach((e) => {
         toast({
@@ -91,7 +89,7 @@ export default function EEsim(): JSX.Element {
 
     if (isSimLoaded) {
       displayErrors();
-    }
+    }*/
   }, [isSimLoaded, results]);
 
   const getColor = (): ColorType => {
@@ -181,32 +179,27 @@ export default function EEsim(): JSX.Element {
     return dd;
   };
 
-  const simOutputCallback = React.useCallback(async () => {
+  /*const simOutputCallback = React.useCallback(async () => {
     //none of the React.State are accessible in the callback
     const res = await sim.getResults();
     console.log("🚀", res);
     setResults(res);
     setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n" + res.header);
     setIsSimRunning(false);
-  }, []);
+  }, []);*/
 
-  const btRun = async () => {
+  const btRun = () => {
     if (sim) {
       setIsSimRunning(true);
-      setParser(getParser(netList));
+      //setParser(getParser(netList));
       store.setItem("netList", netList);
-      await sim.setNetList(netList);
-      await sim.runSim();
+      sim.setNetList(netList);
+      sim.runSim();
     } else {
       //spawn worker thread
-      const worker = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
-      sim = ComLink.wrap<typeof simulation>(worker);
-      await sim.setOutputEvent(ComLink.proxy(simOutputCallback));
-      await sim.start();
-      initialSimInfo = await sim.getInfo();
-      console.log("🧨🧨🧨🧨🧨🧨🧨🧨");
-      await btRun();
+      sim = new SimArray();
       setIsSimLoaded(true);
+      btRun();
     }
   };
 
