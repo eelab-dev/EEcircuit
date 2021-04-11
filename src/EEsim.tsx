@@ -180,7 +180,7 @@ export default function EEsim(): JSX.Element {
     return dd;
   };
 
-  const simArrayOutputCallback = () => {
+  /*const simArrayOutputCallback = () => {
     const res = sim.getResults();
     console.log("🚀", "yessssssssssssssss", res);
     if (res) {
@@ -188,7 +188,7 @@ export default function EEsim(): JSX.Element {
       //setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n" + res.header);
     }
     setIsSimRunning(false);
-  };
+  };*/
 
   /*const simOutputCallback = React.useCallback(async () => {
     //none of the React.State are accessible in the callback
@@ -199,17 +199,19 @@ export default function EEsim(): JSX.Element {
     setIsSimRunning(false);
   }, []);*/
 
-  const btRun = () => {
+  const btRun = async () => {
     if (sim) {
       setIsSimRunning(true);
       //setParser(getParser(netList));
       store.setItem("netList", netList);
       sim.setNetList(netList);
-      sim.runSim();
+      const results = await sim.runSim();
+      setResults(results);
+      setIsSimRunning(false);
     } else {
       //spawn worker thread
       sim = new SimArray();
-      sim.simArrayOutputCallback = simArrayOutputCallback;
+      //sim.simArrayOutputCallback = simArrayOutputCallback;
       setIsSimLoaded(true);
       btRun();
     }

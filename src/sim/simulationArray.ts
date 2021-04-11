@@ -14,7 +14,6 @@ export class SimArray {
   private netLists = [] as string[];
   private inputNetList = "";
   private results: ResultType[];
-  private block = false;
 
   constructor() {
     const worker = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
@@ -61,7 +60,9 @@ export class SimArray {
       console.log("👌👌👌");
     }
 
-    this.simArrayOutputCallback();
+    //this.simArrayOutputCallback();
+
+    return this.results;
   }
 
   public setNetList(text: string) {
