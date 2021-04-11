@@ -55,7 +55,8 @@ export class SimArray {
 
     for (let i = 0; i < this.netLists.length; i++) {
       this.sim.setNetList(this.netLists[i]);
-      await this.sim.runSimP();
+      const wait = i == this.netLists.length - 1 ? true : false;
+      await this.sim.runSimP(wait);
       this.results.push(await this.sim.getResults());
       console.log("👌👌👌");
     }
