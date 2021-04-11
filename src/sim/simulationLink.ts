@@ -27,6 +27,7 @@ export class Simulation {
   private netList = "";
 
   private resolve = () => {};
+  private wait = true;
 
   private getInput = (): string => {
     let strCmd = " ";
@@ -100,7 +101,7 @@ export class Simulation {
         }
         while (!this.pass && this.cmd == 0) {
           //console.log(chkPass());
-          await new Promise((r) => setTimeout(r, 1000));
+          await new Promise((r) => setTimeout(r, this.wait ? 1000 : 0.001));
           console.log(`I am in pass loop JS -${this.pass} `);
         }
         module.FS?.writeFile("/test.cir", this.netList);
@@ -117,22 +118,23 @@ export class Simulation {
   }
 
   // https://mitya.uk/articles/resolving-es6-promises-outside
-  public runSimP = (): Promise<void> => {
+  public runSimP = (wait: boolean): Promise<void> => {
     this.info = "";
     this.error = [] as string[];
     this.results = {} as ResultType;
+    this.wait = wait;
     this.pass = true;
     return new Promise<void>((resolve, reject) => {
       this.resolve = resolve;
     });
   };
 
-  public runSim(): void {
+  /*public runSim(): void {
     this.info = "";
     this.error = [] as string[];
     this.results = {} as ResultType;
     this.pass = true;
-  }
+  }*/
 
   //private outputEvent =  (out: string) => void;
   private outputEvent = (out: string) => {
