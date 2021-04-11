@@ -59,6 +59,7 @@ export default function EEsim(): JSX.Element {
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
   const [tabIndex, setTabIndex] = React.useState(0);
+  const [sweep, setSweep] = React.useState(false);
 
   //const toast = useToast();
   const toast = createStandaloneToast();
@@ -73,6 +74,12 @@ export default function EEsim(): JSX.Element {
       setDisplayData(loadedDisplayData);
     }
   }, []);
+
+  useEffect(() => {
+    if (results && results.length > 1) {
+      setSweep(true);
+    }
+  }, [results]);
 
   useEffect(() => {
     /*const displayErrors = async () => {
@@ -290,7 +297,7 @@ export default function EEsim(): JSX.Element {
         e.color = getColor();
       });
       setDisplayData(d);
-      setResults({ ...results });
+      setResults([...results]);
     }
     console.log("🌈", "hi", displayData);
   }, [displayData]);

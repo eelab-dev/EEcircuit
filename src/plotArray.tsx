@@ -133,11 +133,12 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
 
   const normalLine = (results: ResultType[]) => {
     lineMinMax = [];
+    console.log("📈2", results);
+    console.log("📈2", results.length);
     results.forEach((result) => {
       const data = result.data;
       getLineMinMaxNormal(data as RealDataType);
     });
-    console.log("📈2", lineMinMax);
   };
 
   /*const sweepLine = (results: ResultType[]) => {
@@ -223,7 +224,7 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
     }
   };
 
-  const getLineMinMaxSweep = (dataSweep: number[][][]) => {
+  /*const getLineMinMaxSweep = (dataSweep: number[][][]) => {
     for (let col = 1; col < dataSweep.length; col++) {
       let minY = 100000;
       let maxY = -100000;
@@ -269,7 +270,7 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
         });
       }
     }
-  };
+  };*/
 
   const complexLine = (data: ComplexDataType) => {
     lineMinMax = [];
@@ -336,7 +337,7 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
   };
 
   useEffect(() => {
-    sweepIndices = [];
+    //sweepIndices = [];
     wglp.removeAllLines();
     wglp.addSurface(zoomRect); //change this to Aux !!!!!!
     wglp.addAuxLine(crossXLine);
@@ -350,6 +351,7 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
       if (resultsArray[0].param.dataType == "real") {
         //const data = results ? results.data : [[]];
         //const possibleSweep = results ? results.header.indexOf("sweep") > 0 : false;
+        console.log("📈3", resultsArray);
         normalLine(resultsArray);
       }
       /*if (results.param.dataType == "complex") {
@@ -651,7 +653,7 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
     height: "60vh",
   } as React.CSSProperties;
 
-  const handleLog10YCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
+  /*const handleLog10YCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
     wglp.gLog10Y = e.target.checked;
 
     if (e.target.checked) {
@@ -662,9 +664,9 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
       const a = { ...findMinMaxGlobal() };
       scaleUpdate({ minY: a.minY, maxY: a.maxY } as ScaleType);
     }
-  };
+  };*/
 
-  const findMinMaxGlobalLog10 = (): ScaleType => {
+  /*const findMinMaxGlobalLog10 = (): ScaleType => {
     //???????????????????????
     let minPos = 10000;
     let maxY = -10000;
@@ -677,7 +679,7 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
       }
     }
     return { minY: minPos, maxY: maxY, minX: lineMinMax[0].minX, maxX: lineMinMax[0].maxX };
-  };
+  };*/
 
   return (
     <>
