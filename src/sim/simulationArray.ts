@@ -11,43 +11,63 @@ import * as ComLink from "comlink";
 
 export class SimArray {
   sim: ComLink.Remote<typeof simulation>;
-  private netList = "";
+  private netLists = [] as string[];
   private inputNetList = "";
-  private results: ResultType | null;
+  private results: ResultType[];
+  private block = false;
 
   constructor() {
     const worker = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
     this.sim = ComLink.wrap<typeof simulation>(worker);
     //this.sim = null;
-    this.results = null;
+    this.results = [];
     this.init();
   }
 
   private async init() {
     const simOutputCallback = async () => {
-      this.results = await this.sim.getResults();
-      this.simArrayOutputCallback();
+      //this.results.push(await this.sim.getResults());
+      //this.block = false;
+      console.log("👌");
+      //this.check();
     };
 
-    await this.sim.setOutputEvent(ComLink.proxy(simOutputCallback));
-    await this.sim.start();
-    const initialSimInfo = await this.sim.getInfo();
+    //this.sim.setOutputEvent(ComLink.proxy(simOutputCallback));
+    this.sim.start();
+    //const initialSimInfo = await this.sim.getInfo();
     console.log("🧨🧨🧨🧨🧨🧨🧨🧨");
   }
 
   public async runSim() {
-    if (this.sim) {
-      const netLists = parser(this.inputNetList);
-      await this.sim.setNetList(netLists[0]);
-      await this.sim.runSim();
-    } else {
-      //should not happen
+    this.netLists = parser(this.inputNetList);
+
+    /*this.sim.setNetList(this.netLists[0]);
+    console.log("📚", this.netLists);
+    await this.sim.runSimP();
+    this.results.push(await this.sim.getResults());
+    console.log("👌👌");
+
+    this.sim.setNetList(this.netLists[5]);
+    await this.sim.runSimP();
+    this.results.push(await this.sim.getResults());
+    console.log("👌👌👌");
+    //this.block = false;*/
+
+    for (let i = 0; i < this.netLists.length; i++) {
+      this.sim.setNetList(this.netLists[i]);
+      await this.sim.runSimP();
+      this.results.push(await this.sim.getResults());
+      console.log("👌👌👌");
     }
+
+    this.simArrayOutputCallback();
   }
+
   public setNetList(text: string) {
     this.inputNetList = text;
   }
-  public getResults(): ResultType | null {
+  public getResults(): ResultType[] | null {
+    console.log("----->", this.results);
     return this.results;
   }
 

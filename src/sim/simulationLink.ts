@@ -26,6 +26,8 @@ export class Simulation {
 
   private netList = "";
 
+  private resolve = () => {};
+
   private getInput = (): string => {
     let strCmd = " ";
     if (this.cmd < this.commandList.length) {
@@ -38,7 +40,7 @@ export class Simulation {
     return strCmd;
   };
 
-  public async start(): Promise<void> {
+  public async start() {
     const module = await Module({
       //arguments: ["test.cir"],
       noInitialRun: true,
@@ -87,6 +89,7 @@ export class Simulation {
           try {
             this.dataRaw = module.FS?.readFile("out.raw") ?? new Uint8Array();
             this.results = readOutput(this.dataRaw);
+            this.resolve();
             this.outputEvent(this.output); //callback
           } catch (e) {
             console.log(e);
@@ -112,6 +115,17 @@ export class Simulation {
 
     module.runThings();
   }
+
+  // https://mitya.uk/articles/resolving-es6-promises-outside
+  public runSimP = (): Promise<void> => {
+    this.info = "";
+    this.error = [] as string[];
+    this.results = {} as ResultType;
+    this.pass = true;
+    return new Promise<void>((resolve, reject) => {
+      this.resolve = resolve;
+    });
+  };
 
   public runSim(): void {
     this.info = "";
