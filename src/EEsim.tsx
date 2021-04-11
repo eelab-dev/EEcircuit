@@ -3,7 +3,8 @@ import * as circuits from "./sim/circuits";
 
 import EditorCustom from "./editor/editorCustom";
 
-import Plot from "./plot";
+//import Plot from "./plot";
+import PlotArray from "./plotArray";
 import DisplayBox from "./displayBox";
 import type { ResultType } from "./sim/readOutput";
 import DownCSV from "./downCSV";
@@ -28,6 +29,7 @@ import { Button } from "@chakra-ui/react";
 import { extendTheme } from "@chakra-ui/react";
 import { calcContrast, calcLuminance } from "./calcContrast";
 import { SimArray } from "./sim/simulationArray";
+import plotArray from "./plotArray";
 
 let sim: SimArray;
 const store = window.localStorage;
@@ -51,7 +53,7 @@ export default function EEsim(): JSX.Element {
 
   const [isSimLoaded, setIsSimLoaded] = React.useState(false);
   const [isSimRunning, setIsSimRunning] = React.useState(false);
-  const [results, setResults] = React.useState<ResultType>();
+  const [results, setResults] = React.useState<ResultType[]>();
   const [info, setInfo] = React.useState("");
   //const [parser, setParser] = React.useState<ParserType>();
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
@@ -111,7 +113,7 @@ export default function EEsim(): JSX.Element {
   useEffect(() => {
     //DisplayData logic
     if (results) {
-      const newDD = makeDD(results);
+      const newDD = makeDD(results[0]);
       let tempDD = [] as DisplayDataType[];
       newDD.forEach((newData, i) => {
         let match = false;
@@ -365,7 +367,7 @@ export default function EEsim(): JSX.Element {
 
           <TabPanels>
             <TabPanel>
-              <Plot results={results} displayData={displayData} />
+              <PlotArray resultsArray={results} displayData={displayData} />
             </TabPanel>
 
             <TabPanel>
@@ -381,9 +383,7 @@ export default function EEsim(): JSX.Element {
               />
             </TabPanel>
 
-            <TabPanel>
-              <DownCSV results={results} />
-            </TabPanel>
+            <TabPanel>{/*<DownCSV results={results[0]} />*/}</TabPanel>
           </TabPanels>
         </Tabs>
       </div>

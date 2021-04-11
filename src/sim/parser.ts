@@ -36,7 +36,7 @@ export function parser(netList: string): string[] {
           const ss = line.split("]");
           const a = s[0] + `${i}` + ss[1];
 
-          tempNetList = tempNetList + a;
+          tempNetList = tempNetList + a + "\n";
         } else {
           tempNetList = tempNetList + line + "\n";
         }
