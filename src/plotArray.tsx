@@ -8,10 +8,10 @@ import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/
 import type { ParserType } from "./parserDC";
 import Axis from "./axis";
 import unitConvert from "./sim/unitConverter";
+import type { ResultArrayType } from "./sim/simulationArray";
 
 type PlotType = {
-  resultsArray?: ResultType[];
-  parser?: ParserType;
+  resultsArray?: ResultArrayType;
   displayData?: DisplayDataType[];
 };
 
@@ -60,13 +60,13 @@ type PlotOptions = {
 
 let wglp: WebglPlot;
 let lineMinMax = [{ minY: 0, maxY: 1 }] as LineMinMaxType[];
-let sweepIndices = [] as number[]; //already has one
+//let sweepIndices = [] as number[]; //already has one
 
 const zoomRect = new WebglSquare(new ColorRGBA(0.8, 0.8, 0.2, 0.25));
 const crossXLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 const crossYLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 
-function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element {
+function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
   const [plotOptions, setPlotOptions] = useState<PlotOptions>({
     crosshair: true,
@@ -91,6 +91,15 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
     dragInitialX: 0,
     dragOffsetOld: 0,
   });
+
+  useEffect(() => {
+    if (resultsArray && resultsArray.sweep.length > 1) {
+      SetIsSweep(true);
+      //sweepIndices = resultsArray.sweep;
+    } else {
+      SetIsSweep(false);
+    }
+  }, [resultsArray]);
 
   useEffect(() => {
     if (canvasMain.current) {
@@ -133,8 +142,8 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
 
   const normalLine = (results: ResultType[]) => {
     lineMinMax = [];
-    console.log("📈2", results);
-    console.log("📈2", results.length);
+    //console.log("📈2", results);
+    //console.log("📈2", results.length);
     results.forEach((result) => {
       const data = result.data;
       getLineMinMaxNormal(data as RealDataType);
@@ -212,7 +221,7 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
 
       wglp.addDataLine(line);
 
-      console.log("📈", line);
+      //console.log("📈", line);
       lineMinMax.push({
         minY: minY,
         maxY: maxY,
@@ -272,13 +281,13 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
     }
   };*/
 
-  const complexLine = (data: ComplexDataType) => {
+  /*const complexLine = (data: ComplexDataType) => {
     lineMinMax = [];
     getLineMinMaxComplex(data);
     SetIsSweep(false);
-  };
+  };*/
 
-  const getLineMinMaxComplex = (data: ComplexDataType) => {
+  /*const getLineMinMaxComplex = (data: ComplexDataType) => {
     const drawLine = (dataY: number[], dataX: number[], index: number) => {
       let color: ColorRGBA;
       if (displayData && displayData[index - 1]) {
@@ -334,7 +343,7 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
       drawLine(dataYMag, dataXReal, 2 * col - 1);
       drawLine(dataYPhase, dataXReal, 2 * col);
     }
-  };
+  };*/
 
   useEffect(() => {
     //sweepIndices = [];
@@ -348,11 +357,11 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
     wglp.gScaleX = 2;
 
     if (resultsArray && displayData) {
-      if (resultsArray[0].param.dataType == "real") {
+      if (resultsArray.results[0].param.dataType == "real") {
         //const data = results ? results.data : [[]];
         //const possibleSweep = results ? results.header.indexOf("sweep") > 0 : false;
         console.log("📈3", resultsArray);
-        normalLine(resultsArray);
+        normalLine(resultsArray.results);
       }
       /*if (results.param.dataType == "complex") {
         const data = results ? results.data : [[]];
@@ -367,24 +376,25 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
   }, [resultsArray, displayData]);
 
   useEffect(() => {
-    //console.log("plot->DD->", displayData);
-    //console.log("plot->DD->", wglp.lines);
+    console.log("plot->DD->", displayData);
+    console.log("plot->DD->", wglp.linesData);
     if (resultsArray && displayData) {
-      if (sweepIndices.length > 0) {
-        if (wglp.linesData.length == sweepIndices.length * displayData.length) {
-          //console.log("plot->DD->", "it is sweep");
-          displayData.forEach((e) => {
-            for (let i = 0; i < sweepIndices.length; i++) {
-              wglp.linesData[(e.index - 1) * sweepIndices.length + i].visible = e.visible;
-            }
-          });
-          scaleUpdate(findMinMaxGlobal());
-        }
+      if (resultsArray.sweep.length > 0) {
+        //if (wglp.linesData.length == sweepIndices.length * displayData.length) {
+        //console.log("plot->DD->", "it is sweep");
+        displayData.forEach((e) => {
+          for (let i = 0; i < resultsArray.sweep.length; i++) {
+            //wglp.linesData[(e.index - 1) * resultsArray.sweep.length + i].visible = e.visible;
+            wglp.linesData[e.index - 1 + i * displayData.length].visible = e.visible;
+          }
+        });
+        scaleUpdate(findMinMaxGlobal());
+        //}
       } else {
         if (wglp.linesData.length == displayData.length) {
           displayData.forEach((e) => {
             //first item is time (offset=1) or frequency (offset=2)
-            const offset = resultsArray[0].param.dataType == "complex" ? 2 : 1;
+            const offset = resultsArray.results[0].param.dataType == "complex" ? 2 : 1;
             wglp.linesData[e.index - offset].visible = e.visible;
           });
           scaleUpdate(findMinMaxGlobal());
@@ -622,18 +632,18 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
   };
 
   const handleSweepSlider = (value: number) => {
-    if (displayData) {
+    if (displayData && resultsArray) {
       displayData.forEach((e) => {
         if (e.visible) {
-          for (let i = 0; i < sweepIndices.length; i++) {
-            wglp.linesData[(e.index - 1) * sweepIndices.length + i].color = new ColorRGBA(
+          for (let i = 0; i < resultsArray.sweep.length; i++) {
+            wglp.linesData[e.index - 1 + i * displayData.length].color = new ColorRGBA(
               0,
               0.3,
               0.3,
               0.5
             );
           }
-          wglp.linesData[(e.index - 1) * sweepIndices.length + value].color = new ColorRGBA(
+          wglp.linesData[e.index - 1 + value * displayData.length].color = new ColorRGBA(
             0.9,
             0.9,
             0,
@@ -642,8 +652,8 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
         }
       });
     }
-    if (parser) {
-      const n = parser.sweepStart + parser.sweepStep * value;
+    if (resultsArray) {
+      const n = resultsArray.sweep[value];
       SetSliderValue(n);
     }
   };
@@ -707,7 +717,7 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
         )}
         {plotOptions.sweepSlider && isSweep ? (
           <>
-            <Tag colorScheme="teal">{`${parser?.sweepVar}= ${unitConvert(sliderValue, 3)}`}</Tag>
+            <Tag colorScheme="teal">{`${unitConvert(sliderValue, 3)}`}</Tag>
           </>
         ) : (
           <></>
@@ -719,12 +729,13 @@ function PlotArray({ resultsArray, parser, displayData }: PlotType): JSX.Element
           Log10Y
         </Checkbox>*/}
       </HStack>
+
       {plotOptions.sweepSlider && isSweep ? (
         <Slider
           aria-label="slider-ex-1"
           defaultValue={0}
           min={0}
-          max={sweepIndices.length}
+          max={resultsArray ? resultsArray.sweep.length - 1 : 0}
           onChange={handleSweepSlider}>
           <SliderTrack>
             <SliderFilledTrack />

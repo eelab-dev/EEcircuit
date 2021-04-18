@@ -8,18 +8,28 @@ import { parser } from "./parser";
 import type { ResultType } from "./readOutput";
 
 import * as ComLink from "comlink";
+import type { ParserType } from "./parser";
+
+export type ResultArrayType = {
+  results: ResultType[];
+  sweep: number[];
+};
 
 export class SimArray {
   sim: ComLink.Remote<typeof simulation>;
   private netLists = [] as string[];
+  private parserResult: ParserType | null;
   private inputNetList = "";
   private results: ResultType[];
+  private sweep: number[];
 
   constructor() {
     const worker = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
     this.sim = ComLink.wrap<typeof simulation>(worker);
     //this.sim = null;
     this.results = [];
+    this.sweep = [];
+    this.parserResult = null;
     this.init();
   }
 
@@ -37,8 +47,10 @@ export class SimArray {
     console.log("🧨🧨🧨🧨🧨🧨🧨🧨");
   }
 
-  public async runSim() {
-    this.netLists = parser(this.inputNetList);
+  public async runSim(): Promise<ResultArrayType> {
+    this.parserResult = parser(this.inputNetList);
+    this.netLists = this.parserResult.netLists;
+    this.sweep = this.parserResult.sweep;
 
     /*this.sim.setNetList(this.netLists[0]);
     console.log("📚", this.netLists);
@@ -62,16 +74,16 @@ export class SimArray {
 
     //this.simArrayOutputCallback();
 
-    return this.results;
+    return { results: this.results, sweep: this.sweep };
   }
 
   public setNetList(text: string) {
     this.inputNetList = text;
   }
-  public getResults(): ResultType[] | null {
+  /*public getResults(): ResultTypeArray | null {
     console.log("----->", this.results);
-    return this.results;
-  }
+    return { results: this.results, sweep: this.sweep };
+  }*/
 
-  public simArrayOutputCallback() {}
+  //public simArrayOutputCallback() {}
 }

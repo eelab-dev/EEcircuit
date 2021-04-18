@@ -2,12 +2,18 @@
  *
  */
 
-export function parser(netList: string): string[] {
+export type ParserType = {
+  netLists: string[];
+  sweep: number[];
+};
+
+export function parser(netList: string): ParserType {
   let start = 0;
   let stop = 0;
   let step = 0;
   let lineIndex = -1;
   let netListOutput = [] as string[];
+  let sweep = [] as number[];
 
   const lines = netList.split(/\r?\n/);
   lines.forEach((line, index) => {
@@ -35,6 +41,7 @@ export function parser(netList: string): string[] {
           const s = line.split("[");
           const ss = line.split("]");
           const a = s[0] + `${i}` + ss[1];
+          sweep.push(i);
 
           tempNetList = tempNetList + a + "\n";
         } else {
@@ -48,5 +55,5 @@ export function parser(netList: string): string[] {
   }
 
   console.log("parser 🤔 ->", netListOutput);
-  return netListOutput;
+  return { netLists: netListOutput, sweep: sweep };
 }

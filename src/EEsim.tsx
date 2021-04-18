@@ -28,7 +28,7 @@ import {
 import { Button } from "@chakra-ui/react";
 import { extendTheme } from "@chakra-ui/react";
 import { calcContrast, calcLuminance } from "./calcContrast";
-import { SimArray } from "./sim/simulationArray";
+import { ResultArrayType, SimArray } from "./sim/simulationArray";
 import plotArray from "./plotArray";
 
 let sim: SimArray;
@@ -53,7 +53,7 @@ export default function EEsim(): JSX.Element {
 
   const [isSimLoaded, setIsSimLoaded] = React.useState(false);
   const [isSimRunning, setIsSimRunning] = React.useState(false);
-  const [results, setResults] = React.useState<ResultType[]>();
+  const [resultArray, setResultArray] = React.useState<ResultArrayType>();
   const [info, setInfo] = React.useState("");
   //const [parser, setParser] = React.useState<ParserType>();
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
@@ -76,10 +76,10 @@ export default function EEsim(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    if (results && results.length > 1) {
+    if (resultArray && resultArray.results.length > 1) {
       setSweep(true);
     }
-  }, [results]);
+  }, [resultArray]);
 
   useEffect(() => {
     /*const displayErrors = async () => {
@@ -98,7 +98,7 @@ export default function EEsim(): JSX.Element {
     if (isSimLoaded) {
       displayErrors();
     }*/
-  }, [isSimLoaded, results]);
+  }, [isSimLoaded, resultArray]);
 
   const getColor = (): ColorType => {
     let contrast = 0;
@@ -119,8 +119,8 @@ export default function EEsim(): JSX.Element {
 
   useEffect(() => {
     //DisplayData logic
-    if (results) {
-      const newDD = makeDD(results[0]);
+    if (resultArray) {
+      const newDD = makeDD(resultArray.results[0]);
       let tempDD = [] as DisplayDataType[];
       newDD.forEach((newData, i) => {
         let match = false;
@@ -163,7 +163,7 @@ export default function EEsim(): JSX.Element {
       console.log("makeDD->", tempDD);
       setDisplayData([...tempDD]);
     }
-  }, [results]);
+  }, [resultArray]);
 
   const makeDD = (res: ResultType): DisplayDataType[] => {
     let dd = [] as DisplayDataType[];
@@ -212,8 +212,8 @@ export default function EEsim(): JSX.Element {
       //setParser(getParser(netList));
       store.setItem("netList", netList);
       sim.setNetList(netList);
-      const results = await sim.runSim();
-      setResults(results);
+      const resultArray = await sim.runSim();
+      setResultArray(resultArray);
       setIsSimRunning(false);
     } else {
       //spawn worker thread
@@ -285,19 +285,19 @@ export default function EEsim(): JSX.Element {
   }, [displayData]);
 
   const btReset = React.useCallback(() => {
-    setResults(undefined);
+    setResultArray(undefined);
     setDisplayData(undefined);
     store.removeItem("displayData");
   }, []);
 
   const btColor = React.useCallback(() => {
-    if (results && displayData) {
+    if (resultArray && displayData) {
       const d = [...displayData];
       d.forEach((e) => {
         e.color = getColor();
       });
       setDisplayData(d);
-      setResults([...results]);
+      //setResultArray({results:[...results], sweep:[...resultArray.sweep]});
     }
     console.log("🌈", "hi", displayData);
   }, [displayData]);
@@ -376,7 +376,7 @@ export default function EEsim(): JSX.Element {
 
           <TabPanels>
             <TabPanel>
-              <PlotArray resultsArray={results} displayData={displayData} />
+              <PlotArray resultsArray={resultArray} displayData={displayData} />
             </TabPanel>
 
             <TabPanel>
