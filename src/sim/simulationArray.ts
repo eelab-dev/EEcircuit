@@ -46,6 +46,8 @@ export class SimArray {
     this.netLists = this.parserResult.netLists;
     this.sweep = this.parserResult.sweep;
 
+    this.results = [];
+
     for (let i = 0; i < this.netLists.length; i++) {
       this.sim.setNetList(this.netLists[i]);
       const wait = i == this.netLists.length - 1 ? true : false;
