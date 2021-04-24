@@ -1,6 +1,5 @@
-import type { ReactJSXElement } from "@emotion/react/types/jsx-namespace";
 import React, { useState, useEffect, useRef } from "react";
-import unitConvert from "./sim/unitConverter";
+import { unitConvert2string } from "./sim/unitConverter";
 
 type AxisType = {
   scale: number;
@@ -69,7 +68,7 @@ const Axis = ({ scale, offset, yHeight, axis }: AxisType): JSX.Element => {
       const midpoint = -(offset - i / 3 + 1) / scale;
       const x = (i / 6) * width;
 
-      ctx2d.fillText(unitConvert(midpoint, 2), x, 15);
+      ctx2d.fillText(unitConvert2string(midpoint, 2), x, 15);
       //ctx.fillRect(10, 10, 100, 100);
       ctx2d.moveTo(x, 0);
       ctx2d.lineTo(x, 10);
@@ -84,7 +83,7 @@ const Axis = ({ scale, offset, yHeight, axis }: AxisType): JSX.Element => {
       const midpoint = -(offset + i / 3 - 1) / scale;
       const y = (i / 6) * height;
 
-      ctx2d.fillText(unitConvert(midpoint, 2), 5, y);
+      ctx2d.fillText(unitConvert2string(midpoint, 2), 5, y);
       //ctx.fillRect(10, 10, 100, 100);
       ctx2d.moveTo(width - 10, y);
       ctx2d.lineTo(width, y);

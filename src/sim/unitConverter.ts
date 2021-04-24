@@ -2,7 +2,7 @@
  * Author: Danial Chitnis
  */
 
-const unitConvert = (n: number, fractDigits?: number): string => {
+export const unitConvert2string = (n: number, fractDigits?: number): string => {
   const nLog10 = Math.log10(Math.abs(n));
 
   let nLog10Near = 0;
@@ -17,6 +17,12 @@ const unitConvert = (n: number, fractDigits?: number): string => {
 
   let unit: string;
   switch (nLog10Near) {
+    case 9:
+      unit = "G";
+      break;
+    case 6:
+      unit = "M";
+      break;
     case 3:
       unit = "k";
       break;
@@ -60,4 +66,6 @@ const unitConvert = (n: number, fractDigits?: number): string => {
   return final;
 };
 
-export default unitConvert;
+export const unitConvert2float = (input: string): number => {
+  return 0;
+};

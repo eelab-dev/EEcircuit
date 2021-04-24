@@ -7,7 +7,7 @@ import { Box, Checkbox, Grid, GridItem, HStack, Tag } from "@chakra-ui/react";
 import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/react";
 import type { ParserType } from "./parserDC";
 import Axis from "./axis";
-import unitConvert from "./sim/unitConverter";
+import { unitConvert2string } from "./sim/unitConverter";
 import type { ResultArrayType } from "./sim/simulationArray";
 
 type PlotType = {
@@ -702,8 +702,8 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
         </Checkbox>
         {plotOptions.crosshair ? (
           <>
-            <Tag w="7em" colorScheme="teal">{`X: ${unitConvert(crossXY.x, 3)}`}</Tag>
-            <Tag w="7em" colorScheme="teal">{`Y: ${unitConvert(crossXY.y, 3)}`}</Tag>
+            <Tag w="7em" colorScheme="teal">{`X: ${unitConvert2string(crossXY.x, 3)}`}</Tag>
+            <Tag w="7em" colorScheme="teal">{`Y: ${unitConvert2string(crossXY.y, 3)}`}</Tag>
           </>
         ) : (
           <></>
@@ -717,7 +717,7 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
         )}
         {plotOptions.sweepSlider && isSweep ? (
           <>
-            <Tag colorScheme="teal">{`${unitConvert(sliderValue, 3)}`}</Tag>
+            <Tag colorScheme="teal">{`${unitConvert2string(sliderValue, 3)}`}</Tag>
           </>
         ) : (
           <></>

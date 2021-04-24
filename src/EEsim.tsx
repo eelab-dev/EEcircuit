@@ -3,18 +3,19 @@ import * as circuits from "./sim/circuits";
 
 import EditorCustom from "./editor/editorCustom";
 
-//import Plot from "./plot";
 import PlotArray from "./plotArray";
 import DisplayBox from "./displayBox";
 import type { ResultType } from "./sim/readOutput";
 import DownCSV from "./downCSV";
 
 import {
+  Button,
   Box,
   ChakraProvider,
   createStandaloneToast,
   Divider,
   Flex,
+  Progress,
   Spacer,
   Stack,
   Tab,
@@ -24,12 +25,10 @@ import {
   Tabs,
   Textarea,
   useToast,
+  extendTheme,
 } from "@chakra-ui/react";
-import { Button } from "@chakra-ui/react";
-import { extendTheme } from "@chakra-ui/react";
 import { calcContrast, calcLuminance } from "./calcContrast";
 import { ResultArrayType, SimArray } from "./sim/simulationArray";
-import plotArray from "./plotArray";
 
 let sim: SimArray;
 const store = window.localStorage;
@@ -55,11 +54,11 @@ export default function EEsim(): JSX.Element {
   const [isSimRunning, setIsSimRunning] = React.useState(false);
   const [resultArray, setResultArray] = React.useState<ResultArrayType>();
   const [info, setInfo] = React.useState("");
-  //const [parser, setParser] = React.useState<ParserType>();
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
   const [tabIndex, setTabIndex] = React.useState(0);
   const [sweep, setSweep] = React.useState(false);
+  const [progress, setProgress] = React.useState(0);
 
   //const toast = useToast();
   const toast = createStandaloneToast();
@@ -187,16 +186,6 @@ export default function EEsim(): JSX.Element {
     return dd;
   };
 
-  /*const simArrayOutputCallback = () => {
-    const res = sim.getResults();
-    console.log("🚀", "yessssssssssssssss", res);
-    if (res) {
-      setResults(res);
-      //setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n" + res.header);
-    }
-    setIsSimRunning(false);
-  };*/
-
   /*const simOutputCallback = React.useCallback(async () => {
     //none of the React.State are accessible in the callback
     const res = await sim.getResults();
@@ -214,14 +203,21 @@ export default function EEsim(): JSX.Element {
       sim.setNetList(netList);
       const resultArray = await sim.runSim();
       setResultArray(resultArray);
+      setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n"); ///??????????? res.header
       setIsSimRunning(false);
     } else {
       //spawn worker thread
-      sim = new SimArray();
-      //sim.simArrayOutputCallback = simArrayOutputCallback;
+      sim = new SimArray(); //await????
+      sim.progressCallback = simProgressCallback;
       setIsSimLoaded(true);
+      setProgress(0);
+      //initialSimInfo = await sim.getInfo(); //not yet working???????
       btRun();
     }
+  };
+
+  const simProgressCallback = (n: number) => {
+    setProgress(n);
   };
 
   const change = React.useCallback(
@@ -361,6 +357,10 @@ export default function EEsim(): JSX.Element {
               Reset 🧼
             </Button>
           </Flex>
+        </Box>
+
+        <Box p={1}>
+          <Progress colorScheme={"green"} value={progress} />
         </Box>
 
         <Box p={2}>
