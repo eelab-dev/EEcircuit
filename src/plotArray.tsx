@@ -60,7 +60,6 @@ type PlotOptions = {
 
 let wglp: WebglPlot;
 let lineMinMax = [{ minY: 0, maxY: 1 }] as LineMinMaxType[];
-//let sweepIndices = [] as number[]; //already has one
 
 const zoomRect = new WebglSquare(new ColorRGBA(0.8, 0.8, 0.2, 0.25));
 const crossXLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
@@ -95,7 +94,6 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
   useEffect(() => {
     if (resultsArray && resultsArray.sweep.length > 1) {
       SetIsSweep(true);
-      //sweepIndices = resultsArray.sweep;
     } else {
       SetIsSweep(false);
     }
@@ -346,7 +344,6 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
   };*/
 
   useEffect(() => {
-    //sweepIndices = [];
     wglp.removeAllLines();
     wglp.addSurface(zoomRect); //change this to Aux !!!!!!
     wglp.addAuxLine(crossXLine);
@@ -358,8 +355,6 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
 
     if (resultsArray && displayData) {
       if (resultsArray.results[0].param.dataType == "real") {
-        //const data = results ? results.data : [[]];
-        //const possibleSweep = results ? results.header.indexOf("sweep") > 0 : false;
         console.log("📈3", resultsArray);
         normalLine(resultsArray.results);
       }
@@ -380,8 +375,6 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
     console.log("plot->DD->", wglp.linesData);
     if (resultsArray && displayData) {
       if (resultsArray.sweep.length > 0) {
-        //if (wglp.linesData.length == sweepIndices.length * displayData.length) {
-        //console.log("plot->DD->", "it is sweep");
         displayData.forEach((e) => {
           for (let i = 0; i < resultsArray.sweep.length; i++) {
             //wglp.linesData[(e.index - 1) * resultsArray.sweep.length + i].visible = e.visible;
@@ -637,16 +630,16 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
         if (e.visible) {
           for (let i = 0; i < resultsArray.sweep.length; i++) {
             wglp.linesData[e.index - 1 + i * displayData.length].color = new ColorRGBA(
-              0,
-              0.3,
-              0.3,
+              e.color.r / 2,
+              e.color.g / 2,
+              e.color.b / 2,
               0.5
             );
           }
           wglp.linesData[e.index - 1 + value * displayData.length].color = new ColorRGBA(
-            0.9,
-            0.9,
-            0,
+            e.color.r,
+            e.color.g,
+            e.color.b,
             1
           );
         }
