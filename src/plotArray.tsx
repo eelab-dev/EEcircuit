@@ -11,7 +11,7 @@ import { unitConvert2string } from "./sim/unitConverter";
 import type { ResultArrayType } from "./sim/simulationArray";
 
 type PlotType = {
-  resultsArray?: ResultArrayType;
+  resultArray?: ResultArrayType;
   displayData?: DisplayDataType[];
 };
 
@@ -65,7 +65,7 @@ const zoomRect = new WebglSquare(new ColorRGBA(0.8, 0.8, 0.2, 0.25));
 const crossXLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 const crossYLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 
-function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
+function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
   const [plotOptions, setPlotOptions] = useState<PlotOptions>({
     crosshair: true,
@@ -92,12 +92,12 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
   });
 
   useEffect(() => {
-    if (resultsArray && resultsArray.sweep.length > 1) {
+    if (resultArray && resultArray.sweep.length > 1) {
       SetIsSweep(true);
     } else {
       SetIsSweep(false);
     }
-  }, [resultsArray]);
+  }, [resultArray]);
 
   useEffect(() => {
     if (canvasMain.current) {
@@ -188,7 +188,6 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
 
   const getLineMinMaxNormal = (data: number[][]) => {
     for (let col = 1; col < data.length; col++) {
-      //const color = getColor();
       let color: ColorRGBA;
       if (displayData && displayData[col - 1]) {
         color = new ColorRGBA(
@@ -201,7 +200,6 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
         color = new ColorRGBA(0.5, 0.5, 0.5, 1);
       }
       const line = new WebglLine(color, data[0].length);
-      //const maxX = data[0][data[0].length - 1];
       let minY = 100000;
       let maxY = -100000;
       let minPos = maxY;
@@ -353,10 +351,10 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
     wglp.gOffsetX = -1;
     wglp.gScaleX = 2;
 
-    if (resultsArray && displayData) {
-      if (resultsArray.results[0].param.dataType == "real") {
-        console.log("📈3", resultsArray);
-        normalLine(resultsArray.results);
+    if (resultArray) {
+      if (resultArray.results[0].param.dataType == "real") {
+        console.log("📈3", resultArray);
+        normalLine(resultArray.results);
       }
       /*if (results.param.dataType == "complex") {
         const data = results ? results.data : [[]];
@@ -368,15 +366,15 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
     //?????????????????????
 
     //console.log("line-->", wglp.linesData);
-  }, [resultsArray, displayData]);
+  }, [resultArray]);
 
   useEffect(() => {
     console.log("plot->DD->", displayData);
     console.log("plot->DD->", wglp.linesData);
-    if (resultsArray && displayData) {
-      if (resultsArray.sweep.length > 0) {
+    if (resultArray && displayData) {
+      if (resultArray.sweep.length > 0) {
         displayData.forEach((e) => {
-          for (let i = 0; i < resultsArray.sweep.length; i++) {
+          for (let i = 0; i < resultArray.sweep.length; i++) {
             //wglp.linesData[(e.index - 1) * resultsArray.sweep.length + i].visible = e.visible;
             wglp.linesData[e.index - 1 + i * displayData.length].visible = e.visible;
           }
@@ -387,7 +385,7 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
         if (wglp.linesData.length == displayData.length) {
           displayData.forEach((e) => {
             //first item is time (offset=1) or frequency (offset=2)
-            const offset = resultsArray.results[0].param.dataType == "complex" ? 2 : 1;
+            const offset = resultArray.results[0].param.dataType == "complex" ? 2 : 1;
             wglp.linesData[e.index - offset].visible = e.visible;
           });
           scaleUpdate(findMinMaxGlobal());
@@ -396,10 +394,11 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
     }
 
     //console.log("CANVAS CANVAS!!!!!!!!!", wglp.lines);
-  }, [resultsArray, displayData]);
+  }, [displayData]);
 
   const findMinMaxGlobal = (): ScaleType => {
     //???????????????????????
+
     let minY = 10000;
     let maxY = -10000;
     let minX = 0;
@@ -417,7 +416,8 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
       maxX = lineMinMax[0].maxX;
     }
 
-    return { minY: minY, maxY: maxY, minX: minX, maxX: maxX };
+    const minmax = { minY: minY, maxY: maxY, minX: minX, maxX: maxX };
+    return minmax;
   };
 
   const scaleUpdate = (scale: ScaleType) => {
@@ -625,10 +625,10 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
   };
 
   const handleSweepSlider = (value: number) => {
-    if (displayData && resultsArray) {
+    if (displayData && resultArray) {
       displayData.forEach((e) => {
         if (e.visible) {
-          for (let i = 0; i < resultsArray.sweep.length; i++) {
+          for (let i = 0; i < resultArray.sweep.length; i++) {
             wglp.linesData[e.index - 1 + i * displayData.length].color = new ColorRGBA(
               e.color.r / 2,
               e.color.g / 2,
@@ -645,8 +645,8 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
         }
       });
     }
-    if (resultsArray) {
-      const n = resultsArray.sweep[value];
+    if (resultArray) {
+      const n = resultArray.sweep[value];
       SetSliderValue(n);
     }
   };
@@ -728,7 +728,7 @@ function PlotArray({ resultsArray, displayData }: PlotType): JSX.Element {
           aria-label="slider-ex-1"
           defaultValue={0}
           min={0}
-          max={resultsArray ? resultsArray.sweep.length - 1 : 0}
+          max={resultArray ? resultArray.sweep.length - 1 : 0}
           onChange={handleSweepSlider}>
           <SliderTrack>
             <SliderFilledTrack />

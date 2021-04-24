@@ -295,7 +295,6 @@ export default function EEsim(): JSX.Element {
       setDisplayData(d);
       //setResultArray({results:[...results], sweep:[...resultArray.sweep]});
     }
-    console.log("🌈", "hi", displayData);
   }, [displayData]);
 
   return (
@@ -376,7 +375,7 @@ export default function EEsim(): JSX.Element {
 
           <TabPanels>
             <TabPanel>
-              <PlotArray resultsArray={resultArray} displayData={displayData} />
+              <PlotArray resultArray={resultArray} displayData={displayData} />
             </TabPanel>
 
             <TabPanel>
