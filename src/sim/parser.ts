@@ -2,6 +2,8 @@
  *
  */
 
+import { unitConvert2float } from "./unitConverter";
+
 export type ParserType = {
   netLists: string[];
   sweep: number[];
@@ -23,9 +25,9 @@ export function parser(netList: string): ParserType {
     if (s[1] && !isComment) {
       const cmd = s[1].split(":");
       if (cmd.length > 2 && cmd[2].includes("]")) {
-        start = parseFloat(cmd[0].trim());
-        step = parseFloat(cmd[1].trim());
-        stop = parseFloat(cmd[2].trim());
+        start = unitConvert2float(cmd[0]);
+        step = unitConvert2float(cmd[1]);
+        stop = unitConvert2float(cmd[2].split("]")[0]);
         console.log("parser 🤔 ->", cmd);
         lineIndex = index;
       }
