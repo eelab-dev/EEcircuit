@@ -34,16 +34,10 @@ export class SimArray {
   }
 
   private async init() {
-    const simOutputCallback = async () => {
-      //this.results.push(await this.sim.getResults());
-      //this.block = false;
-      console.log("👌");
-      //this.check();
-    };
-
     //this.sim.setOutputEvent(ComLink.proxy(simOutputCallback));
-    this.sim.start();
+    await this.sim.start();
     //const initialSimInfo = await this.sim.getInfo();
+    console.log("☀️", await this.sim.getInfo());
     console.log("🧨🧨🧨🧨🧨🧨🧨🧨");
   }
 
@@ -52,24 +46,13 @@ export class SimArray {
     this.netLists = this.parserResult.netLists;
     this.sweep = this.parserResult.sweep;
 
-    /*this.sim.setNetList(this.netLists[0]);
-    console.log("📚", this.netLists);
-    await this.sim.runSimP();
-    this.results.push(await this.sim.getResults());
-    console.log("👌👌");
-
-    this.sim.setNetList(this.netLists[5]);
-    await this.sim.runSimP();
-    this.results.push(await this.sim.getResults());
-    console.log("👌👌👌");
-    //this.block = false;*/
-
     for (let i = 0; i < this.netLists.length; i++) {
       this.sim.setNetList(this.netLists[i]);
       const wait = i == this.netLists.length - 1 ? true : false;
       await this.sim.runSimP(wait);
       this.results.push(await this.sim.getResults());
       console.log("👌👌👌");
+      this.progressCallback((100 * i) / (this.netLists.length - 1));
     }
 
     //this.simArrayOutputCallback();
@@ -80,10 +63,10 @@ export class SimArray {
   public setNetList(text: string) {
     this.inputNetList = text;
   }
-  /*public getResults(): ResultTypeArray | null {
-    console.log("----->", this.results);
-    return { results: this.results, sweep: this.sweep };
-  }*/
 
-  //public simArrayOutputCallback() {}
+  public async getInfo(): Promise<string> {
+    return await this.sim.getInfo();
+  }
+
+  public progressCallback(n: number) {}
 }
