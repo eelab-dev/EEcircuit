@@ -51,7 +51,7 @@ export class Simulation {
         this.info += e + "\n";
       },
       printErr: (e) => {
-        console.warn(e);
+        console.error(e);
         this.info += e + "\n\n";
         if (e != "Note: can't find init file.") {
           this.error.push(e);
@@ -101,7 +101,8 @@ export class Simulation {
         }
         while (!this.pass && this.cmd == 0) {
           //console.log(chkPass());
-          await new Promise((r) => setTimeout(r, this.wait ? 1000 : 0.001));
+          const time = this.wait || this.error.length > 0 ? 1000 : 0.001;
+          await new Promise((r) => setTimeout(r, time));
           console.log(`I am in pass loop JS -${this.pass} `);
         }
         module.FS?.writeFile("/test.cir", this.netList);

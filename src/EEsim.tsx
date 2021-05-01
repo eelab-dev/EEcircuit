@@ -81,7 +81,7 @@ export default function EEsim(): JSX.Element {
   }, [resultArray]);
 
   useEffect(() => {
-    /*const displayErrors = async () => {
+    const displayErrors = async () => {
       const errors = await sim.getError();
       errors.forEach((e) => {
         toast({
@@ -96,7 +96,7 @@ export default function EEsim(): JSX.Element {
 
     if (isSimLoaded) {
       displayErrors();
-    }*/
+    }
   }, [isSimLoaded, resultArray]);
 
   const getColor = (): ColorType => {

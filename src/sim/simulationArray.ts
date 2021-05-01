@@ -48,10 +48,14 @@ export class SimArray {
 
     this.results = [];
 
-    for (let i = 0; i < this.netLists.length; i++) {
+    let error = false;
+
+    for (let i = 0; i < this.netLists.length && !error; i++) {
       this.sim.setNetList(this.netLists[i]);
       const wait = i == this.netLists.length - 1 ? true : false;
       await this.sim.runSimP(wait);
+      const err = await this.sim.getError();
+      if (err.length > 0) error = true;
       this.results.push(await this.sim.getResults());
       console.log("👌👌👌");
       this.progressCallback((100 * i) / (this.netLists.length - 1));
@@ -68,6 +72,10 @@ export class SimArray {
 
   public async getInfo(): Promise<string> {
     return await this.sim.getInfo();
+  }
+
+  public async getError(): Promise<string[]> {
+    return await this.sim.getError();
   }
 
   public progressCallback(n: number) {}
