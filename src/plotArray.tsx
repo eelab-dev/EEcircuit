@@ -376,7 +376,10 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
         displayData.forEach((e) => {
           for (let i = 0; i < resultArray.sweep.length; i++) {
             //wglp.linesData[(e.index - 1) * resultsArray.sweep.length + i].visible = e.visible;
-            wglp.linesData[e.index - 1 + i * displayData.length].visible = e.visible;
+            const line = wglp.linesData[e.index - 1 + i * displayData.length];
+            if (line) {
+              line.visible = e.visible;
+            }
           }
         });
         scaleUpdate(findMinMaxGlobal());
