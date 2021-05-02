@@ -391,7 +391,9 @@ export default function EEsim(): JSX.Element {
               />
             </TabPanel>
 
-            <TabPanel>{/*<DownCSV results={results[0]} />*/}</TabPanel>
+            <TabPanel>
+              <DownCSV resultArray={resultArray} />
+            </TabPanel>
           </TabPanels>
         </Tabs>
       </div>
