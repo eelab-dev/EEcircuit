@@ -78,5 +78,9 @@ export class SimArray {
     return await this.sim.getError();
   }
 
+  public getResults(): ResultArrayType {
+    return { results: this.results, sweep: this.sweep };
+  }
+
   public progressCallback(n: number) {}
 }
