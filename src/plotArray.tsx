@@ -5,7 +5,6 @@ import type { DisplayDataType } from "./EEsim";
 import type { ComplexDataType, RealDataType, ResultType } from "./sim/readOutput";
 import { Box, Checkbox, Grid, GridItem, HStack, Tag } from "@chakra-ui/react";
 import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/react";
-import type { ParserType } from "./parserDC";
 import Axis from "./axis";
 import { unitConvert2string } from "./sim/unitConverter";
 import type { ResultArrayType } from "./sim/simulationArray";
@@ -148,6 +147,14 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     });
   };
 
+  const complexLine = (results: ResultType[]) => {
+    lineMinMax = [];
+    results.forEach((result) => {
+      const data = result.data;
+      getLineMinMaxComplex(data as ComplexDataType);
+    });
+  };
+
   /*const sweepLine = (results: ResultType[]) => {
     //isSweep = true;
     //let dataSweep = [[[]]] as number[][][];
@@ -229,61 +236,7 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     }
   };
 
-  /*const getLineMinMaxSweep = (dataSweep: number[][][]) => {
-    for (let col = 1; col < dataSweep.length; col++) {
-      let minY = 100000;
-      let maxY = -100000;
-      let minPos = 10000;
-      let maxNeg = -10000;
-      for (let sweep = 0; sweep < dataSweep[0].length; sweep++) {
-        //const color = getColor();
-        let color: ColorRGBA;
-        if (displayData && displayData[col - 1]) {
-          color = new ColorRGBA(
-            displayData[col - 1].color.r,
-            displayData[col - 1].color.g,
-            displayData[col - 1].color.b,
-            1
-          );
-        } else {
-          color = new ColorRGBA(0.5, 0.5, 0.5, 1);
-        }
-        const line = new WebglLine(color, dataSweep[0][0].length);
-        //const maxX = dataSweep[0][sweep][dataSweep[0][sweep].length - 1];
-
-        for (let i = 0; i < dataSweep[0][sweep].length; i++) {
-          line.setX(i, dataSweep[0][sweep][i]);
-          const y = dataSweep[col][sweep][i];
-          line.setY(i, y);
-          maxY = maxY > y ? maxY : y;
-          minY = minY < y ? minY : y;
-          if (y > 0) {
-            minPos = minPos < y ? minPos : y;
-          }
-          if (y < 0) {
-            maxNeg = maxNeg > y ? maxNeg : y;
-          }
-        }
-        wglp.addDataLine(line);
-        lineMinMax.push({
-          minY: minY,
-          maxY: maxY,
-          minYPos: minPos,
-          maxYNeg: maxNeg,
-          minX: dataSweep[0][0][0],
-          maxX: dataSweep[0][0][dataSweep[0][0].length - 1],
-        });
-      }
-    }
-  };*/
-
-  /*const complexLine = (data: ComplexDataType) => {
-    lineMinMax = [];
-    getLineMinMaxComplex(data);
-    SetIsSweep(false);
-  };*/
-
-  /*const getLineMinMaxComplex = (data: ComplexDataType) => {
+  const getLineMinMaxComplex = (data: ComplexDataType) => {
     const drawLine = (dataY: number[], dataX: number[], index: number) => {
       let color: ColorRGBA;
       if (displayData && displayData[index - 1]) {
@@ -339,6 +292,54 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
       drawLine(dataYMag, dataXReal, 2 * col - 1);
       drawLine(dataYPhase, dataXReal, 2 * col);
     }
+  };
+
+  /*const getLineMinMaxSweep = (dataSweep: number[][][]) => {
+    for (let col = 1; col < dataSweep.length; col++) {
+      let minY = 100000;
+      let maxY = -100000;
+      let minPos = 10000;
+      let maxNeg = -10000;
+      for (let sweep = 0; sweep < dataSweep[0].length; sweep++) {
+        //const color = getColor();
+        let color: ColorRGBA;
+        if (displayData && displayData[col - 1]) {
+          color = new ColorRGBA(
+            displayData[col - 1].color.r,
+            displayData[col - 1].color.g,
+            displayData[col - 1].color.b,
+            1
+          );
+        } else {
+          color = new ColorRGBA(0.5, 0.5, 0.5, 1);
+        }
+        const line = new WebglLine(color, dataSweep[0][0].length);
+        //const maxX = dataSweep[0][sweep][dataSweep[0][sweep].length - 1];
+
+        for (let i = 0; i < dataSweep[0][sweep].length; i++) {
+          line.setX(i, dataSweep[0][sweep][i]);
+          const y = dataSweep[col][sweep][i];
+          line.setY(i, y);
+          maxY = maxY > y ? maxY : y;
+          minY = minY < y ? minY : y;
+          if (y > 0) {
+            minPos = minPos < y ? minPos : y;
+          }
+          if (y < 0) {
+            maxNeg = maxNeg > y ? maxNeg : y;
+          }
+        }
+        wglp.addDataLine(line);
+        lineMinMax.push({
+          minY: minY,
+          maxY: maxY,
+          minYPos: minPos,
+          maxYNeg: maxNeg,
+          minX: dataSweep[0][0][0],
+          maxX: dataSweep[0][0][dataSweep[0][0].length - 1],
+        });
+      }
+    }
   };*/
 
   useEffect(() => {
@@ -356,10 +357,10 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
         console.log("📈3", resultArray);
         normalLine(resultArray.results);
       }
-      /*if (results.param.dataType == "complex") {
-        const data = results ? results.data : [[]];
-        complexLine(data as ComplexDataType);
-      }*/
+      if (resultArray.results[0].param.dataType == "complex") {
+        //const data = results ? results.data : [[]];
+        complexLine(resultArray.results);
+      }
       scaleUpdate(findMinMaxGlobal());
     }
 

@@ -37,8 +37,8 @@ export class SimArray {
     //this.sim.setOutputEvent(ComLink.proxy(simOutputCallback));
     await this.sim.start();
     //const initialSimInfo = await this.sim.getInfo();
-    console.log("☀️", await this.sim.getInfo());
-    console.log("🧨🧨🧨🧨🧨🧨🧨🧨");
+    this.log("☀️", await this.sim.getInfo());
+    this.log("🧨🧨🧨🧨🧨🧨🧨🧨");
   }
 
   public async runSim(): Promise<ResultArrayType> {
@@ -57,7 +57,7 @@ export class SimArray {
       const err = await this.sim.getError();
       if (err.length > 0) error = true;
       this.results.push(await this.sim.getResults());
-      console.log("👌👌👌");
+      this.log("👌👌👌");
       this.progressCallback((100 * i) / (this.netLists.length - 1));
     }
 
@@ -83,4 +83,8 @@ export class SimArray {
   }
 
   public progressCallback(n: number) {}
+
+  private log(message?: any, ...optionalParams: any[]): void {
+    //console.log(message, optionalParams);
+  }
 }

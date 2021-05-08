@@ -37,7 +37,7 @@ export class Simulation {
     } else {
       this.cmd = 0;
     }
-    console.log(`cmd -> ${strCmd}`);
+    this.log(`cmd -> ${strCmd}`);
     return strCmd;
   };
 
@@ -47,7 +47,7 @@ export class Simulation {
       noInitialRun: true,
       print: (e) => {
         /*do nothing*/
-        console.log(e);
+        this.log(e);
         this.info += e + "\n";
       },
       printErr: (e) => {
@@ -59,7 +59,7 @@ export class Simulation {
       },
       preRun: [
         () => {
-          console.log("from prerun");
+          this.log("from prerun");
         },
       ],
       setGetInput: this.getInput,
@@ -83,9 +83,9 @@ export class Simulation {
     //console.log(module.Asyncify);
 
     module.setHandleThings(() => {
-      console.log("handle other things!!!!!");
+      this.log("handle other things!!!!!");
       module.Asyncify?.handleAsync(async () => {
-        console.log(this.pass);
+        this.log(this.pass);
         if (this.cmd == 0) {
           try {
             this.dataRaw = module.FS?.readFile("out.raw") ?? new Uint8Array();
@@ -93,21 +93,21 @@ export class Simulation {
             this.resolve();
             this.outputEvent(this.output); //callback
           } catch (e) {
-            console.log(e);
+            this.log(e);
           }
 
-          console.log("cmd-> -> ready to start...");
+          this.log("cmd-> -> ready to start...");
           //pass = false;
         }
         while (!this.pass && this.cmd == 0) {
           //console.log(chkPass());
           const time = this.wait || this.error.length > 0 ? 1000 : 0.001;
           await new Promise((r) => setTimeout(r, time));
-          console.log(`I am in pass loop JS -${this.pass} `);
+          this.log(`I am in pass loop JS -${this.pass} `);
         }
         module.FS?.writeFile("/test.cir", this.netList);
 
-        console.log("loop finished");
+        this.log("loop finished");
 
         this.pass = false;
       });
@@ -157,6 +157,9 @@ export class Simulation {
   };
   public getError = (): string[] => {
     return this.error;
+  };
+  private log = (message?: any, ...optionalParams: any[]) => {
+    //console.log(message, optionalParams);
   };
 }
 
