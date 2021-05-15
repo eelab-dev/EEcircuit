@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { WebglPlot, ColorRGBA, WebglLine, WebglSquare } from "webgl-plot";
-//import { calcContrast, calcLuminance } from "./calcContrast";
-import type { DisplayDataType } from "./EEsim";
 import type { ComplexDataType, RealDataType, ResultType } from "./sim/readOutput";
-import { Box, Checkbox, Grid, GridItem, HStack, Tag } from "@chakra-ui/react";
+import { Box, Checkbox, color, Grid, GridItem, HStack, Tag } from "@chakra-ui/react";
 import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/react";
 import Axis from "./axis";
 import { unitConvert2string } from "./sim/unitConverter";
 import { isComplex, ResultArrayType } from "./sim/simulationArray";
-import { mapD2W } from "./mapD2W";
+import { DisplayDataType, mapD2W } from "./displayData";
+import { changeIntensity } from "./colors";
 
 type PlotType = {
   resultArray?: ResultArrayType;
@@ -631,49 +630,16 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
   };
 
   const handleSweepSlider = (value: number) => {
-    console.log(displayData);
+    //console.log(displayData);
     if (displayData && resultArray) {
-      const offset = isComplex(resultArray) ? 2 : 1;
-      /*displayData.forEach((e) => {
-        if (e.visible) {
-          for (let i = 0; i < resultArray.sweep.length; i++) {
-            wglp.linesData[e.index - 1 + i * displayData.length].color = new ColorRGBA(
-              e.color.r / 2,
-              e.color.g / 2,
-              e.color.b / 2,
-              0.5
-            );
-          }
-          wglp.linesData[e.index - 1 + value * displayData.length].color = new ColorRGBA(
-            e.color.r,
-            e.color.g,
-            e.color.b,
-            1
-          );
-        }
-      });*/
-      /*wglp.linesData.forEach((line) => {
-        const old = line.color;
-        line.color = new ColorRGBA(old.r / 2, old.g / 2, old.b / 2, 0.5);
-      });
-      displayData.forEach((e, index) => {
-        if (e.visible) {
-          wglp.linesData[0].color = new ColorRGBA(e.color.r, e.color.g, e.color.b, 1);
-        }
-      });*/
       displayData.forEach((e) => {
         if (e.visible) {
           for (let s = 0; s < resultArray.sweep.length; s++) {
             const wIndex = mapD2W(e.index, s, displayData, resultArray);
-            wglp.linesData[wIndex].color = new ColorRGBA(
-              e.color.r / 2,
-              e.color.g / 2,
-              e.color.b / 2,
-              0.5
-            );
+            wglp.linesData[wIndex].color = changeIntensity(e.color, 0.5, 0.5);
           }
           const wIndex = mapD2W(e.index, value, displayData, resultArray);
-          wglp.linesData[wIndex].color = new ColorRGBA(e.color.r, e.color.g, e.color.b, 1);
+          wglp.linesData[wIndex].color = changeIntensity(e.color, 1, 1);
         }
       });
     }
