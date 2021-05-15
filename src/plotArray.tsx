@@ -7,7 +7,8 @@ import { Box, Checkbox, Grid, GridItem, HStack, Tag } from "@chakra-ui/react";
 import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/react";
 import Axis from "./axis";
 import { unitConvert2string } from "./sim/unitConverter";
-import type { ResultArrayType } from "./sim/simulationArray";
+import { isComplex, ResultArrayType } from "./sim/simulationArray";
+import { mapD2W } from "./mapD2W";
 
 type PlotType = {
   resultArray?: ResultArrayType;
@@ -353,11 +354,11 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     wglp.gScaleX = 2;
 
     if (resultArray) {
-      if (resultArray.results[0].param.dataType == "real") {
+      if (!isComplex(resultArray)) {
         console.log("📈3", resultArray);
         normalLine(resultArray.results);
       }
-      if (resultArray.results[0].param.dataType == "complex") {
+      if (isComplex(resultArray)) {
         //const data = results ? results.data : [[]];
         complexLine(resultArray.results);
       }
@@ -367,7 +368,7 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     //?????????????????????
 
     //console.log("line-->", wglp.linesData);
-  }, [resultArray]);
+  }, [resultArray, displayData]);
 
   useEffect(() => {
     console.log("plot->DD->", displayData);
@@ -377,7 +378,8 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
         displayData.forEach((e) => {
           for (let i = 0; i < resultArray.sweep.length; i++) {
             //wglp.linesData[(e.index - 1) * resultsArray.sweep.length + i].visible = e.visible;
-            const line = wglp.linesData[e.index - 1 + i * displayData.length];
+            const offset = isComplex(resultArray) ? 2 : 1;
+            const line = wglp.linesData[e.index - offset + i * displayData.length];
             if (line) {
               line.visible = e.visible;
             }
@@ -389,7 +391,7 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
         if (wglp.linesData.length == displayData.length) {
           displayData.forEach((e) => {
             //first item is time (offset=1) or frequency (offset=2)
-            const offset = resultArray.results[0].param.dataType == "complex" ? 2 : 1;
+            const offset = isComplex(resultArray) ? 2 : 1;
             wglp.linesData[e.index - offset].visible = e.visible;
           });
           scaleUpdate(findMinMaxGlobal());
@@ -629,8 +631,10 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
   };
 
   const handleSweepSlider = (value: number) => {
+    console.log(displayData);
     if (displayData && resultArray) {
-      displayData.forEach((e) => {
+      const offset = isComplex(resultArray) ? 2 : 1;
+      /*displayData.forEach((e) => {
         if (e.visible) {
           for (let i = 0; i < resultArray.sweep.length; i++) {
             wglp.linesData[e.index - 1 + i * displayData.length].color = new ColorRGBA(
@@ -646,6 +650,30 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
             e.color.b,
             1
           );
+        }
+      });*/
+      /*wglp.linesData.forEach((line) => {
+        const old = line.color;
+        line.color = new ColorRGBA(old.r / 2, old.g / 2, old.b / 2, 0.5);
+      });
+      displayData.forEach((e, index) => {
+        if (e.visible) {
+          wglp.linesData[0].color = new ColorRGBA(e.color.r, e.color.g, e.color.b, 1);
+        }
+      });*/
+      displayData.forEach((e) => {
+        if (e.visible) {
+          for (let s = 0; s < resultArray.sweep.length; s++) {
+            const wIndex = mapD2W(e.index, s, displayData, resultArray);
+            wglp.linesData[wIndex].color = new ColorRGBA(
+              e.color.r / 2,
+              e.color.g / 2,
+              e.color.b / 2,
+              0.5
+            );
+          }
+          const wIndex = mapD2W(e.index, value, displayData, resultArray);
+          wglp.linesData[wIndex].color = new ColorRGBA(e.color.r, e.color.g, e.color.b, 1);
         }
       });
     }

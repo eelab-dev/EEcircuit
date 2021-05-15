@@ -88,3 +88,7 @@ export class SimArray {
     //console.log(message, optionalParams);
   }
 }
+
+export const isComplex = (ra: ResultArrayType): boolean => {
+  return ra.results[0].param.dataType == "complex";
+};

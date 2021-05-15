@@ -28,7 +28,7 @@ import {
   extendTheme,
 } from "@chakra-ui/react";
 import { calcContrast, calcLuminance } from "./calcContrast";
-import { ResultArrayType, SimArray } from "./sim/simulationArray";
+import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray";
 
 let sim: SimArray;
 const store = window.localStorage;
@@ -294,9 +294,18 @@ export default function EEsim(): JSX.Element {
   const btColor = React.useCallback(() => {
     if (resultArray && displayData) {
       const d = [...displayData];
-      d.forEach((e) => {
-        e.color = getColor();
-      });
+      if (!isComplex(resultArray)) {
+        d.forEach((e) => {
+          e.color = getColor();
+        });
+      } else {
+        for (let i = 0; i < d.length - 1; i = i + 2) {
+          const c = getColor();
+          d[i].color = c;
+          d[i + 1].color = c;
+        }
+      }
+
       setDisplayData(d);
       //setResultArray({results:[...results], sweep:[...resultArray.sweep]});
     }
