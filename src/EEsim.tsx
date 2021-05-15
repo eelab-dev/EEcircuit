@@ -5,7 +5,6 @@ import EditorCustom from "./editor/editorCustom";
 
 import PlotArray from "./plotArray";
 import DisplayBox from "./displayBox";
-import type { ResultType } from "./sim/readOutput";
 import DownCSV from "./downCSV";
 
 import {
@@ -27,25 +26,13 @@ import {
   useToast,
   extendTheme,
 } from "@chakra-ui/react";
-import { calcContrast, calcLuminance } from "./calcContrast";
+import { getColor } from "./colors";
 import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray";
+import { DisplayDataType, makeDD } from "./displayData";
 
 let sim: SimArray;
 const store = window.localStorage;
 let initialSimInfo = "";
-
-export type ColorType = {
-  r: number;
-  g: number;
-  b: number;
-};
-
-export type DisplayDataType = {
-  name: string;
-  index: number; //result index
-  color: ColorType;
-  visible: boolean;
-};
 
 export default function EEsim(): JSX.Element {
   // Create the count state.
@@ -99,23 +86,6 @@ export default function EEsim(): JSX.Element {
     }
   }, [isSimLoaded, resultArray]);
 
-  const getColor = (): ColorType => {
-    let contrast = 0;
-    let r = 0,
-      g = 0,
-      b = 0;
-    while (contrast < 4) {
-      r = Math.random();
-      g = Math.random();
-      b = Math.random();
-
-      //change the color versus background be careful of infinite loops
-
-      contrast = calcContrast(calcLuminance(b, g, r), calcLuminance(23 / 255, 25 / 255, 35 / 255));
-    }
-    return { r: r, g: g, b: b } as ColorType;
-  };
-
   useEffect(() => {
     //DisplayData logic
     if (resultArray) {
@@ -163,28 +133,6 @@ export default function EEsim(): JSX.Element {
       setDisplayData([...tempDD]);
     }
   }, [resultArray]);
-
-  const makeDD = (res: ResultType): DisplayDataType[] => {
-    let dd = [] as DisplayDataType[];
-    if (res.param.dataType == "complex") {
-      res.param.variables.forEach((e, i) => {
-        if (i > 0) {
-          const color1 = getColor();
-          dd.push({ name: e.name + " (mag)", index: 2 * i, visible: true, color: color1 });
-          dd.push({ name: e.name + " (phase)", index: 2 * i + 1, visible: true, color: color1 });
-        }
-      });
-    } else {
-      res.param.variables.forEach((e, i) => {
-        if (i > 0) {
-          dd.push({ name: e.name, index: i, visible: true, color: getColor() });
-        }
-      });
-    }
-
-    console.log("makeDD->", dd);
-    return dd;
-  };
 
   /*const simOutputCallback = React.useCallback(async () => {
     //none of the React.State are accessible in the callback
