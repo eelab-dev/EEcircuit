@@ -7,6 +7,8 @@ import type * as MonacoEditor from "monaco-editor/esm/vs/editor/editor.api";
 
 const monacoLoader = (): Promise<typeof MonacoEditor> => {
   return new Promise((resolve) => {
+    const monacoPath = "https://cdn.jsdelivr.net/npm/monaco-editor@0.24.0/min/vs";
+
     const loaded2 = (e: CustomEvent) => {
       resolve(e.detail);
     };
@@ -17,7 +19,7 @@ const monacoLoader = (): Promise<typeof MonacoEditor> => {
     //script3.async = true;
     //script3.src = 'https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js';
     monacoLoader.async = true;
-    monacoLoader.src = "https://cdn.jsdelivr.net/npm/monaco-editor@0.23.0/min/vs/loader.js";
+    monacoLoader.src = monacoPath + "/loader.js";
 
     monacoLoader.crossOrigin = "anonymous";
     const scriptLoaded = () => {
@@ -30,11 +32,11 @@ const monacoLoader = (): Promise<typeof MonacoEditor> => {
     monacoRequire.async = true;
     //script2.type = 'module';
     monacoRequire.innerHTML = `
-    require.config({"paths":{"vs":"https://cdn.jsdelivr.net/npm/monaco-editor@0.21.2/min/vs"}});
-    require(['vs/editor/editor.main'], function() {
-      document.dispatchEvent(new CustomEvent('monacoLoaded', {detail: monaco}));
-    });
-    `;
+     require.config({"paths":{"vs":"${monacoPath}"}});
+     require(['vs/editor/editor.main'], function() {
+       document.dispatchEvent(new CustomEvent('monacoLoaded', {detail: monaco}));
+     });
+     `;
   });
 };
 
