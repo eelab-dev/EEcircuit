@@ -28,9 +28,9 @@ Basic DC Sweep
 
 m1 2 1 0 0 N90 W=100.0u L=0.09u
 Vds 2 0 DC 1.8
-Vg 1 0 DC 1
+Vg 1 0 DC [0:0.2:1.8]
 
-.dc vds 0 1.8 0.01 vg 0.2 1 0.2
+.dc vds 0 1.8 0.01
 
 .end
 ```

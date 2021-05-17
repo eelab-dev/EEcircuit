@@ -17,7 +17,7 @@ export function parser(netList: string): ParserType {
   let netListOutput = [] as string[];
   let sweep = [] as number[];
 
-  const lines = netList.split(/\r?\n/);
+  let lines = netList.split(/\r?\n/);
   lines.forEach((line, index) => {
     const s = line.split("[");
     const isComment = line.trim()[0] == "*";
@@ -33,7 +33,10 @@ export function parser(netList: string): ParserType {
       }
     }
   });
-  console.log("parser 🤔 ->", start, step, stop, lineIndex);
+  console.log("parser1 🤔 ->", start, step, stop, lineIndex);
+
+  lines = checkDC(lines);
+  console.log("parser6 🤔 ->", lines);
 
   if (lineIndex >= 0) {
     for (let i = start; i < stop; i = i + step) {
@@ -53,9 +56,33 @@ export function parser(netList: string): ParserType {
       netListOutput.push(tempNetList);
     }
   } else {
-    netListOutput = [netList];
+    let tempNetList = "";
+    lines.forEach((line) => {
+      tempNetList += line + "\n";
+    });
+    netListOutput = [tempNetList];
   }
 
-  console.log("parser 🤔 ->", netListOutput);
+  console.log("parser2 🤔 ->", netListOutput);
   return { netLists: netListOutput, sweep: sweep };
 }
+
+const checkDC = (lines: string[]): string[] => {
+  const linesOut = [] as string[];
+  lines.forEach((line) => {
+    if (line.trim().substring(0, 3) == ".dc") {
+      const dcLine = line.trim().split(" ");
+      console.log("parser3 🤔 ->", dcLine);
+      let dcLineOut = "";
+      for (let i = 0; i < 5; i++) {
+        dcLineOut += dcLine[i] + " ";
+      }
+      linesOut.push(dcLineOut);
+      console.log("parser5 🤔 ->", dcLineOut);
+    } else {
+      linesOut.push(line);
+    }
+  });
+
+  return linesOut;
+};
