@@ -135,3 +135,7 @@ vdd vdd 0 1.8
 .save v(1) v(2) v(3)
 .end
 ```
+
+## Acknowledgments
+
+The script to convert models from Spectre to ngspice provided [here](https://github.com/google/skywater-pdk/issues/309)
