@@ -14,7 +14,7 @@ c vdd 2 0.01
 m1 2 1 0 0 N90 W=100.0u L=0.09u
 vdd vdd 0 1.8
 
-vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30) ac 1
+vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
 .tran  0.1 50
 
 .end
@@ -79,8 +79,8 @@ vdd vdd 0 1.8
 	.param wp = 10.0u
 	.param wn = {wp * 1.5}
 
-	m1 vout vin 0 0 N90 W=wn L=l M=1
-	m2 vout vin vdd vdd P90 W=wp L=l M=1
+	m1 vout vin 0 0 N90 W={wn} L={l} M=1
+	m2 vout vin vdd vdd P90 W={wp} L={l} M=1
 	c1 vout 0 0.1p
 .ends
 
