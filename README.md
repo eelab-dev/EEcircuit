@@ -1,7 +1,6 @@
-![Build App](https://github.com/danchitnis/EEsim/workflows/Build%20App/badge.svg) ![CodeQL](https://github.com/danchitnis/EEsim/workflows/CodeQL/badge.svg) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4670395.svg)](https://doi.org/10.5281/zenodo.4670395)
+![Build App](https://github.com/danchitnis/EEsim/workflows/Build%20App/badge.svg) ![CodeQL](https://github.com/danchitnis/EEsim/workflows/CodeQL/badge.svg) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4781565.svg)](https://doi.org/10.5281/zenodo.4781565)
 
-
-⚠ Currently working on Chrome and Edge. Availability on Safari coming soon. Check latest [status](https://wpt.fyi/results/workers/modules/dedicated-worker-import.any.html?label=master&product=chrome%5Bstable%5D&product=firefox%5Bstable%5D&product=safari%5Bstable%5D&product=chrome%5Bexperimental%5D&product=firefox%5Bexperimental%5D&product=safari%5Bexperimental%5D&aligned). More info [here...](https://github.com/danchitnis/EEsim/issues/9)
+⚠ Currently works on Chrome and Edge. Availability on Safari coming soon. Check latest [status](https://wpt.fyi/results/workers/modules/dedicated-worker-import.any.html?label=master&product=chrome%5Bstable%5D&product=firefox%5Bstable%5D&product=safari%5Bstable%5D&product=chrome%5Bexperimental%5D&product=firefox%5Bexperimental%5D&product=safari%5Bexperimental%5D&aligned). More info [here...](https://github.com/danchitnis/EEsim/issues/9)
 
 # EEsim
 
@@ -31,7 +30,7 @@ vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
 
 ## Examples
 
-💥See [here](https://github.com/danchitnis/EEsim/blob/main/examples.md) for more examples.
+<span style="font-size:2em">💥</span> See [here](https://github.com/danchitnis/EEsim/blob/main/examples.md) for more examples.
 
 ## Usage
 
@@ -39,7 +38,7 @@ Use your mouse to pan & zoom on the plot. left click for area **zoom** and right
 
 ## Documentation
 
-A brief [presentation](https://youtu.be/BZLsTAZr1tY) on the origins of EEsim and how it was developed. ([slides](https://docs.google.com/presentation/d/e/2PACX-1vROdrVB1vpGM1tqHSvA2HpPmH6B2HpILzLM8kaqnePEtZ8UP_To8q5GsWh90YOtBjYZCUov2rnOzis7/pub?start=false&loop=false&delayms=3000))
+<span style="font-size:2em">📺</span> A brief [presentation](https://youtu.be/BZLsTAZr1tY) on the origins of EEsim and how it was developed. ([slides](https://docs.google.com/presentation/d/e/2PACX-1vROdrVB1vpGM1tqHSvA2HpPmH6B2HpILzLM8kaqnePEtZ8UP_To8q5GsWh90YOtBjYZCUov2rnOzis7/pub?start=false&loop=false&delayms=3000))
 
 To learn more about SPICE netlits refer to [ngspice manual](http://ngspice.sourceforge.net/docs/ngspice-manual.pdf)
 
