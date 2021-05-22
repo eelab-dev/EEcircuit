@@ -13,7 +13,7 @@ import readOutput, { ResultType } from "./readOutput";
 
 //export { ResultType };
 
-export default class Simulation {
+export class Simulation {
   private pass = false;
   //const commandList = [" ", "source test.cir", "run", "set filetype=ascii", "write out.raw"];
   private commandList = [" ", "source test.cir", "run", "write out.raw"];
@@ -26,6 +26,9 @@ export default class Simulation {
 
   private netList = "";
 
+  private resolve = () => {};
+  private wait = true;
+
   private getInput = (): string => {
     let strCmd = " ";
     if (this.cmd < this.commandList.length) {
@@ -34,21 +37,21 @@ export default class Simulation {
     } else {
       this.cmd = 0;
     }
-    console.log(`cmd -> ${strCmd}`);
+    this.log(`cmd -> ${strCmd}`);
     return strCmd;
   };
 
-  public async start(): Promise<void> {
+  public async start() {
     const module = await Module({
       //arguments: ["test.cir"],
       noInitialRun: true,
       print: (e) => {
         /*do nothing*/
-        console.log(e);
+        this.log(e);
         this.info += e + "\n";
       },
       printErr: (e) => {
-        console.warn(e);
+        console.error(e);
         this.info += e + "\n\n";
         if (e != "Note: can't find init file.") {
           this.error.push(e);
@@ -56,7 +59,7 @@ export default class Simulation {
       },
       preRun: [
         () => {
-          console.log("from prerun");
+          this.log("from prerun");
         },
       ],
       setGetInput: this.getInput,
@@ -80,29 +83,31 @@ export default class Simulation {
     //console.log(module.Asyncify);
 
     module.setHandleThings(() => {
-      console.log("handle other things!!!!!");
+      this.log("handle other things!!!!!");
       module.Asyncify?.handleAsync(async () => {
-        console.log(this.pass);
+        this.log(this.pass);
         if (this.cmd == 0) {
           try {
             this.dataRaw = module.FS?.readFile("out.raw") ?? new Uint8Array();
             this.results = readOutput(this.dataRaw);
+            this.resolve();
             this.outputEvent(this.output); //callback
           } catch (e) {
-            console.log(e);
+            this.log(e);
           }
 
-          console.log("cmd-> -> ready to start...");
+          this.log("cmd-> -> ready to start...");
           //pass = false;
         }
         while (!this.pass && this.cmd == 0) {
           //console.log(chkPass());
-          await new Promise((r) => setTimeout(r, 1000));
-          console.log(`I am in pass loop JS -${this.pass} `);
+          const time = this.wait || this.error.length > 0 ? 1000 : 0.001;
+          await new Promise((r) => setTimeout(r, time));
+          this.log(`I am in pass loop JS -${this.pass} `);
         }
         module.FS?.writeFile("/test.cir", this.netList);
 
-        console.log("loop finished");
+        this.log("loop finished");
 
         this.pass = false;
       });
@@ -113,12 +118,24 @@ export default class Simulation {
     module.runThings();
   }
 
-  public runSim(): void {
+  // https://mitya.uk/articles/resolving-es6-promises-outside
+  public runSimP = (wait: boolean): Promise<void> => {
+    this.info = "";
+    this.error = [] as string[];
+    this.results = {} as ResultType;
+    this.wait = wait;
+    this.pass = true;
+    return new Promise<void>((resolve, reject) => {
+      this.resolve = resolve;
+    });
+  };
+
+  /*public runSim(): void {
     this.info = "";
     this.error = [] as string[];
     this.results = {} as ResultType;
     this.pass = true;
-  }
+  }*/
 
   //private outputEvent =  (out: string) => void;
   private outputEvent = (out: string) => {
@@ -140,6 +157,9 @@ export default class Simulation {
   };
   public getError = (): string[] => {
     return this.error;
+  };
+  private log = (message?: any, ...optionalParams: any[]) => {
+    //console.log(message, optionalParams);
   };
 }
 

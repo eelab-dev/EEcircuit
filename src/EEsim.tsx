@@ -1,22 +1,20 @@
 import React, { useEffect } from "react";
-import type { simulation } from "./sim/simulationLink";
 import * as circuits from "./sim/circuits";
 
 import EditorCustom from "./editor/editorCustom";
 
-import Plot from "./plot";
+import PlotArray from "./plotArray";
 import DisplayBox from "./displayBox";
-import type { ResultType } from "./sim/readOutput";
 import DownCSV from "./downCSV";
 
-import * as ComLink from "comlink";
-
 import {
+  Button,
   Box,
   ChakraProvider,
   createStandaloneToast,
   Divider,
   Flex,
+  Progress,
   Spacer,
   Stack,
   Tab,
@@ -26,40 +24,28 @@ import {
   Tabs,
   Textarea,
   useToast,
+  extendTheme,
 } from "@chakra-ui/react";
-import { Button } from "@chakra-ui/react";
-import { extendTheme } from "@chakra-ui/react";
-import getParser, { ParserType } from "./parser";
-import { calcContrast, calcLuminance } from "./calcContrast";
+import { getColor } from "./colors";
+import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray";
+import { DisplayDataType, makeDD } from "./displayData";
 
-let sim: ComLink.Remote<typeof simulation>;
+let sim: SimArray;
 const store = window.localStorage;
 let initialSimInfo = "";
-
-export type ColorType = {
-  r: number;
-  g: number;
-  b: number;
-};
-
-export type DisplayDataType = {
-  name: string;
-  index: number; //result index
-  color: ColorType;
-  visible: boolean;
-};
 
 export default function EEsim(): JSX.Element {
   // Create the count state.
 
   const [isSimLoaded, setIsSimLoaded] = React.useState(false);
   const [isSimRunning, setIsSimRunning] = React.useState(false);
-  const [results, setResults] = React.useState<ResultType>();
+  const [resultArray, setResultArray] = React.useState<ResultArrayType>();
   const [info, setInfo] = React.useState("");
-  const [parser, setParser] = React.useState<ParserType>();
   const [netList, setNetList] = React.useState(circuits.bsimTrans);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
   const [tabIndex, setTabIndex] = React.useState(0);
+  const [sweep, setSweep] = React.useState(false);
+  const [progress, setProgress] = React.useState(0);
 
   //const toast = useToast();
   const toast = createStandaloneToast();
@@ -74,6 +60,12 @@ export default function EEsim(): JSX.Element {
       setDisplayData(loadedDisplayData);
     }
   }, []);
+
+  useEffect(() => {
+    if (resultArray && resultArray.results.length > 1) {
+      setSweep(true);
+    }
+  }, [resultArray]);
 
   useEffect(() => {
     const displayErrors = async () => {
@@ -92,29 +84,12 @@ export default function EEsim(): JSX.Element {
     if (isSimLoaded) {
       displayErrors();
     }
-  }, [isSimLoaded, results]);
-
-  const getColor = (): ColorType => {
-    let contrast = 0;
-    let r = 0,
-      g = 0,
-      b = 0;
-    while (contrast < 4) {
-      r = Math.random();
-      g = Math.random();
-      b = Math.random();
-
-      //change the color versus background be careful of infinite loops
-
-      contrast = calcContrast(calcLuminance(b, g, r), calcLuminance(23 / 255, 25 / 255, 35 / 255));
-    }
-    return { r: r, g: g, b: b } as ColorType;
-  };
+  }, [isSimLoaded, resultArray]);
 
   useEffect(() => {
     //DisplayData logic
-    if (results) {
-      const newDD = makeDD(results);
+    if (resultArray) {
+      const newDD = makeDD(resultArray.results[0]);
       let tempDD = [] as DisplayDataType[];
       newDD.forEach((newData, i) => {
         let match = false;
@@ -157,57 +132,40 @@ export default function EEsim(): JSX.Element {
       console.log("makeDD->", tempDD);
       setDisplayData([...tempDD]);
     }
-  }, [results]);
+  }, [resultArray]);
 
-  const makeDD = (res: ResultType): DisplayDataType[] => {
-    let dd = [] as DisplayDataType[];
-    if (res.param.dataType == "complex") {
-      res.param.variables.forEach((e, i) => {
-        if (i > 0) {
-          const color1 = getColor();
-          dd.push({ name: e.name + " (mag)", index: 2 * i, visible: true, color: color1 });
-          dd.push({ name: e.name + " (phase)", index: 2 * i + 1, visible: true, color: color1 });
-        }
-      });
-    } else {
-      res.param.variables.forEach((e, i) => {
-        if (i > 0) {
-          dd.push({ name: e.name, index: i, visible: true, color: getColor() });
-        }
-      });
-    }
-
-    console.log("makeDD->", dd);
-    return dd;
-  };
-
-  const simOutputCallback = React.useCallback(async () => {
+  /*const simOutputCallback = React.useCallback(async () => {
     //none of the React.State are accessible in the callback
     const res = await sim.getResults();
     console.log("🚀", res);
     setResults(res);
     setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n" + res.header);
     setIsSimRunning(false);
-  }, []);
+  }, []);*/
 
   const btRun = async () => {
     if (sim) {
       setIsSimRunning(true);
-      setParser(getParser(netList));
+      //setParser(getParser(netList));
       store.setItem("netList", netList);
-      await sim.setNetList(netList);
-      await sim.runSim();
+      sim.setNetList(netList);
+      const resultArray = await sim.runSim();
+      setResultArray(resultArray);
+      setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n"); ///??????????? res.header
+      setIsSimRunning(false);
     } else {
       //spawn worker thread
-      const worker = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
-      sim = ComLink.wrap<typeof simulation>(worker);
-      await sim.setOutputEvent(ComLink.proxy(simOutputCallback));
-      await sim.start();
-      initialSimInfo = await sim.getInfo();
-      console.log("🧨🧨🧨🧨🧨🧨🧨🧨");
-      await btRun();
+      sim = new SimArray(); //await????
+      sim.progressCallback = simProgressCallback;
       setIsSimLoaded(true);
+      setProgress(0);
+      //initialSimInfo = await sim.getInfo(); //not yet working???????
+      btRun();
     }
+  };
+
+  const simProgressCallback = (n: number) => {
+    setProgress(n);
   };
 
   const change = React.useCallback(
@@ -270,22 +228,35 @@ export default function EEsim(): JSX.Element {
     }
   }, [displayData]);
 
+  const btUpdateGraph = React.useCallback(() => {
+    const results = sim.getResults();
+    setResultArray(results);
+  }, []);
+
   const btReset = React.useCallback(() => {
-    setResults(undefined);
+    setResultArray(undefined);
     setDisplayData(undefined);
     store.removeItem("displayData");
   }, []);
 
   const btColor = React.useCallback(() => {
-    if (results && displayData) {
+    if (resultArray && displayData) {
       const d = [...displayData];
-      d.forEach((e) => {
-        e.color = getColor();
-      });
+      if (!isComplex(resultArray)) {
+        d.forEach((e) => {
+          e.color = getColor();
+        });
+      } else {
+        for (let i = 0; i < d.length - 1; i = i + 2) {
+          const c = getColor();
+          d[i].color = c;
+          d[i + 1].color = c;
+        }
+      }
+
       setDisplayData(d);
-      setResults({ ...results });
+      //setResultArray({results:[...results], sweep:[...resultArray.sweep]});
     }
-    console.log("🌈", "hi", displayData);
   }, [displayData]);
 
   return (
@@ -327,6 +298,14 @@ export default function EEsim(): JSX.Element {
               loadingText={isSimLoaded ? "Running 🏃" : "Loading 🚚"}>
               Run 🚀
             </Button>
+            {isSimRunning ? (
+              <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btUpdateGraph}>
+                Update Graph
+              </Button>
+            ) : (
+              <></>
+            )}
+
             <Spacer />
             <Button
               colorScheme="blue"
@@ -349,6 +328,10 @@ export default function EEsim(): JSX.Element {
           </Flex>
         </Box>
 
+        <Box p={1}>
+          <Progress colorScheme={"green"} value={progress} />
+        </Box>
+
         <Box p={2}>
           <Divider />
         </Box>
@@ -362,7 +345,7 @@ export default function EEsim(): JSX.Element {
 
           <TabPanels>
             <TabPanel>
-              <Plot results={results} parser={parser} displayData={displayData} />
+              <PlotArray resultArray={resultArray} displayData={displayData} />
             </TabPanel>
 
             <TabPanel>
@@ -379,7 +362,7 @@ export default function EEsim(): JSX.Element {
             </TabPanel>
 
             <TabPanel>
-              <DownCSV results={results} />
+              <DownCSV resultArray={resultArray} />
             </TabPanel>
           </TabPanels>
         </Tabs>

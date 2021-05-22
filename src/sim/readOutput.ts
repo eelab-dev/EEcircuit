@@ -29,22 +29,22 @@ export default function readOutput(rawData: Uint8Array): ResultType {
   const resultStr = ab2str(rawData);
 
   const offset = resultStr.indexOf("Binary:");
-  console.log(`file-> ${offset}`);
+  log(`file-> ${offset}`);
   const header = resultStr.substring(0, offset) + "\n";
 
   //let out: number[];
   const out = [] as number[];
   const param = findParams(header);
-  console.log(header);
-  console.log(param);
+  log(header);
+  log(param);
 
   const view = new DataView(rawData.buffer, offset + 8);
-  console.log("😬");
+  log("😬");
 
   for (let i = 0; i < view.byteLength; i = i + 8) {
     const d = view.getFloat64(i, true);
     out.push(d);
-    //console.log(`float -> ${d}`);
+    //log(`float -> ${d}`);
   }
 
   if (param.dataType == "complex") {
@@ -58,7 +58,7 @@ export default function readOutput(rawData: Uint8Array): ResultType {
       const index = i / 2;
       out2[index % param.varNum][Math.floor(index / param.varNum)] = { ...complex };
     }
-    console.log(out2);
+    log(out2);
 
     return {
       param: param,
@@ -75,7 +75,7 @@ export default function readOutput(rawData: Uint8Array): ResultType {
     out.forEach((e, i) => {
       out2[i % param.varNum][Math.floor(i / param.varNum)] = e;
     });
-    //console.log(out2);
+    //log(out2);
 
     return {
       param: param,
@@ -101,17 +101,17 @@ function findParams(header: string): ParamType {
   const pointNum = parseInt(lines[5].split(": ")[1], 10);
   const dataType = lines[3].split(": ")[1].indexOf("complex") > -1 ? "complex" : "real";
 
-  //console.log("🤔", lines);
-  //console.log(lines.indexOf("Variables:"));
+  //log("🤔", lines);
+  //log(lines.indexOf("Variables:"));
 
   const varList = [] as VariableType[];
   for (let i = 0; i < varNum; i++) {
     let str = lines[i + lines.indexOf("Variables:") + 1];
     let str2 = str.split("\t");
-    console.log("str2->", str2);
+    log("str2->", str2);
     varList.push({ name: str2[2], type: str2[3] as "voltage" | "current" | "time" });
   }
-  //console.log("varlist->", varList);
+  //log("varlist->", varList);
 
   const param = {
     varNum: varNum,
@@ -122,7 +122,11 @@ function findParams(header: string): ParamType {
     dataType: dataType,
   } as ParamType;
 
-  console.log("param->", param);
+  log("param->", param);
 
   return param;
+}
+
+function log(message?: any, ...optionalParams: any[]) {
+  //console.log(message, optionalParams);
 }
