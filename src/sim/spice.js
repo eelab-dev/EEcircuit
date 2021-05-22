@@ -484,12 +484,6 @@ var runtimeInitialized = false;
 
 var runtimeExited = false;
 
-__ATINIT__.push({
- func: function() {
-  ___wasm_call_ctors();
- }
-});
-
 function preRun() {
  if (Module["preRun"]) {
   if (typeof Module["preRun"] == "function") Module["preRun"] = [ Module["preRun"] ];
@@ -529,6 +523,10 @@ function postRun() {
 
 function addOnPreRun(cb) {
  __ATPRERUN__.unshift(cb);
+}
+
+function addOnInit(cb) {
+ __ATINIT__.unshift(cb);
 }
 
 function addOnPostRun(cb) {
@@ -588,17 +586,11 @@ function abort(what) {
  throw e;
 }
 
-function hasPrefix(str, prefix) {
- return String.prototype.startsWith ? str.startsWith(prefix) : str.indexOf(prefix) === 0;
-}
-
 var dataURIPrefix = "data:application/octet-stream;base64,";
 
 function isDataURI(filename) {
- return hasPrefix(filename, dataURIPrefix);
+ return filename.startsWith(dataURIPrefix);
 }
-
-var fileURIPrefix = "file://";
 
 var wasmBinaryFile = "spice.wasm";
 
@@ -653,15 +645,17 @@ function createWasm() {
   wasmMemory = Module["asm"]["memory"];
   updateGlobalBufferAndViews(wasmMemory.buffer);
   wasmTable = Module["asm"]["__indirect_function_table"];
+  addOnInit(Module["asm"]["__wasm_call_ctors"]);
   removeRunDependency("wasm-instantiate");
  }
  addRunDependency("wasm-instantiate");
- function receiveInstantiatedSource(output) {
-  receiveInstance(output["instance"]);
+ function receiveInstantiationResult(result) {
+  receiveInstance(result["instance"]);
  }
  function instantiateArrayBuffer(receiver) {
   return getBinaryPromise().then(function(binary) {
-   return WebAssembly.instantiate(binary, info);
+   var result = WebAssembly.instantiate(binary, info);
+   return result;
   }).then(receiver, function(reason) {
    err("failed to asynchronously prepare wasm: " + reason);
    abort(reason);
@@ -673,14 +667,14 @@ function createWasm() {
     credentials: "same-origin"
    }).then(function(response) {
     var result = WebAssembly.instantiateStreaming(response, info);
-    return result.then(receiveInstantiatedSource, function(reason) {
+    return result.then(receiveInstantiationResult, function(reason) {
      err("wasm streaming compile failed: " + reason);
      err("falling back to ArrayBuffer instantiation");
-     return instantiateArrayBuffer(receiveInstantiatedSource);
+     return instantiateArrayBuffer(receiveInstantiationResult);
     });
    });
   } else {
-   return instantiateArrayBuffer(receiveInstantiatedSource);
+   return instantiateArrayBuffer(receiveInstantiationResult);
   }
  }
  if (Module["instantiateWasm"]) {
@@ -752,6 +746,12 @@ function jsStackTrace() {
  return error.stack.toString();
 }
 
+var runtimeKeepaliveCounter = 0;
+
+function keepRuntimeAlive() {
+ return noExitRuntime || runtimeKeepaliveCounter > 0;
+}
+
 function _tzset() {
  if (_tzset.called) return;
  _tzset.called = true;
@@ -780,7 +780,7 @@ function _tzset() {
  }
 }
 
-function _asctime_r(tmPtr, buf) {
+function ___asctime(tmPtr, buf) {
  var date = {
   tm_sec: HEAP32[tmPtr >> 2],
   tm_min: HEAP32[tmPtr + 4 >> 2],
@@ -795,10 +795,6 @@ function _asctime_r(tmPtr, buf) {
  var s = days[date.tm_wday] + " " + months[date.tm_mon] + (date.tm_mday < 10 ? "  " : " ") + date.tm_mday + (date.tm_hour < 10 ? " 0" : " ") + date.tm_hour + (date.tm_min < 10 ? ":0" : ":") + date.tm_min + (date.tm_sec < 10 ? ":0" : ":") + date.tm_sec + " " + (1900 + date.tm_year) + "\n";
  stringToUTF8(s, buf, 26);
  return buf;
-}
-
-function ___asctime_r(a0, a1) {
- return _asctime_r(a0, a1);
 }
 
 function ___assert_fail(condition, filename, line, func) {
@@ -1715,11 +1711,11 @@ var FS = {
   if (FS.ignorePermissions) {
    return 0;
   }
-  if (perms.indexOf("r") !== -1 && !(node.mode & 292)) {
+  if (perms.includes("r") && !(node.mode & 292)) {
    return 2;
-  } else if (perms.indexOf("w") !== -1 && !(node.mode & 146)) {
+  } else if (perms.includes("w") && !(node.mode & 146)) {
    return 2;
-  } else if (perms.indexOf("x") !== -1 && !(node.mode & 73)) {
+  } else if (perms.includes("x") && !(node.mode & 73)) {
    return 2;
   }
   return 0;
@@ -1956,7 +1952,7 @@ var FS = {
    var current = FS.nameTable[hash];
    while (current) {
     var next = current.name_next;
-    if (mounts.indexOf(current.mount) !== -1) {
+    if (mounts.includes(current.mount)) {
      FS.destroyNode(current);
     }
     current = next;
@@ -3940,7 +3936,7 @@ function ___sys_unlink(path) {
 
 function ___sys_wait4(pid, wstart, options, rusage) {
  try {
-  abort("cannot wait on child processes");
+  return -52;
  } catch (e) {
   if (typeof FS === "undefined" || !(e instanceof FS.ErrnoError)) abort(e);
   return -e.errno;
@@ -3958,6 +3954,10 @@ function _clock() {
  return (Date.now() - _clock.start) * (1e6 / 1e3) | 0;
 }
 
+function _emscripten_get_heap_max() {
+ return 2147483648;
+}
+
 function _longjmp(env, value) {
  _setThrew(env, value || 1);
  throw "longjmp";
@@ -3971,10 +3971,6 @@ function _emscripten_memcpy_big(dest, src, num) {
  HEAPU8.copyWithin(dest, src, src + num);
 }
 
-function _emscripten_get_heap_size() {
- return HEAPU8.length;
-}
-
 function emscripten_realloc_buffer(size) {
  try {
   wasmMemory.grow(size - buffer.byteLength + 65535 >>> 16);
@@ -3984,7 +3980,8 @@ function emscripten_realloc_buffer(size) {
 }
 
 function _emscripten_resize_heap(requestedSize) {
- var oldSize = _emscripten_get_heap_size();
+ var oldSize = HEAPU8.length;
+ requestedSize = requestedSize >>> 0;
  var maxHeapSize = 2147483648;
  if (requestedSize > maxHeapSize) {
   return false;
@@ -4006,6 +4003,9 @@ function _emscripten_set_main_loop_timing(mode, value) {
  Browser.mainLoop.timingValue = value;
  if (!Browser.mainLoop.func) {
   return 1;
+ }
+ if (!Browser.mainLoop.running) {
+  Browser.mainLoop.running = true;
  }
  if (mode == 0) {
   Browser.mainLoop.scheduler = function Browser_mainLoop_scheduler_setTimeout() {
@@ -4048,12 +4048,36 @@ function _emscripten_set_main_loop_timing(mode, value) {
  return 0;
 }
 
+function _exit(status) {
+ exit(status);
+}
+
+function maybeExit() {
+ if (!keepRuntimeAlive()) {
+  try {
+   _exit(EXITSTATUS);
+  } catch (e) {
+   if (e instanceof ExitStatus) {
+    return;
+   }
+   throw e;
+  }
+ }
+}
+
 function setMainLoop(browserIterationFunc, fps, simulateInfiniteLoop, arg, noSetTiming) {
- noExitRuntime = true;
  assert(!Browser.mainLoop.func, "emscripten_set_main_loop: there can only be one main loop function at once: call emscripten_cancel_main_loop to cancel the previous one before setting a new one with different parameters.");
  Browser.mainLoop.func = browserIterationFunc;
  Browser.mainLoop.arg = arg;
  var thisMainLoopId = Browser.mainLoop.currentlyRunningMainloop;
+ function checkIsRunning() {
+  if (thisMainLoopId < Browser.mainLoop.currentlyRunningMainloop) {
+   maybeExit();
+   return false;
+  }
+  return true;
+ }
+ Browser.mainLoop.running = false;
  Browser.mainLoop.runner = function Browser_mainLoop_runner() {
   if (ABORT) return;
   if (Browser.mainLoop.queue.length > 0) {
@@ -4072,11 +4096,11 @@ function setMainLoop(browserIterationFunc, fps, simulateInfiniteLoop, arg, noSet
    }
    console.log('main loop blocker "' + blocker.name + '" took ' + (Date.now() - start) + " ms");
    Browser.mainLoop.updateStatus();
-   if (thisMainLoopId < Browser.mainLoop.currentlyRunningMainloop) return;
+   if (!checkIsRunning()) return;
    setTimeout(Browser.mainLoop.runner, 0);
    return;
   }
-  if (thisMainLoopId < Browser.mainLoop.currentlyRunningMainloop) return;
+  if (!checkIsRunning()) return;
   Browser.mainLoop.currentFrameNumber = Browser.mainLoop.currentFrameNumber + 1 | 0;
   if (Browser.mainLoop.timingMode == 1 && Browser.mainLoop.timingValue > 1 && Browser.mainLoop.currentFrameNumber % Browser.mainLoop.timingValue != 0) {
    Browser.mainLoop.scheduler();
@@ -4085,7 +4109,7 @@ function setMainLoop(browserIterationFunc, fps, simulateInfiniteLoop, arg, noSet
    Browser.mainLoop.tickStartTime = _emscripten_get_now();
   }
   Browser.mainLoop.runIter(browserIterationFunc);
-  if (thisMainLoopId < Browser.mainLoop.currentlyRunningMainloop) return;
+  if (!checkIsRunning()) return;
   if (typeof SDL === "object" && SDL.audio && SDL.audio.queueNewAudioData) SDL.audio.queueNewAudioData();
   Browser.mainLoop.scheduler();
  };
@@ -4098,8 +4122,29 @@ function setMainLoop(browserIterationFunc, fps, simulateInfiniteLoop, arg, noSet
  }
 }
 
+function callUserCallback(func, synchronous) {
+ if (ABORT) {
+  return;
+ }
+ if (synchronous) {
+  func();
+  return;
+ }
+ try {
+  func();
+ } catch (e) {
+  if (e instanceof ExitStatus) {
+   return;
+  } else if (e !== "unwind") {
+   if (e && typeof e === "object" && e.stack) err("exception thrown: " + [ e, e.stack ]);
+   throw e;
+  }
+ }
+}
+
 var Browser = {
  mainLoop: {
+  running: false,
   scheduler: null,
   method: "",
   currentlyRunningMainloop: 0,
@@ -4147,18 +4192,7 @@ var Browser = {
      return;
     }
    }
-   try {
-    func();
-   } catch (e) {
-    if (e instanceof ExitStatus) {
-     return;
-    } else if (e == "unwind") {
-     return;
-    } else {
-     if (e && typeof e === "object" && e.stack) err("exception thrown: " + [ e, e.stack ]);
-     throw e;
-    }
-   }
+   callUserCallback(func);
    if (Module["postMainLoop"]) Module["postMainLoop"]();
   }
  },
@@ -4443,15 +4477,12 @@ var Browser = {
  },
  safeRequestAnimationFrame: function(func) {
   return Browser.requestAnimationFrame(function() {
-   if (ABORT) return;
-   func();
+   callUserCallback(func);
   });
  },
  safeSetTimeout: function(func, timeout) {
-  noExitRuntime = true;
   return setTimeout(function() {
-   if (ABORT) return;
-   func();
+   callUserCallback(func);
   }, timeout);
  },
  getMimetype: function(name) {
@@ -4754,10 +4785,6 @@ function _execve(path, argv, envp) {
  return -1;
 }
 
-function _exit(status) {
- exit(status);
-}
-
 function _fd_close(fd) {
  try {
   var stream = SYSCALLS.getStreamFromFD(fd);
@@ -4831,7 +4858,7 @@ function _fork() {
 }
 
 function _getTempRet0() {
- return getTempRet0() | 0;
+ return getTempRet0();
 }
 
 function _getpwent() {
@@ -4851,8 +4878,8 @@ function _kill(pid, sig) {
  return -1;
 }
 
-function _setTempRet0($i) {
- setTempRet0($i | 0);
+function _setTempRet0(val) {
+ setTempRet0(val);
 }
 
 function _siglongjmp(a0, a1) {
@@ -4866,193 +4893,6 @@ function _signal(sig, func) {
   __sigalrm_handler = func;
  } else {}
  return 0;
-}
-
-function _sysconf(name) {
- switch (name) {
- case 30:
-  return 16384;
-
- case 85:
-  var maxHeapSize = 2147483648;
-  return maxHeapSize / 16384;
-
- case 132:
- case 133:
- case 12:
- case 137:
- case 138:
- case 15:
- case 235:
- case 16:
- case 17:
- case 18:
- case 19:
- case 20:
- case 149:
- case 13:
- case 10:
- case 236:
- case 153:
- case 9:
- case 21:
- case 22:
- case 159:
- case 154:
- case 14:
- case 77:
- case 78:
- case 139:
- case 82:
- case 68:
- case 67:
- case 164:
- case 11:
- case 29:
- case 47:
- case 48:
- case 95:
- case 52:
- case 51:
- case 46:
-  return 200809;
-
- case 27:
- case 246:
- case 127:
- case 128:
- case 23:
- case 24:
- case 160:
- case 161:
- case 181:
- case 182:
- case 242:
- case 183:
- case 184:
- case 243:
- case 244:
- case 245:
- case 165:
- case 178:
- case 179:
- case 49:
- case 50:
- case 168:
- case 169:
- case 175:
- case 170:
- case 171:
- case 172:
- case 97:
- case 76:
- case 32:
- case 173:
- case 35:
- case 80:
- case 81:
- case 79:
-  return -1;
-
- case 176:
- case 177:
- case 7:
- case 155:
- case 8:
- case 157:
- case 125:
- case 126:
- case 92:
- case 93:
- case 129:
- case 130:
- case 131:
- case 94:
- case 91:
-  return 1;
-
- case 74:
- case 60:
- case 69:
- case 70:
- case 4:
-  return 1024;
-
- case 31:
- case 42:
- case 72:
-  return 32;
-
- case 87:
- case 26:
- case 33:
-  return 2147483647;
-
- case 34:
- case 1:
-  return 47839;
-
- case 38:
- case 36:
-  return 99;
-
- case 43:
- case 37:
-  return 2048;
-
- case 0:
-  return 2097152;
-
- case 3:
-  return 65536;
-
- case 28:
-  return 32768;
-
- case 44:
-  return 32767;
-
- case 75:
-  return 16384;
-
- case 39:
-  return 1e3;
-
- case 89:
-  return 700;
-
- case 71:
-  return 256;
-
- case 40:
-  return 255;
-
- case 2:
-  return 100;
-
- case 180:
-  return 64;
-
- case 25:
-  return 20;
-
- case 5:
-  return 16;
-
- case 6:
-  return 6;
-
- case 73:
-  return 4;
-
- case 84:
-  {
-   if (typeof navigator === "object") return navigator["hardwareConcurrency"] || 1;
-   return 1;
-  }
- }
- setErrNo(28);
- return -1;
 }
 
 function _system(command) {
@@ -5313,7 +5153,7 @@ function intArrayFromString(stringy, dontAddNull, length) {
 }
 
 var asmLibraryArg = {
- "__asctime_r": ___asctime_r,
+ "__asctime": ___asctime,
  "__assert_fail": ___assert_fail,
  "__clock_gettime": ___clock_gettime,
  "__cxa_allocate_exception": ___cxa_allocate_exception,
@@ -5341,6 +5181,7 @@ var asmLibraryArg = {
  "abort": _abort,
  "atexit": _atexit,
  "clock": _clock,
+ "emscripten_get_heap_max": _emscripten_get_heap_max,
  "emscripten_longjmp": _emscripten_longjmp,
  "emscripten_memcpy_big": _emscripten_memcpy_big,
  "emscripten_resize_heap": _emscripten_resize_heap,
@@ -5375,7 +5216,6 @@ var asmLibraryArg = {
  "setTempRet0": _setTempRet0,
  "siglongjmp": _siglongjmp,
  "signal": _signal,
- "sysconf": _sysconf,
  "system": _system,
  "time": _time
 };
@@ -5394,14 +5234,6 @@ var _malloc = Module["_malloc"] = function() {
  return (_malloc = Module["_malloc"] = Module["asm"]["malloc"]).apply(null, arguments);
 };
 
-var _testSetjmp = Module["_testSetjmp"] = function() {
- return (_testSetjmp = Module["_testSetjmp"] = Module["asm"]["testSetjmp"]).apply(null, arguments);
-};
-
-var _saveSetjmp = Module["_saveSetjmp"] = function() {
- return (_saveSetjmp = Module["_saveSetjmp"] = Module["asm"]["saveSetjmp"]).apply(null, arguments);
-};
-
 var _memset = Module["_memset"] = function() {
  return (_memset = Module["_memset"] = Module["asm"]["memset"]).apply(null, arguments);
 };
@@ -5412,10 +5244,6 @@ var ___errno_location = Module["___errno_location"] = function() {
 
 var _free = Module["_free"] = function() {
  return (_free = Module["_free"] = Module["asm"]["free"]).apply(null, arguments);
-};
-
-var _realloc = Module["_realloc"] = function() {
- return (_realloc = Module["_realloc"] = Module["asm"]["realloc"]).apply(null, arguments);
 };
 
 var __get_tzname = Module["__get_tzname"] = function() {
@@ -5731,14 +5559,13 @@ function callMain(args) {
  HEAP32[(argv >> 2) + argc] = 0;
  try {
   var ret = entryFunction(argc, argv);
-  if (!noExitRuntime) {
+  if (!keepRuntimeAlive()) {
    exit(ret, true);
   }
  } catch (e) {
   if (e instanceof ExitStatus) {
    return;
   } else if (e == "unwind") {
-   noExitRuntime = true;
    return;
   } else {
    var toLog = e;
@@ -5815,11 +5642,11 @@ Module["run"] = run;
 
 
 function exit(status, implicit) {
- if (implicit && noExitRuntime && status === 0) {
+ EXITSTATUS = status;
+ if (implicit && keepRuntimeAlive() && status === 0) {
   return;
  }
- if (noExitRuntime) {} else {
-  EXITSTATUS = status;
+ if (keepRuntimeAlive()) {} else {
   exitRuntime();
   if (Module["onExit"]) Module["onExit"](status);
   ABORT = true;

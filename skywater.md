@@ -20,11 +20,11 @@ Rd 3 4 100
 
 * Supply
 Vid 5 4 DC 0V
-Vgb 1 0 DC 0V
+Vgb 1 0 DC [0:0.1:1.2]
 Vdd 5 0 DC 3.3V
 
 * This is the analysis
-.dc Vdd 0 1.8 0.01 Vgb 0 1.2 0.1
+.dc Vdd 0 1.8 0.01
 
 .save i(Vid)
 
@@ -48,11 +48,11 @@ Rd 3 4 100
 
 * DC source for current measure
 Vid 4 0 DC 0V
-Vgb 5 1 DC 0V
+Vgb 5 1 DC [0:0.1:1.2]
 Vdd 5 0 DC 3.3V
 
 * This is the analysis
-.dc Vdd 0 1.8 0.01 Vgb 0 1.2 0.1
+.dc Vdd 0 1.8 0.01
 
 .save i(Vid)
 
