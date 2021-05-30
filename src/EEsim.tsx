@@ -156,6 +156,7 @@ export default function EEsim(): JSX.Element {
     } else {
       //spawn worker thread
       sim = new SimArray(); //await????
+      await sim.init();
       sim.progressCallback = simProgressCallback;
       setIsSimLoaded(true);
       setProgress(0);
