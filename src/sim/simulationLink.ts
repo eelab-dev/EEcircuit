@@ -23,10 +23,13 @@ export class Simulation {
   private output = "";
   private info = "";
   private error = [] as string[];
+  public initialized = false;
 
   private netList = "";
 
   private resolve = () => {};
+  private resolveWait = () => {};
+  private resolveInit = () => {};
   private wait = true;
 
   private getInput = (): string => {
@@ -41,7 +44,7 @@ export class Simulation {
     return strCmd;
   };
 
-  public async start() {
+  public async start2() {
     const module = await Module({
       //arguments: ["test.cir"],
       noInitialRun: true,
@@ -80,7 +83,7 @@ export class Simulation {
     module.FS?.writeFile("/modelcard.skywater", skyWater.models);
     module.FS?.writeFile("/modelcard.CMOS90", circuits.strModelCMOS90);
     //module.FS.writeFile("/test.cir", circuits.bsimTrans);
-    //console.log(module.Asyncify);
+    console.log("init");
 
     module.setHandleThings(() => {
       this.log("handle other things!!!!!");
@@ -90,21 +93,34 @@ export class Simulation {
           try {
             this.dataRaw = module.FS?.readFile("out.raw") ?? new Uint8Array();
             this.results = readOutput(this.dataRaw);
-            this.resolve();
             this.outputEvent(this.output); //callback
+            this.resolve();
           } catch (e) {
             this.log(e);
           }
 
-          this.log("cmd-> -> ready to start...");
+          this.log("output completed");
           //pass = false;
         }
-        while (!this.pass && this.cmd == 0) {
+
+        if (!this.initialized) {
+          this.resolveInit();
+          this.log("initialized");
+          this.initialized = true;
+        }
+
+        if (this.cmd == 0) {
+          this.log("waiting...");
+          await this.waitSim();
+        }
+        this.log("🥳🥳", "resolveWait2");
+
+        /*while (!this.pass && this.cmd == 0) {
           //console.log(chkPass());
           const time = this.wait || this.error.length > 0 ? 1000 : 0.001;
           await new Promise((r) => setTimeout(r, time));
           this.log(`I am in pass loop JS -${this.pass} `);
-        }
+        }*/
         module.FS?.writeFile("/test.cir", this.netList);
 
         this.log("loop finished");
@@ -118,15 +134,30 @@ export class Simulation {
     module.runThings();
   }
 
+  public start = (): Promise<void> => {
+    this.start2();
+    return new Promise<void>((resolve, reject) => {
+      this.resolveInit = resolve;
+    });
+  };
+
   // https://mitya.uk/articles/resolving-es6-promises-outside
   public runSimP = (wait: boolean): Promise<void> => {
     this.info = "";
     this.error = [] as string[];
     this.results = {} as ResultType;
     this.wait = wait;
+    this.log("🥳", "resolveWait");
+    this.resolveWait();
     this.pass = true;
     return new Promise<void>((resolve, reject) => {
       this.resolve = resolve;
+    });
+  };
+
+  private waitSim = (): Promise<void> => {
+    return new Promise<void>((resolve, reject) => {
+      this.resolveWait = resolve;
     });
   };
 
@@ -159,7 +190,7 @@ export class Simulation {
     return this.error;
   };
   private log = (message?: any, ...optionalParams: any[]) => {
-    //console.log(message, optionalParams);
+    console.log("simLink-> ", message, optionalParams);
   };
 }
 
