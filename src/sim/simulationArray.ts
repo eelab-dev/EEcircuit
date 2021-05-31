@@ -34,14 +34,6 @@ export class SimArray {
 
   public async init(): Promise<void> {
     //this.sim = null;
-
-    await this.init2();
-    return new Promise<void>((resolve, reject) => {
-      resolve();
-    });
-  }
-
-  private async init2(): Promise<void> {
     //this.sim.setOutputEvent(ComLink.proxy(simOutputCallback));
     await this.sim.start();
     //const initialSimInfo = await this.sim.getInfo();
@@ -63,8 +55,7 @@ export class SimArray {
 
     for (let i = 0; i < this.netLists.length && !error; i++) {
       this.sim.setNetList(this.netLists[i]);
-      const wait = i == this.netLists.length - 1 ? true : false;
-      await this.sim.runSimP(wait);
+      await this.sim.runSimP();
       this.log("👌👌👌");
       const err = await this.sim.getError();
       if (err.length > 0) error = true;
@@ -86,6 +77,10 @@ export class SimArray {
     return await this.sim.getInfo();
   }
 
+  public async getInitInfo(): Promise<string> {
+    return await this.sim.getInitInfo();
+  }
+
   public async getError(): Promise<string[]> {
     return await this.sim.getError();
   }
@@ -97,7 +92,7 @@ export class SimArray {
   public progressCallback(n: number) {}
 
   private log(message?: any, ...optionalParams: any[]): void {
-    console.log(message, optionalParams);
+    //console.log("simArray -> ", message, optionalParams);
   }
 }
 
