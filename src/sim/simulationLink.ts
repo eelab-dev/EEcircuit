@@ -22,15 +22,15 @@ export class Simulation {
   private results = {} as ResultType;
   private output = "";
   private info = "";
+  private initInfo = "";
   private error = [] as string[];
-  public initialized = false;
+  private initialized = false;
 
   private netList = "";
 
   private resolve = () => {};
   private resolveWait = () => {};
   private resolveInit = () => {};
-  private wait = true;
 
   private getInput = (): string => {
     let strCmd = " ";
@@ -107,20 +107,15 @@ export class Simulation {
           this.resolveInit();
           this.log("initialized");
           this.initialized = true;
+          this.initInfo = this.info;
         }
 
         if (this.cmd == 0) {
           this.log("waiting...");
-          await this.waitSim();
+          await this.waitSimResolve();
         }
         this.log("🥳🥳", "resolveWait2");
 
-        /*while (!this.pass && this.cmd == 0) {
-          //console.log(chkPass());
-          const time = this.wait || this.error.length > 0 ? 1000 : 0.001;
-          await new Promise((r) => setTimeout(r, time));
-          this.log(`I am in pass loop JS -${this.pass} `);
-        }*/
         module.FS?.writeFile("/test.cir", this.netList);
 
         this.log("loop finished");
@@ -142,33 +137,25 @@ export class Simulation {
   };
 
   // https://mitya.uk/articles/resolving-es6-promises-outside
-  public runSimP = (wait: boolean): Promise<void> => {
-    this.info = "";
-    this.error = [] as string[];
-    this.results = {} as ResultType;
-    this.wait = wait;
-    this.log("🥳", "resolveWait");
-    this.resolveWait();
-    this.pass = true;
+  public runSimP = (): Promise<void> => {
+    if (this.initialized) {
+      this.info = "";
+      this.error = [] as string[];
+      this.results = {} as ResultType;
+      this.log("🥳", "resolveWait");
+      this.resolveWait();
+    }
     return new Promise<void>((resolve, reject) => {
       this.resolve = resolve;
     });
   };
 
-  private waitSim = (): Promise<void> => {
+  private waitSimResolve = (): Promise<void> => {
     return new Promise<void>((resolve, reject) => {
       this.resolveWait = resolve;
     });
   };
 
-  /*public runSim(): void {
-    this.info = "";
-    this.error = [] as string[];
-    this.results = {} as ResultType;
-    this.pass = true;
-  }*/
-
-  //private outputEvent =  (out: string) => void;
   private outputEvent = (out: string) => {
     /** */
   };
@@ -186,11 +173,18 @@ export class Simulation {
   public getInfo = (): string => {
     return this.info;
   };
+
+  public getInitInfo = (): string => {
+    return this.initInfo;
+  };
   public getError = (): string[] => {
     return this.error;
   };
+  public isInitialized = (): boolean => {
+    return this.initialized;
+  };
   private log = (message?: any, ...optionalParams: any[]) => {
-    console.log("simLink-> ", message, optionalParams);
+    //console.log("simLink-> ", message, optionalParams);
   };
 }
 

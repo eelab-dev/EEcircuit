@@ -23,7 +23,6 @@ import {
   TabPanels,
   Tabs,
   Textarea,
-  useToast,
   extendTheme,
 } from "@chakra-ui/react";
 import { getColor } from "./colors";
@@ -47,7 +46,6 @@ export default function EEsim(): JSX.Element {
   const [sweep, setSweep] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
 
-  //const toast = useToast();
   const toast = createStandaloneToast();
 
   useEffect(() => {
@@ -151,12 +149,13 @@ export default function EEsim(): JSX.Element {
       sim.setNetList(netList);
       const resultArray = await sim.runSim();
       setResultArray(resultArray);
-      setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n"); ///??????????? res.header
+      setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n");
       setIsSimRunning(false);
     } else {
       //spawn worker thread
       sim = new SimArray(); //await????
       await sim.init();
+      initialSimInfo = await sim.getInitInfo();
       sim.progressCallback = simProgressCallback;
       setIsSimLoaded(true);
       setProgress(0);
@@ -356,8 +355,6 @@ export default function EEsim(): JSX.Element {
                 bg="gray.900"
                 fontSize="0.9em"
                 rows={15}
-                //value={results ? results.header : ""}
-                //value={sim ? sim.getInfo() + "\n\n" + results?.header : ""}
                 value={info}
               />
             </TabPanel>
