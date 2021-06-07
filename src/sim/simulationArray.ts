@@ -16,7 +16,8 @@ export type ResultArrayType = {
 };
 
 export class SimArray {
-  sim: ComLink.Remote<typeof simulation>;
+  sim1: ComLink.Remote<typeof simulation>;
+  sim2: ComLink.Remote<typeof simulation>;
   private netLists = [] as string[];
   private parserResult: ParserType | null;
   private inputNetList = "";
@@ -27,17 +28,21 @@ export class SimArray {
     this.results = [];
     this.sweep = [];
     this.parserResult = null;
-    const worker = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
-    this.sim = ComLink.wrap<typeof simulation>(worker);
+    const worker1 = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
+    const worker2 = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
+    this.sim1 = ComLink.wrap<typeof simulation>(worker1);
+    this.sim2 = ComLink.wrap<typeof simulation>(worker2);
     //this.init();
   }
 
   public async init(): Promise<void> {
     //this.sim = null;
     //this.sim.setOutputEvent(ComLink.proxy(simOutputCallback));
-    await this.sim.start();
+    await this.sim1.start();
+    await this.sim2.start();
     //const initialSimInfo = await this.sim.getInfo();
-    this.log("☀️", await this.sim.getInfo());
+    this.log("☀️", await this.sim1.getInfo());
+    //this.log("☀️", await this.sim2.getInfo());
     this.log("🧨🧨🧨🧨🧨🧨🧨🧨");
     return new Promise<void>((resolve, reject) => {
       resolve();
@@ -53,13 +58,18 @@ export class SimArray {
 
     let error = false;
 
-    for (let i = 0; i < this.netLists.length && !error; i++) {
-      this.sim.setNetList(this.netLists[i]);
-      await this.sim.runSimP();
+    for (let i = 0; i < this.netLists.length && !error; i += 2) {
+      this.sim1.setNetList(this.netLists[i]);
+      this.sim2.setNetList(this.netLists[i + 1]);
+      const PSim1 = this.sim1.runSimP();
+      const PSim2 = this.sim2.runSimP();
+      //
+      await Promise.all([PSim1, PSim2]);
       this.log("👌👌👌");
-      const err = await this.sim.getError();
+      const err = await this.sim1.getError(); //???????
       if (err.length > 0) error = true;
-      this.results.push(await this.sim.getResults());
+      this.results.push(await this.sim1.getResults());
+      this.results.push(await this.sim2.getResults());
 
       this.progressCallback((100 * i) / (this.netLists.length - 1));
     }
@@ -74,15 +84,15 @@ export class SimArray {
   }
 
   public async getInfo(): Promise<string> {
-    return await this.sim.getInfo();
+    return await this.sim1.getInfo();
   }
 
   public async getInitInfo(): Promise<string> {
-    return await this.sim.getInitInfo();
+    return await this.sim1.getInitInfo();
   }
 
   public async getError(): Promise<string[]> {
-    return await this.sim.getError();
+    return await this.sim1.getError();
   }
 
   public getResults(): ResultArrayType {
@@ -92,7 +102,7 @@ export class SimArray {
   public progressCallback(n: number) {}
 
   private log(message?: any, ...optionalParams: any[]): void {
-    //console.log("simArray -> ", message, optionalParams);
+    console.log("simArray -> ", message, optionalParams);
   }
 }
 
