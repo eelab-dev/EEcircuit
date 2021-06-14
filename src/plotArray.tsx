@@ -354,7 +354,7 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
 
     if (resultArray) {
       if (!isComplex(resultArray)) {
-        console.log("📈3", resultArray);
+        //console.log("📈3", resultArray);
         normalLine(resultArray.results);
       }
       if (isComplex(resultArray)) {
@@ -370,8 +370,8 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
   }, [resultArray, displayData]);
 
   useEffect(() => {
-    console.log("plot->DD->", displayData);
-    console.log("plot->DD->", wglp.linesData);
+    //console.log("plot->DD->", displayData);
+    //console.log("plot->DD->", wglp.linesData);
     if (resultArray && displayData) {
       if (resultArray.sweep.length > 0) {
         displayData.forEach((e) => {
