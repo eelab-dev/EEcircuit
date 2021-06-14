@@ -77,6 +77,7 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
   };
 
   const printCSV = (resultArray?: ResultArrayType): string => {
+    console.log("😱", "I did DownCSV!!!!");
     if (resultArray) {
       if (isComplex(resultArray)) {
         return printCSVComplex(resultArray);
@@ -88,12 +89,19 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
     }
   };
 
+  const btAction = () => {};
+
   return (
     <>
+      <Button colorScheme="blue" onClick={btAction}>
+        Save
+      </Button>
       <a
         href={`data:text/plain;charset=utf-8,${encodeURIComponent(printCSV(resultArray))}`}
         download={"eesim.csv"}>
-        <Button colorScheme="blue">Download</Button>
+        <Button colorScheme="blue" onClick={btAction}>
+          Download
+        </Button>
       </a>
     </>
   );

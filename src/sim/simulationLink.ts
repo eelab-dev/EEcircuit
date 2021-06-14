@@ -44,7 +44,7 @@ export class Simulation {
     return strCmd;
   };
 
-  public async start2() {
+  private async start2() {
     const module = await Module({
       //arguments: ["test.cir"],
       noInitialRun: true,
@@ -167,7 +167,7 @@ export class Simulation {
   public setOutputEvent = (outputEvent: (out: string) => void): void => {
     this.outputEvent = outputEvent;
   };
-  public getResults = (): ResultType => {
+  public getResult = (): ResultType => {
     return this.results;
   };
   public getInfo = (): string => {
