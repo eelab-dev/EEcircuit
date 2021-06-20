@@ -164,9 +164,15 @@ export default function EEsim(): JSX.Element {
     }
   };
 
-  const simProgressCallback = (n: number) => {
+  const simProgressCallback = React.useCallback((n: number) => {
     setProgress(n);
-  };
+    console.log(n);
+  }, []);
+
+  /*const simProgressCallback = (n: number) => {
+    setProgress(n);
+    console.log(n);
+  };*/
 
   const change = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {

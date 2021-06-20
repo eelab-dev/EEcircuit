@@ -301,4 +301,4 @@ const EditorCustom = ({
   );
 };
 
-export default EditorCustom;
+export default React.memo(EditorCustom);

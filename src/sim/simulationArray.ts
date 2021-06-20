@@ -25,6 +25,7 @@ export class SimArray {
   private sweep: number[];
   private threads: number;
   private error = false;
+  private prog = 0;
 
   constructor() {
     this.results = [];
@@ -75,7 +76,7 @@ export class SimArray {
     for (let i = 0; i < netListsDist.length; i++) {
       const singleThreadPromise = this.runSimSingleThread(this.simArray[i], netListsDist[i]);
       threadPromises.push(singleThreadPromise);
-      this.progressCallback((100 * i) / (this.netLists.length - 1)); //????????????????
+      this.progressCallback((100 * this.results.length) / (this.netLists.length - 1)); //????????????????
     }
     const threadResults = await Promise.all(threadPromises);
     for (const result of threadResults) {
@@ -101,6 +102,8 @@ export class SimArray {
       }
       const result = await sim.getResult();
       results.push(result);
+      this.prog++;
+      this.progressCallback((100 * this.prog) / this.netLists.length); //????????????????
     }
     this.log("👌👌👌");
     //this.log(results);
