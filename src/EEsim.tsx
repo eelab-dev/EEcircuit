@@ -24,7 +24,28 @@ import {
   Tabs,
   Textarea,
   extendTheme,
+  useDisclosure,
 } from "@chakra-ui/react";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverHeader,
+  PopoverBody,
+  PopoverFooter,
+  PopoverArrow,
+  PopoverCloseButton,
+} from "@chakra-ui/react";
+
+import {
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+} from "@chakra-ui/react";
+
+import FocusLock from "react-focus-lock";
 import { getColor } from "./colors";
 import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray";
 import { DisplayDataType, makeDD } from "./displayData";
@@ -32,6 +53,7 @@ import { DisplayDataType, makeDD } from "./displayData";
 let sim: SimArray;
 const store = window.localStorage;
 let initialSimInfo = "";
+let threadCount = 1;
 
 export default function EEsim(): JSX.Element {
   // Create the count state.
@@ -45,6 +67,7 @@ export default function EEsim(): JSX.Element {
   const [tabIndex, setTabIndex] = React.useState(0);
   const [sweep, setSweep] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
+  const [threadCountNew, setThreadCountNew] = React.useState(1);
 
   const toast = createStandaloneToast();
 
@@ -142,7 +165,7 @@ export default function EEsim(): JSX.Element {
   }, []);*/
 
   const btRun = async () => {
-    if (sim) {
+    if (sim && threadCount == threadCountNew) {
       setIsSimRunning(true);
       //setParser(getParser(netList));
       store.setItem("netList", netList);
@@ -153,8 +176,9 @@ export default function EEsim(): JSX.Element {
       setIsSimRunning(false);
     } else {
       //spawn worker thread
-      sim = new SimArray(); //await????
-      await sim.init();
+      sim = new SimArray();
+      threadCount = threadCountNew;
+      await sim.init(threadCount);
       initialSimInfo = await sim.getInitInfo();
       sim.progressCallback = simProgressCallback;
       setIsSimLoaded(true);
@@ -265,6 +289,12 @@ export default function EEsim(): JSX.Element {
     }
   }, [displayData]);
 
+  const { onOpen, onClose, isOpen } = useDisclosure();
+
+  const handleThreadChange = (valueString: string, valueNumber: number) => {
+    setThreadCountNew(valueNumber);
+  };
+
   return (
     <ChakraProvider theme={customTheme}>
       <div>
@@ -313,6 +343,38 @@ export default function EEsim(): JSX.Element {
             )}
 
             <Spacer />
+            <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} closeOnBlur={false}>
+              <PopoverTrigger>
+                <Button
+                  colorScheme="blue"
+                  variant="solid"
+                  size="lg"
+                  m={1}
+                  isDisabled={isSimRunning}>
+                  Settings ⚙️
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent p={5}>
+                <FocusLock returnFocus persistentFocus={false}>
+                  <PopoverArrow />
+                  <PopoverCloseButton />
+                  <Box>
+                    Threads
+                    <NumberInput
+                      maxW={20}
+                      value={threadCountNew}
+                      min={1}
+                      onChange={handleThreadChange}>
+                      <NumberInputField />
+                      <NumberInputStepper>
+                        <NumberIncrementStepper />
+                        <NumberDecrementStepper />
+                      </NumberInputStepper>
+                    </NumberInput>
+                  </Box>
+                </FocusLock>
+              </PopoverContent>
+            </Popover>
             <Button
               colorScheme="blue"
               variant="solid"
