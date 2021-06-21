@@ -25,27 +25,27 @@ export class SimArray {
   private sweep: number[];
   private threads: number;
   private error = false;
-  private prog = 0;
+  private progress = 0;
 
   constructor() {
     this.results = [];
     this.sweep = [];
     this.parserResult = null;
     this.simArray = [];
-    this.threads = 6;
+    this.threads = 1;
+  }
 
+  public async init(threadCount: number): Promise<void> {
+    this.results = [];
+    this.sweep = [];
+    this.parserResult = null;
+    this.simArray = [];
+    this.threads = threadCount;
     for (let i = 0; i < this.threads; i++) {
       const worker = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
       const sim = ComLink.wrap<typeof simulation>(worker);
       this.simArray.push(sim);
     }
-
-    //const worker2 = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
-    //this.sim2 = ComLink.wrap<typeof simulation>(worker2);
-    //this.init();
-  }
-
-  public async init(): Promise<void> {
     //https://stackoverflow.com/questions/37576685/using-async-await-with-a-foreach-loop
     for (const sim of this.simArray) {
       await sim.start();
@@ -62,6 +62,7 @@ export class SimArray {
   }
 
   public async runSim(): Promise<ResultArrayType> {
+    this.progress = 0;
     this.parserResult = parser(this.inputNetList);
     this.sweep = this.parserResult.sweep;
     this.netLists = this.parserResult.netLists;
@@ -102,8 +103,8 @@ export class SimArray {
       }
       const result = await sim.getResult();
       results.push(result);
-      this.prog++;
-      this.progressCallback((100 * this.prog) / this.netLists.length); //????????????????
+      this.progress++;
+      this.progressCallback((100 * this.progress) / this.netLists.length); //????????????????
     }
     this.log("👌👌👌");
     //this.log(results);
