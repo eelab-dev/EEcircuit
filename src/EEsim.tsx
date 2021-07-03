@@ -258,11 +258,6 @@ export default function EEsim(): JSX.Element {
     }
   }, [displayData]);
 
-  const btUpdateGraph = React.useCallback(() => {
-    const results = sim.getResults();
-    setResultArray(results);
-  }, []);
-
   const btReset = React.useCallback(() => {
     setResultArray(undefined);
     setDisplayData(undefined);
@@ -334,13 +329,6 @@ export default function EEsim(): JSX.Element {
               loadingText={isSimLoaded ? "Running 🏃" : "Loading 🚚"}>
               Run 🚀
             </Button>
-            {isSimRunning ? (
-              <Button colorScheme="blue" variant="solid" size="lg" m={1} onClick={btUpdateGraph}>
-                Update Graph
-              </Button>
-            ) : (
-              <></>
-            )}
 
             <Spacer />
             <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} closeOnBlur={false}>
