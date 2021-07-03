@@ -77,7 +77,6 @@ export class SimArray {
     for (let i = 0; i < netListsDist.length; i++) {
       const singleThreadPromise = this.runSimSingleThread(this.simArray[i], netListsDist[i]);
       threadPromises.push(singleThreadPromise);
-      this.progressCallback((100 * this.results.length) / (this.netLists.length - 1)); //????????????????
     }
     const threadResults = await Promise.all(threadPromises);
     for (const result of threadResults) {
@@ -104,50 +103,12 @@ export class SimArray {
       const result = await sim.getResult();
       results.push(result);
       this.progress++;
-      this.progressCallback((100 * this.progress) / this.netLists.length); //????????????????
+      this.progressCallback((100 * this.progress) / this.netLists.length);
     }
     this.log("👌👌👌");
     //this.log(results);
     return results;
   }
-
-  /*public async runSim(): Promise<ResultArrayType> {
-    //
-    this.parserResult = parser(this.inputNetList);
-    this.netLists = this.parserResult.netLists;
-    this.sweep = this.parserResult.sweep;
-
-    this.results = [];
-
-    let error = false;
-
-    distNetList(this.netLists, 3);
-
-    for (let i = 0; i < this.netLists.length && !error; i += 2) {
-      this.simArray[0].setNetList(this.netLists[i]);
-      this.simArray[1].setNetList(this.netLists[i + 1]);
-
-      const PSim = [] as Promise<void>[];
-      for (const sim of this.simArray) {
-        const pSim = sim.runSimP();
-        PSim.push(pSim);
-      }
-      await Promise.all(PSim);
-      this.log("👌👌👌");
-      const err = await this.simArray[0].getError(); //???????
-      if (err.length > 0) error = true;
-
-      for (const sim of this.simArray) {
-        this.results.push(await sim.getResults());
-      }
-
-      this.progressCallback((100 * i) / (this.netLists.length - 1));
-    }
-
-    //this.simArrayOutputCallback();
-
-    return { results: this.results, sweep: this.sweep };
-  }*/
 
   public setNetList(text: string) {
     this.inputNetList = text;
