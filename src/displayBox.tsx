@@ -64,4 +64,4 @@ function DisplayBox({ displayData, onChange }: Props): JSX.Element {
 
 //export default React.memo(DisplayBox);
 //don't use memo and see why it returns empty?
-export default DisplayBox;
+export default React.memo(DisplayBox);
