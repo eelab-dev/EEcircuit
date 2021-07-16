@@ -8,6 +8,9 @@ type Prop = {
 };
 
 const DownCSV = ({ resultArray }: Prop): JSX.Element => {
+  const aLink = React.useRef<HTMLAnchorElement>(null);
+  const [href, setHref] = React.useState("");
+  //
   const printCSVReal = (resultArray: ResultArrayType): string => {
     let str = "";
     let strTop = "";
@@ -25,7 +28,10 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
       for (let col = 0; col < resultArray.results[0].data.length; col++) {
         for (let i = 0; i < resultArray.results.length; i++) {
           const data = resultArray.results[i].data as RealDataType;
-          str = str + data[col][row].toExponential(3) + ",";
+          const a = data[col][row];
+          //time-series are unequal length
+          const s = a != undefined ? a.toExponential(3) : "NaN";
+          str = str + s + ",";
         }
       }
       str = str + "\n";
@@ -88,15 +94,26 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
     }
   };
 
+  React.useEffect(() => {
+    setHref("");
+  }, [resultArray]);
+
+  React.useEffect(() => {
+    if (href.length > 0) aLink.current?.click();
+  }, [href]);
+
+  const btAction = () => {
+    setHref(`data:text/plain;charset=utf-8,${encodeURIComponent(printCSV(resultArray))}`);
+  };
+
   return (
     <>
-      <a
-        href={`data:text/plain;charset=utf-8,${encodeURIComponent(printCSV(resultArray))}`}
-        download={"eesim.csv"}>
-        <Button colorScheme="blue">Download</Button>
-      </a>
+      <Button type="submit" colorScheme="blue" onClick={btAction}>
+        Download
+      </Button>
+      <a ref={aLink} href={href} download={"EEsim.csv"}></a>
     </>
   );
 };
 
-export default DownCSV;
+export default React.memo(DownCSV);

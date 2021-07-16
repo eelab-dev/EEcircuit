@@ -155,44 +155,6 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     });
   };
 
-  /*const sweepLine = (results: ResultType[]) => {
-    //isSweep = true;
-    //let dataSweep = [[[]]] as number[][][];
-
-    for (let i = 0; i < data[0].length; i++) {
-      if (i > 1 && data[0][i] < data[0][i - 1]) {
-        sweepIndices.push(i);
-      }
-    }
-    //add last set
-    sweepIndices.push(data[0].length - 1);
-
-    if (sweepIndices == []) {
-      sweepIndices = [data[0].length];
-    }
-
-    dataSweep = [...Array(data.length)].map(() =>
-      [...Array(sweepIndices.length)].map(() => Array(sweepIndices[0]).fill(0))
-    );
-
-    for (let col = 0; col < dataSweep.length; col++) {
-      for (let sweep = 0; sweep < dataSweep[0].length; sweep++) {
-        for (let i = 0; i < dataSweep[0][0].length; i++) {
-          dataSweep[col][sweep][i] = data[col][sweep * sweepIndices[0] + i];
-        }
-      }
-    }
-    if (sweepIndices.length > 0) {
-      SetIsSweep(true);
-    }
-    //console.log("sweep-->", sweepIndices);
-    //console.log("sweep-->", dataSweep);
-
-    //?????????????????????
-    lineMinMax = [];
-    getLineMinMaxSweep(dataSweep);
-  };*/
-
   const getLineMinMaxNormal = (data: number[][]) => {
     for (let col = 1; col < data.length; col++) {
       let color: ColorRGBA;
@@ -294,54 +256,6 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     }
   };
 
-  /*const getLineMinMaxSweep = (dataSweep: number[][][]) => {
-    for (let col = 1; col < dataSweep.length; col++) {
-      let minY = 100000;
-      let maxY = -100000;
-      let minPos = 10000;
-      let maxNeg = -10000;
-      for (let sweep = 0; sweep < dataSweep[0].length; sweep++) {
-        //const color = getColor();
-        let color: ColorRGBA;
-        if (displayData && displayData[col - 1]) {
-          color = new ColorRGBA(
-            displayData[col - 1].color.r,
-            displayData[col - 1].color.g,
-            displayData[col - 1].color.b,
-            1
-          );
-        } else {
-          color = new ColorRGBA(0.5, 0.5, 0.5, 1);
-        }
-        const line = new WebglLine(color, dataSweep[0][0].length);
-        //const maxX = dataSweep[0][sweep][dataSweep[0][sweep].length - 1];
-
-        for (let i = 0; i < dataSweep[0][sweep].length; i++) {
-          line.setX(i, dataSweep[0][sweep][i]);
-          const y = dataSweep[col][sweep][i];
-          line.setY(i, y);
-          maxY = maxY > y ? maxY : y;
-          minY = minY < y ? minY : y;
-          if (y > 0) {
-            minPos = minPos < y ? minPos : y;
-          }
-          if (y < 0) {
-            maxNeg = maxNeg > y ? maxNeg : y;
-          }
-        }
-        wglp.addDataLine(line);
-        lineMinMax.push({
-          minY: minY,
-          maxY: maxY,
-          minYPos: minPos,
-          maxYNeg: maxNeg,
-          minX: dataSweep[0][0][0],
-          maxX: dataSweep[0][0][dataSweep[0][0].length - 1],
-        });
-      }
-    }
-  };*/
-
   useEffect(() => {
     wglp.removeAllLines();
     wglp.addSurface(zoomRect); //change this to Aux !!!!!!
@@ -351,10 +265,11 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     /* x axis is [0,1]*/
     wglp.gOffsetX = -1;
     wglp.gScaleX = 2;
+    console.log("😱", resultArray);
 
     if (resultArray) {
       if (!isComplex(resultArray)) {
-        console.log("📈3", resultArray);
+        //console.log("📈3", resultArray);
         normalLine(resultArray.results);
       }
       if (isComplex(resultArray)) {
@@ -370,8 +285,8 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
   }, [resultArray, displayData]);
 
   useEffect(() => {
-    console.log("plot->DD->", displayData);
-    console.log("plot->DD->", wglp.linesData);
+    //console.log("plot->DD->", displayData);
+    //console.log("plot->DD->", wglp.linesData);
     if (resultArray && displayData) {
       if (resultArray.sweep.length > 0) {
         displayData.forEach((e) => {
@@ -404,8 +319,8 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
   const findMinMaxGlobal = (): ScaleType => {
     //???????????????????????
 
-    let minY = 10000;
-    let maxY = -10000;
+    let minY = 1e6;
+    let maxY = -1e6;
     let minX = 0;
     let maxX = 1;
 
