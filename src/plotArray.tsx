@@ -267,7 +267,7 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     wglp.gScaleX = 2;
     console.log("😱", resultArray);
 
-    if (resultArray) {
+    if (resultArray && resultArray.results.length > 0) {
       if (!isComplex(resultArray)) {
         //console.log("📈3", resultArray);
         normalLine(resultArray.results);

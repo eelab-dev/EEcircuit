@@ -24,7 +24,7 @@ RUN chmod +x /run.sh
 
 ENTRYPOINT ["/run.sh"]
 
-## run command:
+## run this command in WSL2:
 ## docker run -it -v $(realpath .):/mnt ngspice:emcc
 
 

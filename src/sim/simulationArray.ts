@@ -70,7 +70,7 @@ export class SimArray {
 
     this.results = [];
 
-    //let error = false;
+    this.error = false;
 
     let threadPromises = [] as Promise<ResultType[]>[];
 

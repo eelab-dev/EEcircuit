@@ -109,7 +109,7 @@ export default function EEsim(): JSX.Element {
 
   useEffect(() => {
     //DisplayData logic
-    if (resultArray) {
+    if (resultArray && resultArray.results.length > 0) {
       const newDD = makeDD(resultArray.results[0]);
       let tempDD = [] as DisplayDataType[];
       newDD.forEach((newData, i) => {
