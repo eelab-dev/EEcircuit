@@ -55,8 +55,8 @@ export class Simulation {
       },
       printErr: (e) => {
         console.error(e);
-        this.info += e + "\n\n";
         if (e != "Note: can't find init file.") {
+          this.info += e + "\n\n";
           this.error.push(e);
         }
       },

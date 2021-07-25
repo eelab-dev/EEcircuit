@@ -18,7 +18,7 @@ result = getInput();
 const text3 = `
 function _emscripten_sleep(ms) {
  Asyncify.handleSleep(function(wakeUp) {
-  Browser.safeSetTimeout(wakeUp, ms);
+  safeSetTimeout(wakeUp, ms);
  });
 }`;
 

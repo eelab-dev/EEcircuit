@@ -33,21 +33,11 @@ var quit_ = function(status, toThrow) {
  throw toThrow;
 };
 
-var ENVIRONMENT_IS_WEB = false;
+var ENVIRONMENT_IS_WEB = typeof window === "object";
 
-var ENVIRONMENT_IS_WORKER = false;
+var ENVIRONMENT_IS_WORKER = typeof importScripts === "function";
 
-var ENVIRONMENT_IS_NODE = false;
-
-var ENVIRONMENT_IS_SHELL = false;
-
-ENVIRONMENT_IS_WEB = typeof window === "object";
-
-ENVIRONMENT_IS_WORKER = typeof importScripts === "function";
-
-ENVIRONMENT_IS_NODE = typeof process === "object" && typeof process.versions === "object" && typeof process.versions.node === "string";
-
-ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIRONMENT_IS_WORKER;
+var ENVIRONMENT_IS_NODE = typeof process === "object" && typeof process.versions === "object" && typeof process.versions.node === "string";
 
 var scriptDirectory = "";
 
@@ -129,11 +119,6 @@ if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
 if (Module["quit"]) quit_ = Module["quit"];
 
 var STACK_ALIGN = 16;
-
-function alignMemory(size, factor) {
- if (!factor) factor = STACK_ALIGN;
- return Math.ceil(size / factor) * factor;
-}
 
 function warnOnce(text) {
  if (!warnOnce.shown) warnOnce.shown = {};
@@ -484,6 +469,12 @@ var runtimeInitialized = false;
 
 var runtimeExited = false;
 
+var runtimeKeepaliveCounter = 0;
+
+function keepRuntimeAlive() {
+ return noExitRuntime || runtimeKeepaliveCounter > 0;
+}
+
 function preRun() {
  if (Module["preRun"]) {
   if (typeof Module["preRun"] == "function") Module["preRun"] = [ Module["preRun"] ];
@@ -497,13 +488,13 @@ function preRun() {
 function initRuntime() {
  runtimeInitialized = true;
  if (!Module["noFSInit"] && !FS.init.initialized) FS.init();
+ FS.ignorePermissions = false;
  TTY.init();
  PIPEFS.root = FS.mount(PIPEFS, {}, null);
  callRuntimeCallbacks(__ATINIT__);
 }
 
 function preMain() {
- FS.ignorePermissions = false;
  callRuntimeCallbacks(__ATMAIN__);
 }
 
@@ -592,10 +583,15 @@ function isDataURI(filename) {
  return filename.startsWith(dataURIPrefix);
 }
 
-var wasmBinaryFile = "spice.wasm";
+var wasmBinaryFile;
 
-if (!isDataURI(wasmBinaryFile)) {
- wasmBinaryFile = locateFile(wasmBinaryFile);
+if (Module["locateFile"]) {
+ wasmBinaryFile = "spice.wasm";
+ if (!isDataURI(wasmBinaryFile)) {
+  wasmBinaryFile = locateFile(wasmBinaryFile);
+ }
+} else {
+ wasmBinaryFile = new URL("spice.wasm", import.meta.url).toString();
 }
 
 function getBinary(file) {
@@ -746,12 +742,6 @@ function jsStackTrace() {
  return error.stack.toString();
 }
 
-var runtimeKeepaliveCounter = 0;
-
-function keepRuntimeAlive() {
- return noExitRuntime || runtimeKeepaliveCounter > 0;
-}
-
 function _tzset() {
  if (_tzset.called) return;
  _tzset.called = true;
@@ -833,50 +823,41 @@ function ___clock_gettime(a0, a1) {
  return _clock_gettime(a0, a1);
 }
 
-var ExceptionInfoAttrs = {
- DESTRUCTOR_OFFSET: 0,
- REFCOUNT_OFFSET: 4,
- TYPE_OFFSET: 8,
- CAUGHT_OFFSET: 12,
- RETHROWN_OFFSET: 13,
- SIZE: 16
-};
-
 function ___cxa_allocate_exception(size) {
- return _malloc(size + ExceptionInfoAttrs.SIZE) + ExceptionInfoAttrs.SIZE;
+ return _malloc(size + 16) + 16;
 }
 
 function ExceptionInfo(excPtr) {
  this.excPtr = excPtr;
- this.ptr = excPtr - ExceptionInfoAttrs.SIZE;
+ this.ptr = excPtr - 16;
  this.set_type = function(type) {
-  HEAP32[this.ptr + ExceptionInfoAttrs.TYPE_OFFSET >> 2] = type;
+  HEAP32[this.ptr + 4 >> 2] = type;
  };
  this.get_type = function() {
-  return HEAP32[this.ptr + ExceptionInfoAttrs.TYPE_OFFSET >> 2];
+  return HEAP32[this.ptr + 4 >> 2];
  };
  this.set_destructor = function(destructor) {
-  HEAP32[this.ptr + ExceptionInfoAttrs.DESTRUCTOR_OFFSET >> 2] = destructor;
+  HEAP32[this.ptr + 8 >> 2] = destructor;
  };
  this.get_destructor = function() {
-  return HEAP32[this.ptr + ExceptionInfoAttrs.DESTRUCTOR_OFFSET >> 2];
+  return HEAP32[this.ptr + 8 >> 2];
  };
  this.set_refcount = function(refcount) {
-  HEAP32[this.ptr + ExceptionInfoAttrs.REFCOUNT_OFFSET >> 2] = refcount;
+  HEAP32[this.ptr >> 2] = refcount;
  };
  this.set_caught = function(caught) {
   caught = caught ? 1 : 0;
-  HEAP8[this.ptr + ExceptionInfoAttrs.CAUGHT_OFFSET >> 0] = caught;
+  HEAP8[this.ptr + 12 >> 0] = caught;
  };
  this.get_caught = function() {
-  return HEAP8[this.ptr + ExceptionInfoAttrs.CAUGHT_OFFSET >> 0] != 0;
+  return HEAP8[this.ptr + 12 >> 0] != 0;
  };
  this.set_rethrown = function(rethrown) {
   rethrown = rethrown ? 1 : 0;
-  HEAP8[this.ptr + ExceptionInfoAttrs.RETHROWN_OFFSET >> 0] = rethrown;
+  HEAP8[this.ptr + 13 >> 0] = rethrown;
  };
  this.get_rethrown = function() {
-  return HEAP8[this.ptr + ExceptionInfoAttrs.RETHROWN_OFFSET >> 0] != 0;
+  return HEAP8[this.ptr + 13 >> 0] != 0;
  };
  this.init = function(type, destructor) {
   this.set_type(type);
@@ -886,12 +867,12 @@ function ExceptionInfo(excPtr) {
   this.set_rethrown(false);
  };
  this.add_ref = function() {
-  var value = HEAP32[this.ptr + ExceptionInfoAttrs.REFCOUNT_OFFSET >> 2];
-  HEAP32[this.ptr + ExceptionInfoAttrs.REFCOUNT_OFFSET >> 2] = value + 1;
+  var value = HEAP32[this.ptr >> 2];
+  HEAP32[this.ptr >> 2] = value + 1;
  };
  this.release_ref = function() {
-  var prev = HEAP32[this.ptr + ExceptionInfoAttrs.REFCOUNT_OFFSET >> 2];
-  HEAP32[this.ptr + ExceptionInfoAttrs.REFCOUNT_OFFSET >> 2] = prev - 1;
+  var prev = HEAP32[this.ptr >> 2];
+  HEAP32[this.ptr >> 2] = prev - 1;
   return prev === 1;
  };
 }
@@ -933,6 +914,16 @@ function _localtime_r(time, tmPtr) {
 
 function ___localtime_r(a0, a1) {
  return _localtime_r(a0, a1);
+}
+
+var __sigalrm_handler = 0;
+
+function ___sigaction(sig, act, oldact) {
+ if (sig == 14) {
+  __sigalrm_handler = HEAP32[act >> 2];
+  return 0;
+ }
+ return 0;
 }
 
 var PATH = {
@@ -1199,10 +1190,7 @@ result = getInput();
 };
 
 function mmapAlloc(size) {
- var alignedSize = alignMemory(size, 16384);
- var ptr = _malloc(alignedSize);
- while (size < alignedSize) HEAP8[ptr + size++] = 0;
- return ptr;
+ abort();
 }
 
 var MEMFS = {
@@ -1519,6 +1507,22 @@ var MEMFS = {
   }
  }
 };
+
+function asyncLoad(url, onload, onerror, noRunDep) {
+ var dep = !noRunDep ? getUniqueRunDependency("al " + url) : "";
+ readAsync(url, function(arrayBuffer) {
+  assert(arrayBuffer, 'Loading data file "' + url + '" failed (no arrayBuffer).');
+  onload(new Uint8Array(arrayBuffer));
+  if (dep) removeRunDependency(dep);
+ }, function(event) {
+  if (onerror) {
+   onerror();
+  } else {
+   throw 'Loading data file "' + url + '" failed.';
+  }
+ });
+ if (dep) addRunDependency(dep);
+}
 
 var FS = {
  root: null,
@@ -3049,7 +3053,7 @@ var FS = {
   }
   addRunDependency(dep);
   if (typeof url == "string") {
-   Browser.asyncLoad(url, function(byteArray) {
+   asyncLoad(url, function(byteArray) {
     processData(byteArray);
    }, onerror);
   } else {
@@ -3475,20 +3479,6 @@ function ___sys_getdents64(fd, dirp, count) {
 
 function ___sys_getpid() {
  return 42;
-}
-
-function ___sys_getrusage(who, usage) {
- try {
-  _memset(usage, 0, 136);
-  HEAP32[usage >> 2] = 1;
-  HEAP32[usage + 4 >> 2] = 2;
-  HEAP32[usage + 8 >> 2] = 3;
-  HEAP32[usage + 12 >> 2] = 4;
-  return 0;
- } catch (e) {
-  if (typeof FS === "undefined" || !(e instanceof FS.ErrnoError)) abort(e);
-  return -e.errno;
- }
 }
 
 function ___sys_getegid32() {
@@ -3934,13 +3924,13 @@ function ___sys_unlink(path) {
  }
 }
 
-function ___sys_wait4(pid, wstart, options, rusage) {
- try {
-  return -52;
- } catch (e) {
-  if (typeof FS === "undefined" || !(e instanceof FS.ErrnoError)) abort(e);
-  return -e.errno;
- }
+var ___sys_wait4 = function() {
+ err("warning: unsupported syscall: __sys_wait4");
+ return -52;
+};
+
+function __emscripten_throw_longjmp() {
+ throw "longjmp";
 }
 
 function _abort() {
@@ -3956,15 +3946,6 @@ function _clock() {
 
 function _emscripten_get_heap_max() {
  return 2147483648;
-}
-
-function _longjmp(env, value) {
- _setThrew(env, value || 1);
- throw "longjmp";
-}
-
-function _emscripten_longjmp(a0, a1) {
- return _longjmp(a0, a1);
 }
 
 function _emscripten_memcpy_big(dest, src, num) {
@@ -3998,711 +3979,11 @@ function _emscripten_resize_heap(requestedSize) {
  return false;
 }
 
-function _emscripten_set_main_loop_timing(mode, value) {
- Browser.mainLoop.timingMode = mode;
- Browser.mainLoop.timingValue = value;
- if (!Browser.mainLoop.func) {
-  return 1;
- }
- if (!Browser.mainLoop.running) {
-  Browser.mainLoop.running = true;
- }
- if (mode == 0) {
-  Browser.mainLoop.scheduler = function Browser_mainLoop_scheduler_setTimeout() {
-   var timeUntilNextTick = Math.max(0, Browser.mainLoop.tickStartTime + value - _emscripten_get_now()) | 0;
-   setTimeout(Browser.mainLoop.runner, timeUntilNextTick);
-  };
-  Browser.mainLoop.method = "timeout";
- } else if (mode == 1) {
-  Browser.mainLoop.scheduler = function Browser_mainLoop_scheduler_rAF() {
-   Browser.requestAnimationFrame(Browser.mainLoop.runner);
-  };
-  Browser.mainLoop.method = "rAF";
- } else if (mode == 2) {
-  if (typeof setImmediate === "undefined") {
-   var setImmediates = [];
-   var emscriptenMainLoopMessageId = "setimmediate";
-   var Browser_setImmediate_messageHandler = function(event) {
-    if (event.data === emscriptenMainLoopMessageId || event.data.target === emscriptenMainLoopMessageId) {
-     event.stopPropagation();
-     setImmediates.shift()();
-    }
-   };
-   addEventListener("message", Browser_setImmediate_messageHandler, true);
-   setImmediate = function Browser_emulated_setImmediate(func) {
-    setImmediates.push(func);
-    if (ENVIRONMENT_IS_WORKER) {
-     if (Module["setImmediates"] === undefined) Module["setImmediates"] = [];
-     Module["setImmediates"].push(func);
-     postMessage({
-      target: emscriptenMainLoopMessageId
-     });
-    } else postMessage(emscriptenMainLoopMessageId, "*");
-   };
-  }
-  Browser.mainLoop.scheduler = function Browser_mainLoop_scheduler_setImmediate() {
-   setImmediate(Browser.mainLoop.runner);
-  };
-  Browser.mainLoop.method = "immediate";
- }
- return 0;
+function safeSetTimeout(func, timeout) {
+ return setTimeout(function() {
+  callUserCallback(func);
+ }, timeout);
 }
-
-function _exit(status) {
- exit(status);
-}
-
-function maybeExit() {
- if (!keepRuntimeAlive()) {
-  try {
-   _exit(EXITSTATUS);
-  } catch (e) {
-   if (e instanceof ExitStatus) {
-    return;
-   }
-   throw e;
-  }
- }
-}
-
-function setMainLoop(browserIterationFunc, fps, simulateInfiniteLoop, arg, noSetTiming) {
- assert(!Browser.mainLoop.func, "emscripten_set_main_loop: there can only be one main loop function at once: call emscripten_cancel_main_loop to cancel the previous one before setting a new one with different parameters.");
- Browser.mainLoop.func = browserIterationFunc;
- Browser.mainLoop.arg = arg;
- var thisMainLoopId = Browser.mainLoop.currentlyRunningMainloop;
- function checkIsRunning() {
-  if (thisMainLoopId < Browser.mainLoop.currentlyRunningMainloop) {
-   maybeExit();
-   return false;
-  }
-  return true;
- }
- Browser.mainLoop.running = false;
- Browser.mainLoop.runner = function Browser_mainLoop_runner() {
-  if (ABORT) return;
-  if (Browser.mainLoop.queue.length > 0) {
-   var start = Date.now();
-   var blocker = Browser.mainLoop.queue.shift();
-   blocker.func(blocker.arg);
-   if (Browser.mainLoop.remainingBlockers) {
-    var remaining = Browser.mainLoop.remainingBlockers;
-    var next = remaining % 1 == 0 ? remaining - 1 : Math.floor(remaining);
-    if (blocker.counted) {
-     Browser.mainLoop.remainingBlockers = next;
-    } else {
-     next = next + .5;
-     Browser.mainLoop.remainingBlockers = (8 * remaining + next) / 9;
-    }
-   }
-   console.log('main loop blocker "' + blocker.name + '" took ' + (Date.now() - start) + " ms");
-   Browser.mainLoop.updateStatus();
-   if (!checkIsRunning()) return;
-   setTimeout(Browser.mainLoop.runner, 0);
-   return;
-  }
-  if (!checkIsRunning()) return;
-  Browser.mainLoop.currentFrameNumber = Browser.mainLoop.currentFrameNumber + 1 | 0;
-  if (Browser.mainLoop.timingMode == 1 && Browser.mainLoop.timingValue > 1 && Browser.mainLoop.currentFrameNumber % Browser.mainLoop.timingValue != 0) {
-   Browser.mainLoop.scheduler();
-   return;
-  } else if (Browser.mainLoop.timingMode == 0) {
-   Browser.mainLoop.tickStartTime = _emscripten_get_now();
-  }
-  Browser.mainLoop.runIter(browserIterationFunc);
-  if (!checkIsRunning()) return;
-  if (typeof SDL === "object" && SDL.audio && SDL.audio.queueNewAudioData) SDL.audio.queueNewAudioData();
-  Browser.mainLoop.scheduler();
- };
- if (!noSetTiming) {
-  if (fps && fps > 0) _emscripten_set_main_loop_timing(0, 1e3 / fps); else _emscripten_set_main_loop_timing(1, 1);
-  Browser.mainLoop.scheduler();
- }
- if (simulateInfiniteLoop) {
-  throw "unwind";
- }
-}
-
-function callUserCallback(func, synchronous) {
- if (ABORT) {
-  return;
- }
- if (synchronous) {
-  func();
-  return;
- }
- try {
-  func();
- } catch (e) {
-  if (e instanceof ExitStatus) {
-   return;
-  } else if (e !== "unwind") {
-   if (e && typeof e === "object" && e.stack) err("exception thrown: " + [ e, e.stack ]);
-   throw e;
-  }
- }
-}
-
-var Browser = {
- mainLoop: {
-  running: false,
-  scheduler: null,
-  method: "",
-  currentlyRunningMainloop: 0,
-  func: null,
-  arg: 0,
-  timingMode: 0,
-  timingValue: 0,
-  currentFrameNumber: 0,
-  queue: [],
-  pause: function() {
-   Browser.mainLoop.scheduler = null;
-   Browser.mainLoop.currentlyRunningMainloop++;
-  },
-  resume: function() {
-   Browser.mainLoop.currentlyRunningMainloop++;
-   var timingMode = Browser.mainLoop.timingMode;
-   var timingValue = Browser.mainLoop.timingValue;
-   var func = Browser.mainLoop.func;
-   Browser.mainLoop.func = null;
-   setMainLoop(func, 0, false, Browser.mainLoop.arg, true);
-   _emscripten_set_main_loop_timing(timingMode, timingValue);
-   Browser.mainLoop.scheduler();
-  },
-  updateStatus: function() {
-   if (Module["setStatus"]) {
-    var message = Module["statusMessage"] || "Please wait...";
-    var remaining = Browser.mainLoop.remainingBlockers;
-    var expected = Browser.mainLoop.expectedBlockers;
-    if (remaining) {
-     if (remaining < expected) {
-      Module["setStatus"](message + " (" + (expected - remaining) + "/" + expected + ")");
-     } else {
-      Module["setStatus"](message);
-     }
-    } else {
-     Module["setStatus"]("");
-    }
-   }
-  },
-  runIter: function(func) {
-   if (ABORT) return;
-   if (Module["preMainLoop"]) {
-    var preRet = Module["preMainLoop"]();
-    if (preRet === false) {
-     return;
-    }
-   }
-   callUserCallback(func);
-   if (Module["postMainLoop"]) Module["postMainLoop"]();
-  }
- },
- isFullscreen: false,
- pointerLock: false,
- moduleContextCreatedCallbacks: [],
- workers: [],
- init: function() {
-  if (!Module["preloadPlugins"]) Module["preloadPlugins"] = [];
-  if (Browser.initted) return;
-  Browser.initted = true;
-  try {
-   new Blob();
-   Browser.hasBlobConstructor = true;
-  } catch (e) {
-   Browser.hasBlobConstructor = false;
-   console.log("warning: no blob constructor, cannot create blobs with mimetypes");
-  }
-  Browser.BlobBuilder = typeof MozBlobBuilder != "undefined" ? MozBlobBuilder : typeof WebKitBlobBuilder != "undefined" ? WebKitBlobBuilder : !Browser.hasBlobConstructor ? console.log("warning: no BlobBuilder") : null;
-  Browser.URLObject = typeof window != "undefined" ? window.URL ? window.URL : window.webkitURL : undefined;
-  if (!Module.noImageDecoding && typeof Browser.URLObject === "undefined") {
-   console.log("warning: Browser does not support creating object URLs. Built-in browser image decoding will not be available.");
-   Module.noImageDecoding = true;
-  }
-  var imagePlugin = {};
-  imagePlugin["canHandle"] = function imagePlugin_canHandle(name) {
-   return !Module.noImageDecoding && /\.(jpg|jpeg|png|bmp)$/i.test(name);
-  };
-  imagePlugin["handle"] = function imagePlugin_handle(byteArray, name, onload, onerror) {
-   var b = null;
-   if (Browser.hasBlobConstructor) {
-    try {
-     b = new Blob([ byteArray ], {
-      type: Browser.getMimetype(name)
-     });
-     if (b.size !== byteArray.length) {
-      b = new Blob([ new Uint8Array(byteArray).buffer ], {
-       type: Browser.getMimetype(name)
-      });
-     }
-    } catch (e) {
-     warnOnce("Blob constructor present but fails: " + e + "; falling back to blob builder");
-    }
-   }
-   if (!b) {
-    var bb = new Browser.BlobBuilder();
-    bb.append(new Uint8Array(byteArray).buffer);
-    b = bb.getBlob();
-   }
-   var url = Browser.URLObject.createObjectURL(b);
-   var img = new Image();
-   img.onload = function img_onload() {
-    assert(img.complete, "Image " + name + " could not be decoded");
-    var canvas = document.createElement("canvas");
-    canvas.width = img.width;
-    canvas.height = img.height;
-    var ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
-    Module["preloadedImages"][name] = canvas;
-    Browser.URLObject.revokeObjectURL(url);
-    if (onload) onload(byteArray);
-   };
-   img.onerror = function img_onerror(event) {
-    console.log("Image " + url + " could not be decoded");
-    if (onerror) onerror();
-   };
-   img.src = url;
-  };
-  Module["preloadPlugins"].push(imagePlugin);
-  var audioPlugin = {};
-  audioPlugin["canHandle"] = function audioPlugin_canHandle(name) {
-   return !Module.noAudioDecoding && name.substr(-4) in {
-    ".ogg": 1,
-    ".wav": 1,
-    ".mp3": 1
-   };
-  };
-  audioPlugin["handle"] = function audioPlugin_handle(byteArray, name, onload, onerror) {
-   var done = false;
-   function finish(audio) {
-    if (done) return;
-    done = true;
-    Module["preloadedAudios"][name] = audio;
-    if (onload) onload(byteArray);
-   }
-   function fail() {
-    if (done) return;
-    done = true;
-    Module["preloadedAudios"][name] = new Audio();
-    if (onerror) onerror();
-   }
-   if (Browser.hasBlobConstructor) {
-    try {
-     var b = new Blob([ byteArray ], {
-      type: Browser.getMimetype(name)
-     });
-    } catch (e) {
-     return fail();
-    }
-    var url = Browser.URLObject.createObjectURL(b);
-    var audio = new Audio();
-    audio.addEventListener("canplaythrough", function() {
-     finish(audio);
-    }, false);
-    audio.onerror = function audio_onerror(event) {
-     if (done) return;
-     console.log("warning: browser could not fully decode audio " + name + ", trying slower base64 approach");
-     function encode64(data) {
-      var BASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-      var PAD = "=";
-      var ret = "";
-      var leftchar = 0;
-      var leftbits = 0;
-      for (var i = 0; i < data.length; i++) {
-       leftchar = leftchar << 8 | data[i];
-       leftbits += 8;
-       while (leftbits >= 6) {
-        var curr = leftchar >> leftbits - 6 & 63;
-        leftbits -= 6;
-        ret += BASE[curr];
-       }
-      }
-      if (leftbits == 2) {
-       ret += BASE[(leftchar & 3) << 4];
-       ret += PAD + PAD;
-      } else if (leftbits == 4) {
-       ret += BASE[(leftchar & 15) << 2];
-       ret += PAD;
-      }
-      return ret;
-     }
-     audio.src = "data:audio/x-" + name.substr(-3) + ";base64," + encode64(byteArray);
-     finish(audio);
-    };
-    audio.src = url;
-    Browser.safeSetTimeout(function() {
-     finish(audio);
-    }, 1e4);
-   } else {
-    return fail();
-   }
-  };
-  Module["preloadPlugins"].push(audioPlugin);
-  function pointerLockChange() {
-   Browser.pointerLock = document["pointerLockElement"] === Module["canvas"] || document["mozPointerLockElement"] === Module["canvas"] || document["webkitPointerLockElement"] === Module["canvas"] || document["msPointerLockElement"] === Module["canvas"];
-  }
-  var canvas = Module["canvas"];
-  if (canvas) {
-   canvas.requestPointerLock = canvas["requestPointerLock"] || canvas["mozRequestPointerLock"] || canvas["webkitRequestPointerLock"] || canvas["msRequestPointerLock"] || function() {};
-   canvas.exitPointerLock = document["exitPointerLock"] || document["mozExitPointerLock"] || document["webkitExitPointerLock"] || document["msExitPointerLock"] || function() {};
-   canvas.exitPointerLock = canvas.exitPointerLock.bind(document);
-   document.addEventListener("pointerlockchange", pointerLockChange, false);
-   document.addEventListener("mozpointerlockchange", pointerLockChange, false);
-   document.addEventListener("webkitpointerlockchange", pointerLockChange, false);
-   document.addEventListener("mspointerlockchange", pointerLockChange, false);
-   if (Module["elementPointerLock"]) {
-    canvas.addEventListener("click", function(ev) {
-     if (!Browser.pointerLock && Module["canvas"].requestPointerLock) {
-      Module["canvas"].requestPointerLock();
-      ev.preventDefault();
-     }
-    }, false);
-   }
-  }
- },
- createContext: function(canvas, useWebGL, setInModule, webGLContextAttributes) {
-  if (useWebGL && Module.ctx && canvas == Module.canvas) return Module.ctx;
-  var ctx;
-  var contextHandle;
-  if (useWebGL) {
-   var contextAttributes = {
-    antialias: false,
-    alpha: false,
-    majorVersion: 1
-   };
-   if (webGLContextAttributes) {
-    for (var attribute in webGLContextAttributes) {
-     contextAttributes[attribute] = webGLContextAttributes[attribute];
-    }
-   }
-   if (typeof GL !== "undefined") {
-    contextHandle = GL.createContext(canvas, contextAttributes);
-    if (contextHandle) {
-     ctx = GL.getContext(contextHandle).GLctx;
-    }
-   }
-  } else {
-   ctx = canvas.getContext("2d");
-  }
-  if (!ctx) return null;
-  if (setInModule) {
-   if (!useWebGL) assert(typeof GLctx === "undefined", "cannot set in module if GLctx is used, but we are a non-GL context that would replace it");
-   Module.ctx = ctx;
-   if (useWebGL) GL.makeContextCurrent(contextHandle);
-   Module.useWebGL = useWebGL;
-   Browser.moduleContextCreatedCallbacks.forEach(function(callback) {
-    callback();
-   });
-   Browser.init();
-  }
-  return ctx;
- },
- destroyContext: function(canvas, useWebGL, setInModule) {},
- fullscreenHandlersInstalled: false,
- lockPointer: undefined,
- resizeCanvas: undefined,
- requestFullscreen: function(lockPointer, resizeCanvas) {
-  Browser.lockPointer = lockPointer;
-  Browser.resizeCanvas = resizeCanvas;
-  if (typeof Browser.lockPointer === "undefined") Browser.lockPointer = true;
-  if (typeof Browser.resizeCanvas === "undefined") Browser.resizeCanvas = false;
-  var canvas = Module["canvas"];
-  function fullscreenChange() {
-   Browser.isFullscreen = false;
-   var canvasContainer = canvas.parentNode;
-   if ((document["fullscreenElement"] || document["mozFullScreenElement"] || document["msFullscreenElement"] || document["webkitFullscreenElement"] || document["webkitCurrentFullScreenElement"]) === canvasContainer) {
-    canvas.exitFullscreen = Browser.exitFullscreen;
-    if (Browser.lockPointer) canvas.requestPointerLock();
-    Browser.isFullscreen = true;
-    if (Browser.resizeCanvas) {
-     Browser.setFullscreenCanvasSize();
-    } else {
-     Browser.updateCanvasDimensions(canvas);
-    }
-   } else {
-    canvasContainer.parentNode.insertBefore(canvas, canvasContainer);
-    canvasContainer.parentNode.removeChild(canvasContainer);
-    if (Browser.resizeCanvas) {
-     Browser.setWindowedCanvasSize();
-    } else {
-     Browser.updateCanvasDimensions(canvas);
-    }
-   }
-   if (Module["onFullScreen"]) Module["onFullScreen"](Browser.isFullscreen);
-   if (Module["onFullscreen"]) Module["onFullscreen"](Browser.isFullscreen);
-  }
-  if (!Browser.fullscreenHandlersInstalled) {
-   Browser.fullscreenHandlersInstalled = true;
-   document.addEventListener("fullscreenchange", fullscreenChange, false);
-   document.addEventListener("mozfullscreenchange", fullscreenChange, false);
-   document.addEventListener("webkitfullscreenchange", fullscreenChange, false);
-   document.addEventListener("MSFullscreenChange", fullscreenChange, false);
-  }
-  var canvasContainer = document.createElement("div");
-  canvas.parentNode.insertBefore(canvasContainer, canvas);
-  canvasContainer.appendChild(canvas);
-  canvasContainer.requestFullscreen = canvasContainer["requestFullscreen"] || canvasContainer["mozRequestFullScreen"] || canvasContainer["msRequestFullscreen"] || (canvasContainer["webkitRequestFullscreen"] ? function() {
-   canvasContainer["webkitRequestFullscreen"](Element["ALLOW_KEYBOARD_INPUT"]);
-  } : null) || (canvasContainer["webkitRequestFullScreen"] ? function() {
-   canvasContainer["webkitRequestFullScreen"](Element["ALLOW_KEYBOARD_INPUT"]);
-  } : null);
-  canvasContainer.requestFullscreen();
- },
- exitFullscreen: function() {
-  if (!Browser.isFullscreen) {
-   return false;
-  }
-  var CFS = document["exitFullscreen"] || document["cancelFullScreen"] || document["mozCancelFullScreen"] || document["msExitFullscreen"] || document["webkitCancelFullScreen"] || function() {};
-  CFS.apply(document, []);
-  return true;
- },
- nextRAF: 0,
- fakeRequestAnimationFrame: function(func) {
-  var now = Date.now();
-  if (Browser.nextRAF === 0) {
-   Browser.nextRAF = now + 1e3 / 60;
-  } else {
-   while (now + 2 >= Browser.nextRAF) {
-    Browser.nextRAF += 1e3 / 60;
-   }
-  }
-  var delay = Math.max(Browser.nextRAF - now, 0);
-  setTimeout(func, delay);
- },
- requestAnimationFrame: function(func) {
-  if (typeof requestAnimationFrame === "function") {
-   requestAnimationFrame(func);
-   return;
-  }
-  var RAF = Browser.fakeRequestAnimationFrame;
-  RAF(func);
- },
- safeRequestAnimationFrame: function(func) {
-  return Browser.requestAnimationFrame(function() {
-   callUserCallback(func);
-  });
- },
- safeSetTimeout: function(func, timeout) {
-  return setTimeout(function() {
-   callUserCallback(func);
-  }, timeout);
- },
- getMimetype: function(name) {
-  return {
-   "jpg": "image/jpeg",
-   "jpeg": "image/jpeg",
-   "png": "image/png",
-   "bmp": "image/bmp",
-   "ogg": "audio/ogg",
-   "wav": "audio/wav",
-   "mp3": "audio/mpeg"
-  }[name.substr(name.lastIndexOf(".") + 1)];
- },
- getUserMedia: function(func) {
-  if (!window.getUserMedia) {
-   window.getUserMedia = navigator["getUserMedia"] || navigator["mozGetUserMedia"];
-  }
-  window.getUserMedia(func);
- },
- getMovementX: function(event) {
-  return event["movementX"] || event["mozMovementX"] || event["webkitMovementX"] || 0;
- },
- getMovementY: function(event) {
-  return event["movementY"] || event["mozMovementY"] || event["webkitMovementY"] || 0;
- },
- getMouseWheelDelta: function(event) {
-  var delta = 0;
-  switch (event.type) {
-  case "DOMMouseScroll":
-   delta = event.detail / 3;
-   break;
-
-  case "mousewheel":
-   delta = event.wheelDelta / 120;
-   break;
-
-  case "wheel":
-   delta = event.deltaY;
-   switch (event.deltaMode) {
-   case 0:
-    delta /= 100;
-    break;
-
-   case 1:
-    delta /= 3;
-    break;
-
-   case 2:
-    delta *= 80;
-    break;
-
-   default:
-    throw "unrecognized mouse wheel delta mode: " + event.deltaMode;
-   }
-   break;
-
-  default:
-   throw "unrecognized mouse wheel event: " + event.type;
-  }
-  return delta;
- },
- mouseX: 0,
- mouseY: 0,
- mouseMovementX: 0,
- mouseMovementY: 0,
- touches: {},
- lastTouches: {},
- calculateMouseEvent: function(event) {
-  if (Browser.pointerLock) {
-   if (event.type != "mousemove" && "mozMovementX" in event) {
-    Browser.mouseMovementX = Browser.mouseMovementY = 0;
-   } else {
-    Browser.mouseMovementX = Browser.getMovementX(event);
-    Browser.mouseMovementY = Browser.getMovementY(event);
-   }
-   if (typeof SDL != "undefined") {
-    Browser.mouseX = SDL.mouseX + Browser.mouseMovementX;
-    Browser.mouseY = SDL.mouseY + Browser.mouseMovementY;
-   } else {
-    Browser.mouseX += Browser.mouseMovementX;
-    Browser.mouseY += Browser.mouseMovementY;
-   }
-  } else {
-   var rect = Module["canvas"].getBoundingClientRect();
-   var cw = Module["canvas"].width;
-   var ch = Module["canvas"].height;
-   var scrollX = typeof window.scrollX !== "undefined" ? window.scrollX : window.pageXOffset;
-   var scrollY = typeof window.scrollY !== "undefined" ? window.scrollY : window.pageYOffset;
-   if (event.type === "touchstart" || event.type === "touchend" || event.type === "touchmove") {
-    var touch = event.touch;
-    if (touch === undefined) {
-     return;
-    }
-    var adjustedX = touch.pageX - (scrollX + rect.left);
-    var adjustedY = touch.pageY - (scrollY + rect.top);
-    adjustedX = adjustedX * (cw / rect.width);
-    adjustedY = adjustedY * (ch / rect.height);
-    var coords = {
-     x: adjustedX,
-     y: adjustedY
-    };
-    if (event.type === "touchstart") {
-     Browser.lastTouches[touch.identifier] = coords;
-     Browser.touches[touch.identifier] = coords;
-    } else if (event.type === "touchend" || event.type === "touchmove") {
-     var last = Browser.touches[touch.identifier];
-     if (!last) last = coords;
-     Browser.lastTouches[touch.identifier] = last;
-     Browser.touches[touch.identifier] = coords;
-    }
-    return;
-   }
-   var x = event.pageX - (scrollX + rect.left);
-   var y = event.pageY - (scrollY + rect.top);
-   x = x * (cw / rect.width);
-   y = y * (ch / rect.height);
-   Browser.mouseMovementX = x - Browser.mouseX;
-   Browser.mouseMovementY = y - Browser.mouseY;
-   Browser.mouseX = x;
-   Browser.mouseY = y;
-  }
- },
- asyncLoad: function(url, onload, onerror, noRunDep) {
-  var dep = !noRunDep ? getUniqueRunDependency("al " + url) : "";
-  readAsync(url, function(arrayBuffer) {
-   assert(arrayBuffer, 'Loading data file "' + url + '" failed (no arrayBuffer).');
-   onload(new Uint8Array(arrayBuffer));
-   if (dep) removeRunDependency(dep);
-  }, function(event) {
-   if (onerror) {
-    onerror();
-   } else {
-    throw 'Loading data file "' + url + '" failed.';
-   }
-  });
-  if (dep) addRunDependency(dep);
- },
- resizeListeners: [],
- updateResizeListeners: function() {
-  var canvas = Module["canvas"];
-  Browser.resizeListeners.forEach(function(listener) {
-   listener(canvas.width, canvas.height);
-  });
- },
- setCanvasSize: function(width, height, noUpdates) {
-  var canvas = Module["canvas"];
-  Browser.updateCanvasDimensions(canvas, width, height);
-  if (!noUpdates) Browser.updateResizeListeners();
- },
- windowedWidth: 0,
- windowedHeight: 0,
- setFullscreenCanvasSize: function() {
-  if (typeof SDL != "undefined") {
-   var flags = HEAPU32[SDL.screen >> 2];
-   flags = flags | 8388608;
-   HEAP32[SDL.screen >> 2] = flags;
-  }
-  Browser.updateCanvasDimensions(Module["canvas"]);
-  Browser.updateResizeListeners();
- },
- setWindowedCanvasSize: function() {
-  if (typeof SDL != "undefined") {
-   var flags = HEAPU32[SDL.screen >> 2];
-   flags = flags & ~8388608;
-   HEAP32[SDL.screen >> 2] = flags;
-  }
-  Browser.updateCanvasDimensions(Module["canvas"]);
-  Browser.updateResizeListeners();
- },
- updateCanvasDimensions: function(canvas, wNative, hNative) {
-  if (wNative && hNative) {
-   canvas.widthNative = wNative;
-   canvas.heightNative = hNative;
-  } else {
-   wNative = canvas.widthNative;
-   hNative = canvas.heightNative;
-  }
-  var w = wNative;
-  var h = hNative;
-  if (Module["forcedAspectRatio"] && Module["forcedAspectRatio"] > 0) {
-   if (w / h < Module["forcedAspectRatio"]) {
-    w = Math.round(h * Module["forcedAspectRatio"]);
-   } else {
-    h = Math.round(w / Module["forcedAspectRatio"]);
-   }
-  }
-  if ((document["fullscreenElement"] || document["mozFullScreenElement"] || document["msFullscreenElement"] || document["webkitFullscreenElement"] || document["webkitCurrentFullScreenElement"]) === canvas.parentNode && typeof screen != "undefined") {
-   var factor = Math.min(screen.width / w, screen.height / h);
-   w = Math.round(w * factor);
-   h = Math.round(h * factor);
-  }
-  if (Browser.resizeCanvas) {
-   if (canvas.width != w) canvas.width = w;
-   if (canvas.height != h) canvas.height = h;
-   if (typeof canvas.style != "undefined") {
-    canvas.style.removeProperty("width");
-    canvas.style.removeProperty("height");
-   }
-  } else {
-   if (canvas.width != wNative) canvas.width = wNative;
-   if (canvas.height != hNative) canvas.height = hNative;
-   if (typeof canvas.style != "undefined") {
-    if (w != wNative || h != hNative) {
-     canvas.style.setProperty("width", w + "px", "important");
-     canvas.style.setProperty("height", h + "px", "important");
-    } else {
-     canvas.style.removeProperty("width");
-     canvas.style.removeProperty("height");
-    }
-   }
-  }
- },
- wgetRequests: {},
- nextWgetRequestHandle: 0,
- getNextWgetRequestHandle: function() {
-  var handle = Browser.nextWgetRequestHandle;
-  Browser.nextWgetRequestHandle++;
-  return handle;
- }
-};
 //EEsim
 
 function _emscripten_sleep(ms) {
@@ -4737,7 +4018,7 @@ function getEnvStrings() {
    "_": getExecutableName()
   };
   for (var x in ENV) {
-   env[x] = ENV[x];
+   if (ENV[x] === undefined) delete env[x]; else env[x] = ENV[x];
   }
   var strings = [];
   for (var x in env) {
@@ -4783,6 +4064,10 @@ function _environ_sizes_get(penviron_count, penviron_buf_size) {
 function _execve(path, argv, envp) {
  setErrNo(45);
  return -1;
+}
+
+function _exit(status) {
+ exit(status);
 }
 
 function _fd_close(fd) {
@@ -4853,8 +4138,17 @@ function _fd_write(fd, iov, iovcnt, pnum) {
 }
 
 function _fork() {
- setErrNo(6);
+ setErrNo(52);
  return -1;
+}
+
+function _ftime(p) {
+ var millis = Date.now();
+ HEAP32[p >> 2] = millis / 1e3 | 0;
+ HEAP16[p + 4 >> 1] = millis % 1e3;
+ HEAP16[p + 6 >> 1] = 0;
+ HEAP16[p + 8 >> 1] = 0;
+ return 0;
 }
 
 function _getTempRet0() {
@@ -4882,22 +4176,9 @@ function _setTempRet0(val) {
  setTempRet0(val);
 }
 
-function _siglongjmp(a0, a1) {
- return _longjmp(a0, a1);
-}
-
-var __sigalrm_handler = 0;
-
-function _signal(sig, func) {
- if (sig == 14) {
-  __sigalrm_handler = func;
- } else {}
- return 0;
-}
-
 function _system(command) {
  if (!command) return 0;
- setErrNo(6);
+ setErrNo(52);
  return -1;
 }
 
@@ -4917,11 +4198,32 @@ function runAndAbortIfError(func) {
  }
 }
 
+function callUserCallback(func, synchronous) {
+ if (ABORT) {
+  return;
+ }
+ if (synchronous) {
+  func();
+  return;
+ }
+ try {
+  func();
+ } catch (e) {
+  if (e instanceof ExitStatus) {
+   return;
+  } else if (e !== "unwind") {
+   if (e && typeof e === "object" && e.stack) err("exception thrown: " + [ e, e.stack ]);
+   throw e;
+  }
+ }
+}
+
 var Asyncify = {
  State: {
   Normal: 0,
   Unwinding: 1,
-  Rewinding: 2
+  Rewinding: 2,
+  Disabled: 3
  },
  state: 0,
  StackSize: 4096,
@@ -4954,10 +4256,11 @@ var Asyncify = {
       try {
        return original.apply(null, arguments);
       } finally {
-       if (ABORT) return;
-       var y = Asyncify.exportCallStack.pop();
-       assert(y === x);
-       Asyncify.maybeStopUnwind();
+       if (!ABORT) {
+        var y = Asyncify.exportCallStack.pop();
+        assert(y === x);
+        Asyncify.maybeStopUnwind();
+       }
       }
      };
     } else {
@@ -5001,9 +4304,12 @@ var Asyncify = {
   var func = Module["asm"][name];
   return func;
  },
+ doRewind: function(ptr) {
+  var start = Asyncify.getDataRewindFunc(ptr);
+  return start();
+ },
  handleSleep: function(startAsync) {
   if (ABORT) return;
-  noExitRuntime = true;
   if (Asyncify.state === Asyncify.State.Normal) {
    var reachedCallback = false;
    var reachedAfterCallback = false;
@@ -5021,8 +4327,7 @@ var Asyncify = {
     if (typeof Browser !== "undefined" && Browser.mainLoop.func) {
      Browser.mainLoop.resume();
     }
-    var start = Asyncify.getDataRewindFunc(Asyncify.currData);
-    var asyncWasmReturnValue = start();
+    var asyncWasmReturnValue = Asyncify.doRewind(Asyncify.currData);
     if (!Asyncify.currData) {
      var asyncFinalizers = Asyncify.asyncFinalizers;
      Asyncify.asyncFinalizers = [];
@@ -5048,7 +4353,7 @@ var Asyncify = {
    _free(Asyncify.currData);
    Asyncify.currData = null;
    Asyncify.sleepCallbacks.forEach(function(func) {
-    func();
+    callUserCallback(func);
    });
   } else {
    abort("invalid state: " + Asyncify.state);
@@ -5114,34 +4419,6 @@ FS.FSNode = FSNode;
 
 FS.staticInit();
 
-Module["requestFullscreen"] = function Module_requestFullscreen(lockPointer, resizeCanvas) {
- Browser.requestFullscreen(lockPointer, resizeCanvas);
-};
-
-Module["requestAnimationFrame"] = function Module_requestAnimationFrame(func) {
- Browser.requestAnimationFrame(func);
-};
-
-Module["setCanvasSize"] = function Module_setCanvasSize(width, height, noUpdates) {
- Browser.setCanvasSize(width, height, noUpdates);
-};
-
-Module["pauseMainLoop"] = function Module_pauseMainLoop() {
- Browser.mainLoop.pause();
-};
-
-Module["resumeMainLoop"] = function Module_resumeMainLoop() {
- Browser.mainLoop.resume();
-};
-
-Module["getUserMedia"] = function Module_getUserMedia() {
- Browser.getUserMedia();
-};
-
-Module["createContext"] = function Module_createContext(canvas, useWebGL, setInModule, webGLContextAttributes) {
- return Browser.createContext(canvas, useWebGL, setInModule, webGLContextAttributes);
-};
-
 var ASSERTIONS = false;
 
 function intArrayFromString(stringy, dontAddNull, length) {
@@ -5159,6 +4436,7 @@ var asmLibraryArg = {
  "__cxa_allocate_exception": ___cxa_allocate_exception,
  "__cxa_throw": ___cxa_throw,
  "__localtime_r": ___localtime_r,
+ "__sigaction": ___sigaction,
  "__sys_access": ___sys_access,
  "__sys_chdir": ___sys_chdir,
  "__sys_dup2": ___sys_dup2,
@@ -5168,7 +4446,6 @@ var asmLibraryArg = {
  "__sys_getcwd": ___sys_getcwd,
  "__sys_getdents64": ___sys_getdents64,
  "__sys_getpid": ___sys_getpid,
- "__sys_getrusage": ___sys_getrusage,
  "__sys_getuid32": ___sys_getuid32,
  "__sys_ioctl": ___sys_ioctl,
  "__sys_open": ___sys_open,
@@ -5178,11 +4455,11 @@ var asmLibraryArg = {
  "__sys_stat64": ___sys_stat64,
  "__sys_unlink": ___sys_unlink,
  "__sys_wait4": ___sys_wait4,
+ "_emscripten_throw_longjmp": __emscripten_throw_longjmp,
  "abort": _abort,
  "atexit": _atexit,
  "clock": _clock,
  "emscripten_get_heap_max": _emscripten_get_heap_max,
- "emscripten_longjmp": _emscripten_longjmp,
  "emscripten_memcpy_big": _emscripten_memcpy_big,
  "emscripten_resize_heap": _emscripten_resize_heap,
  "emscripten_sleep": _emscripten_sleep,
@@ -5198,6 +4475,7 @@ var asmLibraryArg = {
  "fd_seek": _fd_seek,
  "fd_write": _fd_write,
  "fork": _fork,
+ "ftime": _ftime,
  "getTempRet0": _getTempRet0,
  "getpwent": _getpwent,
  "getpwnam": _getpwnam,
@@ -5214,8 +4492,6 @@ var asmLibraryArg = {
  "invoke_viii": invoke_viii,
  "kill": _kill,
  "setTempRet0": _setTempRet0,
- "siglongjmp": _siglongjmp,
- "signal": _signal,
  "system": _system,
  "time": _time
 };
@@ -5234,8 +4510,8 @@ var _malloc = Module["_malloc"] = function() {
  return (_malloc = Module["_malloc"] = Module["asm"]["malloc"]).apply(null, arguments);
 };
 
-var _memset = Module["_memset"] = function() {
- return (_memset = Module["_memset"] = Module["asm"]["memset"]).apply(null, arguments);
+var _saveSetjmp = Module["_saveSetjmp"] = function() {
+ return (_saveSetjmp = Module["_saveSetjmp"] = Module["asm"]["saveSetjmp"]).apply(null, arguments);
 };
 
 var ___errno_location = Module["___errno_location"] = function() {
@@ -5244,6 +4520,14 @@ var ___errno_location = Module["___errno_location"] = function() {
 
 var _free = Module["_free"] = function() {
  return (_free = Module["_free"] = Module["asm"]["free"]).apply(null, arguments);
+};
+
+var _emscripten_stack_get_base = Module["_emscripten_stack_get_base"] = function() {
+ return (_emscripten_stack_get_base = Module["_emscripten_stack_get_base"] = Module["asm"]["emscripten_stack_get_base"]).apply(null, arguments);
+};
+
+var _emscripten_stack_get_end = Module["_emscripten_stack_get_end"] = function() {
+ return (_emscripten_stack_get_end = Module["_emscripten_stack_get_end"] = Module["asm"]["emscripten_stack_get_end"]).apply(null, arguments);
 };
 
 var __get_tzname = Module["__get_tzname"] = function() {
@@ -5256,14 +4540,6 @@ var __get_daylight = Module["__get_daylight"] = function() {
 
 var __get_timezone = Module["__get_timezone"] = function() {
  return (__get_timezone = Module["__get_timezone"] = Module["asm"]["_get_timezone"]).apply(null, arguments);
-};
-
-var _emscripten_stack_get_base = Module["_emscripten_stack_get_base"] = function() {
- return (_emscripten_stack_get_base = Module["_emscripten_stack_get_base"] = Module["asm"]["emscripten_stack_get_base"]).apply(null, arguments);
-};
-
-var _emscripten_stack_get_end = Module["_emscripten_stack_get_end"] = function() {
- return (_emscripten_stack_get_end = Module["_emscripten_stack_get_end"] = Module["asm"]["emscripten_stack_get_end"]).apply(null, arguments);
 };
 
 var stackSave = Module["stackSave"] = function() {
@@ -5559,22 +4835,17 @@ function callMain(args) {
  HEAP32[(argv >> 2) + argc] = 0;
  try {
   var ret = entryFunction(argc, argv);
-  if (!keepRuntimeAlive()) {
-   exit(ret, true);
-  }
+  exit(ret, true);
  } catch (e) {
-  if (e instanceof ExitStatus) {
+  if (e instanceof ExitStatus || e == "unwind") {
    return;
-  } else if (e == "unwind") {
-   return;
-  } else {
-   var toLog = e;
-   if (e && typeof e === "object" && e.stack) {
-    toLog = [ e, e.stack ];
-   }
-   err("exception thrown: " + toLog);
-   quit_(1, e);
   }
+  var toLog = e;
+  if (e && typeof e === "object" && e.stack) {
+   toLog = [ e, e.stack ];
+  }
+  err("exception thrown: " + toLog);
+  quit_(1, e);
  } finally {
   calledMain = true;
  }
@@ -5643,9 +4914,6 @@ Module["run"] = run;
 
 function exit(status, implicit) {
  EXITSTATUS = status;
- if (implicit && keepRuntimeAlive() && status === 0) {
-  return;
- }
  if (keepRuntimeAlive()) {} else {
   exitRuntime();
   if (Module["onExit"]) Module["onExit"](status);

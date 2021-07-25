@@ -25,6 +25,7 @@ cd ngspice-ngspice
 #https://www.cyberciti.biz/faq/how-to-use-sed-to-find-and-replace-text-in-files-in-linux-unix-shell/
 #https://sourceforge.net/p/ngspice/patches/99/
 sed -i 's/-Wno-unused-but-set-variable/-Wno-unused-const-variable/g' ./configure.ac
+sed -i 's/AC_CHECK_FUNCS(\[time getrusage\])/AC_CHECK_FUNCS(\[time\])/g' ./configure.ac
 sed -i 's|#include "ngspice/ngspice.h"|#include <emscripten.h>\n\n#include "ngspice/ngspice.h"|g' ./src/frontend/control.c
 sed -i 's|freewl = wlist = getcommand(string);|emscripten_sleep(100);\n\n\t\tfreewl = wlist = getcommand(string);|g' ./src/frontend/control.c
 
