@@ -118,8 +118,6 @@ if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
 
 if (Module["quit"]) quit_ = Module["quit"];
 
-var STACK_ALIGN = 16;
-
 function warnOnce(text) {
  if (!warnOnce.shown) warnOnce.shown = {};
  if (!warnOnce.shown[text]) {
@@ -296,20 +294,16 @@ function ccall(ident, returnType, argTypes, args, opts) {
   }
  }
  var ret = func.apply(null, cArgs);
- var asyncMode = opts && opts.async;
- var runningAsync = typeof Asyncify === "object" && Asyncify.currData;
- var prevRunningAsync = typeof Asyncify === "object" && Asyncify.asyncFinalizers.length > 0;
- if (runningAsync && !prevRunningAsync) {
-  return new Promise(function(resolve) {
-   Asyncify.asyncFinalizers.push(function(ret) {
-    if (stack !== 0) stackRestore(stack);
-    resolve(convertReturnValue(ret));
-   });
-  });
+ function onDone(ret) {
+  if (stack !== 0) stackRestore(stack);
+  return convertReturnValue(ret);
  }
- ret = convertReturnValue(ret);
- if (stack !== 0) stackRestore(stack);
- if (opts && opts.async) return Promise.resolve(ret);
+ var asyncMode = opts && opts.async;
+ if (Asyncify.currData) {
+  return Asyncify.whenDone().then(onDone);
+ }
+ ret = onDone(ret);
+ if (asyncMode) return Promise.resolve(ret);
  return ret;
 }
 
@@ -564,8 +558,10 @@ Module["preloadedImages"] = {};
 Module["preloadedAudios"] = {};
 
 function abort(what) {
- if (Module["onAbort"]) {
-  Module["onAbort"](what);
+ {
+  if (Module["onAbort"]) {
+   Module["onAbort"](what);
+  }
  }
  what += "";
  err(what);
@@ -650,8 +646,9 @@ function createWasm() {
  }
  function instantiateArrayBuffer(receiver) {
   return getBinaryPromise().then(function(binary) {
-   var result = WebAssembly.instantiate(binary, info);
-   return result;
+   return WebAssembly.instantiate(binary, info);
+  }).then(function(instance) {
+   return instance;
   }).then(receiver, function(reason) {
    err("failed to asynchronously prepare wasm: " + reason);
    abort(reason);
@@ -727,6 +724,15 @@ function demangleAll(text) {
  });
 }
 
+function handleException(e) {
+ if (e instanceof ExitStatus || e == "unwind") {
+  return EXITSTATUS;
+ }
+ var toLog = e;
+ err("exception thrown: " + toLog);
+ quit_(1, e);
+}
+
 function jsStackTrace() {
  var error = new Error();
  if (!error.stack) {
@@ -742,9 +748,7 @@ function jsStackTrace() {
  return error.stack.toString();
 }
 
-function _tzset() {
- if (_tzset.called) return;
- _tzset.called = true;
+function _tzset_impl() {
  var currentYear = new Date().getFullYear();
  var winter = new Date(currentYear, 0, 1);
  var summer = new Date(currentYear, 6, 1);
@@ -770,6 +774,12 @@ function _tzset() {
  }
 }
 
+function _tzset() {
+ if (_tzset.called) return;
+ _tzset.called = true;
+ _tzset_impl();
+}
+
 function ___asctime(tmPtr, buf) {
  var date = {
   tm_sec: HEAP32[tmPtr >> 2],
@@ -789,6 +799,12 @@ function ___asctime(tmPtr, buf) {
 
 function ___assert_fail(condition, filename, line, func) {
  abort("Assertion failed: " + UTF8ToString(condition) + ", at: " + [ filename ? UTF8ToString(filename) : "unknown filename", line, func ? UTF8ToString(func) : "unknown function" ]);
+}
+
+function ___call_sighandler(fp, sig) {
+ (function(a1) {
+  dynCall_vi.apply(null, [ fp, a1 ]);
+ })(sig);
 }
 
 var _emscripten_get_now;
@@ -914,16 +930,6 @@ function _localtime_r(time, tmPtr) {
 
 function ___localtime_r(a0, a1) {
  return _localtime_r(a0, a1);
-}
-
-var __sigalrm_handler = 0;
-
-function ___sigaction(sig, act, oldact) {
- if (sig == 14) {
-  __sigalrm_handler = HEAP32[act >> 2];
-  return 0;
- }
- return 0;
 }
 
 var PATH = {
@@ -3566,130 +3572,6 @@ function ___sys_open(path, flags, varargs) {
  }
 }
 
-var ERRNO_CODES = {
- EPERM: 63,
- ENOENT: 44,
- ESRCH: 71,
- EINTR: 27,
- EIO: 29,
- ENXIO: 60,
- E2BIG: 1,
- ENOEXEC: 45,
- EBADF: 8,
- ECHILD: 12,
- EAGAIN: 6,
- EWOULDBLOCK: 6,
- ENOMEM: 48,
- EACCES: 2,
- EFAULT: 21,
- ENOTBLK: 105,
- EBUSY: 10,
- EEXIST: 20,
- EXDEV: 75,
- ENODEV: 43,
- ENOTDIR: 54,
- EISDIR: 31,
- EINVAL: 28,
- ENFILE: 41,
- EMFILE: 33,
- ENOTTY: 59,
- ETXTBSY: 74,
- EFBIG: 22,
- ENOSPC: 51,
- ESPIPE: 70,
- EROFS: 69,
- EMLINK: 34,
- EPIPE: 64,
- EDOM: 18,
- ERANGE: 68,
- ENOMSG: 49,
- EIDRM: 24,
- ECHRNG: 106,
- EL2NSYNC: 156,
- EL3HLT: 107,
- EL3RST: 108,
- ELNRNG: 109,
- EUNATCH: 110,
- ENOCSI: 111,
- EL2HLT: 112,
- EDEADLK: 16,
- ENOLCK: 46,
- EBADE: 113,
- EBADR: 114,
- EXFULL: 115,
- ENOANO: 104,
- EBADRQC: 103,
- EBADSLT: 102,
- EDEADLOCK: 16,
- EBFONT: 101,
- ENOSTR: 100,
- ENODATA: 116,
- ETIME: 117,
- ENOSR: 118,
- ENONET: 119,
- ENOPKG: 120,
- EREMOTE: 121,
- ENOLINK: 47,
- EADV: 122,
- ESRMNT: 123,
- ECOMM: 124,
- EPROTO: 65,
- EMULTIHOP: 36,
- EDOTDOT: 125,
- EBADMSG: 9,
- ENOTUNIQ: 126,
- EBADFD: 127,
- EREMCHG: 128,
- ELIBACC: 129,
- ELIBBAD: 130,
- ELIBSCN: 131,
- ELIBMAX: 132,
- ELIBEXEC: 133,
- ENOSYS: 52,
- ENOTEMPTY: 55,
- ENAMETOOLONG: 37,
- ELOOP: 32,
- EOPNOTSUPP: 138,
- EPFNOSUPPORT: 139,
- ECONNRESET: 15,
- ENOBUFS: 42,
- EAFNOSUPPORT: 5,
- EPROTOTYPE: 67,
- ENOTSOCK: 57,
- ENOPROTOOPT: 50,
- ESHUTDOWN: 140,
- ECONNREFUSED: 14,
- EADDRINUSE: 3,
- ECONNABORTED: 13,
- ENETUNREACH: 40,
- ENETDOWN: 38,
- ETIMEDOUT: 73,
- EHOSTDOWN: 142,
- EHOSTUNREACH: 23,
- EINPROGRESS: 26,
- EALREADY: 7,
- EDESTADDRREQ: 17,
- EMSGSIZE: 35,
- EPROTONOSUPPORT: 66,
- ESOCKTNOSUPPORT: 137,
- EADDRNOTAVAIL: 4,
- ENETRESET: 39,
- EISCONN: 30,
- ENOTCONN: 53,
- ETOOMANYREFS: 141,
- EUSERS: 136,
- EDQUOT: 19,
- ESTALE: 72,
- ENOTSUP: 138,
- ENOMEDIUM: 148,
- EILSEQ: 25,
- EOVERFLOW: 61,
- ECANCELED: 11,
- ENOTRECOVERABLE: 56,
- EOWNERDEAD: 62,
- ESTRPIPE: 135
-};
-
 var PIPEFS = {
  BUCKET_BUFFER_SIZE: 8192,
  mount: function(mount) {
@@ -3697,7 +3579,8 @@ var PIPEFS = {
  },
  createPipe: function() {
   var pipe = {
-   buckets: []
+   buckets: [],
+   refcnt: 2
   };
   pipe.buckets.push({
    buffer: new Uint8Array(PIPEFS.BUCKET_BUFFER_SIZE),
@@ -3749,10 +3632,10 @@ var PIPEFS = {
    return 0;
   },
   ioctl: function(stream, request, varargs) {
-   return ERRNO_CODES.EINVAL;
+   return 28;
   },
   fsync: function(stream) {
-   return ERRNO_CODES.EINVAL;
+   return 28;
   },
   read: function(stream, buffer, offset, length, position) {
    var pipe = stream.node.pipe;
@@ -3767,7 +3650,7 @@ var PIPEFS = {
     return 0;
    }
    if (currentLength == 0) {
-    throw new FS.ErrnoError(ERRNO_CODES.EAGAIN);
+    throw new FS.ErrnoError(6);
    }
    var toRead = Math.min(currentLength, length);
    var totalRead = toRead;
@@ -3856,7 +3739,10 @@ var PIPEFS = {
   },
   close: function(stream) {
    var pipe = stream.node.pipe;
-   pipe.buckets = null;
+   pipe.refcnt--;
+   if (pipe.refcnt === 0) {
+    pipe.buckets = null;
+   }
   }
  },
  nextname: function() {
@@ -3925,7 +3811,6 @@ function ___sys_unlink(path) {
 }
 
 var ___sys_wait4 = function() {
- err("warning: unsupported syscall: __sys_wait4");
  return -52;
 };
 
@@ -3979,6 +3864,21 @@ function _emscripten_resize_heap(requestedSize) {
  return false;
 }
 
+function callUserCallback(func, synchronous) {
+ if (ABORT) {
+  return;
+ }
+ if (synchronous) {
+  func();
+  return;
+ }
+ try {
+  func();
+ } catch (e) {
+  handleException(e);
+ }
+}
+
 function safeSetTimeout(func, timeout) {
  return setTimeout(function() {
   callUserCallback(func);
@@ -4030,35 +3930,25 @@ function getEnvStrings() {
 }
 
 function _environ_get(__environ, environ_buf) {
- try {
-  var bufSize = 0;
-  getEnvStrings().forEach(function(string, i) {
-   var ptr = environ_buf + bufSize;
-   HEAP32[__environ + i * 4 >> 2] = ptr;
-   writeAsciiToMemory(string, ptr);
-   bufSize += string.length + 1;
-  });
-  return 0;
- } catch (e) {
-  if (typeof FS === "undefined" || !(e instanceof FS.ErrnoError)) abort(e);
-  return e.errno;
- }
+ var bufSize = 0;
+ getEnvStrings().forEach(function(string, i) {
+  var ptr = environ_buf + bufSize;
+  HEAP32[__environ + i * 4 >> 2] = ptr;
+  writeAsciiToMemory(string, ptr);
+  bufSize += string.length + 1;
+ });
+ return 0;
 }
 
 function _environ_sizes_get(penviron_count, penviron_buf_size) {
- try {
-  var strings = getEnvStrings();
-  HEAP32[penviron_count >> 2] = strings.length;
-  var bufSize = 0;
-  strings.forEach(function(string) {
-   bufSize += string.length + 1;
-  });
-  HEAP32[penviron_buf_size >> 2] = bufSize;
-  return 0;
- } catch (e) {
-  if (typeof FS === "undefined" || !(e instanceof FS.ErrnoError)) abort(e);
-  return e.errno;
- }
+ var strings = getEnvStrings();
+ HEAP32[penviron_count >> 2] = strings.length;
+ var bufSize = 0;
+ strings.forEach(function(string) {
+  bufSize += string.length + 1;
+ });
+ HEAP32[penviron_buf_size >> 2] = bufSize;
+ return 0;
 }
 
 function _execve(path, argv, envp) {
@@ -4167,11 +4057,6 @@ function _getpwuid() {
  throw "getpwuid: TODO";
 }
 
-function _kill(pid, sig) {
- setErrNo(ERRNO_CODES.EPERM);
- return -1;
-}
-
 function _setTempRet0(val) {
  setTempRet0(val);
 }
@@ -4198,26 +4083,6 @@ function runAndAbortIfError(func) {
  }
 }
 
-function callUserCallback(func, synchronous) {
- if (ABORT) {
-  return;
- }
- if (synchronous) {
-  func();
-  return;
- }
- try {
-  func();
- } catch (e) {
-  if (e instanceof ExitStatus) {
-   return;
-  } else if (e !== "unwind") {
-   if (e && typeof e === "object" && e.stack) err("exception thrown: " + [ e, e.stack ]);
-   throw e;
-  }
- }
-}
-
 var Asyncify = {
  State: {
   Normal: 0,
@@ -4233,8 +4098,7 @@ var Asyncify = {
  callStackNameToId: {},
  callStackIdToName: {},
  callStackId: 0,
- afterUnwind: null,
- asyncFinalizers: [],
+ asyncPromiseHandlers: null,
  sleepCallbacks: [],
  getCallStackId: function(funcName) {
   var id = Asyncify.callStackNameToId[funcName];
@@ -4277,11 +4141,15 @@ var Asyncify = {
    if (typeof Fibers !== "undefined") {
     Fibers.trampoline();
    }
-   if (Asyncify.afterUnwind) {
-    Asyncify.afterUnwind();
-    Asyncify.afterUnwind = null;
-   }
   }
+ },
+ whenDone: function() {
+  return new Promise(function(resolve, reject) {
+   Asyncify.asyncPromiseHandlers = {
+    resolve: resolve,
+    reject: reject
+   };
+  });
  },
  allocateData: function() {
   var ptr = _malloc(12 + Asyncify.StackSize);
@@ -4327,13 +4195,24 @@ var Asyncify = {
     if (typeof Browser !== "undefined" && Browser.mainLoop.func) {
      Browser.mainLoop.resume();
     }
-    var asyncWasmReturnValue = Asyncify.doRewind(Asyncify.currData);
+    var asyncWasmReturnValue, isError = false;
+    try {
+     asyncWasmReturnValue = Asyncify.doRewind(Asyncify.currData);
+    } catch (err) {
+     asyncWasmReturnValue = err;
+     isError = true;
+    }
+    var handled = false;
     if (!Asyncify.currData) {
-     var asyncFinalizers = Asyncify.asyncFinalizers;
-     Asyncify.asyncFinalizers = [];
-     asyncFinalizers.forEach(function(func) {
-      func(asyncWasmReturnValue);
-     });
+     var asyncPromiseHandlers = Asyncify.asyncPromiseHandlers;
+     if (asyncPromiseHandlers) {
+      Asyncify.asyncPromiseHandlers = null;
+      (isError ? asyncPromiseHandlers.reject : asyncPromiseHandlers.resolve)(asyncWasmReturnValue);
+      handled = true;
+     }
+    }
+    if (isError && !handled) {
+     throw asyncWasmReturnValue;
     }
    });
    reachedAfterCallback = true;
@@ -4432,11 +4311,11 @@ function intArrayFromString(stringy, dontAddNull, length) {
 var asmLibraryArg = {
  "__asctime": ___asctime,
  "__assert_fail": ___assert_fail,
+ "__call_sighandler": ___call_sighandler,
  "__clock_gettime": ___clock_gettime,
  "__cxa_allocate_exception": ___cxa_allocate_exception,
  "__cxa_throw": ___cxa_throw,
  "__localtime_r": ___localtime_r,
- "__sigaction": ___sigaction,
  "__sys_access": ___sys_access,
  "__sys_chdir": ___sys_chdir,
  "__sys_dup2": ___sys_dup2,
@@ -4490,7 +4369,6 @@ var asmLibraryArg = {
  "invoke_v": invoke_v,
  "invoke_vi": invoke_vi,
  "invoke_viii": invoke_viii,
- "kill": _kill,
  "setTempRet0": _setTempRet0,
  "system": _system,
  "time": _time
@@ -4510,16 +4388,16 @@ var _malloc = Module["_malloc"] = function() {
  return (_malloc = Module["_malloc"] = Module["asm"]["malloc"]).apply(null, arguments);
 };
 
+var _free = Module["_free"] = function() {
+ return (_free = Module["_free"] = Module["asm"]["free"]).apply(null, arguments);
+};
+
 var _saveSetjmp = Module["_saveSetjmp"] = function() {
  return (_saveSetjmp = Module["_saveSetjmp"] = Module["asm"]["saveSetjmp"]).apply(null, arguments);
 };
 
 var ___errno_location = Module["___errno_location"] = function() {
  return (___errno_location = Module["___errno_location"] = Module["asm"]["__errno_location"]).apply(null, arguments);
-};
-
-var _free = Module["_free"] = function() {
- return (_free = Module["_free"] = Module["asm"]["free"]).apply(null, arguments);
 };
 
 var _emscripten_stack_get_base = Module["_emscripten_stack_get_base"] = function() {
@@ -4836,16 +4714,9 @@ function callMain(args) {
  try {
   var ret = entryFunction(argc, argv);
   exit(ret, true);
+  return ret;
  } catch (e) {
-  if (e instanceof ExitStatus || e == "unwind") {
-   return;
-  }
-  var toLog = e;
-  if (e && typeof e === "object" && e.stack) {
-   toLog = [ e, e.stack ];
-  }
-  err("exception thrown: " + toLog);
-  quit_(1, e);
+  return handleException(e);
  } finally {
   calledMain = true;
  }
@@ -4916,10 +4787,17 @@ function exit(status, implicit) {
  EXITSTATUS = status;
  if (keepRuntimeAlive()) {} else {
   exitRuntime();
-  if (Module["onExit"]) Module["onExit"](status);
+ }
+ procExit(status);
+}
+
+function procExit(code) {
+ EXITSTATUS = code;
+ if (!keepRuntimeAlive()) {
+  if (Module["onExit"]) Module["onExit"](code);
   ABORT = true;
  }
- quit_(status, new ExitStatus(status));
+ quit_(code, new ExitStatus(code));
 }
 
 if (Module["preInit"]) {
