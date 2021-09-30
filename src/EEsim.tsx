@@ -25,6 +25,8 @@ import {
   Textarea,
   extendTheme,
   useDisclosure,
+  useBreakpointValue,
+  ThemeConfig,
 } from "@chakra-ui/react";
 import {
   Popover,
@@ -223,13 +225,6 @@ export default function EEsim(): JSX.Element {
     [displayData, isSimLoaded]
   );
 
-  const config = {
-    useSystemColorMode: false,
-    initialColorMode: "dark" as "dark" | "light" | undefined,
-  };
-
-  const customTheme = extendTheme({ config });
-
   const handleTabChange = (index: number) => {
     setTabIndex(index);
   };
@@ -284,143 +279,150 @@ export default function EEsim(): JSX.Element {
     }
   }, [displayData]);
 
+  const LineSelectBox = (): JSX.Element => {
+    return (
+      <Box w={{ base: "100%", md: "30%" }} marginLeft="5%">
+        <Stack direction="row" spacing={2} align="stretch" width="100%" marginBottom="0.5em">
+          <Button colorScheme="blue" onClick={handleSelectAllButton}>
+            Select all
+          </Button>
+          <Button colorScheme="blue" onClick={handleDeSelectButton}>
+            De-select all
+          </Button>
+        </Stack>
+        <DisplayBox displayData={displayData ? displayData : []} onChange={change} />
+      </Box>
+    );
+  };
+
   const { onOpen, onClose, isOpen } = useDisclosure();
 
   const handleThreadChange = (valueString: string, valueNumber: number) => {
     setThreadCountNew(valueNumber);
   };
 
+  const displayBreakpoint = useBreakpointValue({ base: "base", md: "md" });
+
   return (
-    <ChakraProvider theme={customTheme}>
-      <div>
-        <Box p={2}>
-          <div style={{ display: "flex", width: "100%" }}>
-            <EditorCustom
-              height="30vh"
-              width="100%"
-              language="spice"
-              value={netList}
-              valueChanged={handleEditor}
-              theme="vs-dark"
+    <div>
+      <Box border="solid 0px" p={2}>
+        <Flex width="100%">
+          <EditorCustom
+            height="30vh"
+            width="100%"
+            language="spice"
+            value={netList}
+            valueChanged={handleEditor}
+            theme="vs-dark"
+          />
+          {displayBreakpoint == "base" ? <></> : LineSelectBox()}
+        </Flex>
+      </Box>
+      <Box p={1} width={{ base: "100%", md: "72.5%" }}>
+        <Flex>
+          <Button
+            colorScheme="blue"
+            variant="solid"
+            size="lg"
+            m={1}
+            onClick={btRun}
+            isLoading={isSimRunning}
+            loadingText={isSimLoaded ? "Running 🏃" : "Loading 🚚"}>
+            Run 🚀
+          </Button>
+
+          <Spacer />
+          <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} closeOnBlur={false}>
+            <PopoverTrigger>
+              <Button colorScheme="blue" variant="solid" size="lg" m={1} isDisabled={isSimRunning}>
+                {displayBreakpoint === "base" ? "" : "Settings"} ⚙️
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent p={5}>
+              <FocusLock returnFocus persistentFocus={false}>
+                <PopoverArrow />
+                <PopoverCloseButton />
+                <Box>
+                  Threads
+                  <NumberInput
+                    maxW={20}
+                    value={threadCountNew}
+                    min={1}
+                    onChange={handleThreadChange}>
+                    <NumberInputField />
+                    <NumberInputStepper>
+                      <NumberIncrementStepper />
+                      <NumberDecrementStepper />
+                    </NumberInputStepper>
+                  </NumberInput>
+                </Box>
+              </FocusLock>
+            </PopoverContent>
+          </Popover>
+          <Button
+            colorScheme="blue"
+            variant="solid"
+            size="lg"
+            m={1}
+            onClick={btColor}
+            isDisabled={isSimRunning}>
+            {displayBreakpoint === "base" ? "" : "Colorize"} 🌈
+          </Button>
+          <Button
+            colorScheme="blue"
+            variant="solid"
+            size="lg"
+            m={1}
+            onClick={btReset}
+            isDisabled={isSimRunning}>
+            {displayBreakpoint === "base" ? "" : "Reset"} 🧼
+          </Button>
+        </Flex>
+      </Box>
+
+      <Box p={1}>
+        <Progress colorScheme={"green"} value={progress} />
+      </Box>
+
+      <Box p={2}>
+        <Divider />
+      </Box>
+
+      <Tabs variant="soft-rounded" colorScheme="teal">
+        <TabList>
+          <Tab>Plot 📈</Tab>
+          <Tab>Info 🧙‍♂️</Tab>
+          <Tab>CSV 🧾</Tab>
+        </TabList>
+
+        <TabPanels>
+          <TabPanel>
+            <PlotArray resultArray={resultArray} displayData={displayData} />
+            {displayBreakpoint != "base" ? (
+              <></>
+            ) : (
+              <>
+                <Spacer p={2} /> {LineSelectBox()}
+              </>
+            )}
+          </TabPanel>
+
+          <TabPanel>
+            <Textarea
+              readOnly={true}
+              aria-label="info"
+              bg="gray.900"
+              fontSize="0.9em"
+              rows={15}
+              value={info}
             />
+          </TabPanel>
 
-            <div style={{ width: "30%", marginLeft: "5%" }}>
-              <Stack direction="row" spacing={2} align="stretch" width="100%" marginBottom="0.5em">
-                <Button colorScheme="blue" onClick={handleSelectAllButton}>
-                  Select all
-                </Button>
-                <Button colorScheme="blue" onClick={handleDeSelectButton}>
-                  De-select all
-                </Button>
-              </Stack>
-              <DisplayBox displayData={displayData ? displayData : []} onChange={change} />
-            </div>
-          </div>
-        </Box>
-        <Box p={1} width="72.5%">
-          <Flex>
-            <Button
-              colorScheme="blue"
-              variant="solid"
-              size="lg"
-              m={1}
-              onClick={btRun}
-              isLoading={isSimRunning}
-              loadingText={isSimLoaded ? "Running 🏃" : "Loading 🚚"}>
-              Run 🚀
-            </Button>
-
-            <Spacer />
-            <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} closeOnBlur={false}>
-              <PopoverTrigger>
-                <Button
-                  colorScheme="blue"
-                  variant="solid"
-                  size="lg"
-                  m={1}
-                  isDisabled={isSimRunning}>
-                  Settings ⚙️
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent p={5}>
-                <FocusLock returnFocus persistentFocus={false}>
-                  <PopoverArrow />
-                  <PopoverCloseButton />
-                  <Box>
-                    Threads
-                    <NumberInput
-                      maxW={20}
-                      value={threadCountNew}
-                      min={1}
-                      onChange={handleThreadChange}>
-                      <NumberInputField />
-                      <NumberInputStepper>
-                        <NumberIncrementStepper />
-                        <NumberDecrementStepper />
-                      </NumberInputStepper>
-                    </NumberInput>
-                  </Box>
-                </FocusLock>
-              </PopoverContent>
-            </Popover>
-            <Button
-              colorScheme="blue"
-              variant="solid"
-              size="lg"
-              m={1}
-              onClick={btColor}
-              isDisabled={isSimRunning}>
-              Colorize 🌈
-            </Button>
-            <Button
-              colorScheme="blue"
-              variant="solid"
-              size="lg"
-              m={1}
-              onClick={btReset}
-              isDisabled={isSimRunning}>
-              Reset 🧼
-            </Button>
-          </Flex>
-        </Box>
-
-        <Box p={1}>
-          <Progress colorScheme={"green"} value={progress} />
-        </Box>
-
-        <Box p={2}>
-          <Divider />
-        </Box>
-
-        <Tabs variant="soft-rounded" colorScheme="teal">
-          <TabList>
-            <Tab>Plot 📈</Tab>
-            <Tab>Info 🧙‍♂️</Tab>
-            <Tab>CSV 🧾</Tab>
-          </TabList>
-
-          <TabPanels>
-            <TabPanel>
-              <PlotArray resultArray={resultArray} displayData={displayData} />
-            </TabPanel>
-
-            <TabPanel>
-              <Textarea
-                readOnly={true}
-                aria-label="info"
-                bg="gray.900"
-                fontSize="0.9em"
-                rows={15}
-                value={info}
-              />
-            </TabPanel>
-
-            <TabPanel>
-              <DownCSV resultArray={resultArray} />
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
-      </div>
-    </ChakraProvider>
+          <TabPanel>
+            <DownCSV resultArray={resultArray} />
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+    </div>
   );
 }
