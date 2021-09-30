@@ -1,11 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom";
 //import App from './App';
-import EEsim from "./EEsim";
+import Layout from "./layout";
 //import "./index.css";
 
 ReactDOM.render(
-  <EEsim />,
+  <Layout />,
 
   document.getElementById("root")
 );
