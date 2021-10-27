@@ -53,7 +53,7 @@ const EditorCustom = ({
       monacoEditor.languages.register({ id: "spice" });
       monacoEditor.languages.setMonarchTokensProvider("spice", {
         defaultToken: "invalid",
-        keywords: ["vdc", "idc", "pulse", "ac", "dc"],
+        keywords: ["vdc", "idc", "pulse", "ac", "dc", "sin"],
 
         typeKeywords: [],
 
@@ -132,7 +132,7 @@ const EditorCustom = ({
         },
       } as MonarchLanguageConfiguration);
 
-      const createDependencyProposals = (range: {
+      const createDependencyProposalsDotCommands = (range: {
         startLineNumber: number;
         endLineNumber: number;
         startColumn: number;
@@ -165,7 +165,7 @@ const EditorCustom = ({
             insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range: range,
           },
-          {
+          /*{
             label: ".dc (sweep)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
@@ -173,7 +173,7 @@ const EditorCustom = ({
               "dc ${1:source_1st} ${2:min_voltage} ${3:max_voltage} ${4:step} ${5:source_2nd} ${6:min_voltage} ${7:max_voltage} ${8:step} ",
             insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range: range,
-          },
+          },*/
           {
             label: ".ac",
             kind: monacoEditor.languages.CompletionItemKind.Function,
@@ -186,18 +186,121 @@ const EditorCustom = ({
             label: ".save",
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
-            insertText: "save ${1:v(node) or i(node)}",
+            insertText: "save ${1:v(node) | i(node)}",
             insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range: range,
           },
-          /*{
-            label: "m (mosfet)",
+          {
+            label: ".parameter",
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
-            insertText: "m${1:number} ${2:d} ${3:g} ${4:s} ${5:b} ${6:model} W=${7:w} L=${8:l} ",
+            insertText: "parameter ${1:x} = ${2:y}",
             insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range: range,
-          },*/
+          },
+        ];
+      };
+
+      const createDependencyProposalsComponents = (range: {
+        startLineNumber: number;
+        endLineNumber: number;
+        startColumn: number;
+        endColumn: number;
+      }) => {
+        // returning a static list of proposals, not even looking at the prefix (filtering is done by the Monaco editor),
+        // here you could do a server side lookup
+        return [
+          {
+            label: "R (resistor)",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText: "R${1:number} ${2:node1} ${3:node2} ${4:value}",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
+          {
+            label: "C (capacitor)",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText: "C${1:number} ${2:node1} ${3:node2} ${4:value}",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
+          {
+            label: "L (inductance)",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText: "L${1:number} ${2:node1} ${3:node2} ${4:value}",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
+          {
+            label: "M (mosfet)",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText: "M${1:number} ${2:d} ${3:g} ${4:s} ${5:b} ${6:model} W=${7:w} L=${8:l} ",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
+          {
+            label: "V (voltage source)",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText: "V${1:number} ${2:node1} ${3:node2} ${4:dc_voltage}",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
+          {
+            label: "V (voltage source - pulsed)",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText:
+              "V${1:number} ${2:node1} ${3:node2} ${4:dc_voltage} pulse (${5:v1} ${6:v2} ${7:time_delay} ${8:rise_time} ${9:fall_time} ${10:width} ${11:period} ${12:phase})",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
+          {
+            label: "V (voltage source - sinusoidal)",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText:
+              "V${1:number} ${2:node1} ${3:node2} ${4:dc_voltage} SIN (${5:offset_voltage} ${6:amplitude} ${7:frequency} ${8:delay} ${9:damping_factor} ${10:phase})",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
+          {
+            label: "I (current source)",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText: "V${1:number} ${2:node1} ${3:node2} ${4:dc_current}",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
+          {
+            label: "I (current source - pulsed)",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText:
+              "V${1:number} ${2:node1} ${3:node2} ${4:dc_current} pulse (${5:i1} ${6:i2} ${7:time_delay} ${8:rise_time} ${9:fall_time} ${10:width} ${11:period} ${12:phase})",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
+          {
+            label: "G (VCCS)",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText: "V${1:number} ${2:n+} ${3:n-} ${4:nc+} ${5:nc-} ${6:value}",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
+          {
+            label: "E (VCVS)",
+            kind: monacoEditor.languages.CompletionItemKind.Function,
+            documentation: "Fast, unopinionated, minimalist web framework",
+            insertText: "V${1:number} ${2:n+} ${3:n-} ${4:nc+} ${5:nc-} ${6:value}",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range,
+          },
         ];
       };
 
@@ -218,14 +321,21 @@ const EditorCustom = ({
             startColumn: word.startColumn,
             endColumn: word.endColumn,
           };
-          console.log("monaco->", position, word);
+          //console.log("monaco->", position, word);
+
+          let c1 = word.startColumn == 1;
+          if (c1) {
+            //console.log("monaco->😉", position, word);
+            return { suggestions: createDependencyProposalsComponents(range) };
+          }
+
           let match = word.startColumn == 2;
           if (!match) {
             return { suggestions: [] };
           }
 
           return {
-            suggestions: createDependencyProposals(range),
+            suggestions: createDependencyProposalsDotCommands(range),
           };
         },
       });
