@@ -10,7 +10,6 @@ import DownCSV from "./downCSV";
 import {
   Button,
   Box,
-  ChakraProvider,
   createStandaloneToast,
   Divider,
   Flex,
@@ -23,18 +22,14 @@ import {
   TabPanels,
   Tabs,
   Textarea,
-  extendTheme,
+  Image,
   useDisclosure,
   useBreakpointValue,
-  ThemeConfig,
 } from "@chakra-ui/react";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-  PopoverHeader,
-  PopoverBody,
-  PopoverFooter,
   PopoverArrow,
   PopoverCloseButton,
 } from "@chakra-ui/react";
@@ -328,14 +323,15 @@ export default function EEsim(): JSX.Element {
             onClick={btRun}
             isLoading={isSimRunning}
             loadingText={isSimLoaded ? "Running 🏃" : "Loading 🚚"}>
-            Run 🚀
+            Run <Image src="https://unpkg.com/openmoji@13.1.0/color/svg/1F680.svg" height="80%" />
           </Button>
 
           <Spacer />
           <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} closeOnBlur={false}>
             <PopoverTrigger>
               <Button colorScheme="blue" variant="solid" size="lg" m={1} isDisabled={isSimRunning}>
-                {displayBreakpoint === "base" ? "" : "Settings"} ⚙️
+                {displayBreakpoint === "base" ? "" : "Settings"}{" "}
+                <Image src="https://unpkg.com/openmoji@13.1.0/color/svg/2699.svg" height="80%" />
               </Button>
             </PopoverTrigger>
             <PopoverContent p={5}>
@@ -366,7 +362,8 @@ export default function EEsim(): JSX.Element {
             m={1}
             onClick={btColor}
             isDisabled={isSimRunning}>
-            {displayBreakpoint === "base" ? "" : "Colorize"} 🌈
+            {displayBreakpoint === "base" ? "" : "Colorize"}{" "}
+            <Image src="https://unpkg.com/openmoji@13.1.0/color/svg/1F308.svg" height="80%" />
           </Button>
           <Button
             colorScheme="blue"
@@ -375,7 +372,8 @@ export default function EEsim(): JSX.Element {
             m={1}
             onClick={btReset}
             isDisabled={isSimRunning}>
-            {displayBreakpoint === "base" ? "" : "Reset"} 🧼
+            {displayBreakpoint === "base" ? "" : "Reset"}{" "}
+            <Image src="https://unpkg.com/openmoji@13.1.0/color/svg/1F5D1.svg" height="80%" />
           </Button>
         </Flex>
       </Box>
@@ -390,9 +388,20 @@ export default function EEsim(): JSX.Element {
 
       <Tabs variant="soft-rounded" colorScheme="teal">
         <TabList>
-          <Tab>Plot 📈</Tab>
-          <Tab>Info 🧙‍♂️</Tab>
-          <Tab>CSV 🧾</Tab>
+          <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
+            Plot
+            <Image src="https://unpkg.com/openmoji@13.1.0/color/svg/1F4C8.svg" maxHeight="80%" />
+          </Tab>
+          <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
+            Info
+            <Image
+              src="https://unpkg.com/openmoji@13.1.0/color/svg/1F469-200D-1F4BB.svg"
+              height="80%"
+            />
+          </Tab>
+          <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
+            CSV <Image src="https://unpkg.com/openmoji@13.1.0/color/svg/1F4D1.svg" height="80%" />
+          </Tab>
         </TabList>
 
         <TabPanels>
