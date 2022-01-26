@@ -15,11 +15,8 @@ const text2rep = `
 result = getInput();
 `;
 
-const text3 = `
-function _emscripten_sleep(ms) {
- Asyncify.handleSleep(function(wakeUp) {
-  safeSetTimeout(wakeUp, ms);
- });
+const text3 = `function _emscripten_sleep(ms) {
+ Asyncify.handleSleep(wakeUp => safeSetTimeout(wakeUp, ms));
 }`;
 
 const text3rep = `
