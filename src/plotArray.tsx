@@ -656,7 +656,7 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
         templateRows={`1fr ${isAxis ? 1.5 : 0}em`}
         templateColumns={`${isAxis ? 5 : 0}em 1fr`}
         gap={0}>
-        <GridItem row={1} col={1} bg="gray.900" borderRight="solid 2px">
+        <GridItem rowStart={1} colStart={1} bg="gray.900" borderRight="solid 2px">
           {isAxis ? (
             <Axis
               scale={wglp ? wglp.gScaleY : 1}
@@ -668,7 +668,7 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
             <></>
           )}
         </GridItem>
-        <GridItem row={1} col={2} bg="papayawhip">
+        <GridItem rowStart={1} colStart={2} bg="papayawhip">
           <Box bg="gray.900">
             <canvas
               ref={canvasMain}
@@ -681,8 +681,18 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
               onContextMenu={contextMenu}></canvas>
           </Box>
         </GridItem>
-        <GridItem row={2} col={1} bg="gray.900" borderTop="solid 2px" borderRight="solid 2px" />
-        <GridItem row={2} col={2} bg="gray.900" borderTop={`${isAxis ? "solid 2px" : ""}`}>
+        <GridItem
+          rowStart={2}
+          colStart={1}
+          bg="grey.900"
+          borderTop="solid 2px"
+          borderRight="solid 2px"
+        />
+        <GridItem
+          rowStart={2}
+          colStart={2}
+          bg="gray.900"
+          borderTop={`${isAxis ? "solid 2px" : ""}`}>
           {isAxis ? (
             <Axis
               scale={wglp ? wglp.gScaleX : 1}
