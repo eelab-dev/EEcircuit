@@ -600,10 +600,10 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
   return (
     <>
       <HStack>
-        <Checkbox defaultIsChecked={false} onChange={axisBoxHandle}>
+        <Checkbox defaultChecked={false} onChange={axisBoxHandle}>
           Axis
         </Checkbox>
-        <Checkbox defaultIsChecked onChange={crosshairBoxHandle}>
+        <Checkbox defaultChecked onChange={crosshairBoxHandle}>
           Crosshair
         </Checkbox>
         {plotOptions.crosshair ? (
@@ -615,7 +615,7 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
           <></>
         )}
         {isSweep ? (
-          <Checkbox defaultIsChecked={false} onChange={sweepCheckBoxHandle}>
+          <Checkbox defaultChecked={false} onChange={sweepCheckBoxHandle}>
             Sweep slider
           </Checkbox>
         ) : (

@@ -25,6 +25,7 @@ import {
   Image,
   useDisclosure,
   useBreakpointValue,
+  useToast,
 } from "@chakra-ui/react";
 import {
   Popover,
@@ -66,7 +67,8 @@ export default function EEsim(): JSX.Element {
   const [progress, setProgress] = React.useState(0);
   const [threadCountNew, setThreadCountNew] = React.useState(1);
 
-  const toast = createStandaloneToast();
+  //const toast = createStandaloneToast();
+  const toast = useToast();
 
   useEffect(() => {
     const loadedNetList = store.getItem("netList");
