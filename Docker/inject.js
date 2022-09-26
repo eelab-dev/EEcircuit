@@ -16,7 +16,7 @@ result = getInput();
 `;
 
 const text3 = `function _emscripten_sleep(ms) {
- Asyncify.handleSleep(wakeUp => safeSetTimeout(wakeUp, ms));
+ return Asyncify.handleSleep(wakeUp => safeSetTimeout(wakeUp, ms));
 }`;
 
 const text3rep = `
@@ -27,8 +27,16 @@ function _emscripten_sleep(ms) {
 const text4 = `if (calledRun) return`;
 const text4rep = `//if (calledRun) return`;
 
-const text5 = `Module["run"] = run;`;
+const text5 = ` } else {
+  doRun();
+ }
+}`;
+
 const text5rep = `
+ } else {
+  doRun();
+ }
+}
 var getInput;
 
  Module["setGetInput"] = setGetInput;
@@ -49,8 +57,6 @@ function runThings() {
  callMain(args);
 }
 //end of EEsim mod
-
-Module["run"] = run;
 `;
 
 const textAll = [text1, text2, text3, text4, text5];
