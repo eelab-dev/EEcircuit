@@ -7,7 +7,7 @@ import type * as MonacoEditor from "monaco-editor/esm/vs/editor/editor.api";
 
 const monacoLoader = (): Promise<typeof MonacoEditor> => {
   return new Promise((resolve) => {
-    const monacoPath = "https://cdn.jsdelivr.net/npm/monaco-editor@0.33.0/min/vs";
+    const monacoPath = "https://cdn.jsdelivr.net/npm/monaco-editor@0.34.0/min/vs";
 
     const loaded2 = (e: CustomEvent) => {
       resolve(e.detail);
@@ -19,7 +19,7 @@ const monacoLoader = (): Promise<typeof MonacoEditor> => {
     //script3.async = true;
     //script3.src = 'https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js';
     monacoLoader.async = true;
-    monacoLoader.src = monacoPath + "/loader.js";
+    monacoLoader.src = `${monacoPath}/loader.js`;
 
     monacoLoader.crossOrigin = "anonymous";
     const scriptLoaded = () => {

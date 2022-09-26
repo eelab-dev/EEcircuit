@@ -10,7 +10,6 @@ import DownCSV from "./downCSV";
 import {
   Button,
   Box,
-  createStandaloneToast,
   Divider,
   Flex,
   Progress,
@@ -119,7 +118,7 @@ export default function EEsim(): JSX.Element {
         if (displayData) {
           displayData.forEach((oldData) => {
             //account for new color type
-            if (newData.name == oldData.name && oldData.color) {
+            if (newData.name === oldData.name && oldData.color) {
               match = true;
               visible = oldData.visible;
               color = oldData.color;
@@ -164,7 +163,7 @@ export default function EEsim(): JSX.Element {
   }, []);*/
 
   const btRun = async () => {
-    if (sim && threadCount == threadCountNew) {
+    if (sim && threadCount === threadCountNew) {
       setIsSimRunning(true);
       //setParser(getParser(netList));
       store.setItem("netList", netList);
@@ -207,7 +206,7 @@ export default function EEsim(): JSX.Element {
         const dd = displayData;
 
         dd.forEach((e) => {
-          if (e.name == name) {
+          if (e.name === name) {
             e.visible = event.target.checked;
             console.log("change->", e, name);
           }
@@ -409,7 +408,7 @@ export default function EEsim(): JSX.Element {
         <TabPanels>
           <TabPanel>
             <PlotArray resultArray={resultArray} displayData={displayData} />
-            {displayBreakpoint != "base" ? (
+            {displayBreakpoint !== "base" ? (
               <></>
             ) : (
               <>
