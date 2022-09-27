@@ -7,4 +7,4 @@ assignees: ''
 
 ---
 
-⛔✋  !! Please use the [Discussions](https://github.com/danchitnis/EEsim/discussions) first before reporting a bug or a feature request ✋⛔
+✋  !! Only for bug reports. Please use the [Discussions](https://github.com/danchitnis/EEsim/discussions) for a feature request ✋
