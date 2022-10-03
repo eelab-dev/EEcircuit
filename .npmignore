@@ -1,3 +1,7 @@
 .build
 build
+dist
 web_modules
+.parcel-cache
+.vercel
+.yarn
