@@ -12,3 +12,4 @@ temp
 !.yarn/sdks
 !.yarn/versions
 .pnp.
+dist

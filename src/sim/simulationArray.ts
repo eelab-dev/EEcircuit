@@ -42,7 +42,9 @@ export class SimArray {
     this.simArray = [];
     this.threads = threadCount;
     for (let i = 0; i < this.threads; i++) {
-      const worker = new Worker("/_dist_/sim/simulationLink.js", { type: "module" });
+      const worker = new Worker(new URL("./simulationLink.ts", import.meta.url), {
+        type: "module",
+      });
       const sim = ComLink.wrap<typeof simulation>(worker);
       this.simArray.push(sim);
     }
