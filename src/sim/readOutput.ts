@@ -47,7 +47,7 @@ export default function readOutput(rawData: Uint8Array): ResultType {
     //log(`float -> ${d}`);
   }
 
-  if (param.dataType == "complex") {
+  if (param.dataType === "complex") {
     const out2 = new Array(param.varNum)
       .fill(0)
       .map(() => new Array(param.pointNum).fill(0)) as ComplexDataType;

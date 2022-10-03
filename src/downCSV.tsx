@@ -19,7 +19,7 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
     vars.forEach((e) => {
       for (let i = 0; i < resultArray.results.length; i++) {
         const sweepIndex = resultArray.sweep.length > 0 ? `[${resultArray.sweep[i]}]` : "";
-        strTop = strTop + e.name + " " + sweepIndex + ",";
+        strTop = `${strTop}${e.name} ${sweepIndex},`;
       }
     });
     strTop = strTop + "\n";
@@ -30,8 +30,8 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
           const data = resultArray.results[i].data as RealDataType;
           const a = data[col][row];
           //time-series are unequal length
-          const s = a != undefined ? a.toExponential(3) : "NaN";
-          str = str + s + ",";
+          const s = a !== undefined ? a.toExponential() : "NaN";
+          str = `${str}${s},`;
         }
       }
       str = str + "\n";
@@ -48,18 +48,7 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
     vars.forEach((e) => {
       for (let i = 0; i < resultArray.results.length; i++) {
         const sweepIndex = resultArray.sweep.length > 0 ? `[${resultArray.sweep[i]}]` : "";
-        strTop =
-          strTop +
-          e.name +
-          " " +
-          sweepIndex +
-          " (real)" +
-          "," +
-          e.name +
-          " " +
-          sweepIndex +
-          " (img)" +
-          ",";
+        strTop = `${strTop}${e.name} ${sweepIndex} (real),${e.name} ${sweepIndex} (img),`;
       }
     });
     strTop = strTop + "\n";
@@ -69,12 +58,9 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
         //console.log(out2[col][row]);
         for (let i = 0; i < resultArray.results.length; i++) {
           const data = resultArray.results[i].data as ComplexDataType;
-          str =
-            str +
-            data[col][row].real.toExponential(3) +
-            "," +
-            data[col][row].img.toExponential(3) +
-            ",";
+          str = `${str}${data[col][row].real.toExponential()},${data[col][
+            row
+          ].img.toExponential()},`;
         }
       }
       str = str + "\n";
@@ -99,7 +85,9 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
   }, [resultArray]);
 
   React.useEffect(() => {
-    if (href.length > 0) aLink.current?.click();
+    if (href.length > 0) {
+      aLink.current?.click();
+    }
   }, [href]);
 
   const btAction = () => {
@@ -111,7 +99,7 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
       <Button type="submit" colorScheme="blue" onClick={btAction}>
         Download
       </Button>
-      <a ref={aLink} href={href} download={"EEsim.csv"}></a>
+      <a ref={aLink} href={href} download={"EEsim.csv"} />
     </>
   );
 };
