@@ -32,6 +32,7 @@ export const pfet18_hvt = `
 + 
 .param  l = 1 w = 1 ad = 0 as = 0 pd = 0 ps = 0 nrd = 0 nrs = 0 sa = 0 sb = 0 sd = 0 mult = 1 nf = 1.0
 msky130_fd_pr__pfet_01v8_hvt d g s b sky130_fd_pr__pfet_01v8_hvt__model l = {l} w = {w} ad = {ad} as = {as} pd = {pd} ps = {ps} nrd = {nrd} nrs = {nrs} sa = {sa} sb = {sb} sd = {sd} nf = {nf}
+
 .model sky130_fd_pr__pfet_01v8_hvt__model.0 pmos
 * Model Flag Parameters
 + lmin = 2.0e-05 lmax = 0.0001 wmin = 7.0e-06 wmax = 0.0001
