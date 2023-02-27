@@ -39,5 +39,5 @@
     "react-dom": "^18.2.0",
     "webgl-plot": "^0.7.0"
   },
-  "packageManager": "yarn@3.0.1"
+  "packageManager": "yarn@3.4.1"
 }
