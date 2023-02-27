@@ -2,7 +2,7 @@
 
 see this [issue](https://github.com/google/skywater-pdk/issues/301)
 
-**🧨work-in-progress: only `nfet1v8` and `pfet1v8_hvt` implemented so far🧨**
+**🧨work-in-progress: only `nfet1v8` and `pfet1v8` implemented so far🧨**
 
 Copy and paste the examples in [EEsim's](https://eesim.dev) netlist editor.
 
@@ -43,7 +43,7 @@ pfet1V8_hvt I-V curve
 
 * Gate bias
 Rg 1 2 680
-X1 3 2 5 5 sky130_fd_pr__pfet_01v8_hvt w=1u l=1u
+X1 3 2 5 5 sky130_fd_pr__pfet_01v8 w=1u l=1u
 Rd 3 4 100
 
 * DC source for current measure
@@ -69,8 +69,8 @@ Skywater Inverter
 
 .param mc_switch=0
 
-xmn 2 1 0 0 sky130_fd_pr__nfet_01v8 w=0.5u l=0.15u
-xmp 2 1 vdd vdd sky130_fd_pr__pfet_01v8_hvt w=1.0u l=0.15u
+xmn 2 1 0 0 sky130_fd_pr__nfet_01v8 w=1.26u l=0.15u
+xmp 2 1 vdd vdd sky130_fd_pr__pfet_01v8_hvt w=1.26u l=0.15u
 
 * Supply node
 vdd vdd 0 1.8
@@ -92,8 +92,8 @@ Skywater Inverter
 
 .param mc_switch=0
 
-xmn 2 1 0 0 sky130_fd_pr__nfet_01v8 w=0.5u l=0.15u
-xmp 2 1 vdd vdd sky130_fd_pr__pfet_01v8_hvt w=1.0u l=0.15u
+xmn 2 1 0 0 sky130_fd_pr__nfet_01v8 w=1.26u l=0.15u
+xmp 2 1 vdd vdd sky130_fd_pr__pfet_01v8 w=1.26u l=0.150u
 
 * Supply node
 vdd vdd 0 1.8
@@ -123,11 +123,11 @@ vdd vdd 0 1.8
 * Inverter block sub-circuit
 .subckt inv vin vout vdd
 	.param l = 0.15u
-	.param wp = 0.5u
+	.param wp = 2u
 	.param wn = {wp * 1.5}
 
 	xm1 vout vin 0 0 sky130_fd_pr__nfet_01v8 w=wn l=l
-	xm2 vout vin vdd vdd sky130_fd_pr__pfet_01v8_hvt w=wp l=l
+	xm2 vout vin vdd vdd sky130_fd_pr__pfet_01v8 w=wp l=l
 	*c1 vout 0 10f
 .ends
 
