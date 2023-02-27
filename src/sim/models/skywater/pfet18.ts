@@ -1,4 +1,43 @@
+// https://cs.opensource.google/skywater-pdk/sky130_fd_pr/+/main:cells/pfet_01v8/sky130_fd_pr__pfet_01v8__mismatch.corner.spice
+// https://cs.opensource.google/skywater-pdk/sky130_fd_pr/+/main:cells/pfet_01v8/sky130_fd_pr__pfet_01v8__wafer.corner.spice
+// https://cs.opensource.google/skywater-pdk/sky130_fd_pr/+/main:cells/pfet_01v8/sky130_fd_pr__pfet_01v8.pm3.spice
+
 export const pfet18 = `
+
+
+* Copyright 2020 The SkyWater PDK Authors
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     https://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+
+* SKY130 Spice File.
+.param sky130_fd_pr__pfet_01v8__toxe_slope=4.443e-03
+.param sky130_fd_pr__pfet_01v8__toxe_slope1=6.443e-03
+.param sky130_fd_pr__pfet_01v8__toxe_slope2=3.443e-03
+.param sky130_fd_pr__pfet_01v8__lint_slope=0.0
+.param sky130_fd_pr__pfet_01v8__nfactor_slope=0.1
+.param sky130_fd_pr__pfet_01v8__nfactor_slope1=0.1
+.param sky130_fd_pr__pfet_01v8__nfactor_slope2=0.0
+.param sky130_fd_pr__pfet_01v8__voff_slope=0.0
+.param sky130_fd_pr__pfet_01v8__voff_slope1=0.0
+.param sky130_fd_pr__pfet_01v8__voff_slope2=0.007
+.param sky130_fd_pr__pfet_01v8__vth0_slope=5.856e-03
+.param sky130_fd_pr__pfet_01v8__vth0_slope1=7.356e-03
+.param sky130_fd_pr__pfet_01v8__vth0_slope2=4.356e-03
+.param sky130_fd_pr__pfet_01v8__wint_slope=0
+
+
+
+
 
 * Copyright 2020 The SkyWater PDK Authors
 *
@@ -1411,35 +1450,6 @@ export const pfet18 = `
 *   }
 * }
 
-
-* SKY130 Spice File.
-.param sky130_fd_pr__pfet_01v8__toxe_slope=4.443e-03
-.param sky130_fd_pr__pfet_01v8__toxe_slope1=6.443e-03
-.param sky130_fd_pr__pfet_01v8__toxe_slope2=3.443e-03
-.param sky130_fd_pr__pfet_01v8__lint_slope=0.0
-.param sky130_fd_pr__pfet_01v8__nfactor_slope=0.1
-.param sky130_fd_pr__pfet_01v8__nfactor_slope1=0.1
-.param sky130_fd_pr__pfet_01v8__nfactor_slope2=0.0
-.param sky130_fd_pr__pfet_01v8__voff_slope=0.0
-.param sky130_fd_pr__pfet_01v8__voff_slope1=0.0
-.param sky130_fd_pr__pfet_01v8__voff_slope2=0.007
-.param sky130_fd_pr__pfet_01v8__vth0_slope=5.856e-03
-.param sky130_fd_pr__pfet_01v8__vth0_slope1=7.356e-03
-.param sky130_fd_pr__pfet_01v8__vth0_slope2=4.356e-03
-.param sky130_fd_pr__pfet_01v8__wint_slope=0
-
-
-
-.param 
-+ sky130_fd_pr__pfet_01v8__dlc_rotweak = 0.0
-+ sky130_fd_pr__pfet_01v8__wlod_diff = 0.0
-+ sky130_fd_pr__pfet_01v8__kvth0_diff = 0.0
-+ sky130_fd_pr__pfet_01v8__lkvth0_diff = 0.0
-+ sky130_fd_pr__pfet_01v8__wkvth0_diff = 0.0
-+ sky130_fd_pr__pfet_01v8__ku0_diff = 0.0
-+ sky130_fd_pr__pfet_01v8__lku0_diff = 0.0
-+ sky130_fd_pr__pfet_01v8__wku0_diff = 0.0
-+ sky130_fd_pr__pfet_01v8__kvsat_diff = 0.0
 
 .subckt  sky130_fd_pr__pfet_01v8 d g s b
 + 
