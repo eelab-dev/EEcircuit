@@ -7,7 +7,7 @@ import type * as MonacoEditor from "monaco-editor/esm/vs/editor/editor.api";
 
 const monacoLoader = (): Promise<typeof MonacoEditor> => {
   return new Promise((resolve) => {
-    const monacoPath = "https://cdn.jsdelivr.net/npm/monaco-editor@0.39.0/min/vs";
+    const monacoPath = "https://cdn.jsdelivr.net/npm/monaco-editor@0.40.0/min/vs";
 
     const loaded2 = (e: CustomEvent) => {
       resolve(e.detail);
