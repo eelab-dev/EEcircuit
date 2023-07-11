@@ -15,12 +15,12 @@ const text2rep = `
 result = getInput();
 `;
 
-const text3 = `function _emscripten_sleep(ms) {
- return Asyncify.handleSleep(wakeUp => safeSetTimeout(wakeUp, ms));
+const text3 = `var _emscripten_sleep = function(ms) {
+ return Asyncify.handleSleep((wakeUp => safeSetTimeout(wakeUp, ms)));
 }`;
 
 const text3rep = `
-function _emscripten_sleep(ms) {
+var _emscripten_sleep = function(ms) {
  handleThings();
 }`;
 
