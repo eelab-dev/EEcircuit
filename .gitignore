@@ -5,7 +5,7 @@ temp
 .parcel-cache
 *.map
 .vercel
-.yarn/*
+.yarn/**
 !.yarn/patches
 !.yarn/releases
 !.yarn/plugins
@@ -13,3 +13,5 @@ temp
 !.yarn/versions
 .pnp.
 dist
+.pnp.*
+.yarnrc.yml
