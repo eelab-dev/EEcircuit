@@ -1,4 +1,4 @@
-![Build App](https://github.com/danchitnis/EEsim/workflows/Build%20App/badge.svg) ![CodeQL](https://github.com/danchitnis/EEsim/workflows/CodeQL/badge.svg) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4781565.svg)](https://doi.org/10.5281/zenodo.4781565)
+[![Yarn Build](https://github.com/danchitnis/EEsim/actions/workflows/build.yml/badge.svg)](https://github.com/danchitnis/EEsim/actions/workflows/build.yml) ![CodeQL](https://github.com/danchitnis/EEsim/workflows/CodeQL/badge.svg) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4781565.svg)](https://doi.org/10.5281/zenodo.4781565)
 
 ⚠ Works on Chrome, Edge, Safari 15+ and Firefox 111+. Check latest [status](https://wpt.fyi/results/workers/modules/dedicated-worker-import.any.html?label=master&product=chrome%5Bstable%5D&product=firefox%5Bstable%5D&product=safari%5Bstable%5D&product=chrome%5Bexperimental%5D&product=firefox%5Bexperimental%5D&product=safari%5Bexperimental%5D&aligned)
 
