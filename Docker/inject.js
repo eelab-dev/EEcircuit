@@ -1,6 +1,5 @@
 //Danial Chitnis 2020
 //https://stackoverflow.com/questions/14177087/replace-a-string-in-a-file-with-nodejs
-const chalk = require("chalk");
 
 const filename = "./build/spice.js";
 
@@ -15,14 +14,9 @@ const text2rep = `
 result = getInput();
 `;
 
-const text3 = `var _emscripten_sleep = function(ms) {
- return Asyncify.handleSleep((wakeUp => safeSetTimeout(wakeUp, ms)));
-}`;
+const text3 = `var _emscripten_sleep = ms => Asyncify.handleSleep(wakeUp => safeSetTimeout(wakeUp, ms));`;
 
-const text3rep = `
-var _emscripten_sleep = function(ms) {
- handleThings();
-}`;
+const text3rep = `var _emscripten_sleep = ms => handleThings();`;
 
 const text4 = `if (calledRun) return`;
 const text4rep = `//if (calledRun) return`;
@@ -74,9 +68,9 @@ fs.readFile(filename, "utf8", function (err, data) {
     const resultNew = result.replace(textAll[i], "//EEsim\n" + textAllrep[i]);
     if (result == resultNew) {
       return console.error(
-        `${chalk.red(`Couldn't find the phrase:`)}\n` +
-          `${chalk.cyan(textAll[i])} \n\n` +
-          `${chalk.red(`Please investigate`)}\n`
+        `${console.log(`Couldn't find the phrase:`)}\n` +
+          `${console.log(textAll[i])} \n\n` +
+          `${console.log(`Please investigate`)}\n`
       );
     }
     result = resultNew;
@@ -88,5 +82,5 @@ fs.readFile(filename, "utf8", function (err, data) {
     if (err) return console.log(err);
   });
 
-  console.log(chalk.green(`Successfully applied EEsim patches!`));
+  console.log(`Successfully applied EEsim patches!`);
 });
