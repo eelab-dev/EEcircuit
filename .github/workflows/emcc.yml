@@ -1,47 +1,41 @@
 name: EEsim EMCC Build
 
-on: 
+on:
   workflow_dispatch:
     inputs:
       logLevel:
-        description: 'Log level'     
+        description: "Log level"
         required: true
-        default: 'warning'
- 
-      
+        default: "warning"
+
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v2-beta
-      with:
-        node-version: '15'
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-    - name: Build the Docker image
-      run: |
-        cd ./Docker
-        docker build -t ngspice:eesim .
-        
-    - name: Run Docker
-      run: |
-        mkdir image
-        cd image
-        docker run -t -v $(realpath .):/mnt ngspice:eesim
+      - name: Build the Docker image
+        run: |
+          cd ./Docker
+          docker build -t ngspice:eesim .
 
-    
-    - name: Inject JS
-      run: |
-        yarn install
-        cd image
-        node ~/Docker/inject.js
+      - name: Run Docker
+        run: |
+          mkdir image
+          cd image
+          docker run -t -v $(realpath .):/mnt ngspice:eesim
 
-        
-    - name: Archive Output
-      uses: actions/upload-artifact@v2
-      with:
-        name: EEsim output
-        path: image/build
+      - name: Inject JS
+        run: |
+          cd image
+          node ~/Docker/inject.js
+
+      - name: Archive Output
+        uses: actions/upload-artifact@v4
+        with:
+          name: EEsim output
+          path: image/build
