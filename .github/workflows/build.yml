@@ -10,23 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: yarn install
+      - run: yarn build
 
-      - name: corepack
-        run: corepack enable
-
-      - name: yarn global
-        run: corepack prepare yarn@stable --activate
-
-      - name: Set yarn version
-        run: yarn set version stable
-
-      - name: install
-        working-directory: .
-        run: yarn install
-
-      - name: build
-        working-directory: .
-        run: yarn run build
+      
