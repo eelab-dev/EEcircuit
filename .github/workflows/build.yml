@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: 20
       
-      - run: yarn set version latest --yarn-path
+      - run: yarn set version stable
       
       - run: yarn install
 
