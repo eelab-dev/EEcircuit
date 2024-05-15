@@ -386,10 +386,12 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
   };
 
   const mouseMove = (e: React.MouseEvent) => {
-    const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
+    const xOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().left;
+    const yOffSet = (e.target as HTMLCanvasElement).getBoundingClientRect().top;
     const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
+    const height = (e.target as HTMLCanvasElement).getBoundingClientRect().height;
     if (mouseZoom.started) {
-      const cursorOffsetX = (2 * (e.clientX - eOffset - width / 2)) / width;
+      const cursorOffsetX = (2 * (e.clientX - xOffset - width / 2)) / width;
       setMouseZoom({
         started: true,
         cursorDownX: mouseZoom.cursorDownX,
@@ -412,7 +414,7 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     }
     /************Mouse Drag Evenet********* */
     if (mouseDrag.started) {
-      const moveX = (e.clientX - eOffset) * devicePixelRatio - mouseDrag.dragInitialX;
+      const moveX = (e.clientX - xOffset) * devicePixelRatio - mouseDrag.dragInitialX;
       const offsetX = moveX / width;
       wglp.gOffsetX = offsetX + mouseDrag.dragOffsetOld;
     }
@@ -421,25 +423,15 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     const canvas = canvasMain.current;
 
     if (canvas && plotOptions.crosshair) {
-      const devicePixelRatio = window.devicePixelRatio || 1;
-      //canvas.width = canvas.clientWidth * devicePixelRatio;
-      //canvas.height = canvas.clientHeight * devicePixelRatio;
-      //console.log("canvas->", canvas.width / devicePixelRatio, ",", canvas.offsetLeft);
-      //???????????????????????????????????????????????????????????????????????????????????????
-
-      //const x1 = 2 * ((e.pageX - canvas.offsetLeft) * devicePixelRatio - canvas.width / 2);
-      const xPosRel =
-        ((e.pageX - canvas.offsetLeft) * devicePixelRatio) / (width * devicePixelRatio);
-
-      //const x = (1 / wglp.gScaleX) * (x1 / canvas.width) - wglp.gOffsetX;
-      const x = (2 * xPosRel) / wglp.gScaleX - (wglp.gOffsetX + 1) / wglp.gScaleX;
+      const xPosRel = (2 * (e.clientX - xOffset - width / 2)) / width;
+      const x = (1 / wglp.gScaleX) * (xPosRel - wglp.gOffsetX);
       //console.log("cross-->", xPosRel, "--> ", x);
-      const y =
-        (1 / wglp.gScaleY) *
-        ((2 * (canvas.height / 2 - (e.pageY - canvas.offsetTop) * devicePixelRatio)) /
-          canvas.height -
-          wglp.gOffsetY);
+
+      const yPosRel = 1 - 2 * (e.clientY - yOffSet) / height;
+      const y = (1 / wglp.gScaleY) * (yPosRel - wglp.gOffsetY);
+
       cross(x, y);
+
     }
   };
   const cross = (x: number, y: number): void => {
