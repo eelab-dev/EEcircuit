@@ -28,9 +28,9 @@ export class Simulation {
 
   private netList = "";
 
-  private resolve = () => {};
-  private resolveWait = () => {};
-  private resolveInit = () => {};
+  private resolve = () => { };
+  private resolveWait = () => { };
+  private resolveInit = () => { };
 
   private getInput = (): string => {
     let strCmd = " ";
@@ -55,8 +55,8 @@ export class Simulation {
       },
       printErr: (e) => {
         console.error(e);
-        if (e != "Note: can't find init file.") {
-          this.info += e + "\n\n";
+        this.info += e + "\n\n";
+        if (!e.startsWith("Note:")) {
           this.error.push(e);
         }
       },
