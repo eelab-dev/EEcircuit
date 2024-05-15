@@ -255,7 +255,7 @@ const EditorCustom = ({
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText:
-              "V${1:number} ${2:node1} ${3:node2} ${4:dc_voltage} pulse (${5:v1} ${6:v2} ${7:time_delay} ${8:rise_time} ${9:fall_time} ${10:width} ${11:period} ${12:phase})",
+              "V${1:number} ${2:node1} ${3:node2} pulse (${4:v1} ${5:v2} ${6:time_delay} ${7:rise_time} ${8:fall_time} ${9:width} ${10:period} ${11:phase})",
             insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range: range,
           },
@@ -264,7 +264,7 @@ const EditorCustom = ({
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText:
-              "V${1:number} ${2:node1} ${3:node2} ${4:dc_voltage} SIN (${5:offset_voltage} ${6:amplitude} ${7:frequency} ${8:delay} ${9:damping_factor} ${10:phase})",
+              "V${1:number} ${2:node1} ${3:node2} SIN (${4:offset_voltage} ${5:amplitude} ${6:frequency} ${7:delay} ${8:damping_factor} ${9:phase})",
             insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range: range,
           },
