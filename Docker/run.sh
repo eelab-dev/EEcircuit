@@ -34,12 +34,11 @@ sed -i 's|freewl = wlist = getcommand(string);|emscripten_sleep(100);\n\n\t\tfre
 mkdir release
 cd release
 
-emconfigure ../configure --disable-debug
-
+emconfigure ../configure --disable-debug --disable-openmp --disable-xspice -with-readline=no
 wait
 
 # ngspice$(EXEEXT)
-sed -i 's|$(ngspice_LDADD) $(LIBS)|$(ngspice_LDADD) $(LIBS) -g1 -s ASYNCIFY=1 -s ASYNCIFY_ADVISE=0 -s ASYNCIFY_IGNORE_INDIRECT=0 -s  ENVIRONMENT="web,worker" -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s EXTRA_EXPORTED_RUNTIME_METHODS=["FS","Asyncify"] -o spice.mjs|g' ./src/Makefile
+sed -i 's|$(ngspice_LDADD) $(LIBS)|$(ngspice_LDADD) $(LIBS) -g1 -s ASYNCIFY=1 -s ASYNCIFY_ADVISE=0 -s ASYNCIFY_IGNORE_INDIRECT=0 -s ENVIRONMENT="web,worker" -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s EXTRA_EXPORTED_RUNTIME_METHODS=["FS","Asyncify"] -o spice.mjs|g' ./src/Makefile
 
 
 emmake make
