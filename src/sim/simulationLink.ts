@@ -53,10 +53,12 @@ export class Simulation {
         this.log(e);
         this.info += e + "\n";
       },
+
+      //https://sourceforge.net/p/ngspice/discussion/127605/thread/120f3462f9/
       printErr: (e) => {
         console.error(e);
         this.info += e + "\n\n";
-        if (!e.startsWith("Note:")) {
+        if (!e.startsWith("Note:") && e !== "Using SPARSE 1.3 as Direct Linear Solver") {
           this.error.push(e);
         }
       },
