@@ -4,30 +4,31 @@
   "version": "0.0.1",
   "description": "Circuit Simulator",
   "scripts": {
-    "start": "parcel",
-    "build": "parcel build",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\"",
     "lint": "prettier --check \"src/**/*.{js,jsx,ts,tsx}\"",
     "test": "web-test-runner \"src/**/*.test.tsx\"",
-    "vercel": "vercel --prod",
-    "serve": "serve dist"
+    "vercel-prod": "vercel --prod",
+    "vercel": "vercel",
+    "serve": "serve dist",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "author": "Danial Chitnis",
   "license": "MIT",
   "devDependencies": {
     "@babel/preset-react": "^7.24.7",
     "@babel/preset-typescript": "^7.24.7",
-    "@parcel/core": "^2.12.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "eslint": "^9.8.0",
-    "parcel": "^2.12.0",
     "prettier": "^3.3.3",
     "process": "^0.11.10",
     "serve": "^14.2.3",
     "typescript": "^5.5.4",
-    "vercel": "^35.2.2"
+    "vercel": "^35.2.2",
+    "vite": "^5.3.5"
   },
   "dependencies": {
     "@chakra-ui/react": "2.8.2",
@@ -37,6 +38,7 @@
     "framer-motion": "^11.3.21",
     "monaco-editor": "^0.50.0",
     "preact": "^10.23.1",
+    "preact-compat": "^3.19.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-focus-lock": "^2.12.1",
