@@ -324,7 +324,7 @@ export default function EEsim(): JSX.Element {
             onClick={btRun}
             isLoading={isSimRunning}
             loadingText={isSimLoaded ? "Running 🏃" : "Loading 🚚"}>
-            Run <Image src="https://unpkg.com/openmoji@13.1.0/color/svg/1F680.svg" height="80%" />
+            Run <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F680.min.svg" height="80%" />
           </Button>
 
           <Spacer />
@@ -332,7 +332,7 @@ export default function EEsim(): JSX.Element {
             <PopoverTrigger>
               <Button colorScheme="blue" variant="solid" size="lg" m={1} isDisabled={isSimRunning}>
                 {displayBreakpoint === "base" ? "" : "Settings"}{" "}
-                <Image src="https://unpkg.com/openmoji@13.1.0/color/svg/2699.svg" height="80%" />
+                <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/2699.min.svg" height="80%" />
               </Button>
             </PopoverTrigger>
             <PopoverContent p={5}>
@@ -364,7 +364,7 @@ export default function EEsim(): JSX.Element {
             onClick={btColor}
             isDisabled={isSimRunning}>
             {displayBreakpoint === "base" ? "" : "Colorize"}{" "}
-            <Image src="https://unpkg.com/openmoji@13.1.0/color/svg/1F308.svg" height="80%" />
+            <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F308.min.svg" height="80%" />
           </Button>
           <Button
             colorScheme="blue"
@@ -374,7 +374,7 @@ export default function EEsim(): JSX.Element {
             onClick={btReset}
             isDisabled={isSimRunning}>
             {displayBreakpoint === "base" ? "" : "Reset"}{" "}
-            <Image src="https://unpkg.com/openmoji@13.1.0/color/svg/1F5D1.svg" height="80%" />
+            <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F5D1.min.svg" height="80%" />
           </Button>
         </Flex>
       </Box>
@@ -391,17 +391,17 @@ export default function EEsim(): JSX.Element {
         <TabList>
           <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
             Plot
-            <Image src="https://unpkg.com/openmoji@13.1.0/color/svg/1F4C8.svg" maxHeight="80%" />
+            <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4C8.min.svg" maxHeight="80%" />
           </Tab>
           <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
             Info
             <Image
-              src="https://unpkg.com/openmoji@13.1.0/color/svg/1F469-200D-1F4BB.svg"
+              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F469-200D-1F4BB.min.svg"
               height="80%"
             />
           </Tab>
           <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
-            CSV <Image src="https://unpkg.com/openmoji@13.1.0/color/svg/1F4D1.svg" height="80%" />
+            CSV <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4D1.min.svg" height="80%" />
           </Tab>
         </TabList>
 
