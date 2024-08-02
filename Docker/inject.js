@@ -21,9 +21,9 @@ const text3rep = `var _emscripten_sleep = ms => handleThings();`;
 const text4 = `if (calledRun) return`;
 const text4rep = `//if (calledRun) return`;
 
-const text5 = ` } else {
-  doRun();
- }
+const text5 = `  } else {
+    doRun();
+  }
 }`;
 
 const text5rep = `
@@ -69,8 +69,8 @@ fs.readFile(filename, "utf8", function (err, data) {
     if (result == resultNew) {
       return console.error(
         `${console.log(`Couldn't find the phrase:`)}\n` +
-          `${console.log(textAll[i])} \n\n` +
-          `${console.log(`Please investigate`)}\n`
+        `${console.log(textAll[i])} \n\n` +
+        `${console.log(`Please investigate`)}\n`
       );
     }
     result = resultNew;
