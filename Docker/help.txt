@@ -1,3 +1,3 @@
-docker build -t eesim .
+docker build --no-cache -t eesim .
 docker run -t -v $(realpath .):/mnt eesim
 node ./inject.js
