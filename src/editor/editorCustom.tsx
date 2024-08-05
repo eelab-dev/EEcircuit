@@ -349,12 +349,13 @@ const EditorCustom = ({
     if (monacoRef.current && containerRef.current) {
       editorCodeRef.current = monacoRef.current.editor.create(containerRef.current, {
         value: "// First line\nfunction hello() {\n\talert('Hello world!');\n}\n// Last line",
-        language: "javascript",
+        language: "plaintext",
         roundedSelection: false,
         scrollBeyondLastLine: false,
         readOnly: false,
         theme: "vs-dark",
         automaticLayout: true,
+        // ...,
       });
 
       setIsEditorCodeMounted(true);
