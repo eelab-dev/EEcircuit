@@ -39,15 +39,7 @@
     "framer-motion": "^11.3.21",
     "monaco-editor": "^0.50.0",
     "preact": "^10.23.1",
-    "preact-compat": "^3.19.0",
     "react-focus-lock": "^2.12.1",
     "webgl-plot": "^0.7.1"
-  },
-  "packageManager": "yarn@4.4.0",
-  "alias": {
-    "react": "preact/compat",
-    "react-dom/test-utils": "preact/test-utils",
-    "react-dom": "preact/compat",
-    "react/jsx-runtime": "preact/jsx-runtime"
   }
 }
