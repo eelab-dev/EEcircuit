@@ -17,17 +17,18 @@
   "author": "Danial Chitnis",
   "license": "MIT",
   "devDependencies": {
-    "@babel/preset-react": "^7.24.7",
-    "@babel/preset-typescript": "^7.24.7",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@babel/core": "^7.25.2",
+    "@babel/plugin-transform-react-jsx-development": "^7.24.7",
+    "@preact/preset-vite": "^2.9.0",
+    "@types/babel__core": "^7",
+    "@typescript-eslint/eslint-plugin": "^8.0.1",
+    "babel-plugin-transform-hook-names": "^1.0.2",
     "eslint": "^9.8.0",
     "prettier": "^3.3.3",
     "process": "^0.11.10",
     "serve": "^14.2.3",
     "typescript": "^5.5.4",
-    "vercel": "^35.2.2",
+    "vercel": "^35.2.3",
     "vite": "^5.3.5"
   },
   "dependencies": {
@@ -39,12 +40,10 @@
     "monaco-editor": "^0.50.0",
     "preact": "^10.23.1",
     "preact-compat": "^3.19.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "react-focus-lock": "^2.12.1",
     "webgl-plot": "^0.7.1"
   },
-  "packageManager": "yarn@4.3.1",
+  "packageManager": "yarn@4.4.0",
   "alias": {
     "react": "preact/compat",
     "react-dom/test-utils": "preact/test-utils",
