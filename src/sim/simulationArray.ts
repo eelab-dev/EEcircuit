@@ -85,6 +85,12 @@ export class SimArray {
       this.results = this.results.concat(result);
     }
     //this.log("Final", this.results);
+    if (!this.error) {
+      console.log("Simulation run completed successfully!");
+    }
+    else {
+      console.error("Simulation run completed with errors!");
+    }
 
     return { results: this.results, sweep: this.sweep };
   }
@@ -132,7 +138,7 @@ export class SimArray {
     return { results: this.results, sweep: this.sweep };
   }
 
-  public progressCallback(n: number) {}
+  public progressCallback(n: number) { }
 
   private log(message?: any, ...optionalParams: any[]): void {
     //console.log("simArray -> ", message, optionalParams);
