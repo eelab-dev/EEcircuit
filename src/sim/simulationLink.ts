@@ -40,7 +40,7 @@ export class Simulation {
     } else {
       this.cmd = 0;
     }
-    this.log(`cmd -> ${strCmd}`);
+    this.log_debug(`cmd -> ${strCmd}`);
     return strCmd;
   };
 
@@ -50,21 +50,24 @@ export class Simulation {
       noInitialRun: true,
       print: (e) => {
         /*do nothing*/
-        this.log(e);
+        this.log_debug(e);
         this.info += e + "\n";
       },
 
-      //https://sourceforge.net/p/ngspice/discussion/127605/thread/120f3462f9/
+      // https://sourceforge.net/p/ngspice/discussion/127605/thread/120f3462f9/
       printErr: (e) => {
-        console.error(e);
         this.info += e + "\n\n";
-        if (!e.startsWith("Note:") && e !== "Using SPARSE 1.3 as Direct Linear Solver") {
+        if (e != "Warning: can't find the initialization file spinit." && e !== "Using SPARSE 1.3 as Direct Linear Solver") {
+          console.error(e);
           this.error.push(e);
+        }
+        else {
+          console.log(e);
         }
       },
       preRun: [
         () => {
-          this.log("from prerun");
+          this.log_debug("from prerun");
         },
       ],
       setGetInput: this.getInput,
@@ -88,9 +91,9 @@ export class Simulation {
     console.log("init");
 
     module.setHandleThings(() => {
-      this.log("handle other things!!!!!");
+      this.log_debug("handle other things!!!!!");
       module.Asyncify?.handleAsync(async () => {
-        this.log(this.pass);
+        this.log_debug(this.pass);
         if (this.cmd == 0) {
           try {
             this.dataRaw = module.FS?.readFile("out.raw") ?? new Uint8Array();
@@ -98,29 +101,29 @@ export class Simulation {
             this.outputEvent(this.output); //callback
             this.resolve();
           } catch (e) {
-            this.log(e);
+            this.log_debug(e);
           }
 
-          this.log("output completed");
+          this.log_debug("output completed");
           //pass = false;
         }
 
         if (!this.initialized) {
           this.resolveInit();
-          this.log("initialized");
+          this.log_debug("initialized");
           this.initialized = true;
           this.initInfo = this.info;
         }
 
         if (this.cmd == 0) {
-          this.log("waiting...");
+          this.log_debug("waiting...");
           await this.waitSimResolve();
         }
-        this.log("🥳🥳", "resolveWait2");
+        this.log_debug("🥳🥳", "resolveWait2");
 
         module.FS?.writeFile("/test.cir", this.netList);
 
-        this.log("loop finished");
+        this.log_debug("loop finished");
 
         this.pass = false;
       });
@@ -144,7 +147,7 @@ export class Simulation {
       this.info = "";
       this.error = [] as string[];
       this.results = {} as ResultType;
-      this.log("🥳", "resolveWait");
+      this.log_debug("🥳", "resolveWait");
       this.resolveWait();
     }
     return new Promise<void>((resolve, reject) => {
@@ -185,7 +188,7 @@ export class Simulation {
   public isInitialized = (): boolean => {
     return this.initialized;
   };
-  private log = (message?: any, ...optionalParams: any[]) => {
+  private log_debug = (message?: any, ...optionalParams: any[]) => {
     //console.log("simLink-> ", message, optionalParams);
   };
 }
