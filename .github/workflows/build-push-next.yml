@@ -29,7 +29,7 @@ jobs:
       run: docker run -t -v $(realpath ./Docker):/mnt eesim
 
     - name: Run Inject.js
-      run: docker exec eesim node ./mnt/inject.js
+      run: node ./Docker/inject.js
 
     - name: Rename and Copy Files to Main Directory
       run: |
