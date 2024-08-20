@@ -1,0 +1,48 @@
+name: EEsim Docker Build and Deploy
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Runs every Sunday at midnight
+  workflow_dispatch:      # Allows manual triggering
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        repository: danchitnis/EEsim
+        ref: next   # Checkout the "next" branch
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Create Empty Build Directory
+      run: mkdir -p Docker/build
+
+    - name: Build Docker Image
+      run: docker build --no-cache -t eesim ./Docker
+
+    - name: Run Docker Container
+      run: docker run -t -v $(realpath ./Docker):/mnt eesim
+
+    - name: Run Inject.js
+      run: docker exec eesim node ./mnt/inject.js
+
+    - name: Rename and Copy Files to Main Directory
+      run: |
+        cp ./Docker/build/spice.wasm ./src/sim/spice.wasm
+        cp ./Docker/build/spice-eesim.js ./src/sim/spice.js
+
+    - name: Install Dependencies
+      run: npm install
+    
+    - name: Build Project with Vite
+      run: npm run build
+
+    - name: Deploy to Vercel
+      run: npm run vercel
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}  # Ensure your Vercel token is stored in GitHub Secrets
