@@ -1,7 +1,7 @@
 //Danial Chitnis 2020
 //https://stackoverflow.com/questions/14177087/replace-a-string-in-a-file-with-nodejs
 
-const filename = "./build/spice.js";
+const filename = "./Docker/build/spice.js";
 
 const text1 = `if (typeof window != "undefined" && typeof window.prompt == "function")`;
 const text1rep = `
@@ -60,26 +60,28 @@ let fs = require("fs");
 
 fs.readFile(filename, "utf8", function (err, data) {
   if (err) {
-    return console.log(err);
+    console.error(err);
+    process.exit(1);  // Exit with code 1 if an error occurs while reading the file
   }
+
   let result = data;
 
   for (let i = 0; i < textAll.length; i++) {
     const resultNew = result.replace(textAll[i], "//EEsim\n" + textAllrep[i]);
-    if (result == resultNew) {
-      return console.error(
-        `${console.log(`Couldn't find the phrase:`)}\n` +
-        `${console.log(textAll[i])} \n\n` +
-        `${console.log(`Please investigate`)}\n`
-      );
+    if (result === resultNew) {
+      console.error(`Couldn't find the phrase:\n${textAll[i]}\n\nPlease investigate`);
+      process.exit(1);  // Exit with code 1 if a phrase cannot be found and replaced
     }
     result = resultNew;
   }
 
-  fSplit = filename.split(".");
-  filenameNew = "." + fSplit[1] + "-eesim" + "." + fSplit[2];
+  const fSplit = filename.split(".");
+  const filenameNew = `.${fSplit[1]}-eesim.${fSplit[2]}`;
   fs.writeFile(filenameNew, result, "utf8", function (err) {
-    if (err) return console.log(err);
+    if (err) {
+      console.error(err);
+      process.exit(1);  // Exit with code 1 if an error occurs while writing the file
+    }
   });
 
   console.log(`Successfully applied EEsim patches!`);
