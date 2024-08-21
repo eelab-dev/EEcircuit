@@ -1,4 +1,4 @@
-name: EEsim Docker Build and Deploy
+name: EEsim Next Build and Push
 
 on:
   schedule:
@@ -36,6 +36,9 @@ jobs:
         cp ./Docker/build/spice.wasm ./src/sim/spice.wasm
         cp ./Docker/build/spice-eesim.js ./src/sim/spice.js
 
+    - name: Update Dependencies
+      run: npx --yes npm-check-updates -u
+    
     - name: Install Dependencies
       run: npm install
     
