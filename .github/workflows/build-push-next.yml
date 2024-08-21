@@ -1,5 +1,9 @@
 name: EEsim Next Build and Push
 
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
 on:
   schedule:
     - cron: '0 0 * * 0'  # Runs every Sunday at midnight
@@ -46,6 +50,5 @@ jobs:
       run: npm run build
 
     - name: Deploy to Vercel
-      run: npm run vercel
-      env:
-        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}  # Ensure your Vercel token is stored in GitHub Secrets
+      run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}
+
