@@ -1,4 +1,4 @@
-name: EEsim Next Build and Push
+name: Next Build Deploy Test Push
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -51,4 +51,17 @@ jobs:
 
     - name: Deploy to Vercel
       run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}
+
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+        
+    - name: Run Playwright tests
+      run: npx playwright test
+      
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 30
 
