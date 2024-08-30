@@ -140,8 +140,6 @@ if (Module["arguments"]) arguments_ = Module["arguments"];
 
 if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
 
-if (Module["quit"]) quit_ = Module["quit"];
-
 // perform assertions in shell.js after we set up out() and err(), as otherwise if an assertion fails it cannot print the message
 // end include: shell.js
 // include: preamble.js
@@ -153,9 +151,7 @@ if (Module["quit"]) quit_ = Module["quit"];
 // You can also build docs locally as HTML or other formats in site/
 // An online HTML version (which may be of a different version of Emscripten)
 //    is up at http://kripken.github.io/emscripten-site/docs/api_reference/preamble.js.html
-var wasmBinary;
-
-if (Module["wasmBinary"]) wasmBinary = Module["wasmBinary"];
+var wasmBinary = Module["wasmBinary"];
 
 // Wasm globals
 var wasmMemory;
@@ -204,8 +200,6 @@ function updateMemoryViews() {
 // end include: runtime_shared.js
 // include: runtime_stack_check.js
 // end include: runtime_stack_check.js
-// include: runtime_assertions.js
-// end include: runtime_assertions.js
 var __ATPRERUN__ = [];
 
 // functions called before the runtime is initialized
@@ -232,7 +226,7 @@ function preRun() {
 
 function initRuntime() {
   runtimeInitialized = true;
-  if (!Module["noFSInit"] && !FS.init.initialized) FS.init();
+  if (!Module["noFSInit"] && !FS.initialized) FS.init();
   FS.ignorePermissions = false;
   TTY.init();
   PIPEFS.root = FS.mount(PIPEFS, {}, null);
@@ -622,21 +616,6 @@ class ExceptionInfo {
   }
   get_adjusted_ptr() {
     return HEAPU32[(((this.ptr) + (16)) >> 2)];
-  }
-  // Get pointer which is expected to be received by catch clause in C++ code. It may be adjusted
-  // when the pointer is casted to some of the exception object base classes (e.g. when virtual
-  // inheritance is used). When a pointer is thrown this method should return the thrown pointer
-  // itself.
-  get_exception_ptr() {
-    // Work around a fastcomp bug, this code is still included for some reason in a build without
-    // exceptions support.
-    var isPointer = ___cxa_is_pointer_type(this.get_type());
-    if (isPointer) {
-      return HEAPU32[((this.excPtr) >> 2)];
-    }
-    var adjusted = this.get_adjusted_ptr();
-    if (adjusted !== 0) return adjusted;
-    return this.excPtr;
   }
 }
 
@@ -1029,6 +1008,8 @@ var TTY = {
   }
 };
 
+var alignMemory = (size, alignment) => Math.ceil(size / alignment) * alignment;
+
 var mmapAlloc = size => {
   abort();
 };
@@ -1336,26 +1317,28 @@ var MEMFS = {
       var allocated;
       var contents = stream.node.contents;
       // Only make a new copy when MAP_PRIVATE is specified.
-      if (!(flags & 2) && contents.buffer === HEAP8.buffer) {
+      if (!(flags & 2) && contents && contents.buffer === HEAP8.buffer) {
         // We can't emulate MAP_SHARED when the file is not backed by the
         // buffer we're mapping to (e.g. the HEAP buffer).
         allocated = false;
         ptr = contents.byteOffset;
       } else {
-        // Try to avoid unnecessary slices.
-        if (position > 0 || position + length < contents.length) {
-          if (contents.subarray) {
-            contents = contents.subarray(position, position + length);
-          } else {
-            contents = Array.prototype.slice.call(contents, position, position + length);
-          }
-        }
         allocated = true;
         ptr = mmapAlloc(length);
         if (!ptr) {
           throw new FS.ErrnoError(48);
         }
-        HEAP8.set(contents, ptr);
+        if (contents) {
+          // Try to avoid unnecessary slices.
+          if (position > 0 || position + length < contents.length) {
+            if (contents.subarray) {
+              contents = contents.subarray(position, position + length);
+            } else {
+              contents = Array.prototype.slice.call(contents, position, position + length);
+            }
+          }
+          HEAP8.set(contents, ptr);
+        }
       }
       return {
         ptr: ptr,
@@ -1535,10 +1518,10 @@ var FS = {
       this.node_ops = {};
       this.stream_ops = {};
       this.rdev = rdev;
-      this.readMode = 292 | /*292*/ 73;
-      /*73*/ this.writeMode = 146;
+      this.readMode = 292 | 73;
+      this.writeMode = 146;
     }
-    /*146*/ get read() {
+    get read() {
       return (this.mode & this.readMode) === this.readMode;
     }
     set read(val) {
@@ -2498,6 +2481,9 @@ var FS = {
     if (!stream.stream_ops.mmap) {
       throw new FS.ErrnoError(43);
     }
+    if (!length) {
+      throw new FS.ErrnoError(28);
+    }
     return stream.stream_ops.mmap(stream, length, position, prot, flags);
   },
   msync(stream, buffer, offset, length, mmapFlags) {
@@ -2631,7 +2617,7 @@ var FS = {
       }
     }, {}, "/proc/self/fd");
   },
-  createStandardStreams() {
+  createStandardStreams(input, output, error) {
     // TODO deprecate the old functionality of a single
     // input / output callback and that utilizes FS.createDevice
     // and instead require a unique set of stream ops
@@ -2639,18 +2625,18 @@ var FS = {
     // default tty devices. however, if the standard streams
     // have been overwritten we create a unique device for
     // them instead.
-    if (Module["stdin"]) {
-      FS.createDevice("/dev", "stdin", Module["stdin"]);
+    if (input) {
+      FS.createDevice("/dev", "stdin", input);
     } else {
       FS.symlink("/dev/tty", "/dev/stdin");
     }
-    if (Module["stdout"]) {
-      FS.createDevice("/dev", "stdout", null, Module["stdout"]);
+    if (output) {
+      FS.createDevice("/dev", "stdout", null, output);
     } else {
       FS.symlink("/dev/tty", "/dev/stdout");
     }
-    if (Module["stderr"]) {
-      FS.createDevice("/dev", "stderr", null, Module["stderr"]);
+    if (error) {
+      FS.createDevice("/dev", "stderr", null, error);
     } else {
       FS.symlink("/dev/tty1", "/dev/stderr");
     }
@@ -2675,15 +2661,15 @@ var FS = {
     };
   },
   init(input, output, error) {
-    FS.init.initialized = true;
+    FS.initialized = true;
     // Allow Module.stdin etc. to provide defaults, if none explicitly passed to us here
-    Module["stdin"] = input || Module["stdin"];
-    Module["stdout"] = output || Module["stdout"];
-    Module["stderr"] = error || Module["stderr"];
-    FS.createStandardStreams();
+    input ??= Module["stdin"];
+    output ??= Module["stdout"];
+    error ??= Module["stderr"];
+    FS.createStandardStreams(input, output, error);
   },
   quit() {
-    FS.init.initialized = false;
+    FS.initialized = false;
     // force-flush all streams, so we get musl std streams printed out
     // close all of our streams
     for (var i = 0; i < FS.streams.length; i++) {
@@ -3880,7 +3866,6 @@ var _emscripten_resize_heap = requestedSize => {
   if (requestedSize > maxHeapSize) {
     return false;
   }
-  var alignUp = (x, multiple) => x + (multiple - x % multiple) % multiple;
   // Loop through potential heap size increases. If we attempt a too eager
   // reservation that fails, cut down on the attempted size and reserve a
   // smaller bump instead. (max 3 times, chosen somewhat arbitrarily)
@@ -3889,7 +3874,7 @@ var _emscripten_resize_heap = requestedSize => {
     // ensure geometric growth
     // but limit overreserving (default to capping at +96MB overgrowth at most)
     overGrownHeapSize = Math.min(overGrownHeapSize, requestedSize + 100663296);
-    var newSize = Math.min(maxHeapSize, alignUp(Math.max(requestedSize, overGrownHeapSize), 65536));
+    var newSize = Math.min(maxHeapSize, alignMemory(Math.max(requestedSize, overGrownHeapSize), 65536));
     var replacement = growMemory(newSize);
     if (replacement) {
       return true;
@@ -4114,6 +4099,10 @@ function _fd_seek(fd, offset_low, offset_high, whence, newOffset) {
     var curr = FS.write(stream, HEAP8, ptr, len, offset);
     if (curr < 0) return -1;
     ret += curr;
+    if (curr < len) {
+      // No more space to write.
+      break;
+    }
     if (typeof offset != "undefined") {
       offset += curr;
     }
@@ -4436,8 +4425,6 @@ var __emscripten_stack_restore = a0 => (__emscripten_stack_restore = wasmExports
 var __emscripten_stack_alloc = a0 => (__emscripten_stack_alloc = wasmExports["_emscripten_stack_alloc"])(a0);
 
 var _emscripten_stack_get_current = () => (_emscripten_stack_get_current = wasmExports["emscripten_stack_get_current"])();
-
-var ___cxa_is_pointer_type = a0 => (___cxa_is_pointer_type = wasmExports["__cxa_is_pointer_type"])(a0);
 
 var dynCall_iiiii = Module["dynCall_iiiii"] = (a0, a1, a2, a3, a4) => (dynCall_iiiii = Module["dynCall_iiiii"] = wasmExports["dynCall_iiiii"])(a0, a1, a2, a3, a4);
 

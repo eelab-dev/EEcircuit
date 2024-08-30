@@ -22,17 +22,17 @@
     "@playwright/test": "^1.46.1",
     "@preact/preset-vite": "^2.9.0",
     "@types/babel__core": "^7",
-    "@types/node": "^22.5.0",
-    "@typescript-eslint/eslint-plugin": "^8.2.0",
+    "@types/node": "^22.5.1",
+    "@typescript-eslint/eslint-plugin": "^8.3.0",
     "babel-plugin-transform-hook-names": "^1.0.2",
     "csv-parser": "^3.0.0",
-    "eslint": "^9.9.0",
+    "eslint": "^9.9.1",
     "prettier": "^3.3.3",
     "process": "^0.11.10",
     "serve": "^14.2.3",
     "simple-git": "^3.25.0",
     "typescript": "^5.5.4",
-    "vercel": "^37.0.0",
+    "vercel": "^37.2.1",
     "vite": "^5.4.2"
   },
   "dependencies": {
@@ -40,10 +40,10 @@
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "comlink": "^4.4.1",
-    "framer-motion": "^11.3.29",
-    "monaco-editor": "^0.50.0",
+    "framer-motion": "^11.3.31",
+    "monaco-editor": "^0.51.0",
     "preact": "^10.23.2",
-    "react-focus-lock": "^2.12.1",
+    "react-focus-lock": "^2.13.2",
     "webgl-plot": "^0.7.1"
   }
 }
