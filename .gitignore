@@ -17,4 +17,5 @@ dist
 .yarnrc.yml
 tests/output
 tests/repos
+test-results
 playwright-report
