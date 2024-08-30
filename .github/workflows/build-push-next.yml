@@ -65,3 +65,7 @@ jobs:
         path: playwright-report/
         retention-days: 30
 
+    - uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: Auto updates after tests
+
