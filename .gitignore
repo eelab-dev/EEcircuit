@@ -15,3 +15,6 @@ temp
 dist
 .pnp.*
 .yarnrc.yml
+tests/output
+tests/repos
+playwright-report
