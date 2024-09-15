@@ -311,7 +311,6 @@ function removeRunDependency(id) {
   // catches the exception?
   err(what);
   ABORT = true;
-  EXITSTATUS = 1;
   what += ". Build with -sASSERTIONS for more info.";
   // Use a wasm runtime error, because a JS error might be seen as a foreign
   // exception, which means we'd run destructors on it. We need the error to
@@ -892,7 +891,7 @@ var TTY = {
     TTY.ttys[dev] = {
       input: [],
       output: [],
-      ops: ops
+      ops
     };
     FS.registerDevice(dev, TTY.stream_ops);
   },
@@ -1341,8 +1340,8 @@ var MEMFS = {
         }
       }
       return {
-        ptr: ptr,
-        allocated: allocated
+        ptr,
+        allocated
       };
     },
     msync(stream, buffer, offset, length, mmapFlags) {
@@ -1883,9 +1882,9 @@ var FS = {
       }
     }
     var mount = {
-      type: type,
-      opts: opts,
-      mountpoint: mountpoint,
+      type,
+      opts,
+      mountpoint,
       mounts: []
     };
     // create a root node for the fs
@@ -2334,10 +2333,10 @@ var FS = {
     flags &= ~(128 | 512 | 131072);
     // register the stream with the filesystem
     var stream = FS.createStream({
-      node: node,
+      node,
       path: FS.getPath(node),
       // we want the absolute path to the node
-      flags: flags,
+      flags,
       seekable: true,
       position: 0,
       stream_ops: node.stream_ops,
@@ -2938,7 +2937,7 @@ var FS = {
     } else {
       var properties = {
         isDevice: false,
-        url: url
+        url
       };
     }
     var node = FS.createFile(parent, name, properties, canRead, canWrite);
@@ -3000,7 +2999,7 @@ var FS = {
       }
       writeChunks(stream, HEAP8, ptr, length, position);
       return {
-        ptr: ptr,
+        ptr,
         allocated: true
       };
     };
@@ -3049,15 +3048,15 @@ var SYSCALLS = {
     (tempI64 = [ Math.floor(atime / 1e3) >>> 0, (tempDouble = Math.floor(atime / 1e3), 
     (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
     HEAP32[(((buf) + (40)) >> 2)] = tempI64[0], HEAP32[(((buf) + (44)) >> 2)] = tempI64[1]);
-    HEAPU32[(((buf) + (48)) >> 2)] = (atime % 1e3) * 1e3;
+    HEAPU32[(((buf) + (48)) >> 2)] = (atime % 1e3) * 1e3 * 1e3;
     (tempI64 = [ Math.floor(mtime / 1e3) >>> 0, (tempDouble = Math.floor(mtime / 1e3), 
     (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
     HEAP32[(((buf) + (56)) >> 2)] = tempI64[0], HEAP32[(((buf) + (60)) >> 2)] = tempI64[1]);
-    HEAPU32[(((buf) + (64)) >> 2)] = (mtime % 1e3) * 1e3;
+    HEAPU32[(((buf) + (64)) >> 2)] = (mtime % 1e3) * 1e3 * 1e3;
     (tempI64 = [ Math.floor(ctime / 1e3) >>> 0, (tempDouble = Math.floor(ctime / 1e3), 
     (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
     HEAP32[(((buf) + (72)) >> 2)] = tempI64[0], HEAP32[(((buf) + (76)) >> 2)] = tempI64[1]);
-    HEAPU32[(((buf) + (80)) >> 2)] = (ctime % 1e3) * 1e3;
+    HEAPU32[(((buf) + (80)) >> 2)] = (ctime % 1e3) * 1e3 * 1e3;
     (tempI64 = [ stat.ino >>> 0, (tempDouble = stat.ino, (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
     HEAP32[(((buf) + (88)) >> 2)] = tempI64[0], HEAP32[(((buf) + (92)) >> 2)] = tempI64[1]);
     return 0;
@@ -3334,11 +3333,11 @@ function ___syscall_ioctl(fd, op, varargs) {
             c_cc.push(HEAP8[(argp + i) + (17)]);
           }
           return stream.tty.ops.ioctl_tcsets(stream.tty, op, {
-            c_iflag: c_iflag,
-            c_oflag: c_oflag,
-            c_cflag: c_cflag,
-            c_lflag: c_lflag,
-            c_cc: c_cc
+            c_iflag,
+            c_oflag,
+            c_cflag,
+            c_lflag,
+            c_cc
           });
         }
         return 0;
@@ -4216,8 +4215,8 @@ var Asyncify = {
   whenDone() {
     return new Promise((resolve, reject) => {
       Asyncify.asyncPromiseHandlers = {
-        resolve: resolve,
-        reject: reject
+        resolve,
+        reject
       };
     });
   },
@@ -4393,16 +4392,16 @@ var wasmImports = {
   /** @export */ fd_read: _fd_read,
   /** @export */ fd_seek: _fd_seek,
   /** @export */ fd_write: _fd_write,
-  /** @export */ invoke_i: invoke_i,
-  /** @export */ invoke_ii: invoke_ii,
-  /** @export */ invoke_iii: invoke_iii,
-  /** @export */ invoke_iiii: invoke_iiii,
-  /** @export */ invoke_iiiii: invoke_iiiii,
-  /** @export */ invoke_iiiiii: invoke_iiiiii,
-  /** @export */ invoke_iiiiiiiii: invoke_iiiiiiiii,
-  /** @export */ invoke_v: invoke_v,
-  /** @export */ invoke_vi: invoke_vi,
-  /** @export */ invoke_viii: invoke_viii,
+  /** @export */ invoke_i,
+  /** @export */ invoke_ii,
+  /** @export */ invoke_iii,
+  /** @export */ invoke_iiii,
+  /** @export */ invoke_iiiii,
+  /** @export */ invoke_iiiiii,
+  /** @export */ invoke_iiiiiiiii,
+  /** @export */ invoke_v,
+  /** @export */ invoke_vi,
+  /** @export */ invoke_viii,
   /** @export */ proc_exit: _proc_exit
 };
 
@@ -4670,10 +4669,8 @@ function run(args = arguments_) {
   }
   if (Module["setStatus"]) {
     Module["setStatus"]("Running...");
-    setTimeout(function() {
-      setTimeout(function() {
-        Module["setStatus"]("");
-      }, 1);
+    setTimeout(() => {
+      setTimeout(() => Module["setStatus"](""), 1);
       doRun();
     }, 1);
 //EEsim
