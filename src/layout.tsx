@@ -5,19 +5,14 @@ import EEsim from "./EEsim";
 //import EEsim from "./EEsim";
 
 const Layout = (): JSX.Element => {
-  const config: ThemeConfig = {
-    initialColorMode: "dark",
-    useSystemColorMode: false,
-  };
-
-  const customTheme = extendTheme({ config });
+ 
 
   return (
-    <div>
-      <ChakraProvider theme={customTheme}>
+
+    
         <EEsim />
-      </ChakraProvider>
-    </div>
+    
+
   );
 };
 
