@@ -43,20 +43,17 @@ const EditorCustom = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
 
-  
+
   useEffect(() => {
     const f = () => {
       //const monacoEditor = await monaco.init();
-      console.log('Hello');
-      
-      
-      
+
 
       const monacoEditor = MonacoEditor;
       monacoRef.current = monacoEditor;
       editorRef.current = monacoEditor.editor;
 
-      
+
 
 
       monacoEditor.languages.register({ id: "spice" });
@@ -313,12 +310,10 @@ const EditorCustom = ({
         ];
       };
 
-      console.log("monaco->here lang");
-
       monacoEditor.languages.registerCompletionItemProvider("spice", {
         triggerCharacters: ["."],
         provideCompletionItems: function (model, position) {
-          console.log("monaco-> here 1");
+
           // find out if we are completing a property in the 'dependencies' object.
           let textUntilPosition = model.getValueInRange({
             startLineNumber: 1,
@@ -333,7 +328,7 @@ const EditorCustom = ({
             startColumn: word.startColumn,
             endColumn: word.endColumn,
           };
-          console.log("monaco-> here 2");
+
 
           let c1 = word.startColumn == 1;
           if (c1) {
@@ -355,13 +350,9 @@ const EditorCustom = ({
       setIsMonacoReady(true);
     };
     f();
-    console.log("mon", monacoRef.current?.languages);
   }, []);
 
   useEffect(() => {
-    console.log("isMonacoReady", isMonacoReady);
-    console.log('monacoRef', monacoRef.current);
-    console.log("containerRef", containerRef.current);
 
     if (monacoRef.current && containerRef.current) {
       editorCodeRef.current = monacoRef.current.editor.create(containerRef.current, {
@@ -373,11 +364,10 @@ const EditorCustom = ({
         theme: "vs-dark",
         automaticLayout: true,
         quickSuggestions: true,
-        wordBasedSuggestions: 'allDocuments'
+        wordBasedSuggestions: 'allDocuments',
+        contextmenu: true,
         // ...,
       });
-
-      console.log("editorCodeRef", editorCodeRef.current);
 
       setIsEditorCodeMounted(true);
     }
@@ -385,7 +375,7 @@ const EditorCustom = ({
 
   useEffect(() => {
     if (editorRef.current && editorCodeRef.current && isEditorCodeMounted) {
-      
+
       editorCodeRef.current.setValue(value ? value : "hello!");
       editorCodeRef.current.onDidChangeModelContent(monacoEvent);
     }
