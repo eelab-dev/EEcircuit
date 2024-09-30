@@ -1,4 +1,4 @@
-[![Yarn Build](https://github.com/danchitnis/EEsim/actions/workflows/build.yml/badge.svg)](https://github.com/danchitnis/EEsim/actions/workflows/build.yml) ![CodeQL](https://github.com/danchitnis/EEsim/workflows/CodeQL/badge.svg) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4781565.svg)](https://doi.org/10.5281/zenodo.4781565)
+[![Yarn Build](https://github.com/eelab-dev/EEcircuit/actions/workflows/build.yml/badge.svg)](https://github.com/eelab-dev/EEcircuit/actions/workflows/build.yml) ![CodeQL](https://github.com/eelab-dev/EEcircuit/workflows/CodeQL/badge.svg) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4781565.svg)](https://doi.org/10.5281/zenodo.4781565)
 
 (formerly EEsim.dev)
 
@@ -30,7 +30,7 @@ vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
 
 ## Examples
 
-<span style="font-size:2em">💥</span> See [here](https://github.com/danchitnis/EEsim/blob/main/examples.md) for more examples.
+<span style="font-size:2em">💥</span> See [here](https://github.com/eelab-dev/EEcircuit/blob/main/examples.md) for more examples.
 
 ## Usage
 
@@ -44,7 +44,7 @@ To learn more about SPICE netlits refer to [ngspice manual](http://ngspice.sourc
 
 ## Transistor Models
 
-See [Transistor Models](https://github.com/danchitnis/EEsim/blob/main/models.md) for more information.
+See [Transistor Models](https://github.com/eelab-dev/EEcircuit/blob/main/models.md) for more information.
 
 ## Acknowledgments
 
