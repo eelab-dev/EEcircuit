@@ -4,7 +4,7 @@ import { compareCSVFiles } from './compareCSV';
 
 
 
-export async function testEEsim(page: Page, url: string) {
+export async function testEEcircuit(page: Page, url: string) {
     const consoleErrors: string[] = [];
 
     let isSimCompleted: boolean = false;
@@ -40,7 +40,7 @@ export async function testEEsim(page: Page, url: string) {
 
     await page.goto(url);
 
-    await expect(page).toHaveTitle(/EEsim/);
+    await expect(page).toHaveTitle(/EEcircuit/);
 
     await page.getByRole('button', { name: 'Run' }).click();
 
@@ -68,7 +68,7 @@ export async function testEEsim(page: Page, url: string) {
     const match = text.match(/ngspice-(\d+)/);
     const number = match ? parseInt(match[1]) : null;
 
-    console.log('ngspice version from EEsim:', number);
+    console.log('ngspice version from EEcircuit:', number);
 
     const tag = await cloneAndGetLatestTag('https://github.com/danchitnis/ngspice-sf-mirror', './tests/repos');
 
@@ -85,5 +85,5 @@ export async function testEEsim(page: Page, url: string) {
     const download = await downloadPromise;
     await download.saveAs('./tests/output/' + download.suggestedFilename());
 
-    const compare = await compareCSVFiles('./tests/lib/EEsim.csv', './tests/output/' + download.suggestedFilename());
+    const compare = await compareCSVFiles('./tests/lib/EEcircuit.csv', './tests/output/' + download.suggestedFilename());
 }
