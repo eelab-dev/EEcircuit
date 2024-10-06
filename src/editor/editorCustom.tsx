@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import type * as MonacoEditor from "monaco-editor/esm/vs/editor/editor.api";
-import monacoLoader from "./monacoLoader";
+import * as MonacoEditor from "monaco-editor/esm/vs/editor/editor.api";
+import './useWorker';
+import { on } from "events";
+//import * as monaco from "monaco-editor";
 
 // https://www.gitmemory.com/issue/microsoft/monaco-editor/1423/530617327
 interface MonarchLanguageConfiguration extends MonacoEditor.languages.IMonarchLanguage {
@@ -33,22 +35,26 @@ const EditorCustom = ({
   height,
   options,
 }: EditorCustomType) => {
-  const [isMonacoReady, setIsMonacoReady] = useState(false);
+  const [isMonacoReady, setIsMonacoReady] = useState(true);
   const [isEditorCodeMounted, setIsEditorCodeMounted] = useState(false);
   const editorCodeRef = useRef<MonacoEditor.editor.IStandaloneCodeEditor>();
   const editorRef = useRef<typeof MonacoEditor.editor>();
   const monacoRef = useRef<typeof MonacoEditor>();
   const containerRef = useRef<HTMLDivElement>(null);
 
+
+
   useEffect(() => {
-    const f = async () => {
+    const f = () => {
       //const monacoEditor = await monaco.init();
-      const monacoEditor = await monacoLoader();
+
+
+      const monacoEditor = MonacoEditor;
       monacoRef.current = monacoEditor;
       editorRef.current = monacoEditor.editor;
 
-      //const a = await loadMonaco();
-      //console.log('a is loaded', a);
+
+
 
       monacoEditor.languages.register({ id: "spice" });
       monacoEditor.languages.setMonarchTokensProvider("spice", {
@@ -307,6 +313,7 @@ const EditorCustom = ({
       monacoEditor.languages.registerCompletionItemProvider("spice", {
         triggerCharacters: ["."],
         provideCompletionItems: function (model, position) {
+
           // find out if we are completing a property in the 'dependencies' object.
           let textUntilPosition = model.getValueInRange({
             startLineNumber: 1,
@@ -321,7 +328,7 @@ const EditorCustom = ({
             startColumn: word.startColumn,
             endColumn: word.endColumn,
           };
-          //console.log("monaco->", position, word);
+
 
           let c1 = word.startColumn == 1;
           if (c1) {
@@ -346,15 +353,19 @@ const EditorCustom = ({
   }, []);
 
   useEffect(() => {
+
     if (monacoRef.current && containerRef.current) {
       editorCodeRef.current = monacoRef.current.editor.create(containerRef.current, {
         value: "// First line\nfunction hello() {\n\talert('Hello world!');\n}\n// Last line",
-        language: "plaintext",
+        language: "spice",
         roundedSelection: false,
         scrollBeyondLastLine: false,
         readOnly: false,
         theme: "vs-dark",
         automaticLayout: true,
+        quickSuggestions: true,
+        wordBasedSuggestions: 'allDocuments',
+        contextmenu: true,
         // ...,
       });
 
@@ -364,15 +375,7 @@ const EditorCustom = ({
 
   useEffect(() => {
     if (editorRef.current && editorCodeRef.current && isEditorCodeMounted) {
-      const modelDefault = editorRef.current.createModel(
-        "let a=0\n",
-        language ? language : "plaintext"
-      );
-      const model = editorCodeRef.current.getModel();
-      editorRef.current.setModelLanguage(
-        model ? model : modelDefault,
-        language ? language : "plaintext"
-      );
+
       editorCodeRef.current.setValue(value ? value : "hello!");
       editorCodeRef.current.onDidChangeModelContent(monacoEvent);
     }
