@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { JSX, useEffect } from "react";
 import * as circuits from "./sim/circuits";
 
 import EditorCustom from "./editor/editorCustom";
@@ -52,7 +52,7 @@ const store = window.localStorage;
 let initialSimInfo = "";
 let threadCount = 1;
 
-export default function EEsim(): JSX.Element {
+export default function EEcircuit(): JSX.Element {
   // Create the count state.
 
   const [isSimLoaded, setIsSimLoaded] = React.useState(false);
