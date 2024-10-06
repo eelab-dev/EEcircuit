@@ -198,7 +198,7 @@ export default function EEcircuit(): JSX.Element {
 
   const change = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const name = event.target.name;
+      const name = (event.target as HTMLInputElement).name;
 
       //index 0 is time
 
@@ -207,7 +207,7 @@ export default function EEcircuit(): JSX.Element {
 
         dd.forEach((e) => {
           if (e.name === name) {
-            e.visible = event.target.checked;
+            e.visible = (event.target as HTMLInputElement).checked;
             console.log("change->", e, name);
           }
         });
@@ -302,7 +302,7 @@ export default function EEcircuit(): JSX.Element {
   return (
     <div>
       <Box border="solid 0px" p={2}>
-        <Flex width="100%">
+        <Flex width={{ base: "100%", md: "75%" }}>
           <EditorCustom
             height="30vh"
             width="100%"
