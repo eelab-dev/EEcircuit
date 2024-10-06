@@ -1,5 +1,5 @@
 {
-  "name": "eesim",
+  "name": "eecircuit",
   "source": "./src/index.html",
   "version": "0.0.1",
   "description": "Circuit Simulator",
