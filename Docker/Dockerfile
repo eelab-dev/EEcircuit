@@ -1,19 +1,24 @@
-FROM fedora:latest
+FROM ubuntu:latest
 
-RUN dnf -y update
+RUN apt-get update && apt-get install -y \
+  build-essential \
+  cmake \
+  git \
+  wget \
+  curl \
+  bison \
+  python3
 
-RUN dnf -y install autoconf automake make cmake bzip2\
-  gcc-c++ libstdc++-static.x86_64
+RUN apt-get -y install autoconf automake bzip2
 
-RUN dnf -y install libtool bison xz which
+#gcc-c++ libstdc++-static.x86_64
+
+RUN apt-get -y install libtool which
 
 
 ## Emscripten
 ## https://emscripten.org/docs/getting_started/downloads.html
-RUN dnf -y install git wget curl
 
-
-RUN dnf clean all
 
 ## fix the bug in ngspice
 # COPY ./misc_time.c /opt/misc_time.c
