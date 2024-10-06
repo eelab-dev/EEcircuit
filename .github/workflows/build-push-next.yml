@@ -17,7 +17,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
-        repository: danchitnis/EEsim
+        repository: eelab-dev/EEcircuit
         ref: next   # Checkout the "next" branch
 
     - name: Set up Docker Buildx
@@ -27,10 +27,10 @@ jobs:
       run: mkdir -p Docker/build
 
     - name: Build Docker Image
-      run: docker build --no-cache -t eesim ./Docker
+      run: docker build --no-cache -t eecircuit ./Docker
 
     - name: Run Docker Container
-      run: docker run -t -v $(realpath ./Docker):/mnt eesim
+      run: docker run -t -v $(realpath ./Docker):/mnt eecircuit
 
     - name: Run Inject.js
       run: node ./Docker/inject.js
@@ -45,9 +45,6 @@ jobs:
     
     - name: Install Dependencies
       run: npm install
-
-    - name: Update Monaco Loader
-      run: node ./monacoUpdater.js
     
     - name: Build Project with Vite
       run: npm run build
@@ -59,7 +56,7 @@ jobs:
       run: npx playwright install --with-deps
         
     - name: Run Playwright tests
-      run: npx playwright test -g "EEsim Next"
+      run: npx playwright test -g "EEcircuit Next"
       
     - uses: actions/upload-artifact@v4
       if: always()
