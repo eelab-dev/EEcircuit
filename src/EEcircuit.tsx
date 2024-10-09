@@ -1,7 +1,9 @@
-import React, { JSX, useEffect } from "react";
+import React, { JSX, Suspense, useEffect, useState } from "react";
 import * as circuits from "./sim/circuits";
 
-import EditorCustom from "./editor/editorCustom";
+//import EditorCustom from "./editor/editorCustom";
+
+const EditorCustom = React.lazy(() => import("./editor/editorCustom"));
 
 import PlotArray from "./plotArray";
 import DisplayBox from "./displayBox";
@@ -46,6 +48,12 @@ import FocusLock from "react-focus-lock";
 import { getColor } from "./colors";
 import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray";
 import { DisplayDataType, makeDD } from "./displayData";
+
+
+
+
+
+
 
 let sim: SimArray;
 const store = window.localStorage;
@@ -291,30 +299,60 @@ export default function EEcircuit(): JSX.Element {
     );
   };
 
-  const { onOpen, onClose, isOpen } = useDisclosure();
 
+
+
+
+
+
+  const { onOpen, onClose, isOpen } = useDisclosure();
   const handleThreadChange = (valueString: string, valueNumber: number) => {
     setThreadCountNew(valueNumber);
   };
 
   const displayBreakpoint = useBreakpointValue({ base: "base", md: "md" });
+  const [componentsLoaded, setComponentsLoaded] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+  useEffect(() => {
+    // Simulate loading of other components
+    setTimeout(() => {
+      setComponentsLoaded(true);
+    }, 10); // Adjust the timeout as needed
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   return (
     <div>
       <Box border="solid 0px" p={2}>
-        <Flex width={{ base: "100%", md: "75%" }}>
-          <EditorCustom
-            height="30vh"
-            width="100%"
-            language="spice"
-            value={netList}
-            valueChanged={handleEditor}
-            theme="vs-dark"
-          />
+        <Flex width="100%">
+          {componentsLoaded && (
+            <Suspense fallback={<div>Text Editor Loading...</div>}>
+              <EditorCustom
+                height="30vh"
+                width="100%"
+                language="spice"
+                value={netList}
+                valueChanged={handleEditor}
+                theme="vs-dark"
+                key={windowSize.width}
+              />
+            </Suspense>
+          )}
           {displayBreakpoint == "base" ? <></> : LineSelectBox()}
         </Flex>
       </Box>
-      <Box p={1} width={{ base: "100%", md: "72.5%" }}>
+      <Box p={1} width={{ base: "100%", md: "73%" }}>
         <Flex>
           <Button
             colorScheme="blue"
