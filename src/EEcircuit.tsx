@@ -1,19 +1,20 @@
 import React, { JSX, Suspense, useEffect, useState } from "react";
-import * as circuits from "./sim/circuits";
+import * as circuits from "./sim/circuits.ts";
 
 //import EditorCustom from "./editor/editorCustom";
 
-const EditorCustom = React.lazy(() => import("./editor/editorCustom"));
+const EditorCustom = React.lazy(() => import("./editor/editorCustom.tsx"));
 
-import PlotArray from "./plotArray";
-import DisplayBox from "./displayBox";
-import DownCSV from "./downCSV";
+import PlotArray from "./plotArray.tsx";
+import DisplayBox from "./displayBox.tsx";
+import DownCSV from "./downCSV.tsx";
 
 import {
-  Button,
   Box,
+  Button,
   Divider,
   Flex,
+  Image,
   Progress,
   Spacer,
   Stack,
@@ -23,37 +24,30 @@ import {
   TabPanels,
   Tabs,
   Textarea,
-  Image,
-  useDisclosure,
   useBreakpointValue,
+  useDisclosure,
   useToast,
 } from "@chakra-ui/react";
 import {
   Popover,
-  PopoverTrigger,
-  PopoverContent,
   PopoverArrow,
   PopoverCloseButton,
+  PopoverContent,
+  PopoverTrigger,
 } from "@chakra-ui/react";
 
 import {
+  NumberDecrementStepper,
+  NumberIncrementStepper,
   NumberInput,
   NumberInputField,
   NumberInputStepper,
-  NumberIncrementStepper,
-  NumberDecrementStepper,
 } from "@chakra-ui/react";
 
 import FocusLock from "react-focus-lock";
-import { getColor } from "./colors";
-import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray";
-import { DisplayDataType, makeDD } from "./displayData";
-
-
-
-
-
-
+import { getColor } from "./colors.ts";
+import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray.ts";
+import { DisplayDataType, makeDD } from "./displayData.ts";
 
 let sim: SimArray;
 const store = window.localStorage;
@@ -83,7 +77,9 @@ export default function EEcircuit(): JSX.Element {
 
     const loadedDisplayDataString = store.getItem("displayData");
     if (loadedDisplayDataString) {
-      const loadedDisplayData = JSON.parse(loadedDisplayDataString) as DisplayDataType[];
+      const loadedDisplayData = JSON.parse(
+        loadedDisplayDataString,
+      ) as DisplayDataType[];
       setDisplayData(loadedDisplayData);
     }
   }, []);
@@ -226,7 +222,7 @@ export default function EEcircuit(): JSX.Element {
         store.setItem("displayData", stringDD);
       }
     },
-    [displayData, isSimLoaded]
+    [displayData, isSimLoaded],
   );
 
   const handleTabChange = (index: number) => {
@@ -286,7 +282,13 @@ export default function EEcircuit(): JSX.Element {
   const LineSelectBox = (): JSX.Element => {
     return (
       <Box w={{ base: "100%", md: "30%" }} marginLeft="5%">
-        <Stack direction="row" spacing={2} align="stretch" width="100%" marginBottom="0.5em">
+        <Stack
+          direction="row"
+          spacing={2}
+          align="stretch"
+          width="100%"
+          marginBottom="0.5em"
+        >
           <Button colorScheme="blue" onClick={handleSelectAllButton}>
             Select all
           </Button>
@@ -294,16 +296,13 @@ export default function EEcircuit(): JSX.Element {
             De-select all
           </Button>
         </Stack>
-        <DisplayBox displayData={displayData ? displayData : []} onChange={change} />
+        <DisplayBox
+          displayData={displayData ? displayData : []}
+          onChange={change}
+        />
       </Box>
     );
   };
-
-
-
-
-
-
 
   const { onOpen, onClose, isOpen } = useDisclosure();
   const handleThreadChange = (valueString: string, valueNumber: number) => {
@@ -312,7 +311,10 @@ export default function EEcircuit(): JSX.Element {
 
   const displayBreakpoint = useBreakpointValue({ base: "base", md: "md" });
   const [componentsLoaded, setComponentsLoaded] = useState(false);
-  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [windowSize, setWindowSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
 
   useEffect(() => {
     // Simulate loading of other components
@@ -326,9 +328,9 @@ export default function EEcircuit(): JSX.Element {
       setWindowSize({ width: window.innerWidth, height: window.innerHeight });
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
     };
   }, []);
 
@@ -361,16 +363,35 @@ export default function EEcircuit(): JSX.Element {
             m={1}
             onClick={btRun}
             isLoading={isSimRunning}
-            loadingText={isSimLoaded ? "Running 🏃" : "Loading 🚚"}>
-            Run <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F680.min.svg" height="80%" />
+            loadingText={isSimLoaded ? "Running 🏃" : "Loading 🚚"}
+          >
+            Run{" "}
+            <Image
+              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F680.min.svg"
+              height="80%"
+            />
           </Button>
 
           <Spacer />
-          <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} closeOnBlur={false}>
+          <Popover
+            isOpen={isOpen}
+            onOpen={onOpen}
+            onClose={onClose}
+            closeOnBlur={false}
+          >
             <PopoverTrigger>
-              <Button colorScheme="blue" variant="solid" size="lg" m={1} isDisabled={isSimRunning}>
+              <Button
+                colorScheme="blue"
+                variant="solid"
+                size="lg"
+                m={1}
+                isDisabled={isSimRunning}
+              >
                 {displayBreakpoint === "base" ? "" : "Settings"}{" "}
-                <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/2699.min.svg" height="80%" />
+                <Image
+                  src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/2699.min.svg"
+                  height="80%"
+                />
               </Button>
             </PopoverTrigger>
             <PopoverContent p={5}>
@@ -383,7 +404,8 @@ export default function EEcircuit(): JSX.Element {
                     maxW={20}
                     value={threadCountNew}
                     min={1}
-                    onChange={handleThreadChange}>
+                    onChange={handleThreadChange}
+                  >
                     <NumberInputField />
                     <NumberInputStepper>
                       <NumberIncrementStepper />
@@ -400,9 +422,13 @@ export default function EEcircuit(): JSX.Element {
             size="lg"
             m={1}
             onClick={btColor}
-            isDisabled={isSimRunning}>
+            isDisabled={isSimRunning}
+          >
             {displayBreakpoint === "base" ? "" : "Colorize"}{" "}
-            <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F308.min.svg" height="80%" />
+            <Image
+              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F308.min.svg"
+              height="80%"
+            />
           </Button>
           <Button
             colorScheme="blue"
@@ -410,9 +436,13 @@ export default function EEcircuit(): JSX.Element {
             size="lg"
             m={1}
             onClick={btReset}
-            isDisabled={isSimRunning}>
+            isDisabled={isSimRunning}
+          >
             {displayBreakpoint === "base" ? "" : "Reset"}{" "}
-            <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F5D1.min.svg" height="80%" />
+            <Image
+              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F5D1.min.svg"
+              height="80%"
+            />
           </Button>
         </Flex>
       </Box>
@@ -429,7 +459,10 @@ export default function EEcircuit(): JSX.Element {
         <TabList>
           <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
             Plot
-            <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4C8.min.svg" maxHeight="80%" />
+            <Image
+              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4C8.min.svg"
+              maxHeight="80%"
+            />
           </Tab>
           <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
             Info
@@ -439,16 +472,18 @@ export default function EEcircuit(): JSX.Element {
             />
           </Tab>
           <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
-            CSV <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4D1.min.svg" height="80%" />
+            CSV{" "}
+            <Image
+              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4D1.min.svg"
+              height="80%"
+            />
           </Tab>
         </TabList>
 
         <TabPanels>
           <TabPanel>
             <PlotArray resultArray={resultArray} displayData={displayData} />
-            {displayBreakpoint !== "base" ? (
-              <></>
-            ) : (
+            {displayBreakpoint !== "base" ? <></> : (
               <>
                 <Spacer p={2} /> {LineSelectBox()}
               </>
