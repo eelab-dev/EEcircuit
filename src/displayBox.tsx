@@ -1,6 +1,6 @@
 import { Box, Checkbox, Stack } from "@chakra-ui/react";
-import React from "react";
-import type { DisplayDataType } from "./displayData";
+import React, { JSX } from "react";
+import type { DisplayDataType } from "./displayData.ts";
 
 type Props = {
   displayData: DisplayDataType[];
@@ -32,7 +32,8 @@ function DisplayBox({ displayData, onChange }: Props): JSX.Element {
       bg="gray.700"
       width="80%"
       maxHeight="25vh"
-      overflowY="scroll">
+      overflowY="scroll"
+    >
       <Stack spacing={1} direction="column">
         {list.map((e, i) => (
           <Checkbox
@@ -40,11 +41,10 @@ function DisplayBox({ displayData, onChange }: Props): JSX.Element {
             onChange={onChange}
             name={e.name}
             isChecked={e.visible}
-            color={
-              e.color
-                ? `rgb(${e.color.r * 255},${e.color.g * 255},${e.color.b * 255})`
-                : `rgb(200,200,200)`
-            }>
+            color={e.color
+              ? `rgb(${e.color.r * 255},${e.color.g * 255},${e.color.b * 255})`
+              : `rgb(200,200,200)`}
+          >
             {e.name}
           </Checkbox>
           /*<div key={e.index}>

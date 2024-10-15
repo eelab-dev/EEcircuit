@@ -3,12 +3,12 @@
  *
  */
 
-import type { Simulation, simulation } from "./simulationLink";
-import { parser } from "./parser";
-import type { ResultType } from "./readOutput";
+import type { Simulation, simulation } from "./simulationLink.ts";
+import { parser } from "./parser.ts";
+import type { ResultType } from "./readOutput.ts";
 
 import * as ComLink from "comlink";
-import type { ParserType } from "./parser";
+import type { ParserType } from "./parser.ts";
 
 export type ResultArrayType = {
   results: ResultType[];
