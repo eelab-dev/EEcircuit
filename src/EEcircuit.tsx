@@ -1,7 +1,7 @@
 import React, { JSX, Suspense, useEffect, useState } from "react";
 import * as circuits from "./sim/circuits.ts";
 
-//import EditorCustom from "./editor/editorCustom";
+import FocusLock from "react-focus-lock";
 
 const EditorCustom = React.lazy(() => import("./editor/editorCustom.tsx"));
 
@@ -44,13 +44,12 @@ import {
   NumberInputStepper,
 } from "@chakra-ui/react";
 
-import FocusLock from "react-focus-lock";
 import { getColor } from "./colors.ts";
 import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray.ts";
 import { DisplayDataType, makeDD } from "./displayData.ts";
 
 let sim: SimArray;
-const store = window.localStorage;
+const store = globalThis.localStorage;
 let initialSimInfo = "";
 let threadCount = 1;
 
@@ -113,7 +112,7 @@ export default function EEcircuit(): JSX.Element {
     //DisplayData logic
     if (resultArray && resultArray.results.length > 0) {
       const newDD = makeDD(resultArray.results[0]);
-      let tempDD = [] as DisplayDataType[];
+      const tempDD = [] as DisplayDataType[];
       newDD.forEach((newData, i) => {
         let match = false;
         let visible = true;
@@ -312,8 +311,8 @@ export default function EEcircuit(): JSX.Element {
   const displayBreakpoint = useBreakpointValue({ base: "base", md: "md" });
   const [componentsLoaded, setComponentsLoaded] = useState(false);
   const [windowSize, setWindowSize] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: globalThis.innerWidth,
+    height: globalThis.innerHeight,
   });
 
   useEffect(() => {
@@ -325,12 +324,15 @@ export default function EEcircuit(): JSX.Element {
 
   useEffect(() => {
     const handleResize = () => {
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+      setWindowSize({
+        width: globalThis.innerWidth,
+        height: globalThis.innerHeight,
+      });
     };
 
-    window.addEventListener("resize", handleResize);
+    globalThis.addEventListener("resize", handleResize);
     return () => {
-      window.removeEventListener("resize", handleResize);
+      globalThis.removeEventListener("resize", handleResize);
     };
   }, []);
 
