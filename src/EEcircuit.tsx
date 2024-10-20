@@ -16,6 +16,7 @@ import {
   Flex,
   Image,
   Progress,
+  Skeleton,
   Spacer,
   Stack,
   Tab,
@@ -57,6 +58,7 @@ export default function EEcircuit(): JSX.Element {
   // Create the count state.
 
   const [isSimLoaded, setIsSimLoaded] = React.useState(false);
+  const [isSimLoading, setIsSimLoading] = React.useState(false);
   const [isSimRunning, setIsSimRunning] = React.useState(false);
   const [resultArray, setResultArray] = React.useState<ResultArrayType>();
   const [info, setInfo] = React.useState("");
@@ -177,12 +179,16 @@ export default function EEcircuit(): JSX.Element {
       setIsSimRunning(false);
     } else {
       //spawn worker thread
+      console.log("sim is loading");
+      setIsSimLoaded(false);
+      setIsSimLoading(true);
       sim = new SimArray();
       threadCount = threadCountNew;
       await sim.init(threadCount);
       initialSimInfo = await sim.getInitInfo();
       sim.progressCallback = simProgressCallback;
       setIsSimLoaded(true);
+      setIsSimLoading(false);
       setProgress(0);
       //initialSimInfo = await sim.getInfo(); //not yet working???????
       btRun();
@@ -341,7 +347,7 @@ export default function EEcircuit(): JSX.Element {
       <Box border="solid 0px" p={2}>
         <Flex width="100%">
           {componentsLoaded && (
-            <Suspense fallback={<div>Text Editor Loading...</div>}>
+            <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
               <EditorCustom
                 height="30vh"
                 width="100%"
@@ -364,8 +370,8 @@ export default function EEcircuit(): JSX.Element {
             size="lg"
             m={1}
             onClick={btRun}
-            isLoading={isSimRunning}
-            loadingText={isSimLoaded ? "Running 🏃" : "Loading 🚚"}
+            isLoading={isSimRunning || isSimLoading}
+            loadingText={isSimLoading ? "Loading 🚚" : "Running 🏃"}
           >
             Run{" "}
             <Image
