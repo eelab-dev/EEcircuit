@@ -90,7 +90,7 @@ export default function EEcircuit(): JSX.Element {
 
   useEffect(() => {
     const loadedNetList = store.getItem("netList");
-    setNetList(loadedNetList ? loadedNetList : circuits.bsimTrans);
+    setNetList(loadedNetList ? loadedNetList : circuitDefault);
 
     const loadedDisplayDataString = store.getItem("displayData");
     if (loadedDisplayDataString) {
@@ -365,17 +365,15 @@ export default function EEcircuit(): JSX.Element {
       <Box border="solid 0px" p={2}>
         <Flex width="100%">
           <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
-            {componentsLoaded && (
-              <EditorCustom
-                height="30vh"
-                width="100%"
-                language="spice"
-                value={netList}
-                valueChanged={handleEditor}
-                theme="vs-dark"
-                key={windowSize.width}
-              />
-            )}
+            <EditorCustom
+              height="30vh"
+              width="100%"
+              language="spice"
+              value={netList}
+              valueChanged={handleEditor}
+              theme="vs-dark"
+              key={windowSize.width}
+            />
           </Suspense>
           {displayBreakpoint == "base" ? <></> : LineSelectBox()}
         </Flex>
