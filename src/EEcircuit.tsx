@@ -1,12 +1,14 @@
 import React, { JSX, Suspense, useEffect, useState } from "react";
-import * as circuits from "./sim/circuits.ts";
+//import * as circuits from "./sim/circuits.ts";
 
 import FocusLock from "react-focus-lock";
 
 const EditorCustom = React.lazy(() => import("./editor/editorCustom.tsx"));
+const PlotArray = React.lazy(() => import("./plotArray.tsx"));
+const DisplayBox = React.lazy(() => import("./displayBox.tsx"));
 
-import PlotArray from "./plotArray.tsx";
-import DisplayBox from "./displayBox.tsx";
+//import PlotArray from "./plotArray.tsx";
+//import DisplayBox from "./displayBox.tsx";
 import DownCSV from "./downCSV.tsx";
 
 import {
@@ -54,6 +56,20 @@ const store = globalThis.localStorage;
 let initialSimInfo = "";
 let threadCount = 1;
 
+const circuitDefault = `Basic RLC circuit 
+.include modelcard.CMOS90
+
+r vdd 2 100.0
+l vdd 2 1
+c vdd 2 0.01
+m1 2 1 0 0 N90 W=100.0u L=0.09u
+vdd vdd 0 1.8
+
+vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
+.tran 0.1 50
+
+.end`;
+
 export default function EEcircuit(): JSX.Element {
   // Create the count state.
 
@@ -62,7 +78,7 @@ export default function EEcircuit(): JSX.Element {
   const [isSimRunning, setIsSimRunning] = React.useState(false);
   const [resultArray, setResultArray] = React.useState<ResultArrayType>();
   const [info, setInfo] = React.useState("");
-  const [netList, setNetList] = React.useState(circuits.bsimTrans);
+  const [netList, setNetList] = React.useState(circuitDefault);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
   const [tabIndex, setTabIndex] = React.useState(0);
   const [sweep, setSweep] = React.useState(false);
@@ -287,24 +303,26 @@ export default function EEcircuit(): JSX.Element {
   const LineSelectBox = (): JSX.Element => {
     return (
       <Box w={{ base: "100%", md: "30%" }} marginLeft="5%">
-        <Stack
-          direction="row"
-          spacing={2}
-          align="stretch"
-          width="100%"
-          marginBottom="0.5em"
-        >
-          <Button colorScheme="blue" onClick={handleSelectAllButton}>
-            Select all
-          </Button>
-          <Button colorScheme="blue" onClick={handleDeSelectButton}>
-            De-select all
-          </Button>
-        </Stack>
-        <DisplayBox
-          displayData={displayData ? displayData : []}
-          onChange={change}
-        />
+        <Suspense fallback={<Skeleton height="100px" />}>
+          <Stack
+            direction="row"
+            spacing={2}
+            align="stretch"
+            width="100%"
+            marginBottom="0.5em"
+          >
+            <Button colorScheme="blue" onClick={handleSelectAllButton}>
+              Select all
+            </Button>
+            <Button colorScheme="blue" onClick={handleDeSelectButton}>
+              De-select all
+            </Button>
+          </Stack>
+          <DisplayBox
+            displayData={displayData ? displayData : []}
+            onChange={change}
+          />
+        </Suspense>
       </Box>
     );
   };
@@ -346,8 +364,8 @@ export default function EEcircuit(): JSX.Element {
     <div>
       <Box border="solid 0px" p={2}>
         <Flex width="100%">
-          {componentsLoaded && (
-            <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
+          <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
+            {componentsLoaded && (
               <EditorCustom
                 height="30vh"
                 width="100%"
@@ -357,8 +375,8 @@ export default function EEcircuit(): JSX.Element {
                 theme="vs-dark"
                 key={windowSize.width}
               />
-            </Suspense>
-          )}
+            )}
+          </Suspense>
           {displayBreakpoint == "base" ? <></> : LineSelectBox()}
         </Flex>
       </Box>
@@ -490,10 +508,15 @@ export default function EEcircuit(): JSX.Element {
 
         <TabPanels>
           <TabPanel>
-            <PlotArray resultArray={resultArray} displayData={displayData} />
+            <Suspense fallback={<Skeleton height="400px" />}>
+              <PlotArray resultArray={resultArray} displayData={displayData} />
+            </Suspense>
             {displayBreakpoint !== "base" ? <></> : (
               <>
-                <Spacer p={2} /> {LineSelectBox()}
+                <Spacer p={2} />
+                <Suspense fallback={<Skeleton height="100px" />}>
+                  {LineSelectBox()}
+                </Suspense>
               </>
             )}
           </TabPanel>
