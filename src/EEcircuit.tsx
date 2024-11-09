@@ -13,43 +13,50 @@ import DownCSV from "./downCSV.tsx";
 
 import {
   Box,
-  Button,
-  Divider,
   Flex,
   Image,
-  Progress,
-  Skeleton,
+  Separator,
   Spacer,
   Stack,
-  Tab,
-  TabList,
-  TabPanel,
-  TabPanels,
   Tabs,
   Textarea,
   useBreakpointValue,
   useDisclosure,
-  useToast,
-} from "@chakra-ui/react";
-import {
-  Popover,
-  PopoverArrow,
-  PopoverCloseButton,
-  PopoverContent,
-  PopoverTrigger,
 } from "@chakra-ui/react";
 
 import {
+  PopoverArrow,
+  PopoverBody,
+  PopoverContent,
+  PopoverRoot,
+  PopoverTitle,
+  PopoverTrigger,
+} from "./components/ui/popover.tsx";
+
+import {
+  NumberInputField,
+  NumberInputLabel,
+  NumberInputRoot,
+} from "./components/ui/number-input.tsx";
+
+/*import {
   NumberDecrementStepper,
   NumberIncrementStepper,
   NumberInput,
   NumberInputField,
   NumberInputStepper,
-} from "@chakra-ui/react";
+} from "@chakra-ui/react";  */
+
+import { Toaster, toaster } from "./components/ui/toaster.tsx";
+import { Button } from "./components/ui/button.tsx";
+import { Skeleton } from "./components/ui/skeleton.tsx";
+import { ProgressBar, ProgressRoot } from "./components/ui/progress.tsx";
 
 import { getColor } from "./colors.ts";
 import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray.ts";
 import { DisplayDataType, makeDD } from "./displayData.ts";
+import type { CheckedChangeDetails } from "../node_modules/@zag-js/switch/dist/index.d.ts";
+import type { ValueChangeDetails } from "../node_modules/@zag-js/tabs/dist/index.d.ts";
 
 let sim: SimArray;
 const store = globalThis.localStorage;
@@ -86,7 +93,6 @@ export default function EEcircuit(): JSX.Element {
   const [threadCountNew, setThreadCountNew] = React.useState(1);
 
   //const toast = createStandaloneToast();
-  const toast = useToast();
 
   useEffect(() => {
     const loadedNetList = store.getItem("netList");
@@ -111,12 +117,9 @@ export default function EEcircuit(): JSX.Element {
     const displayErrors = async () => {
       const errors = await sim.getError();
       errors.forEach((e) => {
-        toast({
-          title: "ngspice error",
+        toaster.create({
           description: e,
-          status: "error",
-          duration: 9000,
-          isClosable: true,
+          type: "error",
         });
       });
     };
@@ -222,21 +225,21 @@ export default function EEcircuit(): JSX.Element {
   };*/
 
   const change = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const name = (event.target as HTMLInputElement).name;
+    (name: string, check: boolean) => {
+      //const name = event;
 
       //index 0 is time
 
       if (isSimLoaded && displayData) {
         const dd = displayData;
 
-        dd.forEach((e) => {
-          if (e.name === name) {
-            e.visible = (event.target as HTMLInputElement).checked;
-            console.log("change->", e, name);
+        dd.forEach((dd) => {
+          if (dd.name === name) {
+            dd.visible = check;
+            console.log("change->", check, name);
           }
         });
-        //console.log("change->", dd);
+        console.log("change->", dd);
 
         setDisplayData([...dd]);
         const stringDD = JSON.stringify(dd);
@@ -306,7 +309,7 @@ export default function EEcircuit(): JSX.Element {
         <Suspense fallback={<Skeleton height="100px" />}>
           <Stack
             direction="row"
-            spacing={2}
+            gap={2}
             align="stretch"
             width="100%"
             marginBottom="0.5em"
@@ -320,7 +323,7 @@ export default function EEcircuit(): JSX.Element {
           </Stack>
           <DisplayBox
             displayData={displayData ? displayData : []}
-            onChange={change}
+            checkCallBack={change}
           />
         </Suspense>
       </Box>
@@ -328,7 +331,8 @@ export default function EEcircuit(): JSX.Element {
   };
 
   const { onOpen, onClose, isOpen } = useDisclosure();
-  const handleThreadChange = (valueString: string, valueNumber: number) => {
+  const handleThreadChange = (e: ValueChangeDetails) => {
+    const valueNumber = parseInt(e.value);
     setThreadCountNew(valueNumber);
   };
 
@@ -386,7 +390,7 @@ export default function EEcircuit(): JSX.Element {
             size="lg"
             m={1}
             onClick={btRun}
-            isLoading={isSimRunning || isSimLoading}
+            loading={isSimRunning || isSimLoading}
             loadingText={isSimLoading ? "Loading 🚚" : "Running 🏃"}
           >
             Run{" "}
@@ -397,56 +401,55 @@ export default function EEcircuit(): JSX.Element {
           </Button>
 
           <Spacer />
-          <Popover
-            isOpen={isOpen}
-            onOpen={onOpen}
-            onClose={onClose}
-            closeOnBlur={false}
-          >
-            <PopoverTrigger>
-              <Button
-                colorScheme="blue"
-                variant="solid"
-                size="lg"
-                m={1}
-                isDisabled={isSimRunning}
-              >
-                {displayBreakpoint === "base" ? "" : "Settings"}{" "}
-                <Image
-                  src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/2699.min.svg"
-                  height="80%"
-                />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent p={5}>
-              <FocusLock returnFocus persistentFocus={false}>
-                <PopoverArrow />
-                <PopoverCloseButton />
-                <Box>
-                  Threads
-                  <NumberInput
-                    maxW={20}
-                    value={threadCountNew}
-                    min={1}
-                    onChange={handleThreadChange}
-                  >
-                    <NumberInputField />
-                    <NumberInputStepper>
-                      <NumberIncrementStepper />
-                      <NumberDecrementStepper />
-                    </NumberInputStepper>
-                  </NumberInput>
-                </Box>
-              </FocusLock>
-            </PopoverContent>
-          </Popover>
+          {
+            <PopoverRoot
+              open={isOpen}
+              onOpenChange={onOpen}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  colorScheme="blue"
+                  variant="solid"
+                  size="lg"
+                  m={1}
+                  disabled={isSimRunning}
+                >
+                  {displayBreakpoint === "base" ? "" : "Settings"}{" "}
+                  <Image
+                    src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/2699.min.svg"
+                    height="80%"
+                  />
+                </Button>
+              </PopoverTrigger>
+              <PopoverArrow />
+              <PopoverContent p={5}>
+                <PopoverBody>
+                  <PopoverTitle>Threads</PopoverTitle>
+                  <FocusLock returnFocus persistentFocus={false}>
+                    <Box>
+                      {
+                        <NumberInputRoot
+                          max={20}
+                          defaultValue={threadCount.toString()}
+                          min={1}
+                          onValueChange={handleThreadChange}
+                        >
+                          <NumberInputField />
+                        </NumberInputRoot>
+                      }
+                    </Box>
+                  </FocusLock>
+                </PopoverBody>
+              </PopoverContent>
+            </PopoverRoot>
+          }
           <Button
             colorScheme="blue"
             variant="solid"
             size="lg"
             m={1}
             onClick={btColor}
-            isDisabled={isSimRunning}
+            disabled={isSimRunning}
           >
             {displayBreakpoint === "base" ? "" : "Colorize"}{" "}
             <Image
@@ -460,7 +463,7 @@ export default function EEcircuit(): JSX.Element {
             size="lg"
             m={1}
             onClick={btReset}
-            isDisabled={isSimRunning}
+            disabled={isSimRunning}
           >
             {displayBreakpoint === "base" ? "" : "Reset"}{" "}
             <Image
@@ -472,69 +475,85 @@ export default function EEcircuit(): JSX.Element {
       </Box>
 
       <Box p={1}>
-        <Progress colorScheme={"green"} value={progress} />
+        <ProgressRoot value={progress}>
+          <ProgressBar />
+        </ProgressRoot>
       </Box>
 
       <Box p={2}>
-        <Divider />
+        <Separator />
       </Box>
 
-      <Tabs variant="soft-rounded" colorScheme="teal">
-        <TabList>
-          <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
+      <Tabs.Root defaultValue="plot" colorScheme="teal">
+        <Tabs.List>
+          <Tabs.Trigger
+            value="plot"
+            marginRight="0.5em"
+            paddingLeft="2em"
+            paddingRight="2em"
+          >
             Plot
             <Image
               src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4C8.min.svg"
               maxHeight="80%"
             />
-          </Tab>
-          <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
+          </Tabs.Trigger>
+          <Tabs.Trigger
+            value="info"
+            marginRight="0.5em"
+            paddingLeft="2em"
+            paddingRight="2em"
+          >
             Info
             <Image
               src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F469-200D-1F4BB.min.svg"
               height="80%"
             />
-          </Tab>
-          <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
+          </Tabs.Trigger>
+          <Tabs.Trigger
+            value="csv"
+            marginRight="0.5em"
+            paddingLeft="2em"
+            paddingRight="2em"
+          >
             CSV{" "}
             <Image
               src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4D1.min.svg"
               height="80%"
             />
-          </Tab>
-        </TabList>
+          </Tabs.Trigger>
+        </Tabs.List>
 
-        <TabPanels>
-          <TabPanel>
-            <Suspense fallback={<Skeleton height="400px" />}>
-              <PlotArray resultArray={resultArray} displayData={displayData} />
-            </Suspense>
-            {displayBreakpoint !== "base" ? <></> : (
-              <>
-                <Spacer p={2} />
-                <Suspense fallback={<Skeleton height="100px" />}>
-                  {LineSelectBox()}
-                </Suspense>
-              </>
-            )}
-          </TabPanel>
+        <Tabs.Content value="plot">
+          <Suspense fallback={<Skeleton height="400px" />}>
+            <PlotArray resultArray={resultArray} displayData={displayData} />
+          </Suspense>
+          {displayBreakpoint !== "base" ? <></> : (
+            <>
+              <Spacer p={2} />
+              <Suspense fallback={<Skeleton height="100px" />}>
+                {LineSelectBox()}
+              </Suspense>
+            </>
+          )}
+        </Tabs.Content>
 
-          <TabPanel>
-            <Textarea
-              readOnly={true}
-              aria-label="info"
-              bg="gray.900"
-              fontSize="0.9em"
-              rows={15}
-              value={info}
-            />
-          </TabPanel>
+        <Tabs.Content value="info">
+          <Textarea
+            readOnly={true}
+            aria-label="info"
+            bg="gray.900"
+            fontSize="0.9em"
+            rows={15}
+            value={info}
+          />
+        </Tabs.Content>
 
-          <TabPanel>
-            <DownCSV resultArray={resultArray} />
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
+        <Tabs.Content value="csv">
+          <DownCSV resultArray={resultArray} />
+        </Tabs.Content>
+      </Tabs.Root>
+      <Toaster />
     </div>
   );
 }

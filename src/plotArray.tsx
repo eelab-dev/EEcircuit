@@ -1,30 +1,24 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { JSX, useEffect, useRef, useState } from "react";
 import { ColorRGBA, WebglLine, WebglPlot, WebglSquare } from "webgl-plot";
 import type {
   ComplexDataType,
   RealDataType,
   ResultType,
 } from "./sim/readOutput.ts";
-import {
-  Box,
-  Checkbox,
-  color,
-  Grid,
-  GridItem,
-  HStack,
-  Tag,
-} from "@chakra-ui/react";
-import {
-  Slider,
-  SliderFilledTrack,
-  SliderThumb,
-  SliderTrack,
-} from "@chakra-ui/react";
+import { Box, Grid, GridItem, HStack } from "@chakra-ui/react";
+
+import { Checkbox } from "./components/ui/checkbox.tsx";
+import { Tag } from "./components/ui/tag.tsx";
+
+import { Slider } from "./components/ui/slider.tsx";
+
 import Axis from "./axis.tsx";
 import { unitConvert2string } from "./sim/unitConverter.ts";
 import { isComplex, ResultArrayType } from "./sim/simulationArray.ts";
 import { DisplayDataType, mapD2W } from "./displayData.ts";
 import { changeIntensity } from "./colors.ts";
+import type { CheckedChangeDetails } from "../node_modules/@zag-js/switch/dist/index.d.ts";
+import { ValueChangeDetails } from "../node_modules/@zag-js/slider/dist/index.d.ts";
 
 type PlotType = {
   resultArray?: ResultArrayType;
@@ -395,7 +389,7 @@ function PlotArray(
     wglp.gOffsetX = 0;*/
   };
 
-  const mouseDown = (e: React.MouseEvent) => {
+  const mouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
     //console.log(e.clientX - eOffset); //offset from the edge of the element
@@ -424,7 +418,7 @@ function PlotArray(
     }
   };
 
-  const mouseMove = (e: React.MouseEvent) => {
+  const mouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const xOffset =
       (e.target as HTMLCanvasElement).getBoundingClientRect().left;
     const yOffSet = (e.target as HTMLCanvasElement).getBoundingClientRect().top;
@@ -481,7 +475,7 @@ function PlotArray(
     setCrossXY({ x: x, y: y });
   };
 
-  const mouseUp = (e: React.MouseEvent) => {
+  const mouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
     if (mouseZoom.started) {
@@ -507,13 +501,13 @@ function PlotArray(
     zoomRect.visible = false;
   };
 
-  const doubleClick = (e: React.MouseEvent) => {
+  const doubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     scaleUpdate(findMinMaxGlobal());
     setZoomStatus({ scale: wglp.gScaleX, offset: wglp.gOffsetX });
   };
 
-  function wheelEvent(e: React.WheelEvent) {
+  function wheelEvent(e: React.WheelEvent<HTMLCanvasElement>) {
     //e.preventDefault();
     const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
     const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
@@ -551,13 +545,13 @@ function PlotArray(
     }
   }
 
-  const contextMenu = (e: React.MouseEvent) => {
+  const contextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
   };
 
-  const crosshairBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let o = { ...plotOptions };
-    o.crosshair = e.target.checked;
+  const crosshairBoxHandle = (e: CheckedChangeDetails) => {
+    const o = { ...plotOptions };
+    o.crosshair = e.checked;
     setPlotOptions(o);
   };
 
@@ -570,18 +564,19 @@ function PlotArray(
     }
   }, [plotOptions]);
 
-  const axisBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    SetIsAxis(e.target.checked);
+  const axisBoxHandle = (e: CheckedChangeDetails) => {
+    SetIsAxis(e.checked);
   };
 
-  const sweepCheckBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const sweepCheckBoxHandle = (e: CheckedChangeDetails) => {
     let o = { ...plotOptions };
-    o.sweepSlider = e.target.checked;
+    o.sweepSlider = e.checked;
     setPlotOptions(o);
   };
 
-  const handleSweepSlider = (value: number) => {
+  const handleSweepSlider = (e: ValueChangeDetails) => {
     //console.log(displayData);
+    const value = e.value[0];
     if (displayData && resultArray) {
       displayData.forEach((e) => {
         if (e.visible) {
@@ -636,10 +631,10 @@ function PlotArray(
   return (
     <>
       <HStack>
-        <Checkbox defaultChecked={false} onChange={axisBoxHandle}>
+        <Checkbox defaultChecked={false} onCheckedChange={axisBoxHandle}>
           Axis
         </Checkbox>
-        <Checkbox defaultChecked onChange={crosshairBoxHandle}>
+        <Checkbox defaultChecked onCheckedChange={crosshairBoxHandle}>
           Crosshair
         </Checkbox>
         {plotOptions.crosshair
@@ -656,7 +651,10 @@ function PlotArray(
           : <></>}
         {isSweep
           ? (
-            <Checkbox defaultChecked={false} onChange={sweepCheckBoxHandle}>
+            <Checkbox
+              defaultChecked={false}
+              onCheckedChange={sweepCheckBoxHandle}
+            >
               Sweep slider
             </Checkbox>
           )
@@ -683,17 +681,11 @@ function PlotArray(
       {plotOptions.sweepSlider && isSweep
         ? (
           <Slider
-            aria-label="slider-ex-1"
-            defaultValue={0}
+            defaultValue={[0]}
             min={0}
             max={resultArray ? resultArray.sweep.length - 1 : 0}
-            onChange={handleSweepSlider}
-          >
-            <SliderTrack>
-              <SliderFilledTrack />
-            </SliderTrack>
-            <SliderThumb />
-          </Slider>
+            onValueChange={handleSweepSlider}
+          />
         )
         : <></>}
 
