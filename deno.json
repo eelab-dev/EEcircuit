@@ -4,6 +4,7 @@
             "src/"
         ],
         "exclude": [
+            "node_modules/",
             "src/testdata/",
             "src/fixtures/**/*.ts",
             "dist/**",
@@ -19,8 +20,15 @@
         "rules": {}
     },
     "imports": {
-        "react": "npm:preact/compat",
-        "react-dom": "npm:preact/compat",
-        "react/jsx-runtime": "npm:preact/jsx-runtime"
+        //"react": "npm:preact/compat",
+        //"react-dom": "npm:preact/compat",
+        //"react/jsx-runtime": "npm:preact/jsx-runtime"
+    },
+    "compilerOptions": {
+      "jsx": "react-jsx",
+      "strict": true,
+      "lib": [
+        "dom"
+      ]
     }
 }
