@@ -2,6 +2,8 @@ import { Box, CheckboxGroup, Stack } from "@chakra-ui/react";
 import React, { JSX } from "react";
 import type { DisplayDataType } from "./displayData.ts";
 import { Checkbox } from "./components/ui/checkbox.tsx";
+import type { CheckboxCheckedChangeDetails } from "@chakra-ui/react";
+
 
 type Props = {
   displayData: DisplayDataType[];
@@ -42,7 +44,7 @@ function DisplayBox({ displayData, checkCallBack }: Props): JSX.Element {
           {list.map((dd, i) => (
             <Checkbox
               key={dd.name}
-              onCheckedChange={(e) =>
+              onCheckedChange={(e: CheckboxCheckedChangeDetails) =>
                 checkCallBack(dd.name, e.checked == true ? true : false)}
               name={dd.name}
               checked={dd.visible}
