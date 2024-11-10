@@ -1,5 +1,9 @@
 import React, { JSX, Suspense, useEffect, useState } from "react";
 //import * as circuits from "./sim/circuits.ts";
+import {
+  NumberInputValueChangeDetails,
+  PopoverOpenChangeDetails,
+} from "@chakra-ui/react";
 
 import FocusLock from "react-focus-lock";
 
@@ -21,7 +25,6 @@ import {
   Tabs,
   Textarea,
   useBreakpointValue,
-  useDisclosure,
 } from "@chakra-ui/react";
 
 import {
@@ -55,8 +58,6 @@ import { ProgressBar, ProgressRoot } from "./components/ui/progress.tsx";
 import { getColor } from "./colors.ts";
 import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray.ts";
 import { DisplayDataType, makeDD } from "./displayData.ts";
-import type { CheckedChangeDetails } from "../node_modules/@zag-js/switch/dist/index.d.ts";
-import type { ValueChangeDetails } from "../node_modules/@zag-js/tabs/dist/index.d.ts";
 
 let sim: SimArray;
 const store = globalThis.localStorage;
@@ -330,10 +331,11 @@ export default function EEcircuit(): JSX.Element {
     );
   };
 
-  const { onOpen, onClose, isOpen } = useDisclosure();
-  const handleThreadChange = (e: ValueChangeDetails) => {
-    const valueNumber = parseInt(e.value);
-    setThreadCountNew(valueNumber);
+  //const { onOpen, onClose } = useDisclosure();
+  const [open, setOpen] = useState(false);
+  const handleThreadChange = (e: NumberInputValueChangeDetails) => {
+   // const valueNumber = parseInt(e.value);
+    setThreadCountNew(e.valueAsNumber);
   };
 
   const displayBreakpoint = useBreakpointValue({ base: "base", md: "md" });
@@ -403,8 +405,8 @@ export default function EEcircuit(): JSX.Element {
           <Spacer />
           {
             <PopoverRoot
-              open={isOpen}
-              onOpenChange={onOpen}
+              open={open}
+              onOpenChange={(e: PopoverOpenChangeDetails) => setOpen(e.open)}
             >
               <PopoverTrigger asChild>
                 <Button
