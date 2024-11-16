@@ -5,7 +5,7 @@ import type {
   RealDataType,
   ResultType,
 } from "./sim/readOutput.ts";
-import { Box, Grid, GridItem, HStack } from "@chakra-ui/react";
+import { Box, CheckboxCheckedChangeDetails, Grid, GridItem, HStack, SliderValueChangeDetails } from "@chakra-ui/react";
 
 import { Checkbox } from "./components/ui/checkbox.tsx";
 import { Tag } from "./components/ui/tag.tsx";
@@ -17,8 +17,6 @@ import { unitConvert2string } from "./sim/unitConverter.ts";
 import { isComplex, ResultArrayType } from "./sim/simulationArray.ts";
 import { DisplayDataType, mapD2W } from "./displayData.ts";
 import { changeIntensity } from "./colors.ts";
-import type { CheckedChangeDetails } from "../node_modules/@zag-js/switch/dist/index.d.ts";
-import { ValueChangeDetails } from "../node_modules/@zag-js/slider/dist/index.d.ts";
 
 type PlotType = {
   resultArray?: ResultArrayType;
@@ -549,9 +547,9 @@ function PlotArray(
     e.preventDefault();
   };
 
-  const crosshairBoxHandle = (e: CheckedChangeDetails) => {
+  const crosshairBoxHandle = (e: CheckboxCheckedChangeDetails) => {
     const o = { ...plotOptions };
-    o.crosshair = e.checked;
+    o.crosshair = e.checked === true;
     setPlotOptions(o);
   };
 
@@ -564,17 +562,17 @@ function PlotArray(
     }
   }, [plotOptions]);
 
-  const axisBoxHandle = (e: CheckedChangeDetails) => {
-    SetIsAxis(e.checked);
+  const axisBoxHandle = (e: CheckboxCheckedChangeDetails) => {
+    SetIsAxis(e.checked === true);
   };
 
-  const sweepCheckBoxHandle = (e: CheckedChangeDetails) => {
+  const sweepCheckBoxHandle = (e: CheckboxCheckedChangeDetails) => {
     let o = { ...plotOptions };
-    o.sweepSlider = e.checked;
+    o.sweepSlider = (e.checked === true);
     setPlotOptions(o);
   };
 
-  const handleSweepSlider = (e: ValueChangeDetails) => {
+  const handleSweepSlider = (e: SliderValueChangeDetails) => {
     //console.log(displayData);
     const value = e.value[0];
     if (displayData && resultArray) {
