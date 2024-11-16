@@ -334,7 +334,7 @@ export default function EEcircuit(): JSX.Element {
   //const { onOpen, onClose } = useDisclosure();
   const [open, setOpen] = useState(false);
   const handleThreadChange = (e: NumberInputValueChangeDetails) => {
-   // const valueNumber = parseInt(e.value);
+    // const valueNumber = parseInt(e.value);
     setThreadCountNew(e.valueAsNumber);
   };
 
