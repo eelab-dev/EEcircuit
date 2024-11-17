@@ -39,7 +39,7 @@ var ENVIRONMENT_IS_WORKER = typeof importScripts == "function";
 
 // N.b. Electron.js environment is simultaneously a NODE-environment, but
 // also a web environment.
-var ENVIRONMENT_IS_NODE = typeof process == "object" && typeof process.versions == "object" && typeof process.versions.node == "string";
+var ENVIRONMENT_IS_NODE = typeof process == "object" && typeof process.versions == "object" && typeof process.versions.node == "string" && process.type != "renderer";
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
@@ -460,7 +460,7 @@ function createWasm() {
       readyPromiseReject(e);
     }
   }
-  if (!wasmBinaryFile) wasmBinaryFile = findWasmBinary();
+  wasmBinaryFile ??= findWasmBinary();
   // If instantiation fails, reject the module ready promise.
   instantiateAsync(wasmBinary, wasmBinaryFile, info, receiveInstantiationResult).catch(readyPromiseReject);
   return {};
@@ -1468,6 +1468,7 @@ var FS = {
   genericErrors: {},
   filesystems: null,
   syncFSRequests: 0,
+  readFiles: {},
   FSStream: class {
     constructor() {
       // TODO(https://github.com/emscripten-core/emscripten/issues/21414):
@@ -2349,7 +2350,6 @@ var FS = {
       stream.stream_ops.open(stream);
     }
     if (Module["logReadFiles"] && !(flags & 1)) {
-      if (!FS.readFiles) FS.readFiles = {};
       if (!(path in FS.readFiles)) {
         FS.readFiles[path] = 1;
       }
@@ -2771,7 +2771,7 @@ var FS = {
   createDevice(parent, name, input, output) {
     var path = PATH.join2(typeof parent == "string" ? parent : FS.getPath(parent), name);
     var mode = FS_getMode(!!input, !!output);
-    if (!FS.createDevice.major) FS.createDevice.major = 64;
+    FS.createDevice.major ??= 64;
     var dev = FS.makedev(FS.createDevice.major++, 0);
     // Create a fake device that a set of stream ops to emulate
     // the old behavior.
@@ -3816,12 +3816,7 @@ var getHeapMax = () => // Stay one Wasm page short of 4GB: while e.g. Chrome is 
 
 var _emscripten_get_heap_max = () => getHeapMax();
 
-var _emscripten_get_now;
-
-// Modern environment where performance.now() is supported:
-// N.B. a shorter form "_emscripten_get_now = performance.now;" is
-// unfortunately not allowed even in current browsers (e.g. FF Nightly 75).
-_emscripten_get_now = () => performance.now();
+var _emscripten_get_now = () => performance.now();
 
 var growMemory = size => {
   var b = wasmMemory.buffer;
@@ -4277,8 +4272,8 @@ var Asyncify = {
         }
         Asyncify.state = Asyncify.State.Rewinding;
         runAndAbortIfError(() => _asyncify_start_rewind(Asyncify.currData));
-        if (typeof Browser != "undefined" && Browser.mainLoop.func) {
-          Browser.mainLoop.resume();
+        if (typeof MainLoop != "undefined" && MainLoop.func) {
+          MainLoop.resume();
         }
         var asyncWasmReturnValue, isError = false;
         try {
@@ -4321,8 +4316,8 @@ var Asyncify = {
         Asyncify.state = Asyncify.State.Unwinding;
         // TODO: reuse, don't alloc/free every sleep
         Asyncify.currData = Asyncify.allocateData();
-        if (typeof Browser != "undefined" && Browser.mainLoop.func) {
-          Browser.mainLoop.pause();
+        if (typeof MainLoop != "undefined" && MainLoop.func) {
+          MainLoop.pause();
         }
         runAndAbortIfError(() => _asyncify_start_unwind(Asyncify.currData));
       }

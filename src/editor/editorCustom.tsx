@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as MonacoEditor from "monaco-editor/esm/vs/editor/editor.api";
-import './useWorker';
-import { on } from "events";
+import "./useWorker.ts";
 //import * as monaco from "monaco-editor";
 
 // https://www.gitmemory.com/issue/microsoft/monaco-editor/1423/530617327
-interface MonarchLanguageConfiguration extends MonacoEditor.languages.IMonarchLanguage {
+interface MonarchLanguageConfiguration
+  extends MonacoEditor.languages.IMonarchLanguage {
   keywords: string[];
 }
 
@@ -14,7 +14,7 @@ type EditorCustomType = {
   language?: string;
   modelChangedContent?: (
     editorCode: MonacoEditor.editor.IStandaloneCodeEditor | undefined,
-    changedText: MonacoEditor.editor.IModelContentChangedEvent
+    changedText: MonacoEditor.editor.IModelContentChangedEvent,
   ) => void;
   valueChanged?: (value: string | undefined) => void;
   theme?: string;
@@ -42,19 +42,13 @@ const EditorCustom = ({
   const monacoRef = useRef<typeof MonacoEditor>();
   const containerRef = useRef<HTMLDivElement>(null);
 
-
-
   useEffect(() => {
     const f = () => {
       //const monacoEditor = await monaco.init();
 
-
       const monacoEditor = MonacoEditor;
       monacoRef.current = monacoEditor;
       editorRef.current = monacoEditor.editor;
-
-
-
 
       monacoEditor.languages.register({ id: "spice" });
       monacoEditor.languages.setMonarchTokensProvider("spice", {
@@ -69,7 +63,8 @@ const EditorCustom = ({
         symbols: /[=><!~?:&|+\-*\/\^%]+/,
 
         // C# style strings
-        escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
+        escapes:
+          /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
 
         ignoreCase: true,
 
@@ -95,12 +90,17 @@ const EditorCustom = ({
             // delimiters and operators
             [/[{}()\[\]]/, "@brackets"],
             [/[<>](?!@symbols)/, "@brackets"],
-            [/@symbols/, { cases: { "@operators": "operator", "@default": "" } }],
+            [/@symbols/, {
+              cases: { "@operators": "operator", "@default": "" },
+            }],
 
             // @ annotations.
             // As an example, we emit a debugging log message on these tokens.
             // Note: message are supressed during the first load -- change some lines to see them.
-            [/@\s*[a-zA-Z_\$][\w\$]*/, { token: "annotation", log: "annotation token: $0" }],
+            [/@\s*[a-zA-Z_\$][\w\$]*/, {
+              token: "annotation",
+              log: "annotation token: $0",
+            }],
 
             // numbers
             [/\d*\.\d+([eE][\-+]?\d+)/, "number.float"],
@@ -152,7 +152,8 @@ const EditorCustom = ({
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "The Lodash library exported as Node.js modules.",
             insertText: "include ${1:model_file} ",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
@@ -160,15 +161,18 @@ const EditorCustom = ({
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "The Lodash library exported as Node.js modules.",
             insertText: "tran ${1:step} ${2:max_time} ",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
             label: ".dc",
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
-            insertText: "dc ${1:source} ${2:min_voltage} ${3:max_voltage} ${4:step} ",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertText:
+              "dc ${1:source} ${2:min_voltage} ${3:max_voltage} ${4:step} ",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           /*{
@@ -184,8 +188,10 @@ const EditorCustom = ({
             label: ".ac",
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
-            insertText: "ac ${1:dec | oct | lin} ${2:number_point} ${3:fstart} ${4:fstop} ",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertText:
+              "ac ${1:dec | oct | lin} ${2:number_point} ${3:fstart} ${4:fstop} ",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
@@ -193,7 +199,8 @@ const EditorCustom = ({
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText: "save ${1:v(node) | i(node)}",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
@@ -201,7 +208,8 @@ const EditorCustom = ({
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText: "parameter ${1:x} = ${2:y}",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
         ];
@@ -221,7 +229,8 @@ const EditorCustom = ({
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText: "R${1:number} ${2:node1} ${3:node2} ${4:value}",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
@@ -229,7 +238,8 @@ const EditorCustom = ({
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText: "C${1:number} ${2:node1} ${3:node2} ${4:value}",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
@@ -237,15 +247,18 @@ const EditorCustom = ({
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText: "L${1:number} ${2:node1} ${3:node2} ${4:value}",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
             label: "M (mosfet)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
-            insertText: "M${1:number} ${2:d} ${3:g} ${4:s} ${5:b} ${6:model} W=${7:w} L=${8:l} ",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertText:
+              "M${1:number} ${2:d} ${3:g} ${4:s} ${5:b} ${6:model} W=${7:w} L=${8:l} ",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
@@ -253,7 +266,8 @@ const EditorCustom = ({
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText: "V${1:number} ${2:node1} ${3:node2} ${4:dc_voltage}",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
@@ -262,7 +276,8 @@ const EditorCustom = ({
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText:
               "V${1:number} ${2:node1} ${3:node2} pulse (${4:v1} ${5:v2} ${6:time_delay} ${7:rise_time} ${8:fall_time} ${9:width} ${10:period} ${11:phase})",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
@@ -271,7 +286,8 @@ const EditorCustom = ({
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText:
               "V${1:number} ${2:node1} ${3:node2} SIN (${4:offset_voltage} ${5:amplitude} ${6:frequency} ${7:delay} ${8:damping_factor} ${9:phase})",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
@@ -279,7 +295,8 @@ const EditorCustom = ({
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText: "I${1:number} ${2:node1} ${3:node2} ${4:dc_current}",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
@@ -288,23 +305,28 @@ const EditorCustom = ({
             documentation: "Fast, unopinionated, minimalist web framework",
             insertText:
               "I${1:number} ${2:node1} ${3:node2} ${4:dc_current} pulse (${5:i1} ${6:i2} ${7:time_delay} ${8:rise_time} ${9:fall_time} ${10:width} ${11:period} ${12:phase})",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
             label: "G (VCCS)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
-            insertText: "G${1:number} ${2:n+} ${3:n-} ${4:nc+} ${5:nc-} ${6:value}",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertText:
+              "G${1:number} ${2:n+} ${3:n-} ${4:nc+} ${5:nc-} ${6:value}",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
           {
             label: "E (VCVS)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
             documentation: "Fast, unopinionated, minimalist web framework",
-            insertText: "E${1:number} ${2:n+} ${3:n-} ${4:nc+} ${5:nc-} ${6:value}",
-            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertText:
+              "E${1:number} ${2:n+} ${3:n-} ${4:nc+} ${5:nc-} ${6:value}",
+            insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule
+              .InsertAsSnippet,
             range: range,
           },
         ];
@@ -313,7 +335,6 @@ const EditorCustom = ({
       monacoEditor.languages.registerCompletionItemProvider("spice", {
         triggerCharacters: ["."],
         provideCompletionItems: function (model, position) {
-
           // find out if we are completing a property in the 'dependencies' object.
           let textUntilPosition = model.getValueInRange({
             startLineNumber: 1,
@@ -328,7 +349,6 @@ const EditorCustom = ({
             startColumn: word.startColumn,
             endColumn: word.endColumn,
           };
-
 
           let c1 = word.startColumn == 1;
           if (c1) {
@@ -353,21 +373,24 @@ const EditorCustom = ({
   }, []);
 
   useEffect(() => {
-
     if (monacoRef.current && containerRef.current) {
-      editorCodeRef.current = monacoRef.current.editor.create(containerRef.current, {
-        value: "// First line\nfunction hello() {\n\talert('Hello world!');\n}\n// Last line",
-        language: "spice",
-        roundedSelection: false,
-        scrollBeyondLastLine: false,
-        readOnly: false,
-        theme: "vs-dark",
-        automaticLayout: true,
-        quickSuggestions: true,
-        wordBasedSuggestions: 'allDocuments',
-        contextmenu: true,
-        // ...,
-      });
+      editorCodeRef.current = monacoRef.current.editor.create(
+        containerRef.current,
+        {
+          value:
+            "// First line\nfunction hello() {\n\talert('Hello world!');\n}\n// Last line",
+          language: "spice",
+          roundedSelection: false,
+          scrollBeyondLastLine: false,
+          readOnly: false,
+          theme: "vs-dark",
+          automaticLayout: true,
+          quickSuggestions: true,
+          wordBasedSuggestions: "allDocuments",
+          contextmenu: true,
+          // ...,
+        },
+      );
 
       setIsEditorCodeMounted(true);
     }
@@ -375,7 +398,6 @@ const EditorCustom = ({
 
   useEffect(() => {
     if (editorRef.current && editorCodeRef.current && isEditorCodeMounted) {
-
       editorCodeRef.current.setValue(value ? value : "hello!");
       editorCodeRef.current.onDidChangeModelContent(monacoEvent);
     }
@@ -411,7 +433,9 @@ const EditorCustom = ({
         height,
         width,
       }}
-      ref={containerRef}></div>
+      ref={containerRef}
+    >
+    </div>
   );
 };
 

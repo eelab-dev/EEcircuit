@@ -2,7 +2,7 @@
  *
  */
 
-import { unitConvert2float } from "./unitConverter";
+import { unitConvert2float } from "./unitConverter.ts";
 
 export type ParserType = {
   netLists: string[];

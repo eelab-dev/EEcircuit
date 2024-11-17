@@ -1,13 +1,22 @@
-import React, { useState, useEffect, useRef } from "react";
-import { WebglPlot, ColorRGBA, WebglLine, WebglSquare } from "webgl-plot";
-import type { ComplexDataType, RealDataType, ResultType } from "./sim/readOutput";
-import { Box, Checkbox, color, Grid, GridItem, HStack, Tag } from "@chakra-ui/react";
-import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/react";
-import Axis from "./axis";
-import { unitConvert2string } from "./sim/unitConverter";
-import { isComplex, ResultArrayType } from "./sim/simulationArray";
-import { DisplayDataType, mapD2W } from "./displayData";
-import { changeIntensity } from "./colors";
+import React, { JSX, useEffect, useRef, useState } from "react";
+import { ColorRGBA, WebglLine, WebglPlot, WebglSquare } from "webgl-plot";
+import type {
+  ComplexDataType,
+  RealDataType,
+  ResultType,
+} from "./sim/readOutput.ts";
+import { Box, CheckboxCheckedChangeDetails, Grid, GridItem, HStack, SliderValueChangeDetails } from "@chakra-ui/react";
+
+import { Checkbox } from "./components/ui/checkbox.tsx";
+import { Tag } from "./components/ui/tag.tsx";
+
+import { Slider } from "./components/ui/slider.tsx";
+
+import Axis from "./axis.tsx";
+import { unitConvert2string } from "./sim/unitConverter.ts";
+import { isComplex, ResultArrayType } from "./sim/simulationArray.ts";
+import { DisplayDataType, mapD2W } from "./displayData.ts";
+import { changeIntensity } from "./colors.ts";
 
 type PlotType = {
   resultArray?: ResultArrayType;
@@ -64,7 +73,9 @@ const zoomRect = new WebglSquare(new ColorRGBA(0.8, 0.8, 0.2, 0.25));
 const crossXLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 const crossYLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 
-function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Element {
+function PlotArray(
+  { resultArray: resultArray, displayData }: PlotType,
+): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
   const [plotOptions, setPlotOptions] = useState<PlotOptions>({
     crosshair: true,
@@ -77,7 +88,10 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
 
   const [crossXY, setCrossXY] = useState<CrossXY>({ x: 0, y: 0 });
 
-  const [zoomStatus, setZoomStatus] = useState<ZoomStatus>({ scale: 1, offset: 0 });
+  const [zoomStatus, setZoomStatus] = useState<ZoomStatus>({
+    scale: 1,
+    offset: 0,
+  });
 
   const [mouseZoom, setMouseZoom] = useState<MouseZoom>({
     started: false,
@@ -101,10 +115,14 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
   useEffect(() => {
     if (canvasMain.current) {
       const devicePixelRatio = window.devicePixelRatio || 1;
-      canvasMain.current.width = canvasMain.current.clientWidth * devicePixelRatio;
-      canvasMain.current.height = canvasMain.current.clientHeight * devicePixelRatio;
+      canvasMain.current.width = canvasMain.current.clientWidth *
+        devicePixelRatio;
+      canvasMain.current.height = canvasMain.current.clientHeight *
+        devicePixelRatio;
 
-      wglp = new WebglPlot(canvasMain.current, { powerPerformance: "high-performance" });
+      wglp = new WebglPlot(canvasMain.current, {
+        powerPerformance: "high-performance",
+      });
 
       const newFrame = () => {
         wglp.update();
@@ -119,7 +137,7 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
         (e) => {
           e.preventDefault();
         },
-        { passive: false }
+        { passive: false },
       );
     }
     console.log("canvas->", "I am here! 🧨");
@@ -132,7 +150,10 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
   }, [canvasMain]);
 
   useEffect(() => {
-    setZoomStatus({ scale: wglp.gScaleX, offset: wglp.gOffsetX / wglp.gScaleX });
+    setZoomStatus({
+      scale: wglp.gScaleX,
+      offset: wglp.gOffsetX / wglp.gScaleX,
+    });
   }, [mouseDrag]);
 
   /////////////////////////////////////////////////////////////////////
@@ -163,7 +184,7 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
           displayData[col - 1].color.r,
           displayData[col - 1].color.g,
           displayData[col - 1].color.b,
-          1
+          1,
         );
       } else {
         color = new ColorRGBA(0.5, 0.5, 0.5, 1);
@@ -206,7 +227,7 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
           displayData[index - 1].color.r,
           displayData[index - 1].color.g,
           displayData[index - 1].color.b,
-          1
+          1,
         );
       } else {
         color = new ColorRGBA(0.5, 0.5, 0.5, 1);
@@ -293,7 +314,8 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
           for (let i = 0; i < resultArray.sweep.length; i++) {
             //wglp.linesData[(e.index - 1) * resultsArray.sweep.length + i].visible = e.visible;
             const offset = isComplex(resultArray) ? 2 : 1;
-            const line = wglp.linesData[e.index - offset + i * displayData.length];
+            const line =
+              wglp.linesData[e.index - offset + i * displayData.length];
             if (line) {
               line.visible = e.visible;
             }
@@ -365,31 +387,42 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     wglp.gOffsetX = 0;*/
   };
 
-  const mouseDown = (e: React.MouseEvent) => {
+  const mouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
     //console.log(e.clientX - eOffset); //offset from the edge of the element
 
     if (e.button == 0) {
       (e.target as HTMLCanvasElement).style.cursor = "pointer";
-      const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
+      const width =
+        (e.target as HTMLCanvasElement).getBoundingClientRect().width;
       const cursorDownX = (2 * (e.clientX - eOffset - width / 2)) / width;
-      setMouseZoom({ started: true, cursorDownX: cursorDownX, cursorOffsetX: 0 });
+      setMouseZoom({
+        started: true,
+        cursorDownX: cursorDownX,
+        cursorOffsetX: 0,
+      });
       zoomRect.visible = true;
     }
     if (e.button == 2) {
       (e.target as HTMLCanvasElement).style.cursor = "grabbing";
       const dragInitialX = (e.clientX - eOffset) * devicePixelRatio;
       const dragOffsetOld = wglp.gOffsetX;
-      setMouseDrag({ started: true, dragInitialX: dragInitialX, dragOffsetOld: dragOffsetOld });
+      setMouseDrag({
+        started: true,
+        dragInitialX: dragInitialX,
+        dragOffsetOld: dragOffsetOld,
+      });
     }
   };
 
-  const mouseMove = (e: React.MouseEvent) => {
-    const xOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().left;
+  const mouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const xOffset =
+      (e.target as HTMLCanvasElement).getBoundingClientRect().left;
     const yOffSet = (e.target as HTMLCanvasElement).getBoundingClientRect().top;
     const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
-    const height = (e.target as HTMLCanvasElement).getBoundingClientRect().height;
+    const height =
+      (e.target as HTMLCanvasElement).getBoundingClientRect().height;
     if (mouseZoom.started) {
       const cursorOffsetX = (2 * (e.clientX - xOffset - width / 2)) / width;
       setMouseZoom({
@@ -414,7 +447,8 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     }
     /************Mouse Drag Evenet********* */
     if (mouseDrag.started) {
-      const moveX = (e.clientX - xOffset) * devicePixelRatio - mouseDrag.dragInitialX;
+      const moveX = (e.clientX - xOffset) * devicePixelRatio -
+        mouseDrag.dragInitialX;
       const offsetX = moveX / width;
       wglp.gOffsetX = offsetX + mouseDrag.dragOffsetOld;
     }
@@ -431,7 +465,6 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
       const y = (1 / wglp.gScaleY) * (yPosRel - wglp.gOffsetY);
 
       cross(x, y);
-
     }
   };
   const cross = (x: number, y: number): void => {
@@ -440,15 +473,18 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     setCrossXY({ x: x, y: y });
   };
 
-  const mouseUp = (e: React.MouseEvent) => {
+  const mouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
     if (mouseZoom.started) {
-      const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
+      const width =
+        (e.target as HTMLCanvasElement).getBoundingClientRect().width;
       const cursorUpX = (2 * (e.clientX - eOffset - width / 2)) / width;
-      const zoomFactor = Math.abs(cursorUpX - mouseZoom.cursorDownX) / (2 * wglp.gScaleX);
+      const zoomFactor = Math.abs(cursorUpX - mouseZoom.cursorDownX) /
+        (2 * wglp.gScaleX);
       const offsetFactor =
-        (mouseZoom.cursorDownX + cursorUpX - 2 * wglp.gOffsetX) / (2 * wglp.gScaleX);
+        (mouseZoom.cursorDownX + cursorUpX - 2 * wglp.gOffsetX) /
+        (2 * wglp.gScaleX);
 
       if (zoomFactor > 0) {
         wglp.gScaleX = 1 / zoomFactor;
@@ -463,13 +499,13 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     zoomRect.visible = false;
   };
 
-  const doubleClick = (e: React.MouseEvent) => {
+  const doubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     scaleUpdate(findMinMaxGlobal());
     setZoomStatus({ scale: wglp.gScaleX, offset: wglp.gOffsetX });
   };
 
-  function wheelEvent(e: React.WheelEvent) {
+  function wheelEvent(e: React.WheelEvent<HTMLCanvasElement>) {
     //e.preventDefault();
     const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
     const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
@@ -507,13 +543,13 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     }
   }
 
-  const contextMenu = (e: React.MouseEvent) => {
+  const contextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
   };
 
-  const crosshairBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let o = { ...plotOptions };
-    o.crosshair = e.target.checked;
+  const crosshairBoxHandle = (e: CheckboxCheckedChangeDetails) => {
+    const o = { ...plotOptions };
+    o.crosshair = e.checked === true;
     setPlotOptions(o);
   };
 
@@ -526,18 +562,19 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     }
   }, [plotOptions]);
 
-  const axisBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    SetIsAxis(e.target.checked);
+  const axisBoxHandle = (e: CheckboxCheckedChangeDetails) => {
+    SetIsAxis(e.checked === true);
   };
 
-  const sweepCheckBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const sweepCheckBoxHandle = (e: CheckboxCheckedChangeDetails) => {
     let o = { ...plotOptions };
-    o.sweepSlider = e.target.checked;
+    o.sweepSlider = (e.checked === true);
     setPlotOptions(o);
   };
 
-  const handleSweepSlider = (value: number) => {
+  const handleSweepSlider = (e: SliderValueChangeDetails) => {
     //console.log(displayData);
+    const value = e.value[0];
     if (displayData && resultArray) {
       displayData.forEach((e) => {
         if (e.visible) {
@@ -592,73 +629,85 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
   return (
     <>
       <HStack>
-        <Checkbox defaultChecked={false} onChange={axisBoxHandle}>
+        <Checkbox defaultChecked={false} onCheckedChange={axisBoxHandle}>
           Axis
         </Checkbox>
-        <Checkbox defaultChecked onChange={crosshairBoxHandle}>
+        <Checkbox defaultChecked onCheckedChange={crosshairBoxHandle}>
           Crosshair
         </Checkbox>
-        {plotOptions.crosshair ? (
-          <>
-            <Tag w="7em" colorScheme="teal">{`X: ${unitConvert2string(crossXY.x, 3)}`}</Tag>
-            <Tag w="7em" colorScheme="teal">{`Y: ${unitConvert2string(crossXY.y, 3)}`}</Tag>
-          </>
-        ) : (
-          <></>
-        )}
-        {isSweep ? (
-          <Checkbox defaultChecked={false} onChange={sweepCheckBoxHandle}>
-            Sweep slider
-          </Checkbox>
-        ) : (
-          <></>
-        )}
-        {plotOptions.sweepSlider && isSweep ? (
-          <>
-            <Tag colorScheme="teal">{`${unitConvert2string(sliderValue, 3)}`}</Tag>
-          </>
-        ) : (
-          <></>
-        )}
+        {plotOptions.crosshair
+          ? (
+            <>
+              <Tag w="7em" colorScheme="teal">
+                {`X: ${unitConvert2string(crossXY.x, 3)}`}
+              </Tag>
+              <Tag w="7em" colorScheme="teal">
+                {`Y: ${unitConvert2string(crossXY.y, 3)}`}
+              </Tag>
+            </>
+          )
+          : <></>}
+        {isSweep
+          ? (
+            <Checkbox
+              defaultChecked={false}
+              onCheckedChange={sweepCheckBoxHandle}
+            >
+              Sweep slider
+            </Checkbox>
+          )
+          : <></>}
+        {plotOptions.sweepSlider && isSweep
+          ? (
+            <>
+              <Tag colorScheme="teal">
+                {`${unitConvert2string(sliderValue, 3)}`}
+              </Tag>
+            </>
+          )
+          : <></>}
 
-        {/*<Checkbox defaultIsChecked={false}>Neg</Checkbox>
+        {
+          /*<Checkbox defaultIsChecked={false}>Neg</Checkbox>
         <Checkbox defaultIsChecked={false}>Log10X</Checkbox>
         <Checkbox defaultIsChecked={false} onChange={handleLog10YCheckbox}>
           Log10Y
-        </Checkbox>*/}
+        </Checkbox>*/
+        }
       </HStack>
 
-      {plotOptions.sweepSlider && isSweep ? (
-        <Slider
-          aria-label="slider-ex-1"
-          defaultValue={0}
-          min={0}
-          max={resultArray ? resultArray.sweep.length - 1 : 0}
-          onChange={handleSweepSlider}>
-          <SliderTrack>
-            <SliderFilledTrack />
-          </SliderTrack>
-          <SliderThumb />
-        </Slider>
-      ) : (
-        <></>
-      )}
+      {plotOptions.sweepSlider && isSweep
+        ? (
+          <Slider
+            defaultValue={[0]}
+            min={0}
+            max={resultArray ? resultArray.sweep.length - 1 : 0}
+            onValueChange={handleSweepSlider}
+          />
+        )
+        : <></>}
 
       <Grid
         templateRows={`1fr ${isAxis ? 1.5 : 0}em`}
         templateColumns={`${isAxis ? 5 : 0}em 1fr`}
-        gap={0}>
-        <GridItem rowStart={1} colStart={1} bg="gray.900" borderRight="solid 2px">
-          {isAxis ? (
-            <Axis
-              scale={wglp ? wglp.gScaleY : 1}
-              offset={wglp ? wglp.gOffsetY : 0}
-              axis="y"
-              yHeight={canvasStyle.height as string}
-            />
-          ) : (
-            <></>
-          )}
+        gap={0}
+      >
+        <GridItem
+          rowStart={1}
+          colStart={1}
+          bg="gray.900"
+          borderRight="solid 2px"
+        >
+          {isAxis
+            ? (
+              <Axis
+                scale={wglp ? wglp.gScaleY : 1}
+                offset={wglp ? wglp.gOffsetY : 0}
+                axis="y"
+                yHeight={canvasStyle.height as string}
+              />
+            )
+            : <></>}
         </GridItem>
         <GridItem rowStart={1} colStart={2} bg="papayawhip">
           <Box bg="gray.900">
@@ -670,7 +719,9 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
               onMouseUp={mouseUp}
               onDoubleClick={doubleClick}
               onWheel={wheelEvent}
-              onContextMenu={contextMenu}></canvas>
+              onContextMenu={contextMenu}
+            >
+            </canvas>
           </Box>
         </GridItem>
         <GridItem
@@ -684,17 +735,18 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
           rowStart={2}
           colStart={2}
           bg="gray.900"
-          borderTop={`${isAxis ? "solid 2px" : ""}`}>
-          {isAxis ? (
-            <Axis
-              scale={wglp ? wglp.gScaleX : 1}
-              offset={wglp ? wglp.gOffsetX : 0}
-              axis="x"
-              yHeight={canvasStyle.height as string}
-            />
-          ) : (
-            <></>
-          )}
+          borderTop={`${isAxis ? "solid 2px" : ""}`}
+        >
+          {isAxis
+            ? (
+              <Axis
+                scale={wglp ? wglp.gScaleX : 1}
+                offset={wglp ? wglp.gOffsetX : 0}
+                axis="x"
+                yHeight={canvasStyle.height as string}
+              />
+            )
+            : <></>}
         </GridItem>
       </Grid>
     </>

@@ -2,9 +2,9 @@
  * map display data to webgl-plot lines
  */
 
-import { ColorType, getColor } from "./colors";
-import type { ResultType } from "./sim/readOutput";
-import { isComplex, ResultArrayType } from "./sim/simulationArray";
+import { ColorType, getColor } from "./colors.ts";
+import type { ResultType } from "./sim/readOutput.ts";
+import { isComplex, ResultArrayType } from "./sim/simulationArray.ts";
 
 export type DisplayDataType = {
   name: string;
