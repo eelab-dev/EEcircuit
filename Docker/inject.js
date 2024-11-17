@@ -56,7 +56,7 @@ function runThings() {
 const textAll = [text1, text2, text3, text4, text5];
 const textAllrep = [text1rep, text2rep, text3rep, text4rep, text5rep];
 
-let fs = require("fs");
+import fs from "fs";
 
 fs.readFile(filename, "utf8", function (err, data) {
   if (err) {
