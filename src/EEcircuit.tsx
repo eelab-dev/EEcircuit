@@ -1,65 +1,92 @@
-import React, { JSX, useEffect } from "react";
-import * as circuits from "./sim/circuits";
-
-import EditorCustom from "./editor/editorCustom";
-
-import PlotArray from "./plotArray";
-import DisplayBox from "./displayBox";
-import DownCSV from "./downCSV";
-
+import React, { JSX, Suspense, useEffect, useState } from "react";
+//import * as circuits from "./sim/circuits.ts";
 import {
-  Button,
-  Box,
-  Divider,
-  Flex,
-  Progress,
-  Spacer,
-  Stack,
-  Tab,
-  TabList,
-  TabPanel,
-  TabPanels,
-  Tabs,
-  Textarea,
-  Image,
-  useDisclosure,
-  useBreakpointValue,
-  useToast,
-} from "@chakra-ui/react";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverArrow,
-  PopoverCloseButton,
-} from "@chakra-ui/react";
-
-import {
-  NumberInput,
-  NumberInputField,
-  NumberInputStepper,
-  NumberIncrementStepper,
-  NumberDecrementStepper,
+  NumberInputValueChangeDetails,
+  PopoverOpenChangeDetails,
 } from "@chakra-ui/react";
 
 import FocusLock from "react-focus-lock";
-import { getColor } from "./colors";
-import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray";
-import { DisplayDataType, makeDD } from "./displayData";
+
+const EditorCustom = React.lazy(() => import("./editor/editorCustom.tsx"));
+const PlotArray = React.lazy(() => import("./plotArray.tsx"));
+const DisplayBox = React.lazy(() => import("./displayBox.tsx"));
+
+//import PlotArray from "./plotArray.tsx";
+//import DisplayBox from "./displayBox.tsx";
+import DownCSV from "./downCSV.tsx";
+
+import {
+  Box,
+  Flex,
+  Image,
+  Separator,
+  Spacer,
+  Stack,
+  Tabs,
+  Textarea,
+  useBreakpointValue,
+} from "@chakra-ui/react";
+
+import {
+  PopoverArrow,
+  PopoverBody,
+  PopoverContent,
+  PopoverRoot,
+  PopoverTitle,
+  PopoverTrigger,
+} from "./components/ui/popover.tsx";
+
+import {
+  NumberInputField,
+  NumberInputLabel,
+  NumberInputRoot,
+} from "./components/ui/number-input.tsx";
+
+/*import {
+  NumberDecrementStepper,
+  NumberIncrementStepper,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+} from "@chakra-ui/react";  */
+
+import { Toaster, toaster } from "./components/ui/toaster.tsx";
+import { Button } from "./components/ui/button.tsx";
+import { Skeleton } from "./components/ui/skeleton.tsx";
+import { ProgressBar, ProgressRoot } from "./components/ui/progress.tsx";
+
+import { getColor } from "./colors.ts";
+import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray.ts";
+import { DisplayDataType, makeDD } from "./displayData.ts";
 
 let sim: SimArray;
-const store = window.localStorage;
+const store = globalThis.localStorage;
 let initialSimInfo = "";
 let threadCount = 1;
+
+const circuitDefault = `Basic RLC circuit 
+.include modelcard.CMOS90
+
+r vdd 2 100.0
+l vdd 2 1
+c vdd 2 0.01
+m1 2 1 0 0 N90 W=100.0u L=0.09u
+vdd vdd 0 1.8
+
+vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
+.tran 0.1 50
+
+.end`;
 
 export default function EEcircuit(): JSX.Element {
   // Create the count state.
 
   const [isSimLoaded, setIsSimLoaded] = React.useState(false);
+  const [isSimLoading, setIsSimLoading] = React.useState(false);
   const [isSimRunning, setIsSimRunning] = React.useState(false);
   const [resultArray, setResultArray] = React.useState<ResultArrayType>();
   const [info, setInfo] = React.useState("");
-  const [netList, setNetList] = React.useState(circuits.bsimTrans);
+  const [netList, setNetList] = React.useState(circuitDefault);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
   const [tabIndex, setTabIndex] = React.useState(0);
   const [sweep, setSweep] = React.useState(false);
@@ -67,15 +94,16 @@ export default function EEcircuit(): JSX.Element {
   const [threadCountNew, setThreadCountNew] = React.useState(1);
 
   //const toast = createStandaloneToast();
-  const toast = useToast();
 
   useEffect(() => {
     const loadedNetList = store.getItem("netList");
-    setNetList(loadedNetList ? loadedNetList : circuits.bsimTrans);
+    setNetList(loadedNetList ? loadedNetList : circuitDefault);
 
     const loadedDisplayDataString = store.getItem("displayData");
     if (loadedDisplayDataString) {
-      const loadedDisplayData = JSON.parse(loadedDisplayDataString) as DisplayDataType[];
+      const loadedDisplayData = JSON.parse(
+        loadedDisplayDataString,
+      ) as DisplayDataType[];
       setDisplayData(loadedDisplayData);
     }
   }, []);
@@ -90,12 +118,9 @@ export default function EEcircuit(): JSX.Element {
     const displayErrors = async () => {
       const errors = await sim.getError();
       errors.forEach((e) => {
-        toast({
-          title: "ngspice error",
+        toaster.create({
           description: e,
-          status: "error",
-          duration: 9000,
-          isClosable: true,
+          type: "error",
         });
       });
     };
@@ -109,7 +134,7 @@ export default function EEcircuit(): JSX.Element {
     //DisplayData logic
     if (resultArray && resultArray.results.length > 0) {
       const newDD = makeDD(resultArray.results[0]);
-      let tempDD = [] as DisplayDataType[];
+      const tempDD = [] as DisplayDataType[];
       newDD.forEach((newData, i) => {
         let match = false;
         let visible = true;
@@ -174,12 +199,16 @@ export default function EEcircuit(): JSX.Element {
       setIsSimRunning(false);
     } else {
       //spawn worker thread
+      console.log("sim is loading");
+      setIsSimLoaded(false);
+      setIsSimLoading(true);
       sim = new SimArray();
       threadCount = threadCountNew;
       await sim.init(threadCount);
       initialSimInfo = await sim.getInitInfo();
       sim.progressCallback = simProgressCallback;
       setIsSimLoaded(true);
+      setIsSimLoading(false);
       setProgress(0);
       //initialSimInfo = await sim.getInfo(); //not yet working???????
       btRun();
@@ -197,28 +226,28 @@ export default function EEcircuit(): JSX.Element {
   };*/
 
   const change = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const name = event.target.name;
+    (name: string, check: boolean) => {
+      //const name = event;
 
       //index 0 is time
 
       if (isSimLoaded && displayData) {
         const dd = displayData;
 
-        dd.forEach((e) => {
-          if (e.name === name) {
-            e.visible = event.target.checked;
-            console.log("change->", e, name);
+        dd.forEach((dd) => {
+          if (dd.name === name) {
+            dd.visible = check;
+            console.log("change->", check, name);
           }
         });
-        //console.log("change->", dd);
+        console.log("change->", dd);
 
         setDisplayData([...dd]);
         const stringDD = JSON.stringify(dd);
         store.setItem("displayData", stringDD);
       }
     },
-    [displayData, isSimLoaded]
+    [displayData, isSimLoaded],
   );
 
   const handleTabChange = (index: number) => {
@@ -278,43 +307,84 @@ export default function EEcircuit(): JSX.Element {
   const LineSelectBox = (): JSX.Element => {
     return (
       <Box w={{ base: "100%", md: "30%" }} marginLeft="5%">
-        <Stack direction="row" spacing={2} align="stretch" width="100%" marginBottom="0.5em">
-          <Button colorScheme="blue" onClick={handleSelectAllButton}>
-            Select all
-          </Button>
-          <Button colorScheme="blue" onClick={handleDeSelectButton}>
-            De-select all
-          </Button>
-        </Stack>
-        <DisplayBox displayData={displayData ? displayData : []} onChange={change} />
+        <Suspense fallback={<Skeleton height="100px" />}>
+          <Stack
+            direction="row"
+            gap={2}
+            align="stretch"
+            width="100%"
+            marginBottom="0.5em"
+          >
+            <Button colorScheme="blue" onClick={handleSelectAllButton}>
+              Select all
+            </Button>
+            <Button colorScheme="blue" onClick={handleDeSelectButton}>
+              De-select all
+            </Button>
+          </Stack>
+          <DisplayBox
+            displayData={displayData ? displayData : []}
+            checkCallBack={change}
+          />
+        </Suspense>
       </Box>
     );
   };
 
-  const { onOpen, onClose, isOpen } = useDisclosure();
-
-  const handleThreadChange = (valueString: string, valueNumber: number) => {
-    setThreadCountNew(valueNumber);
+  //const { onOpen, onClose } = useDisclosure();
+  const [open, setOpen] = useState(false);
+  const handleThreadChange = (e: NumberInputValueChangeDetails) => {
+    // const valueNumber = parseInt(e.value);
+    setThreadCountNew(e.valueAsNumber);
   };
 
   const displayBreakpoint = useBreakpointValue({ base: "base", md: "md" });
+  const [componentsLoaded, setComponentsLoaded] = useState(false);
+  const [windowSize, setWindowSize] = useState({
+    width: globalThis.innerWidth,
+    height: globalThis.innerHeight,
+  });
+
+  useEffect(() => {
+    // Simulate loading of other components
+    setTimeout(() => {
+      setComponentsLoaded(true);
+    }, 10); // Adjust the timeout as needed
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: globalThis.innerWidth,
+        height: globalThis.innerHeight,
+      });
+    };
+
+    globalThis.addEventListener("resize", handleResize);
+    return () => {
+      globalThis.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   return (
     <div>
       <Box border="solid 0px" p={2}>
         <Flex width="100%">
-          <EditorCustom
-            height="30vh"
-            width="100%"
-            language="spice"
-            value={netList}
-            valueChanged={handleEditor}
-            theme="vs-dark"
-          />
+          <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
+            <EditorCustom
+              height="30vh"
+              width="100%"
+              language="spice"
+              value={netList}
+              valueChanged={handleEditor}
+              theme="vs-dark"
+              key={windowSize.width}
+            />
+          </Suspense>
           {displayBreakpoint == "base" ? <></> : LineSelectBox()}
         </Flex>
       </Box>
-      <Box p={1} width={{ base: "100%", md: "72.5%" }}>
+      <Box p={1} width={{ base: "100%", md: "73%" }}>
         <Flex>
           <Button
             colorScheme="blue"
@@ -322,49 +392,72 @@ export default function EEcircuit(): JSX.Element {
             size="lg"
             m={1}
             onClick={btRun}
-            isLoading={isSimRunning}
-            loadingText={isSimLoaded ? "Running 🏃" : "Loading 🚚"}>
-            Run <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F680.min.svg" height="80%" />
+            loading={isSimRunning || isSimLoading}
+            loadingText={isSimLoading ? "Loading 🚚" : "Running 🏃"}
+          >
+            Run{" "}
+            <Image
+              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F680.min.svg"
+              height="80%"
+            />
           </Button>
 
           <Spacer />
-          <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} closeOnBlur={false}>
-            <PopoverTrigger>
-              <Button colorScheme="blue" variant="solid" size="lg" m={1} isDisabled={isSimRunning}>
-                {displayBreakpoint === "base" ? "" : "Settings"}{" "}
-                <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/2699.min.svg" height="80%" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent p={5}>
-              <FocusLock returnFocus persistentFocus={false}>
-                <PopoverArrow />
-                <PopoverCloseButton />
-                <Box>
-                  Threads
-                  <NumberInput
-                    maxW={20}
-                    value={threadCountNew}
-                    min={1}
-                    onChange={handleThreadChange}>
-                    <NumberInputField />
-                    <NumberInputStepper>
-                      <NumberIncrementStepper />
-                      <NumberDecrementStepper />
-                    </NumberInputStepper>
-                  </NumberInput>
-                </Box>
-              </FocusLock>
-            </PopoverContent>
-          </Popover>
+          {
+            <PopoverRoot
+              open={open}
+              onOpenChange={(e: PopoverOpenChangeDetails) => setOpen(e.open)}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  colorScheme="blue"
+                  variant="solid"
+                  size="lg"
+                  m={1}
+                  disabled={isSimRunning}
+                >
+                  {displayBreakpoint === "base" ? "" : "Settings"}{" "}
+                  <Image
+                    src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/2699.min.svg"
+                    height="80%"
+                  />
+                </Button>
+              </PopoverTrigger>
+              <PopoverArrow />
+              <PopoverContent p={5}>
+                <PopoverBody>
+                  <PopoverTitle>Threads</PopoverTitle>
+                  <FocusLock returnFocus persistentFocus={false}>
+                    <Box>
+                      {
+                        <NumberInputRoot
+                          max={20}
+                          defaultValue={threadCount.toString()}
+                          min={1}
+                          onValueChange={handleThreadChange}
+                        >
+                          <NumberInputField />
+                        </NumberInputRoot>
+                      }
+                    </Box>
+                  </FocusLock>
+                </PopoverBody>
+              </PopoverContent>
+            </PopoverRoot>
+          }
           <Button
             colorScheme="blue"
             variant="solid"
             size="lg"
             m={1}
             onClick={btColor}
-            isDisabled={isSimRunning}>
+            disabled={isSimRunning}
+          >
             {displayBreakpoint === "base" ? "" : "Colorize"}{" "}
-            <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F308.min.svg" height="80%" />
+            <Image
+              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F308.min.svg"
+              height="80%"
+            />
           </Button>
           <Button
             colorScheme="blue"
@@ -372,67 +465,97 @@ export default function EEcircuit(): JSX.Element {
             size="lg"
             m={1}
             onClick={btReset}
-            isDisabled={isSimRunning}>
+            disabled={isSimRunning}
+          >
             {displayBreakpoint === "base" ? "" : "Reset"}{" "}
-            <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F5D1.min.svg" height="80%" />
+            <Image
+              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F5D1.min.svg"
+              height="80%"
+            />
           </Button>
         </Flex>
       </Box>
 
       <Box p={1}>
-        <Progress colorScheme={"green"} value={progress} />
+        <ProgressRoot value={progress}>
+          <ProgressBar />
+        </ProgressRoot>
       </Box>
 
       <Box p={2}>
-        <Divider />
+        <Separator />
       </Box>
 
-      <Tabs variant="soft-rounded" colorScheme="teal">
-        <TabList>
-          <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
+      <Tabs.Root defaultValue="plot" colorScheme="teal">
+        <Tabs.List>
+          <Tabs.Trigger
+            value="plot"
+            marginRight="0.5em"
+            paddingLeft="2em"
+            paddingRight="2em"
+          >
             Plot
-            <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4C8.min.svg" maxHeight="80%" />
-          </Tab>
-          <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
+            <Image
+              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4C8.min.svg"
+              maxHeight="80%"
+            />
+          </Tabs.Trigger>
+          <Tabs.Trigger
+            value="info"
+            marginRight="0.5em"
+            paddingLeft="2em"
+            paddingRight="2em"
+          >
             Info
             <Image
               src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F469-200D-1F4BB.min.svg"
               height="80%"
             />
-          </Tab>
-          <Tab marginRight="0.5em" paddingLeft="2em" paddingRight="2em">
-            CSV <Image src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4D1.min.svg" height="80%" />
-          </Tab>
-        </TabList>
-
-        <TabPanels>
-          <TabPanel>
-            <PlotArray resultArray={resultArray} displayData={displayData} />
-            {displayBreakpoint !== "base" ? (
-              <></>
-            ) : (
-              <>
-                <Spacer p={2} /> {LineSelectBox()}
-              </>
-            )}
-          </TabPanel>
-
-          <TabPanel>
-            <Textarea
-              readOnly={true}
-              aria-label="info"
-              bg="gray.900"
-              fontSize="0.9em"
-              rows={15}
-              value={info}
+          </Tabs.Trigger>
+          <Tabs.Trigger
+            value="csv"
+            marginRight="0.5em"
+            paddingLeft="2em"
+            paddingRight="2em"
+          >
+            CSV{" "}
+            <Image
+              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4D1.min.svg"
+              height="80%"
             />
-          </TabPanel>
+          </Tabs.Trigger>
+        </Tabs.List>
 
-          <TabPanel>
-            <DownCSV resultArray={resultArray} />
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
+        <Tabs.Content value="plot">
+          <Suspense fallback={<Skeleton height="400px" />}>
+            <PlotArray resultArray={resultArray} displayData={displayData} />
+          </Suspense>
+          {displayBreakpoint !== "base" ? <></> : (
+            <>
+              <Spacer p={2} />
+              <Suspense fallback={<Skeleton height="100px" />}>
+                {LineSelectBox()}
+              </Suspense>
+            </>
+          )}
+        </Tabs.Content>
+
+        <Tabs.Content value="info">
+          <Textarea
+            readOnly={true}
+            aria-label="info"
+            bg="gray.900"
+            fontSize="0.9em"
+            rows={15}
+            value={info}
+          />
+        </Tabs.Content>
+
+        <Tabs.Content value="csv">
+          <DownCSV resultArray={resultArray} />
+        </Tabs.Content>
+      </Tabs.Root>
+      <Toaster />
     </div>
   );
 }

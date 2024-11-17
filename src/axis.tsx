@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { unitConvert2string } from "./sim/unitConverter";
+import React, { JSX, useEffect, useRef, useState } from "react";
+import { unitConvert2string } from "./sim/unitConverter.ts";
 
 type AxisType = {
   scale: number;
@@ -18,7 +18,10 @@ type CanvasSize = {
 const Axis = ({ scale, offset, yHeight, axis }: AxisType): JSX.Element => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ctx, setCtx] = useState<CanvasRenderingContext2D>();
-  const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
+  const [canvasSize, setCanvasSize] = useState<CanvasSize>({
+    width: 0,
+    height: 0,
+  });
 
   //console.log("axis->", axis == "y");
   //console.log("axis->", midpoint);
@@ -61,7 +64,11 @@ const Axis = ({ scale, offset, yHeight, axis }: AxisType): JSX.Element => {
     }
   }, [scale, offset]);
 
-  const updateX = (ctx2d: CanvasRenderingContext2D, width: number, height: number) => {
+  const updateX = (
+    ctx2d: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+  ) => {
     ctx2d.clearRect(0, 0, width, height);
 
     for (let i = 0; i < 6; i++) {
@@ -76,7 +83,11 @@ const Axis = ({ scale, offset, yHeight, axis }: AxisType): JSX.Element => {
     }
   };
 
-  const updateY = (ctx2d: CanvasRenderingContext2D, width: number, height: number) => {
+  const updateY = (
+    ctx2d: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+  ) => {
     //console.log("yaxis->", canvasSize);
     ctx2d.clearRect(0, 0, width, height);
     for (let i = 0; i < 6; i++) {

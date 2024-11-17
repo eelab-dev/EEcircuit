@@ -1,7 +1,7 @@
 import { Button } from "@chakra-ui/react";
-import React from "react";
-import type { ComplexDataType, RealDataType } from "./sim/readOutput";
-import { isComplex, ResultArrayType } from "./sim/simulationArray";
+import React, { JSX } from "react";
+import type { ComplexDataType, RealDataType } from "./sim/readOutput.ts";
+import { isComplex, ResultArrayType } from "./sim/simulationArray.ts";
 
 type Prop = {
   resultArray?: ResultArrayType;
@@ -18,7 +18,9 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
     const vars = resultArray.results[0].param.variables;
     vars.forEach((e) => {
       for (let i = 0; i < resultArray.results.length; i++) {
-        const sweepIndex = resultArray.sweep.length > 0 ? `[${resultArray.sweep[i]}]` : "";
+        const sweepIndex = resultArray.sweep.length > 0
+          ? `[${resultArray.sweep[i]}]`
+          : "";
         strTop = `${strTop}${e.name} ${sweepIndex},`;
       }
     });
@@ -47,8 +49,11 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
     const vars = resultArray.results[0].param.variables;
     vars.forEach((e) => {
       for (let i = 0; i < resultArray.results.length; i++) {
-        const sweepIndex = resultArray.sweep.length > 0 ? `[${resultArray.sweep[i]}]` : "";
-        strTop = `${strTop}${e.name} ${sweepIndex} (real),${e.name} ${sweepIndex} (img),`;
+        const sweepIndex = resultArray.sweep.length > 0
+          ? `[${resultArray.sweep[i]}]`
+          : "";
+        strTop =
+          `${strTop}${e.name} ${sweepIndex} (real),${e.name} ${sweepIndex} (img),`;
       }
     });
     strTop = strTop + "\n";
@@ -58,9 +63,11 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
         //console.log(out2[col][row]);
         for (let i = 0; i < resultArray.results.length; i++) {
           const data = resultArray.results[i].data as ComplexDataType;
-          str = `${str}${data[col][row].real.toExponential()},${data[col][
-            row
-          ].img.toExponential()},`;
+          str = `${str}${data[col][row].real.toExponential()},${
+            data[col][
+              row
+            ].img.toExponential()
+          },`;
         }
       }
       str = str + "\n";
@@ -91,7 +98,11 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
   }, [href]);
 
   const btAction = () => {
-    setHref(`data:text/plain;charset=utf-8,${encodeURIComponent(printCSV(resultArray))}`);
+    setHref(
+      `data:text/plain;charset=utf-8,${
+        encodeURIComponent(printCSV(resultArray))
+      }`,
+    );
   };
 
   return (

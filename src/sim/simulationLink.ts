@@ -3,13 +3,13 @@
  */
 import * as Comlink from "comlink";
 
-import * as circuits from "./circuits";
-import * as freePDK45 from "./models/freepdk/freePDK";
-import * as ptm from "./models/ptm";
-import * as skyWater from "./models/skywater/models";
-import Module from "./spice";
+import * as circuits from "./circuits.ts";
+import * as freePDK45 from "./models/freepdk/freePDK.ts";
+import * as ptm from "./models/ptm.ts";
+import * as skyWater from "./models/skywater/models.ts";
+import Module from "./spice.js";
 
-import readOutput, { ResultType } from "./readOutput";
+import readOutput, { ResultType } from "./readOutput.ts";
 
 //export { ResultType };
 
