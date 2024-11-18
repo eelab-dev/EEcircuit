@@ -35,7 +35,7 @@ var readyPromise = new Promise((resolve, reject) => {
 // Attempt to auto-detect the environment
 var ENVIRONMENT_IS_WEB = typeof window == "object";
 
-var ENVIRONMENT_IS_WORKER = typeof importScripts == "function";
+var ENVIRONMENT_IS_WORKER = typeof WorkerGlobalScope != "undefined";
 
 // N.b. Electron.js environment is simultaneously a NODE-environment, but
 // also a web environment.
@@ -475,10 +475,12 @@ var tempI64;
 // end include: runtime_debug.js
 // === Body ===
 // end include: preamble.js
-/** @constructor */ function ExitStatus(status) {
-  this.name = "ExitStatus";
-  this.message = `Program terminated with exit(${status})`;
-  this.status = status;
+class ExitStatus {
+  name="ExitStatus";
+  constructor(status) {
+    this.message = `Program terminated with exit(${status})`;
+    this.status = status;
+  }
 }
 
 var callRuntimeCallbacks = callbacks => {
@@ -501,17 +503,17 @@ var UTF8Decoder = typeof TextDecoder != "undefined" ? new TextDecoder : undefine
      * array that contains uint8 values, returns a copy of that string as a
      * Javascript String object.
      * heapOrArray is either a regular array, or a JavaScript typed array view.
-     * @param {number} idx
+     * @param {number=} idx
      * @param {number=} maxBytesToRead
      * @return {string}
-     */ var UTF8ArrayToString = (heapOrArray, idx, maxBytesToRead) => {
+     */ var UTF8ArrayToString = (heapOrArray, idx = 0, maxBytesToRead = NaN) => {
   var endIdx = idx + maxBytesToRead;
   var endPtr = idx;
   // TextDecoder needs to know the byte length in advance, it doesn't stop on
   // null terminator by itself.  Also, use the length info to avoid running tiny
   // strings through TextDecoder, since .subarray() allocates garbage.
   // (As a tiny code save trick, compare endPtr against endIdx using a negation,
-  // so that undefined means Infinity)
+  // so that undefined/NaN means Infinity)
   while (heapOrArray[endPtr] && !(endPtr >= endIdx)) ++endPtr;
   if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) {
     return UTF8Decoder.decode(heapOrArray.subarray(idx, endPtr));
@@ -958,7 +960,7 @@ var TTY = {
     },
     put_char(tty, val) {
       if (val === null || val === 10) {
-        out(UTF8ArrayToString(tty.output, 0));
+        out(UTF8ArrayToString(tty.output));
         tty.output = [];
       } else {
         if (val != 0) tty.output.push(val);
@@ -967,7 +969,7 @@ var TTY = {
     // val == 0 would cut text output off in the middle.
     fsync(tty) {
       if (tty.output && tty.output.length > 0) {
-        out(UTF8ArrayToString(tty.output, 0));
+        out(UTF8ArrayToString(tty.output));
         tty.output = [];
       }
     },
@@ -992,7 +994,7 @@ var TTY = {
   default_tty1_ops: {
     put_char(tty, val) {
       if (val === null || val === 10) {
-        err(UTF8ArrayToString(tty.output, 0));
+        err(UTF8ArrayToString(tty.output));
         tty.output = [];
       } else {
         if (val != 0) tty.output.push(val);
@@ -1000,7 +1002,7 @@ var TTY = {
     },
     fsync(tty) {
       if (tty.output && tty.output.length > 0) {
-        err(UTF8ArrayToString(tty.output, 0));
+        err(UTF8ArrayToString(tty.output));
         tty.output = [];
       }
     }
@@ -1452,6 +1454,7 @@ var FS = {
   initialized: false,
   ignorePermissions: true,
   ErrnoError: class {
+    name="ErrnoError";
     // We set the `name` property to be able to identify `FS.ErrnoError`
     // - the `name` is a standard ECMA-262 property of error objects. Kind of good to have it anyway.
     // - when using PROXYFS, an error can come from an underlying FS
@@ -1459,9 +1462,6 @@ var FS = {
     // the test `err instanceof FS.ErrnoError` won't detect an error coming from another filesystem, causing bugs.
     // we'll use the reliable test `err.name == "ErrnoError"` instead
     constructor(errno) {
-      // TODO(sbc): Use the inline member declaration syntax once we
-      // support it in acorn and closure.
-      this.name = "ErrnoError";
       this.errno = errno;
     }
   },
@@ -1470,11 +1470,7 @@ var FS = {
   syncFSRequests: 0,
   readFiles: {},
   FSStream: class {
-    constructor() {
-      // TODO(https://github.com/emscripten-core/emscripten/issues/21414):
-      // Use inline field declarations.
-      this.shared = {};
-    }
+    shared={};
     get object() {
       return this.node;
     }
@@ -1504,6 +1500,11 @@ var FS = {
     }
   },
   FSNode: class {
+    node_ops={};
+    stream_ops={};
+    readMode=292 | 73;
+    writeMode=146;
+    mounted=null;
     constructor(parent, name, mode, rdev) {
       if (!parent) {
         parent = this;
@@ -1511,15 +1512,10 @@ var FS = {
       // root node sets parent to itself
       this.parent = parent;
       this.mount = parent.mount;
-      this.mounted = null;
       this.id = FS.nextInode++;
       this.name = name;
       this.mode = mode;
-      this.node_ops = {};
-      this.stream_ops = {};
       this.rdev = rdev;
-      this.readMode = 292 | 73;
-      this.writeMode = 146;
     }
     get read() {
       return (this.mode & this.readMode) === this.readMode;
@@ -2510,7 +2506,7 @@ var FS = {
     var buf = new Uint8Array(length);
     FS.read(stream, buf, 0, length, 0);
     if (opts.encoding === "utf8") {
-      ret = UTF8ArrayToString(buf, 0);
+      ret = UTF8ArrayToString(buf);
     } else if (opts.encoding === "binary") {
       ret = buf;
     }
@@ -2840,10 +2836,8 @@ var FS = {
     // Lazy chunked Uint8Array (implements get and length from Uint8Array).
     // Actual getting is abstracted away for eventual reuse.
     class LazyUint8Array {
-      constructor() {
-        this.lengthKnown = false;
-        this.chunks = [];
-      }
+      lengthKnown=false;
+      chunks=[];
       // Loaded chunks. Index is the chunk number
       get(idx) {
         if (idx > this.length - 1 || idx < 0) {
@@ -3138,12 +3132,12 @@ function ___syscall_faccessat(dirfd, path, amode, flags) {
   }
 }
 
-/** @suppress {duplicate } */ function syscallGetVarargI() {
+/** @suppress {duplicate } */ var syscallGetVarargI = () => {
   // the `+` prepended here is necessary to convince the JSCompiler that varargs is indeed a number.
   var ret = HEAP32[((+SYSCALLS.varargs) >> 2)];
   SYSCALLS.varargs += 4;
   return ret;
-}
+};
 
 var syscallGetVarargP = syscallGetVarargI;
 
@@ -3709,6 +3703,8 @@ var __emscripten_get_now_is_monotonic = () => nowIsMonotonic;
 
 var __emscripten_memcpy_js = (dest, src, num) => HEAPU8.copyWithin(dest, src, src + num);
 
+var runtimeKeepaliveCounter = 0;
+
 var __emscripten_runtime_keepalive_clear = () => {
   noExitRuntime = false;
   runtimeKeepaliveCounter = 0;
@@ -3820,7 +3816,7 @@ var _emscripten_get_now = () => performance.now();
 
 var growMemory = size => {
   var b = wasmMemory.buffer;
-  var pages = (size - b.byteLength + 65535) / 65536;
+  var pages = ((size - b.byteLength + 65535) / 65536) | 0;
   try {
     // round size grow request up to wasm page size (fixed 64KB per spec)
     wasmMemory.grow(pages);
@@ -3888,8 +3884,6 @@ var handleException = e => {
   }
   quit_(1, e);
 };
-
-var runtimeKeepaliveCounter = 0;
 
 var keepRuntimeAlive = () => noExitRuntime || runtimeKeepaliveCounter > 0;
 
