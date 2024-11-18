@@ -39,13 +39,14 @@ export default function readOutput(rawData: Uint8Array): ResultType {
   log(param);
 
   const view = new DataView(rawData.buffer, offset + 8);
-  log("😬");
 
   for (let i = 0; i < view.byteLength; i = i + 8) {
     const d = view.getFloat64(i, true);
     out.push(d);
     //log(`float -> ${d}`);
   }
+
+  log("🤔", out);
 
   if (param.dataType === "complex") {
     const out2 = new Array(param.varNum)
@@ -95,11 +96,15 @@ function ab2str(buf: BufferSource) {
 
 function findParams(header: string): ParamType {
   //
+
+
   const lines = header.split("\n");
 
-  const varNum = parseInt(lines[4].split(": ")[1], 10);
-  const pointNum = parseInt(lines[5].split(": ")[1], 10);
-  const dataType = lines[3].split(": ")[1].indexOf("complex") > -1 ? "complex" : "real";
+  log("header in findParam->", lines);
+
+  const varNum = parseInt(lines[lines.findIndex(s => s.startsWith("No. Variables"))].split(":")[1], 10);
+  const pointNum = parseInt(lines[lines.findIndex(s => s.startsWith("No. Points"))].split(":")[1], 10);
+  const dataType = lines[lines.findIndex(s => s.startsWith("Flags"))].split(":")[1].indexOf("complex") > -1 ? "complex" : "real";
 
   //log("🤔", lines);
   //log(lines.indexOf("Variables:"));
