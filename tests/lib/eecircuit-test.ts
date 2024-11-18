@@ -51,7 +51,7 @@ export async function testEEcircuit(page: Page, url: string) {
     await page.getByRole('button', { name: 'Colorize' }).click();
     await page.getByRole('button', { name: 'Reset' }).click();
     await page.getByRole('button', { name: 'Settings' }).click();
-    await page.getByLabel('Close').click();
+    //await page.getByLabel('Close').click();
 
     await page.getByRole('button', { name: 'Run' }).click();
 
