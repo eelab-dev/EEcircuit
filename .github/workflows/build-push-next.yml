@@ -27,18 +27,18 @@ jobs:
       run: mkdir -p Docker/build
 
     - name: Build Docker Image
-      run: docker build --no-cache -t eecircuit ./Docker
+      #run: docker build --no-cache -t eecircuit ./Docker
 
     - name: Run Docker Container
-      run: docker run -t -v $(realpath ./Docker):/mnt eecircuit
+      #run: docker run -t -v $(realpath ./Docker):/mnt eecircuit
 
     - name: Run Inject.js
-      run: node ./Docker/inject.js
+      #run: node ./Docker/inject.js
 
     - name: Rename and Copy Files to Main Directory
-      run: |
-        cp ./Docker/build/spice.wasm ./src/sim/spice.wasm
-        cp ./Docker/build/spice-eesim.js ./src/sim/spice.js
+      #run: |
+        #cp ./Docker/build/spice.wasm ./src/sim/spice.wasm
+        #cp ./Docker/build/spice-eesim.js ./src/sim/spice.js
 
     - name: Update Dependencies
       run: npx --yes npm-check-updates -u
@@ -50,7 +50,7 @@ jobs:
       run: npm run build
 
     - name: Deploy to Vercel
-      run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}
+      #run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}
 
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
@@ -65,7 +65,17 @@ jobs:
         path: playwright-report/
         retention-days: 30
 
-    - uses: stefanzweifel/git-auto-commit-action@v5
-      with:
-        commit_message: Auto updates after tests
+    # Check if 'bot' branch exists and delete it if it does
+    - name: Delete 'bot' branch if it exists
+      run: gh repo view --json branches | jq -r '.branches[].name' | grep -q "^bot$" && gh branch delete bot --force
+
+    # Create new 'bot' branch from 'next'
+    - name: Create new 'bot' branch
+      run: gh repo create-branch bot --source next
+
+    # Create a Pull Request
+    - name: Create Pull Request
+      run: gh pr create --base next --head bot --title "Update from bot branch" --body "Automated pull request to merge changes from the bot branch to next."
+      env:
+        GITHUB_TOKEN: ${{secrets.PULL_REQ}}
 
