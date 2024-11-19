@@ -26,16 +26,16 @@ jobs:
     - name: Create Empty Build Directory
       run: mkdir -p Docker/build
 
-    - name: Build Docker Image
+    #- name: Build Docker Image
       #run: docker build --no-cache -t eecircuit ./Docker
 
-    - name: Run Docker Container
+    #- name: Run Docker Container
       #run: docker run -t -v $(realpath ./Docker):/mnt eecircuit
 
-    - name: Run Inject.js
+    #- name: Run Inject.js
       #run: node ./Docker/inject.js
 
-    - name: Rename and Copy Files to Main Directory
+    #- name: Rename and Copy Files to Main Directory
       #run: |
         #cp ./Docker/build/spice.wasm ./src/sim/spice.wasm
         #cp ./Docker/build/spice-eesim.js ./src/sim/spice.js
