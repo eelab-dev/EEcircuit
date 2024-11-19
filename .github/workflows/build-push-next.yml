@@ -49,7 +49,7 @@ jobs:
     - name: Build Project with Vite
       run: npm run build
 
-    - name: Deploy to Vercel
+    #- name: Deploy to Vercel
       #run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}
 
     - name: Install Playwright Browsers
