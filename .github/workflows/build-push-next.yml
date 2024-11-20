@@ -3,6 +3,7 @@ name: Next Build Deploy Test Push
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  GH_TOKEN: ${{secrets.PULL_REQ}}
 
 on:
   schedule:
@@ -76,8 +77,8 @@ jobs:
     # Create a Pull Request
     - name: Create Pull Request
       run: gh pr create --base next --head bot --title "Update from bot branch" --body "Automated pull request to merge changes from the bot branch to next."
-      env:
-        GH_TOKEN: ${{secrets.PULL_REQ}}
+
+        
 
     
 
