@@ -90,7 +90,7 @@ jobs:
     - name: Stage and commit any changes
       run: |
         git add .
-        git diff --staged --quiet || git commit -m "Automated: Stage uncommitted changes"
+        git commit -m "Automated: Direct commit of changes" || echo "No changes to commit"
     
 
     # Create Pull Request only if there are differences
