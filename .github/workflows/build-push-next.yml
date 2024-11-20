@@ -44,8 +44,8 @@ jobs:
     - name: Update Dependencies
       run: npx --yes npm-check-updates -u
     
-    #- name: Install Dependencies
-      #run: npm install
+    - name: Install Dependencies
+      run: npm install
     
     #- name: Build Project with Vite
       #run: npm run build
