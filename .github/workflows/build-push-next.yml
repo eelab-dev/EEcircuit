@@ -68,11 +68,14 @@ jobs:
 
     # Check if 'bot' branch exists and delete it if it does
     - name: Delete 'bot' branch if it exists
-      run: gh repo view --json branches | jq -r '.branches[].name' | grep -q "^bot$" && gh branch delete bot --force
+      run: gh api "repos/:owner/:repo/branches" --jq '.[].name' | grep -q "^bot$" && gh branch delete bot --force
 
     # Create new 'bot' branch from 'next'
     - name: Create new 'bot' branch
-      run: gh repo create-branch bot --source next
+      run: |
+        git checkout next
+        git checkout -b bot
+        git push -u origin bot
 
     # Create a Pull Request
     - name: Create Pull Request
