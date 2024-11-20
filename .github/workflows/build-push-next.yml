@@ -44,11 +44,11 @@ jobs:
     - name: Update Dependencies
       run: npx --yes npm-check-updates -u
     
-    - name: Install Dependencies
-      run: npm install
+    #- name: Install Dependencies
+      #run: npm install
     
-    - name: Build Project with Vite
-      run: npm run build
+    #- name: Build Project with Vite
+      #run: npm run build
 
     #- name: Deploy to Vercel
       #run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}
@@ -68,7 +68,7 @@ jobs:
 
     # Check if 'bot' branch exists and delete it if it does
     - name: Delete 'bot' branch if it exists
-      run: gh api "repos/:owner/:repo/branches" --jq '.[].name' | grep -q "^bot$" && gh branch delete bot --force
+      run: git branch -a | grep -q bot && git branch -D bot || echo "Branch 'bot' not found"
 
     # Create new 'bot' branch from 'next'
     - name: Create new 'bot' branch
