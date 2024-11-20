@@ -77,5 +77,5 @@ jobs:
     - name: Create Pull Request
       run: gh pr create --base next --head bot --title "Update from bot branch" --body "Automated pull request to merge changes from the bot branch to next."
       env:
-        GITHUB_TOKEN: ${{secrets.PULL_REQ}}
+        GH_TOKEN: ${{secrets.PULL_REQ}}
 
