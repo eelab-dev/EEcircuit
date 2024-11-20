@@ -75,7 +75,6 @@ jobs:
       run: |
         git checkout next
         git checkout -b bot
-        git push -u origin bot
 
     # Create a Pull Request
     - name: Create Pull Request
