@@ -421,7 +421,6 @@ function getWasmImports() {
 // Create the wasm instance.
 // Receives the wasm imports, returns the exports.
 function createWasm() {
-  var info = getWasmImports();
   // Load the wasm module and create an instance of using native support in the JS engine.
   // handle a generated wasm instance, receiving its exports and
   // performing other necessary setup
@@ -445,6 +444,7 @@ function createWasm() {
     // When the regression is fixed, can restore the above PTHREADS-enabled path.
     receiveInstance(result["instance"]);
   }
+  var info = getWasmImports();
   // User shell pages can write their own Module.instantiateWasm = function(imports, successCallback) callback
   // to manually instantiate the Wasm module themselves. This allows pages to
   // run the instantiation parallel to any other async startup actions they are
@@ -1182,7 +1182,7 @@ var MEMFS = {
       }
     },
     lookup(parent, name) {
-      throw FS.genericErrors[44];
+      throw MEMFS.doesNotExistError;
     },
     mknod(parent, name, mode, dev) {
       return MEMFS.createNode(parent, name, mode, dev);
@@ -1465,7 +1465,6 @@ var FS = {
       this.errno = errno;
     }
   },
-  genericErrors: {},
   filesystems: null,
   syncFSRequests: 0,
   readFiles: {},
@@ -2555,7 +2554,8 @@ var FS = {
     // setup /dev/null
     FS.registerDevice(FS.makedev(1, 3), {
       read: () => 0,
-      write: (stream, buffer, offset, length, pos) => length
+      write: (stream, buffer, offset, length, pos) => length,
+      llseek: () => 0
     });
     FS.mkdev("/dev/null", FS.makedev(1, 3));
     // setup /dev/tty and /dev/tty1
@@ -2641,11 +2641,6 @@ var FS = {
     var stderr = FS.open("/dev/stderr", 1);
   },
   staticInit() {
-    // Some errors may happen quite a bit, to avoid overhead we reuse them (and suffer a lack of stack info)
-    [ 44 ].forEach(code => {
-      FS.genericErrors[code] = new FS.ErrnoError(code);
-      FS.genericErrors[code].stack = "<generic error, no stack>";
-    });
     FS.nameTable = new Array(4096);
     FS.mount(MEMFS, {}, "/");
     FS.createDefaultDirectories();
@@ -4339,6 +4334,12 @@ var Asyncify = {
 FS.createPreloadedFile = FS_createPreloadedFile;
 
 FS.staticInit();
+
+// This error may happen quite a bit. To avoid overhead we reuse it (and
+// suffer a lack of stack info).
+MEMFS.doesNotExistError = new FS.ErrnoError(44);
+
+/** @suppress {checkTypes} */ MEMFS.doesNotExistError.stack = "<generic error, no stack>";
 
 var wasmImports = {
   /** @export */ __assert_fail: ___assert_fail,
