@@ -93,18 +93,10 @@ jobs:
         git commit -m "Automated: Direct commit of changes" || echo "No changes to commit"
     
 
-    # Create Pull Request only if there are differences
-    - name: Create Pull Request
-      run: |
-        if [ $(git rev-list --count next..bot) -gt 0 ]; then
-          gh pr create \
-            --base next \
-            --head bot \
-            --title "Update from bot branch" \
-            --body "Automated pull request to merge changes from the bot branch to next."
-        else
-          echo "No changes to create PR for"
-        fi
+    # auto commit
+    - uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: Auto updates after tests
 
 
     
