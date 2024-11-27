@@ -21,19 +21,6 @@ jobs:
         repository: eelab-dev/EEcircuit
         ref: next   # Checkout the "next" branch
 
-    # Delete bot branch if it exists
-    - name: Delete 'bot' branch if it exists
-      run: |
-        if git show-ref --verify --quiet refs/heads/bot; then
-          git branch -D bot
-        fi
-
-    # Create new 'bot' branch from 'next'
-    - name: Create new 'bot' branch
-      run: |
-        git checkout next
-        git checkout -b bot
-    
     
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -61,10 +48,10 @@ jobs:
     - name: Install Dependencies
       run: npm install
     
-    #- name: Build Project with Vite
+    - name: Build Project with Vite
       #run: npm run build
 
-    #- name: Deploy to Vercel
+    - name: Deploy to Vercel
       #run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}
 
     - name: Install Playwright Browsers
@@ -79,18 +66,6 @@ jobs:
         name: playwright-report
         path: playwright-report/
         retention-days: 30
-
-
-    - name: Configure Git
-      run: |
-        git config --global user.name 'GitHub Action'
-        git config --global user.email 'action@github.com'
-    
-    # First handle any uncommitted changes
-    - name: Stage and commit any changes
-      run: |
-        git add .
-        git commit -m "Automated: Direct commit of changes" || echo "No changes to commit"
     
 
     # auto commit
