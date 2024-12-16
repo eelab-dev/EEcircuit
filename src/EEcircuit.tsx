@@ -5,8 +5,6 @@ import {
   PopoverOpenChangeDetails,
 } from "@chakra-ui/react";
 
-import FocusLock from "react-focus-lock";
-
 const EditorCustom = React.lazy(() => import("./editor/editorCustom.tsx"));
 const PlotArray = React.lazy(() => import("./plotArray.tsx"));
 const DisplayBox = React.lazy(() => import("./displayBox.tsx"));
@@ -427,20 +425,19 @@ export default function EEcircuit(): JSX.Element {
               <PopoverContent p={5}>
                 <PopoverBody>
                   <PopoverTitle>Threads</PopoverTitle>
-                  <FocusLock returnFocus persistentFocus={false}>
-                    <Box>
-                      {
-                        <NumberInputRoot
-                          max={20}
-                          defaultValue={threadCount.toString()}
-                          min={1}
-                          onValueChange={handleThreadChange}
-                        >
-                          <NumberInputField />
-                        </NumberInputRoot>
-                      }
-                    </Box>
-                  </FocusLock>
+
+                  <Box>
+                    {
+                      <NumberInputRoot
+                        max={20}
+                        defaultValue={threadCount.toString()}
+                        min={1}
+                        onValueChange={handleThreadChange}
+                      >
+                        <NumberInputField />
+                      </NumberInputRoot>
+                    }
+                  </Box>
                 </PopoverBody>
               </PopoverContent>
             </PopoverRoot>
