@@ -33,13 +33,13 @@
     "simple-git": "^3.27.0",
     "typescript": "^5.7.2",
     "vercel": "^39.2.2",
-    "vite": "^6.0.3",
+    "vite": "^6.0.5",
     "vite-tsconfig-paths": "^5.1.4"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.2.3",
     "@emotion/react": "^11.14.0",
-    "@types/react": "^19.0.1",
+    "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "comlink": "^4.4.2",
     "monaco-editor": "^0.52.2",
@@ -50,6 +50,6 @@
     "webgl-plot": "^0.7.1"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "4.28.1"
+    "@rollup/rollup-linux-x64-gnu": "4.29.1"
   }
 }
