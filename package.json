@@ -39,6 +39,8 @@
     "@chakra-ui/react": "2.10.1",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
+    "@vercel/analytics": "^1.4.1",
+    "@vercel/speed-insights": "^1.1.0",
     "comlink": "^4.4.1",
     "framer-motion": "^11.11.1",
     "monaco-editor": "^0.52.0",
