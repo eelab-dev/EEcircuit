@@ -21,23 +21,23 @@
     "@babel/core": "^7.26.0",
     "@babel/plugin-transform-react-jsx-development": "^7.25.9",
     "@babel/plugin-transform-react-jsx-source": "^7.25.9",
-    "@chakra-ui/cli": "^3.2.3",
+    "@chakra-ui/cli": "^3.2.5",
     "@playwright/test": "^1.49.1",
     "@types/babel__core": "^7",
-    "@types/node": "^22.10.2",
+    "@types/node": "^22.10.5",
     "@vitejs/plugin-react": "^4.3.4",
     "babel-plugin-transform-hook-names": "^1.0.2",
-    "csv-parser": "^3.0.0",
+    "csv-parser": "^3.1.0",
     "process": "^0.11.10",
     "serve": "^14.2.4",
     "simple-git": "^3.27.0",
     "typescript": "^5.7.2",
-    "vercel": "^39.2.2",
-    "vite": "^6.0.5",
+    "vercel": "^39.2.5",
+    "vite": "^6.0.7",
     "vite-tsconfig-paths": "^5.1.4"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.2.3",
+    "@chakra-ui/react": "^3.2.5",
     "@emotion/react": "^11.14.0",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
@@ -47,7 +47,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-icons": "^5.4.0",
-    "webgl-plot": "^0.7.1"
+    "webgl-plot": "^0.7.2"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "4.29.1"
