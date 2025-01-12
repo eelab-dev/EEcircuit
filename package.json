@@ -21,7 +21,7 @@
     "@babel/core": "^7.26.0",
     "@babel/plugin-transform-react-jsx-development": "^7.25.9",
     "@babel/plugin-transform-react-jsx-source": "^7.25.9",
-    "@chakra-ui/cli": "^3.2.5",
+    "@chakra-ui/cli": "^3.3.0",
     "@playwright/test": "^1.49.1",
     "@types/babel__core": "^7",
     "@types/node": "^22.10.5",
@@ -31,15 +31,15 @@
     "process": "^0.11.10",
     "serve": "^14.2.4",
     "simple-git": "^3.27.0",
-    "typescript": "^5.7.2",
-    "vercel": "^39.2.5",
+    "typescript": "^5.7.3",
+    "vercel": "^39.2.6",
     "vite": "^6.0.7",
     "vite-tsconfig-paths": "^5.1.4"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.2.5",
+    "@chakra-ui/react": "^3.3.0",
     "@emotion/react": "^11.14.0",
-    "@types/react": "^19.0.2",
+    "@types/react": "^19.0.4",
     "@types/react-dom": "^19.0.2",
     "comlink": "^4.4.2",
     "monaco-editor": "^0.52.2",
@@ -50,6 +50,6 @@
     "webgl-plot": "^0.7.2"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "4.29.1"
+    "@rollup/rollup-linux-x64-gnu": "4.30.1"
   }
 }
