@@ -18,8 +18,8 @@ const text3 = `var _emscripten_sleep = ms => Asyncify.handleSleep(wakeUp => safe
 
 const text3rep = `var _emscripten_sleep = ms => handleThings();`;
 
-const text4 = `if (calledRun) return`;
-const text4rep = `//if (calledRun) return`;
+const text4 = `Module["calledRun"] = true;`;
+const text4rep = `Module["calledRun"] = false;`;
 
 const text5 = `  } else {
     doRun();

@@ -1,9 +1,8 @@
-
 var Module = (() => {
   var _scriptName = import.meta.url;
   
   return (
-function(moduleArg = {}) {
+async function(moduleArg = {}) {
   var moduleRtn;
 
 // include: shell.js
@@ -96,7 +95,7 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
   if (scriptDirectory.startsWith("blob:")) {
     scriptDirectory = "";
   } else {
-    scriptDirectory = scriptDirectory.substr(0, scriptDirectory.replace(/[?#].*/, "").lastIndexOf("/") + 1);
+    scriptDirectory = scriptDirectory.slice(0, scriptDirectory.replace(/[?#].*/, "").lastIndexOf("/") + 1);
   }
   {
     // include: web_or_worker_shell_read.js
@@ -119,8 +118,7 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
       throw new Error(response.status + " : " + response.url);
     };
   }
-} else // end include: web_or_worker_shell_read.js
-{}
+} else {}
 
 var out = Module["print"] || console.log.bind(console);
 
@@ -183,9 +181,21 @@ var EXITSTATUS;
 }
 
 // Memory management
-var /** @type {!Int8Array} */ HEAP8, /** @type {!Uint8Array} */ HEAPU8, /** @type {!Int16Array} */ HEAP16, /** @type {!Uint16Array} */ HEAPU16, /** @type {!Int32Array} */ HEAP32, /** @type {!Uint32Array} */ HEAPU32, /** @type {!Float32Array} */ HEAPF32, /** @type {!Float64Array} */ HEAPF64;
+var /** @type {!Int8Array} */ HEAP8, /** @type {!Uint8Array} */ HEAPU8, /** @type {!Int16Array} */ HEAP16, /** @type {!Uint16Array} */ HEAPU16, /** @type {!Int32Array} */ HEAP32, /** @type {!Uint32Array} */ HEAPU32, /** @type {!Float32Array} */ HEAPF32, /* BigInt64Array type is not correctly defined in closure
+/** not-@type {!BigInt64Array} */ HEAP64, /* BigUint64Array type is not correctly defined in closure
+/** not-t@type {!BigUint64Array} */ HEAPU64, /** @type {!Float64Array} */ HEAPF64;
+
+var runtimeInitialized = false;
 
 // include: runtime_shared.js
+// include: runtime_stack_check.js
+// end include: runtime_stack_check.js
+// include: runtime_exceptions.js
+// end include: runtime_exceptions.js
+// include: runtime_debug.js
+// end include: runtime_debug.js
+// include: memoryprofiler.js
+// end include: memoryprofiler.js
 function updateMemoryViews() {
   var b = wasmMemory.buffer;
   Module["HEAP8"] = HEAP8 = new Int8Array(b);
@@ -196,25 +206,11 @@ function updateMemoryViews() {
   Module["HEAPU32"] = HEAPU32 = new Uint32Array(b);
   Module["HEAPF32"] = HEAPF32 = new Float32Array(b);
   Module["HEAPF64"] = HEAPF64 = new Float64Array(b);
+  Module["HEAP64"] = HEAP64 = new BigInt64Array(b);
+  Module["HEAPU64"] = HEAPU64 = new BigUint64Array(b);
 }
 
 // end include: runtime_shared.js
-// include: runtime_stack_check.js
-// end include: runtime_stack_check.js
-var __ATPRERUN__ = [];
-
-// functions called before the runtime is initialized
-var __ATINIT__ = [];
-
-// functions called during startup
-var __ATMAIN__ = [];
-
-// functions called during shutdown
-var __ATPOSTRUN__ = [];
-
-// functions called after the main() is called
-var runtimeInitialized = false;
-
 function preRun() {
   if (Module["preRun"]) {
     if (typeof Module["preRun"] == "function") Module["preRun"] = [ Module["preRun"] ];
@@ -222,21 +218,19 @@ function preRun() {
       addOnPreRun(Module["preRun"].shift());
     }
   }
-  callRuntimeCallbacks(__ATPRERUN__);
+  callRuntimeCallbacks(onPreRuns);
 }
 
 function initRuntime() {
   runtimeInitialized = true;
   if (!Module["noFSInit"] && !FS.initialized) FS.init();
-  FS.ignorePermissions = false;
   TTY.init();
   PIPEFS.root = FS.mount(PIPEFS, {}, null);
-  callRuntimeCallbacks(__ATINIT__);
+  wasmExports["__wasm_call_ctors"]();
+  FS.ignorePermissions = false;
 }
 
-function preMain() {
-  callRuntimeCallbacks(__ATMAIN__);
-}
+function preMain() {}
 
 function postRun() {
   if (Module["postRun"]) {
@@ -245,27 +239,9 @@ function postRun() {
       addOnPostRun(Module["postRun"].shift());
     }
   }
-  callRuntimeCallbacks(__ATPOSTRUN__);
+  callRuntimeCallbacks(onPostRuns);
 }
 
-function addOnPreRun(cb) {
-  __ATPRERUN__.unshift(cb);
-}
-
-function addOnInit(cb) {
-  __ATINIT__.unshift(cb);
-}
-
-function addOnPostRun(cb) {
-  __ATPOSTRUN__.unshift(cb);
-}
-
-// include: runtime_math.js
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/imul
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/fround
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/clz32
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/trunc
-// end include: runtime_math.js
 // A counter of dependencies for calling run(). If we need to
 // do asynchronous work before running, increment this and
 // decrement it. Incrementing must happen in a place like
@@ -327,33 +303,15 @@ function removeRunDependency(id) {
   throw e;
 }
 
-// include: memoryprofiler.js
-// end include: memoryprofiler.js
-// include: URIUtils.js
-// Prefix of data URIs emitted by SINGLE_FILE and related options.
-var dataURIPrefix = "data:application/octet-stream;base64,";
+var wasmBinaryFile;
 
-/**
- * Indicates whether filename is a base64 data URI.
- * @noinline
- */ var isDataURI = filename => filename.startsWith(dataURIPrefix);
-
-// end include: URIUtils.js
-// include: runtime_exceptions.js
-// end include: runtime_exceptions.js
 function findWasmBinary() {
   if (Module["locateFile"]) {
-    var f = "spice.wasm";
-    if (!isDataURI(f)) {
-      return locateFile(f);
-    }
-    return f;
+    return locateFile("spice.wasm");
   }
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
   return new URL("spice.wasm", import.meta.url).href;
 }
-
-var wasmBinaryFile;
 
 function getBinarySync(file) {
   if (file == wasmBinaryFile && wasmBinary) {
@@ -390,7 +348,7 @@ async function instantiateArrayBuffer(binaryFile, imports) {
 }
 
 async function instantiateAsync(binary, binaryFile, imports) {
-  if (!binary && typeof WebAssembly.instantiateStreaming == "function" && !isDataURI(binaryFile) && typeof fetch == "function") {
+  if (!binary && typeof WebAssembly.instantiateStreaming == "function") {
     try {
       var response = fetch(binaryFile, {
         credentials: "same-origin"
@@ -427,7 +385,6 @@ async function createWasm() {
     wasmMemory = wasmExports["memory"];
     updateMemoryViews();
     wasmTable = wasmExports["__indirect_function_table"];
-    addOnInit(wasmExports["__wasm_call_ctors"]);
     removeRunDependency("wasm-instantiate");
     return wasmExports;
   }
@@ -439,7 +396,7 @@ async function createWasm() {
     // receiveInstance() will swap in the exports (to Module.asm) so they can be called
     // TODO: Due to Closure regression https://github.com/google/closure-compiler/issues/3193, the above line no longer optimizes out down to the following line.
     // When the regression is fixed, can restore the above PTHREADS-enabled path.
-    receiveInstance(result["instance"]);
+    return receiveInstance(result["instance"]);
   }
   var info = getWasmImports();
   // User shell pages can write their own Module.instantiateWasm = function(imports, successCallback) callback
@@ -449,33 +406,25 @@ async function createWasm() {
   // Also pthreads and wasm workers initialize the wasm instance through this
   // path.
   if (Module["instantiateWasm"]) {
-    try {
-      return Module["instantiateWasm"](info, receiveInstance);
-    } catch (e) {
-      err(`Module.instantiateWasm callback failed with error: ${e}`);
-      // If instantiation fails, reject the module ready promise.
-      readyPromiseReject(e);
-    }
+    return new Promise((resolve, reject) => {
+      Module["instantiateWasm"](info, (mod, inst) => {
+        receiveInstance(mod, inst);
+        resolve(mod.exports);
+      });
+    });
   }
   wasmBinaryFile ??= findWasmBinary();
   try {
     var result = await instantiateAsync(wasmBinary, wasmBinaryFile, info);
-    receiveInstantiationResult(result);
-    return result;
+    var exports = receiveInstantiationResult(result);
+    return exports;
   } catch (e) {
     // If instantiation fails, reject the module ready promise.
     readyPromiseReject(e);
-    return;
+    return Promise.reject(e);
   }
 }
 
-// Globals used by JS i64 conversions (see makeSetValue)
-var tempDouble;
-
-var tempI64;
-
-// include: runtime_debug.js
-// end include: runtime_debug.js
 // === Body ===
 // end include: preamble.js
 class ExitStatus {
@@ -492,6 +441,14 @@ var callRuntimeCallbacks = callbacks => {
     callbacks.shift()(Module);
   }
 };
+
+var onPostRuns = [];
+
+var addOnPostRun = cb => onPostRuns.unshift(cb);
+
+var onPreRuns = [];
+
+var addOnPreRun = cb => onPreRuns.unshift(cb);
 
 var noExitRuntime = Module["noExitRuntime"] || true;
 
@@ -664,7 +621,7 @@ var PATH = {
     return parts;
   },
   normalize: path => {
-    var isAbsolute = PATH.isAbs(path), trailingSlash = path.substr(-1) === "/";
+    var isAbsolute = PATH.isAbs(path), trailingSlash = path.slice(-1) === "/";
     // Normalize the path
     path = PATH.normalizeArray(path.split("/").filter(p => !!p), !isAbsolute).join("/");
     if (!path && !isAbsolute) {
@@ -683,32 +640,21 @@ var PATH = {
     }
     if (dir) {
       // It has a dirname, strip trailing slash
-      dir = dir.substr(0, dir.length - 1);
+      dir = dir.slice(0, -1);
     }
     return root + dir;
   },
-  basename: path => {
-    // EMSCRIPTEN return '/'' for '/', not an empty string
-    if (path === "/") return "/";
-    path = PATH.normalize(path);
-    path = path.replace(/\/$/, "");
-    var lastSlash = path.lastIndexOf("/");
-    if (lastSlash === -1) return path;
-    return path.substr(lastSlash + 1);
-  },
+  basename: path => path && path.match(/([^\/]+|\/)\/*$/)[1],
   join: (...paths) => PATH.normalize(paths.join("/")),
   join2: (l, r) => PATH.normalize(l + "/" + r)
 };
 
-var initRandomFill = () => {
-  if (typeof crypto == "object" && typeof crypto["getRandomValues"] == "function") {
-    // for modern web browsers
-    return view => crypto.getRandomValues(view);
-  } else // we couldn't find a proper implementation, as Math.random() is not suitable for /dev/random, see emscripten-core/emscripten/pull/7096
-  abort("initRandomDevice");
-};
+var initRandomFill = () => view => crypto.getRandomValues(view);
 
-var randomFill = view => (randomFill = initRandomFill())(view);
+var randomFill = view => {
+  // Lazily init on the first invocation.
+  (randomFill = initRandomFill())(view);
+};
 
 var PATH_FS = {
   resolve: (...args) => {
@@ -721,7 +667,6 @@ var PATH_FS = {
       } else if (!path) {
         return "";
       }
-      // an invalid portion invalidates the whole thing
       resolvedPath = path + "/" + resolvedPath;
       resolvedAbsolute = PATH.isAbs(path);
     }
@@ -731,8 +676,8 @@ var PATH_FS = {
     return ((resolvedAbsolute ? "/" : "") + resolvedPath) || ".";
   },
   relative: (from, to) => {
-    from = PATH_FS.resolve(from).substr(1);
-    to = PATH_FS.resolve(to).substr(1);
+    from = PATH_FS.resolve(from).slice(1);
+    to = PATH_FS.resolve(to).slice(1);
     function trim(arr) {
       var start = 0;
       for (;start < arr.length; start++) {
@@ -835,13 +780,13 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
   return outIdx - startIdx;
 };
 
-/** @type {function(string, boolean=, number=)} */ function intArrayFromString(stringy, dontAddNull, length) {
+/** @type {function(string, boolean=, number=)} */ var intArrayFromString = (stringy, dontAddNull, length) => {
   var len = length > 0 ? length : lengthBytesUTF8(stringy) + 1;
   var u8array = new Array(len);
   var numBytesWritten = stringToUTF8Array(stringy, u8array, 0, u8array.length);
   if (dontAddNull) u8array.length = numBytesWritten;
   return u8array;
-}
+};
 
 var FS_stdin_getChar = () => {
   if (!FS_stdin_getChar_buffer.length) {
@@ -872,24 +817,7 @@ result = getInput();
 var TTY = {
   ttys: [],
   init() {},
-  // https://github.com/emscripten-core/emscripten/pull/1555
-  // if (ENVIRONMENT_IS_NODE) {
-  //   // currently, FS.init does not distinguish if process.stdin is a file or TTY
-  //   // device, it always assumes it's a TTY device. because of this, we're forcing
-  //   // process.stdin to UTF8 encoding to at least make stdin reading compatible
-  //   // with text files until FS.init can be refactored.
-  //   process.stdin.setEncoding('utf8');
-  // }
   shutdown() {},
-  // https://github.com/emscripten-core/emscripten/pull/1555
-  // if (ENVIRONMENT_IS_NODE) {
-  //   // inolen: any idea as to why node -e 'process.stdin.read()' wouldn't exit immediately (with process.stdin being a tty)?
-  //   // isaacs: because now it's reading from the stream, you've expressed interest in it, so that read() kicks off a _read() which creates a ReadReq operation
-  //   // inolen: I thought read() in that case was a synchronous operation that just grabbed some amount of buffered data if it exists?
-  //   // isaacs: it is. but it also triggers a _read() call, which calls readStart() on the handle
-  //   // isaacs: do process.stdin.pause() and i'd think it'd probably close the pending call
-  //   process.stdin.pause();
-  // }
   register(dev, ops) {
     TTY.ttys[dev] = {
       input: [],
@@ -915,7 +843,7 @@ var TTY = {
       stream.tty.ops.fsync(stream.tty);
     },
     read(stream, buffer, offset, length, pos) {
-      /* ignored */ if (!stream.tty || !stream.tty.ops.get_char) {
+      if (!stream.tty || !stream.tty.ops.get_char) {
         throw new FS.ErrnoError(60);
       }
       var bytesRead = 0;
@@ -967,9 +895,8 @@ var TTY = {
         if (val != 0) tty.output.push(val);
       }
     },
-    // val == 0 would cut text output off in the middle.
     fsync(tty) {
-      if (tty.output && tty.output.length > 0) {
+      if (tty.output?.length > 0) {
         out(UTF8ArrayToString(tty.output));
         tty.output = [];
       }
@@ -1002,7 +929,7 @@ var TTY = {
       }
     },
     fsync(tty) {
-      if (tty.output && tty.output.length > 0) {
+      if (tty.output?.length > 0) {
         err(UTF8ArrayToString(tty.output));
         tty.output = [];
       }
@@ -1124,7 +1051,6 @@ var MEMFS = {
     // Allocate new storage.
     if (node.usedBytes > 0) node.contents.set(oldContents.subarray(0, node.usedBytes), 0);
   },
-  // Copy old data over to the new storage.
   resizeFileStorage(node, newSize) {
     if (node.usedBytes == newSize) return;
     if (newSize == 0) {
@@ -1138,7 +1064,6 @@ var MEMFS = {
       if (oldContents) {
         node.contents.set(oldContents.subarray(0, Math.min(newSize, node.usedBytes)));
       }
-      // Copy old data over to the new storage.
       node.usedBytes = newSize;
     }
   },
@@ -1173,7 +1098,7 @@ var MEMFS = {
     },
     setattr(node, attr) {
       for (const key of [ "mode", "atime", "mtime", "ctime" ]) {
-        if (attr[key]) {
+        if (attr[key] != null) {
           node[key] = attr[key];
         }
       }
@@ -1441,6 +1366,9 @@ var FS = {
   currentPath: "/",
   initialized: false,
   ignorePermissions: true,
+  filesystems: null,
+  syncFSRequests: 0,
+  readFiles: {},
   ErrnoError: class {
     name="ErrnoError";
     // We set the `name` property to be able to identify `FS.ErrnoError`
@@ -1453,9 +1381,6 @@ var FS = {
       this.errno = errno;
     }
   },
-  filesystems: null,
-  syncFSRequests: 0,
-  readFiles: {},
   FSStream: class {
     shared={};
     get object() {
@@ -1496,7 +1421,6 @@ var FS = {
       if (!parent) {
         parent = this;
       }
-      // root node sets parent to itself
       this.parent = parent;
       this.mount = parent.mount;
       this.id = FS.nextInode++;
@@ -1525,10 +1449,9 @@ var FS = {
     }
   },
   lookupPath(path, opts = {}) {
-    if (!path) return {
-      path: "",
-      node: null
-    };
+    if (!path) {
+      throw new FS.ErrnoError(44);
+    }
     opts.follow_mount ??= true;
     if (!PATH.isAbs(path)) {
       path = FS.cwd() + "/" + path;
@@ -1536,7 +1459,7 @@ var FS = {
     // limit max consecutive symlinks to 40 (SYMLOOP_MAX).
     linkloop: for (var nlinks = 0; nlinks < 40; nlinks++) {
       // split the absolute path
-      var parts = path.split("/").filter(p => !!p && (p !== "."));
+      var parts = path.split("/").filter(p => !!p);
       // start at the root
       var current = FS.root;
       var current_path = "/";
@@ -1545,6 +1468,9 @@ var FS = {
         if (islast && opts.parent) {
           // stop resolving
           break;
+        }
+        if (parts[i] === ".") {
+          continue;
         }
         if (parts[i] === "..") {
           current_path = PATH.dirname(current_path);
@@ -1749,13 +1675,18 @@ var FS = {
     if (FS.isLink(node.mode)) {
       return 32;
     } else if (FS.isDir(node.mode)) {
-      if (FS.flagsToPermissionString(flags) !== "r" || // opening for write
-      (flags & 512)) {
+      if (FS.flagsToPermissionString(flags) !== "r" || (flags & (512 | 64))) {
         // TODO: check for O_SEARCH? (== search for dir only)
         return 31;
       }
     }
     return FS.nodePermissions(node, FS.flagsToPermissionString(flags));
+  },
+  checkOpExists(op, err) {
+    if (!op) {
+      throw new FS.ErrnoError(err);
+    }
+    return op;
   },
   MAX_OPEN_FDS: 4096,
   nextfd() {
@@ -1791,6 +1722,13 @@ var FS = {
     var stream = FS.createStream(origStream, fd);
     stream.stream_ops?.dup?.(stream);
     return stream;
+  },
+  doSetAttr(stream, node, attr) {
+    var setattr = stream?.stream_ops.setattr;
+    var arg = setattr ? stream : node;
+    setattr ??= node.node_ops.setattr;
+    FS.checkOpExists(setattr, 63);
+    setattr(arg, attr);
   },
   chrdev_stream_ops: {
     open(stream) {
@@ -1936,8 +1874,11 @@ var FS = {
     });
     var parent = lookup.node;
     var name = PATH.basename(path);
-    if (!name || name === "." || name === "..") {
+    if (!name) {
       throw new FS.ErrnoError(28);
+    }
+    if (name === "." || name === "..") {
+      throw new FS.ErrnoError(20);
     }
     var errCode = FS.mayCreate(parent, name);
     if (errCode) {
@@ -1949,8 +1890,20 @@ var FS = {
     return parent.node_ops.mknod(parent, name, mode, dev);
   },
   statfs(path) {
+    return FS.statfsNode(FS.lookupPath(path, {
+      follow: true
+    }).node);
+  },
+  statfsStream(stream) {
+    // We keep a separate statfsStream function because noderawfs overrides
+    // it. In noderawfs, stream.node is sometimes null. Instead, we need to
+    // look at stream.path.
+    return FS.statfsNode(stream.node);
+  },
+  statfsNode(node) {
     // NOTE: None of the defaults here are true. We're just returning safe and
-    //       sane values.
+    //       sane values. Currently nodefs and rawfs replace these defaults,
+    //       other file systems leave them alone.
     var rtn = {
       bsize: 4096,
       frsize: 4096,
@@ -1963,11 +1916,8 @@ var FS = {
       flags: 2,
       namelen: 255
     };
-    var parent = FS.lookupPath(path, {
-      follow: true
-    }).node;
-    if (parent?.node_ops.statfs) {
-      Object.assign(rtn, parent.node_ops.statfs(parent.mount.opts.root));
+    if (node.node_ops.statfs) {
+      Object.assign(rtn, node.node_ops.statfs(node.mount.opts.root));
     }
     return rtn;
   },
@@ -2131,10 +2081,8 @@ var FS = {
       follow: true
     });
     var node = lookup.node;
-    if (!node.node_ops.readdir) {
-      throw new FS.ErrnoError(54);
-    }
-    return node.node_ops.readdir(node);
+    var readdir = FS.checkOpExists(node.node_ops.readdir, 54);
+    return readdir(node);
   },
   unlink(path) {
     var lookup = FS.lookupPath(path, {
@@ -2178,16 +2126,27 @@ var FS = {
       follow: !dontFollow
     });
     var node = lookup.node;
-    if (!node) {
-      throw new FS.ErrnoError(44);
-    }
-    if (!node.node_ops.getattr) {
-      throw new FS.ErrnoError(63);
-    }
-    return node.node_ops.getattr(node);
+    var getattr = FS.checkOpExists(node.node_ops.getattr, 63);
+    return getattr(node);
+  },
+  fstat(fd) {
+    var stream = FS.getStreamChecked(fd);
+    var node = stream.node;
+    var getattr = stream.stream_ops.getattr;
+    var arg = getattr ? stream : node;
+    getattr ??= node.node_ops.getattr;
+    FS.checkOpExists(getattr, 63);
+    return getattr(arg);
   },
   lstat(path) {
     return FS.stat(path, true);
+  },
+  doChmod(stream, node, mode, dontFollow) {
+    FS.doSetAttr(stream, node, {
+      mode: (mode & 4095) | (node.mode & ~4095),
+      ctime: Date.now(),
+      dontFollow
+    });
   },
   chmod(path, mode, dontFollow) {
     var node;
@@ -2199,20 +2158,20 @@ var FS = {
     } else {
       node = path;
     }
-    if (!node.node_ops.setattr) {
-      throw new FS.ErrnoError(63);
-    }
-    node.node_ops.setattr(node, {
-      mode: (mode & 4095) | (node.mode & ~4095),
-      ctime: Date.now()
-    });
+    FS.doChmod(null, node, mode, dontFollow);
   },
   lchmod(path, mode) {
     FS.chmod(path, mode, true);
   },
   fchmod(fd, mode) {
     var stream = FS.getStreamChecked(fd);
-    FS.chmod(stream.node, mode);
+    FS.doChmod(stream, stream.node, mode, false);
+  },
+  doChown(stream, node, dontFollow) {
+    FS.doSetAttr(stream, node, {
+      timestamp: Date.now(),
+      dontFollow
+    });
   },
   chown(path, uid, gid, dontFollow) {
     var node;
@@ -2224,20 +2183,30 @@ var FS = {
     } else {
       node = path;
     }
-    if (!node.node_ops.setattr) {
-      throw new FS.ErrnoError(63);
-    }
-    node.node_ops.setattr(node, {
-      timestamp: Date.now()
-    });
+    FS.doChown(null, node, dontFollow);
   },
-  // we ignore the uid / gid for now
   lchown(path, uid, gid) {
     FS.chown(path, uid, gid, true);
   },
   fchown(fd, uid, gid) {
     var stream = FS.getStreamChecked(fd);
-    FS.chown(stream.node, uid, gid);
+    FS.doChown(stream, stream.node, false);
+  },
+  doTruncate(stream, node, len) {
+    if (FS.isDir(node.mode)) {
+      throw new FS.ErrnoError(31);
+    }
+    if (!FS.isFile(node.mode)) {
+      throw new FS.ErrnoError(28);
+    }
+    var errCode = FS.nodePermissions(node, "w");
+    if (errCode) {
+      throw new FS.ErrnoError(errCode);
+    }
+    FS.doSetAttr(stream, node, {
+      size: len,
+      timestamp: Date.now()
+    });
   },
   truncate(path, len) {
     if (len < 0) {
@@ -2252,37 +2221,22 @@ var FS = {
     } else {
       node = path;
     }
-    if (!node.node_ops.setattr) {
-      throw new FS.ErrnoError(63);
-    }
-    if (FS.isDir(node.mode)) {
-      throw new FS.ErrnoError(31);
-    }
-    if (!FS.isFile(node.mode)) {
-      throw new FS.ErrnoError(28);
-    }
-    var errCode = FS.nodePermissions(node, "w");
-    if (errCode) {
-      throw new FS.ErrnoError(errCode);
-    }
-    node.node_ops.setattr(node, {
-      size: len,
-      timestamp: Date.now()
-    });
+    FS.doTruncate(null, node, len);
   },
   ftruncate(fd, len) {
     var stream = FS.getStreamChecked(fd);
-    if ((stream.flags & 2097155) === 0) {
+    if (len < 0 || (stream.flags & 2097155) === 0) {
       throw new FS.ErrnoError(28);
     }
-    FS.truncate(stream.node, len);
+    FS.doTruncate(stream, stream.node, len);
   },
   utime(path, atime, mtime) {
     var lookup = FS.lookupPath(path, {
       follow: true
     });
     var node = lookup.node;
-    node.node_ops.setattr(node, {
+    var setattr = FS.checkOpExists(node.node_ops.setattr, 63);
+    setattr(node, {
       atime,
       mtime
     });
@@ -2298,9 +2252,11 @@ var FS = {
       mode = 0;
     }
     var node;
+    var isDirPath;
     if (typeof path == "object") {
       node = path;
     } else {
+      isDirPath = path.endsWith("/");
       // noent_okay makes it so that if the final component of the path
       // doesn't exist, lookupPath returns `node: undefined`. `path` will be
       // updated to point to the target of all symlinks.
@@ -2319,9 +2275,14 @@ var FS = {
         if ((flags & 128)) {
           throw new FS.ErrnoError(20);
         }
+      } else if (isDirPath) {
+        throw new FS.ErrnoError(31);
       } else {
         // node doesn't exist, try to create it
-        node = FS.mknod(path, mode, 0);
+        // Ignore the permission bits here to ensure we can `open` this new
+        // file below. We use chmod below the apply the permissions once the
+        // file is open.
+        node = FS.mknod(path, mode | 511, 0);
         created = true;
       }
     }
@@ -2367,6 +2328,9 @@ var FS = {
     // call the new stream's open function
     if (stream.stream_ops.open) {
       stream.stream_ops.open(stream);
+    }
+    if (created) {
+      FS.chmod(node, mode & 511);
     }
     if (Module["logReadFiles"] && !(flags & 1)) {
       if (!(path in FS.readFiles)) {
@@ -2594,7 +2558,8 @@ var FS = {
     var randomBuffer = new Uint8Array(1024), randomLeft = 0;
     var randomByte = () => {
       if (randomLeft === 0) {
-        randomLeft = randomFill(randomBuffer).byteLength;
+        randomFill(randomBuffer);
+        randomLeft = randomBuffer.byteLength;
       }
       return randomBuffer[--randomLeft];
     };
@@ -2757,8 +2722,9 @@ var FS = {
       var current = PATH.join2(parent, part);
       try {
         FS.mkdir(current);
-      } catch (e) {}
-      // ignore EEXIST
+      } catch (e) {
+        if (e.errno != 20) throw e;
+      }
       parent = current;
     }
     return current;
@@ -2808,7 +2774,7 @@ var FS = {
         }
       },
       read(stream, buffer, offset, length, pos) {
-        /* ignored */ var bytesRead = 0;
+        var bytesRead = 0;
         for (var i = 0; i < length; i++) {
           var result;
           try {
@@ -3050,36 +3016,40 @@ var SYSCALLS = {
     }
     return dir + "/" + path;
   },
-  doStat(func, path, buf) {
-    var stat = func(path);
+  writeStat(buf, stat) {
     HEAP32[((buf) >> 2)] = stat.dev;
     HEAP32[(((buf) + (4)) >> 2)] = stat.mode;
     HEAPU32[(((buf) + (8)) >> 2)] = stat.nlink;
     HEAP32[(((buf) + (12)) >> 2)] = stat.uid;
     HEAP32[(((buf) + (16)) >> 2)] = stat.gid;
     HEAP32[(((buf) + (20)) >> 2)] = stat.rdev;
-    (tempI64 = [ stat.size >>> 0, (tempDouble = stat.size, (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
-    HEAP32[(((buf) + (24)) >> 2)] = tempI64[0], HEAP32[(((buf) + (28)) >> 2)] = tempI64[1]);
+    HEAP64[(((buf) + (24)) >> 3)] = BigInt(stat.size);
     HEAP32[(((buf) + (32)) >> 2)] = 4096;
     HEAP32[(((buf) + (36)) >> 2)] = stat.blocks;
     var atime = stat.atime.getTime();
     var mtime = stat.mtime.getTime();
     var ctime = stat.ctime.getTime();
-    (tempI64 = [ Math.floor(atime / 1e3) >>> 0, (tempDouble = Math.floor(atime / 1e3), 
-    (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
-    HEAP32[(((buf) + (40)) >> 2)] = tempI64[0], HEAP32[(((buf) + (44)) >> 2)] = tempI64[1]);
+    HEAP64[(((buf) + (40)) >> 3)] = BigInt(Math.floor(atime / 1e3));
     HEAPU32[(((buf) + (48)) >> 2)] = (atime % 1e3) * 1e3 * 1e3;
-    (tempI64 = [ Math.floor(mtime / 1e3) >>> 0, (tempDouble = Math.floor(mtime / 1e3), 
-    (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
-    HEAP32[(((buf) + (56)) >> 2)] = tempI64[0], HEAP32[(((buf) + (60)) >> 2)] = tempI64[1]);
+    HEAP64[(((buf) + (56)) >> 3)] = BigInt(Math.floor(mtime / 1e3));
     HEAPU32[(((buf) + (64)) >> 2)] = (mtime % 1e3) * 1e3 * 1e3;
-    (tempI64 = [ Math.floor(ctime / 1e3) >>> 0, (tempDouble = Math.floor(ctime / 1e3), 
-    (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
-    HEAP32[(((buf) + (72)) >> 2)] = tempI64[0], HEAP32[(((buf) + (76)) >> 2)] = tempI64[1]);
+    HEAP64[(((buf) + (72)) >> 3)] = BigInt(Math.floor(ctime / 1e3));
     HEAPU32[(((buf) + (80)) >> 2)] = (ctime % 1e3) * 1e3 * 1e3;
-    (tempI64 = [ stat.ino >>> 0, (tempDouble = stat.ino, (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
-    HEAP32[(((buf) + (88)) >> 2)] = tempI64[0], HEAP32[(((buf) + (92)) >> 2)] = tempI64[1]);
+    HEAP64[(((buf) + (88)) >> 3)] = BigInt(stat.ino);
     return 0;
+  },
+  writeStatFs(buf, stats) {
+    HEAP32[(((buf) + (4)) >> 2)] = stats.bsize;
+    HEAP32[(((buf) + (40)) >> 2)] = stats.bsize;
+    HEAP32[(((buf) + (8)) >> 2)] = stats.blocks;
+    HEAP32[(((buf) + (12)) >> 2)] = stats.bfree;
+    HEAP32[(((buf) + (16)) >> 2)] = stats.bavail;
+    HEAP32[(((buf) + (20)) >> 2)] = stats.files;
+    HEAP32[(((buf) + (24)) >> 2)] = stats.ffree;
+    HEAP32[(((buf) + (28)) >> 2)] = stats.fsid;
+    HEAP32[(((buf) + (44)) >> 2)] = stats.flags;
+    // ST_NOSUID
+    HEAP32[(((buf) + (36)) >> 2)] = stats.namelen;
   },
   doMsync(addr, stream, len, flags, offset) {
     if (!FS.isFile(stream.node.mode)) {
@@ -3148,7 +3118,7 @@ function ___syscall_faccessat(dirfd, path, amode, flags) {
     if (amode & 4) perms += "r";
     if (amode & 2) perms += "w";
     if (amode & 1) perms += "x";
-    if (perms && /* otherwise, they've just passed F_OK */ FS.nodePermissions(node, perms)) {
+    if (perms && FS.nodePermissions(node, perms)) {
       return -2;
     }
     return 0;
@@ -3212,9 +3182,12 @@ function ___syscall_fcntl64(fd, cmd, varargs) {
 
      case 13:
      case 14:
+      // Pretend that the locking is successful. These are process-level locks,
+      // and Emscripten programs are a single process. If we supported linking a
+      // filesystem between programs, we'd need to do more here.
+      // See https://github.com/emscripten-core/emscripten/issues/23697
       return 0;
     }
-    // Pretend that the locking is successful.
     return -28;
   } catch (e) {
     if (typeof FS == "undefined" || !(e.name === "ErrnoError")) throw e;
@@ -3224,8 +3197,7 @@ function ___syscall_fcntl64(fd, cmd, varargs) {
 
 function ___syscall_fstat64(fd, buf) {
   try {
-    var stream = SYSCALLS.getStreamFromFD(fd);
-    return SYSCALLS.doStat(FS.stat, stream.path, buf);
+    return SYSCALLS.writeStat(buf, FS.fstat(fd));
   } catch (e) {
     if (typeof FS == "undefined" || !(e.name === "ErrnoError")) throw e;
     return -e.errno;
@@ -3285,8 +3257,7 @@ function ___syscall_ioctl(fd, op, varargs) {
         return 0;
       }
 
-     // no-op, not actually adjusting terminal settings
-      case 21506:
+     case 21506:
      case 21507:
      case 21508:
       {
@@ -3312,8 +3283,7 @@ function ___syscall_ioctl(fd, op, varargs) {
         return 0;
       }
 
-     // no-op, not actually adjusting terminal settings
-      case 21519:
+     case 21519:
       {
         if (!stream.tty) return -59;
         var argp = syscallGetVarargP();
@@ -3327,8 +3297,7 @@ function ___syscall_ioctl(fd, op, varargs) {
         return -28;
       }
 
-     // not supported
-      case 21531:
+     case 21531:
       {
         var argp = syscallGetVarargP();
         return FS.ioctl(stream, op, argp);
@@ -3366,8 +3335,7 @@ function ___syscall_ioctl(fd, op, varargs) {
      default:
       return -28;
     }
-  } // not supported
-  catch (e) {
+  } catch (e) {
     if (typeof FS == "undefined" || !(e.name === "ErrnoError")) throw e;
     return -e.errno;
   }
@@ -3376,7 +3344,7 @@ function ___syscall_ioctl(fd, op, varargs) {
 function ___syscall_lstat64(path, buf) {
   try {
     path = SYSCALLS.getStr(path);
-    return SYSCALLS.doStat(FS.lstat, path, buf);
+    return SYSCALLS.writeStat(buf, FS.lstat(path));
   } catch (e) {
     if (typeof FS == "undefined" || !(e.name === "ErrnoError")) throw e;
     return -e.errno;
@@ -3390,7 +3358,7 @@ function ___syscall_newfstatat(dirfd, path, buf, flags) {
     var allowEmpty = flags & 4096;
     flags = flags & (~6400);
     path = SYSCALLS.calculateAt(dirfd, path, allowEmpty);
-    return SYSCALLS.doStat(nofollow ? FS.lstat : FS.stat, path, buf);
+    return SYSCALLS.writeStat(buf, nofollow ? FS.lstat(path) : FS.stat(path));
   } catch (e) {
     if (typeof FS == "undefined" || !(e.name === "ErrnoError")) throw e;
     return -e.errno;
@@ -3422,7 +3390,8 @@ var PIPEFS = {
       buckets: [],
       // refcnt 2 because pipe has a read end and a write end. We need to be
       // able to read from the read end after write end is closed.
-      refcnt: 2
+      refcnt: 2,
+      timestamp: new Date
     };
     pipe.buckets.push({
       buffer: new Uint8Array(PIPEFS.BUCKET_BUFFER_SIZE),
@@ -3457,6 +3426,25 @@ var PIPEFS = {
     };
   },
   stream_ops: {
+    getattr(stream) {
+      var node = stream.node;
+      var timestamp = node.pipe.timestamp;
+      return {
+        dev: 14,
+        ino: node.id,
+        mode: 4480,
+        nlink: 1,
+        uid: 0,
+        gid: 0,
+        rdev: 0,
+        size: 0,
+        atime: timestamp,
+        mtime: timestamp,
+        ctime: timestamp,
+        blksize: 4096,
+        blocks: 0
+      };
+    },
     poll(stream) {
       var pipe = stream.node.pipe;
       if ((stream.flags & 2097155) === 1) {
@@ -3472,6 +3460,9 @@ var PIPEFS = {
       }
       return 0;
     },
+    dup(stream) {
+      stream.node.pipe.refcnt++;
+    },
     ioctl(stream, request, varargs) {
       return 28;
     },
@@ -3479,7 +3470,7 @@ var PIPEFS = {
       return 28;
     },
     read(stream, buffer, offset, length, position) {
-      /* ignored */ var pipe = stream.node.pipe;
+      var pipe = stream.node.pipe;
       var currentLength = 0;
       for (var i = 0; i < pipe.buckets.length; i++) {
         var bucket = pipe.buckets[i];
@@ -3528,7 +3519,7 @@ var PIPEFS = {
       return totalRead;
     },
     write(stream, buffer, offset, length, position) {
-      /* ignored */ var pipe = stream.node.pipe;
+      var pipe = stream.node.pipe;
       var data = buffer.subarray(offset, offset + length);
       var dataLen = data.byteLength;
       if (dataLen <= 0) {
@@ -3643,7 +3634,7 @@ function ___syscall_rmdir(path) {
 function ___syscall_stat64(path, buf) {
   try {
     path = SYSCALLS.getStr(path);
-    return SYSCALLS.doStat(FS.stat, path, buf);
+    return SYSCALLS.writeStat(buf, FS.stat(path));
   } catch (e) {
     if (typeof FS == "undefined" || !(e.name === "ErrnoError")) throw e;
     return -e.errno;
@@ -3669,8 +3660,6 @@ function ___syscall_unlinkat(dirfd, path, flags) {
 }
 
 var __abort_js = () => abort("");
-
-var __emscripten_memcpy_js = (dest, src, num) => HEAPU8.copyWithin(dest, src, src + num);
 
 var runtimeKeepaliveCounter = 0;
 
@@ -3706,10 +3695,14 @@ var ydayFromDate = date => {
   return yday;
 };
 
-var convertI32PairToI53Checked = (lo, hi) => ((hi + 2097152) >>> 0 < 4194305 - !!lo) ? (lo >>> 0) + hi * 4294967296 : NaN;
+var INT53_MAX = 9007199254740992;
 
-function __localtime_js(time_low, time_high, tmPtr) {
-  var time = convertI32PairToI53Checked(time_low, time_high);
+var INT53_MIN = -9007199254740992;
+
+var bigintToI53Checked = num => (num < INT53_MIN || num > INT53_MAX) ? NaN : Number(num);
+
+function __localtime_js(time, tmPtr) {
+  time = bigintToI53Checked(time);
   var date = new Date(time * 1e3);
   HEAP32[((tmPtr) >> 2)] = date.getSeconds();
   HEAP32[(((tmPtr) + (4)) >> 2)] = date.getMinutes();
@@ -3779,8 +3772,8 @@ var nowIsMonotonic = 1;
 
 var checkWasiClock = clock_id => clock_id >= 0 && clock_id <= 3;
 
-function _clock_time_get(clk_id, ignored_precision_low, ignored_precision_high, ptime) {
-  var ignored_precision = convertI32PairToI53Checked(ignored_precision_low, ignored_precision_high);
+function _clock_time_get(clk_id, ignored_precision, ptime) {
+  ignored_precision = bigintToI53Checked(ignored_precision);
   if (!checkWasiClock(clk_id)) {
     return 28;
   }
@@ -3795,8 +3788,7 @@ function _clock_time_get(clk_id, ignored_precision_low, ignored_precision_high, 
   }
   // "now" is in ms, and wasi times are in ns.
   var nsec = Math.round(now * 1e3 * 1e3);
-  (tempI64 = [ nsec >>> 0, (tempDouble = nsec, (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
-  HEAP32[((ptime) >> 2)] = tempI64[0], HEAP32[(((ptime) + (4)) >> 2)] = tempI64[1]);
+  HEAP64[((ptime) >> 3)] = BigInt(nsec);
   return 0;
 }
 
@@ -3817,11 +3809,9 @@ var growMemory = size => {
     // .grow() takes a delta compared to the previous size
     updateMemoryViews();
     return 1;
-  } /*success*/ catch (e) {}
+  } catch (e) {}
 };
 
-// implicit 0 return to save code size (caller will cast "undefined" into 0
-// anyhow)
 var _emscripten_resize_heap = requestedSize => {
   var oldSize = HEAPU8.length;
   // With CAN_ADDRESS_2GB or MEMORY64, pointers are already unsigned.
@@ -4014,10 +4004,8 @@ function _fd_fdstat_get(fd, pbuf) {
     }
     HEAP8[pbuf] = type;
     HEAP16[(((pbuf) + (2)) >> 1)] = flags;
-    (tempI64 = [ rightsBase >>> 0, (tempDouble = rightsBase, (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
-    HEAP32[(((pbuf) + (8)) >> 2)] = tempI64[0], HEAP32[(((pbuf) + (12)) >> 2)] = tempI64[1]);
-    (tempI64 = [ rightsInheriting >>> 0, (tempDouble = rightsInheriting, (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
-    HEAP32[(((pbuf) + (16)) >> 2)] = tempI64[0], HEAP32[(((pbuf) + (20)) >> 2)] = tempI64[1]);
+    HEAP64[(((pbuf) + (8)) >> 3)] = BigInt(rightsBase);
+    HEAP64[(((pbuf) + (16)) >> 3)] = BigInt(rightsInheriting);
     return 0;
   } catch (e) {
     if (typeof FS == "undefined" || !(e.name === "ErrnoError")) throw e;
@@ -4055,14 +4043,13 @@ function _fd_read(fd, iov, iovcnt, pnum) {
   }
 }
 
-function _fd_seek(fd, offset_low, offset_high, whence, newOffset) {
-  var offset = convertI32PairToI53Checked(offset_low, offset_high);
+function _fd_seek(fd, offset, whence, newOffset) {
+  offset = bigintToI53Checked(offset);
   try {
     if (isNaN(offset)) return 61;
     var stream = SYSCALLS.getStreamFromFD(fd);
     FS.llseek(stream, offset, whence);
-    (tempI64 = [ stream.position >>> 0, (tempDouble = stream.position, (+(Math.abs(tempDouble))) >= 1 ? (tempDouble > 0 ? (+(Math.floor((tempDouble) / 4294967296))) >>> 0 : (~~((+(Math.ceil((tempDouble - +(((~~(tempDouble))) >>> 0)) / 4294967296))))) >>> 0) : 0) ], 
-    HEAP32[((newOffset) >> 2)] = tempI64[0], HEAP32[(((newOffset) + (4)) >> 2)] = tempI64[1]);
+    HEAP64[((newOffset) >> 3)] = BigInt(stream.position);
     if (stream.getdents && offset === 0 && whence === 0) stream.getdents = null;
     // reset readdir state
     return 0;
@@ -4360,7 +4347,6 @@ var wasmImports = {
   /** @export */ __syscall_stat64: ___syscall_stat64,
   /** @export */ __syscall_unlinkat: ___syscall_unlinkat,
   /** @export */ _abort_js: __abort_js,
-  /** @export */ _emscripten_memcpy_js: __emscripten_memcpy_js,
   /** @export */ _emscripten_runtime_keepalive_clear: __emscripten_runtime_keepalive_clear,
   /** @export */ _emscripten_system: __emscripten_system,
   /** @export */ _emscripten_throw_longjmp: __emscripten_throw_longjmp,
@@ -4393,99 +4379,95 @@ var wasmImports = {
   /** @export */ proc_exit: _proc_exit
 };
 
-var wasmExports;
+var wasmExports = await createWasm();
 
-createWasm();
+var ___wasm_call_ctors = wasmExports["__wasm_call_ctors"];
 
-var ___wasm_call_ctors = () => (___wasm_call_ctors = wasmExports["__wasm_call_ctors"])();
+var _main = Module["_main"] = wasmExports["__main_argc_argv"];
 
-var _main = Module["_main"] = (a0, a1) => (_main = Module["_main"] = wasmExports["__main_argc_argv"])(a0, a1);
+var _free = wasmExports["free"];
 
-var _free = a0 => (_free = wasmExports["free"])(a0);
+var _malloc = wasmExports["malloc"];
 
-var _malloc = a0 => (_malloc = wasmExports["malloc"])(a0);
+var _setThrew = wasmExports["setThrew"];
 
-var _setThrew = (a0, a1) => (_setThrew = wasmExports["setThrew"])(a0, a1);
+var __emscripten_stack_restore = wasmExports["_emscripten_stack_restore"];
 
-var __emscripten_tempret_set = a0 => (__emscripten_tempret_set = wasmExports["_emscripten_tempret_set"])(a0);
+var __emscripten_stack_alloc = wasmExports["_emscripten_stack_alloc"];
 
-var __emscripten_stack_restore = a0 => (__emscripten_stack_restore = wasmExports["_emscripten_stack_restore"])(a0);
+var _emscripten_stack_get_current = wasmExports["emscripten_stack_get_current"];
 
-var __emscripten_stack_alloc = a0 => (__emscripten_stack_alloc = wasmExports["_emscripten_stack_alloc"])(a0);
+var dynCall_iiiii = Module["dynCall_iiiii"] = wasmExports["dynCall_iiiii"];
 
-var _emscripten_stack_get_current = () => (_emscripten_stack_get_current = wasmExports["emscripten_stack_get_current"])();
+var dynCall_vi = Module["dynCall_vi"] = wasmExports["dynCall_vi"];
 
-var dynCall_iiiii = Module["dynCall_iiiii"] = (a0, a1, a2, a3, a4) => (dynCall_iiiii = Module["dynCall_iiiii"] = wasmExports["dynCall_iiiii"])(a0, a1, a2, a3, a4);
+var dynCall_ii = Module["dynCall_ii"] = wasmExports["dynCall_ii"];
 
-var dynCall_vi = Module["dynCall_vi"] = (a0, a1) => (dynCall_vi = Module["dynCall_vi"] = wasmExports["dynCall_vi"])(a0, a1);
+var dynCall_v = Module["dynCall_v"] = wasmExports["dynCall_v"];
 
-var dynCall_ii = Module["dynCall_ii"] = (a0, a1) => (dynCall_ii = Module["dynCall_ii"] = wasmExports["dynCall_ii"])(a0, a1);
+var dynCall_i = Module["dynCall_i"] = wasmExports["dynCall_i"];
 
-var dynCall_v = Module["dynCall_v"] = a0 => (dynCall_v = Module["dynCall_v"] = wasmExports["dynCall_v"])(a0);
+var dynCall_viii = Module["dynCall_viii"] = wasmExports["dynCall_viii"];
 
-var dynCall_i = Module["dynCall_i"] = a0 => (dynCall_i = Module["dynCall_i"] = wasmExports["dynCall_i"])(a0);
+var dynCall_iiiiii = Module["dynCall_iiiiii"] = wasmExports["dynCall_iiiiii"];
 
-var dynCall_viii = Module["dynCall_viii"] = (a0, a1, a2, a3) => (dynCall_viii = Module["dynCall_viii"] = wasmExports["dynCall_viii"])(a0, a1, a2, a3);
+var dynCall_iii = Module["dynCall_iii"] = wasmExports["dynCall_iii"];
 
-var dynCall_iiiiii = Module["dynCall_iiiiii"] = (a0, a1, a2, a3, a4, a5) => (dynCall_iiiiii = Module["dynCall_iiiiii"] = wasmExports["dynCall_iiiiii"])(a0, a1, a2, a3, a4, a5);
+var dynCall_iiii = Module["dynCall_iiii"] = wasmExports["dynCall_iiii"];
 
-var dynCall_iii = Module["dynCall_iii"] = (a0, a1, a2) => (dynCall_iii = Module["dynCall_iii"] = wasmExports["dynCall_iii"])(a0, a1, a2);
+var dynCall_iiiiiii = Module["dynCall_iiiiiii"] = wasmExports["dynCall_iiiiiii"];
 
-var dynCall_iiii = Module["dynCall_iiii"] = (a0, a1, a2, a3) => (dynCall_iiii = Module["dynCall_iiii"] = wasmExports["dynCall_iiii"])(a0, a1, a2, a3);
+var dynCall_d = Module["dynCall_d"] = wasmExports["dynCall_d"];
 
-var dynCall_iiiiiii = Module["dynCall_iiiiiii"] = (a0, a1, a2, a3, a4, a5, a6) => (dynCall_iiiiiii = Module["dynCall_iiiiiii"] = wasmExports["dynCall_iiiiiii"])(a0, a1, a2, a3, a4, a5, a6);
+var dynCall_iiiiiiiiii = Module["dynCall_iiiiiiiiii"] = wasmExports["dynCall_iiiiiiiiii"];
 
-var dynCall_d = Module["dynCall_d"] = a0 => (dynCall_d = Module["dynCall_d"] = wasmExports["dynCall_d"])(a0);
+var dynCall_vii = Module["dynCall_vii"] = wasmExports["dynCall_vii"];
 
-var dynCall_iiiiiiiiii = Module["dynCall_iiiiiiiiii"] = (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9) => (dynCall_iiiiiiiiii = Module["dynCall_iiiiiiiiii"] = wasmExports["dynCall_iiiiiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
+var dynCall_iiiiddi = Module["dynCall_iiiiddi"] = wasmExports["dynCall_iiiiddi"];
 
-var dynCall_vii = Module["dynCall_vii"] = (a0, a1, a2) => (dynCall_vii = Module["dynCall_vii"] = wasmExports["dynCall_vii"])(a0, a1, a2);
+var dynCall_viddii = Module["dynCall_viddii"] = wasmExports["dynCall_viddii"];
 
-var dynCall_iiiiddi = Module["dynCall_iiiiddi"] = (a0, a1, a2, a3, a4, a5, a6) => (dynCall_iiiiddi = Module["dynCall_iiiiddi"] = wasmExports["dynCall_iiiiddi"])(a0, a1, a2, a3, a4, a5, a6);
+var dynCall_iiiiiiiii = Module["dynCall_iiiiiiiii"] = wasmExports["dynCall_iiiiiiiii"];
 
-var dynCall_viddii = Module["dynCall_viddii"] = (a0, a1, a2, a3, a4, a5) => (dynCall_viddii = Module["dynCall_viddii"] = wasmExports["dynCall_viddii"])(a0, a1, a2, a3, a4, a5);
+var dynCall_ddd = Module["dynCall_ddd"] = wasmExports["dynCall_ddd"];
 
-var dynCall_iiiiiiiii = Module["dynCall_iiiiiiiii"] = (a0, a1, a2, a3, a4, a5, a6, a7, a8) => (dynCall_iiiiiiiii = Module["dynCall_iiiiiiiii"] = wasmExports["dynCall_iiiiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8);
+var dynCall_viiiiiiiii = Module["dynCall_viiiiiiiii"] = wasmExports["dynCall_viiiiiiiii"];
 
-var dynCall_ddd = Module["dynCall_ddd"] = (a0, a1, a2) => (dynCall_ddd = Module["dynCall_ddd"] = wasmExports["dynCall_ddd"])(a0, a1, a2);
+var dynCall_viiiiii = Module["dynCall_viiiiii"] = wasmExports["dynCall_viiiiii"];
 
-var dynCall_viiiiiiiii = Module["dynCall_viiiiiiiii"] = (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9) => (dynCall_viiiiiiiii = Module["dynCall_viiiiiiiii"] = wasmExports["dynCall_viiiiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
+var dynCall_viiii = Module["dynCall_viiii"] = wasmExports["dynCall_viiii"];
 
-var dynCall_viiiiii = Module["dynCall_viiiiii"] = (a0, a1, a2, a3, a4, a5, a6) => (dynCall_viiiiii = Module["dynCall_viiiiii"] = wasmExports["dynCall_viiiiii"])(a0, a1, a2, a3, a4, a5, a6);
+var dynCall_viiiii = Module["dynCall_viiiii"] = wasmExports["dynCall_viiiii"];
 
-var dynCall_viiii = Module["dynCall_viiii"] = (a0, a1, a2, a3, a4) => (dynCall_viiii = Module["dynCall_viiii"] = wasmExports["dynCall_viiii"])(a0, a1, a2, a3, a4);
+var dynCall_viiiiiiiiiiiii = Module["dynCall_viiiiiiiiiiiii"] = wasmExports["dynCall_viiiiiiiiiiiii"];
 
-var dynCall_viiiii = Module["dynCall_viiiii"] = (a0, a1, a2, a3, a4, a5) => (dynCall_viiiii = Module["dynCall_viiiii"] = wasmExports["dynCall_viiiii"])(a0, a1, a2, a3, a4, a5);
+var dynCall_viiiiiiiiiiiiiii = Module["dynCall_viiiiiiiiiiiiiii"] = wasmExports["dynCall_viiiiiiiiiiiiiii"];
 
-var dynCall_viiiiiiiiiiiii = Module["dynCall_viiiiiiiiiiiii"] = (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13) => (dynCall_viiiiiiiiiiiii = Module["dynCall_viiiiiiiiiiiii"] = wasmExports["dynCall_viiiiiiiiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
+var dynCall_viiiiiiii = Module["dynCall_viiiiiiii"] = wasmExports["dynCall_viiiiiiii"];
 
-var dynCall_viiiiiiiiiiiiiii = Module["dynCall_viiiiiiiiiiiiiii"] = (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15) => (dynCall_viiiiiiiiiiiiiii = Module["dynCall_viiiiiiiiiiiiiii"] = wasmExports["dynCall_viiiiiiiiiiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15);
+var dynCall_iidiii = Module["dynCall_iidiii"] = wasmExports["dynCall_iidiii"];
 
-var dynCall_viiiiiiii = Module["dynCall_viiiiiiii"] = (a0, a1, a2, a3, a4, a5, a6, a7, a8) => (dynCall_viiiiiiii = Module["dynCall_viiiiiiii"] = wasmExports["dynCall_viiiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8);
+var dynCall_dd = Module["dynCall_dd"] = wasmExports["dynCall_dd"];
 
-var dynCall_iidiii = Module["dynCall_iidiii"] = (a0, a1, a2, a3, a4, a5) => (dynCall_iidiii = Module["dynCall_iidiii"] = wasmExports["dynCall_iidiii"])(a0, a1, a2, a3, a4, a5);
+var dynCall_ddi = Module["dynCall_ddi"] = wasmExports["dynCall_ddi"];
 
-var dynCall_dd = Module["dynCall_dd"] = (a0, a1) => (dynCall_dd = Module["dynCall_dd"] = wasmExports["dynCall_dd"])(a0, a1);
+var dynCall_diidddd = Module["dynCall_diidddd"] = wasmExports["dynCall_diidddd"];
 
-var dynCall_ddi = Module["dynCall_ddi"] = (a0, a1, a2) => (dynCall_ddi = Module["dynCall_ddi"] = wasmExports["dynCall_ddi"])(a0, a1, a2);
+var dynCall_diidd = Module["dynCall_diidd"] = wasmExports["dynCall_diidd"];
 
-var dynCall_diidddd = Module["dynCall_diidddd"] = (a0, a1, a2, a3, a4, a5, a6) => (dynCall_diidddd = Module["dynCall_diidddd"] = wasmExports["dynCall_diidddd"])(a0, a1, a2, a3, a4, a5, a6);
+var dynCall_diiddd = Module["dynCall_diiddd"] = wasmExports["dynCall_diiddd"];
 
-var dynCall_diidd = Module["dynCall_diidd"] = (a0, a1, a2, a3, a4) => (dynCall_diidd = Module["dynCall_diidd"] = wasmExports["dynCall_diidd"])(a0, a1, a2, a3, a4);
+var dynCall_jiji = Module["dynCall_jiji"] = wasmExports["dynCall_jiji"];
 
-var dynCall_diiddd = Module["dynCall_diiddd"] = (a0, a1, a2, a3, a4, a5) => (dynCall_diiddd = Module["dynCall_diiddd"] = wasmExports["dynCall_diiddd"])(a0, a1, a2, a3, a4, a5);
+var dynCall_iidiiii = Module["dynCall_iidiiii"] = wasmExports["dynCall_iidiiii"];
 
-var dynCall_jiji = Module["dynCall_jiji"] = (a0, a1, a2, a3, a4) => (dynCall_jiji = Module["dynCall_jiji"] = wasmExports["dynCall_jiji"])(a0, a1, a2, a3, a4);
+var _asyncify_start_unwind = wasmExports["asyncify_start_unwind"];
 
-var dynCall_iidiiii = Module["dynCall_iidiiii"] = (a0, a1, a2, a3, a4, a5, a6) => (dynCall_iidiiii = Module["dynCall_iidiiii"] = wasmExports["dynCall_iidiiii"])(a0, a1, a2, a3, a4, a5, a6);
+var _asyncify_stop_unwind = wasmExports["asyncify_stop_unwind"];
 
-var _asyncify_start_unwind = a0 => (_asyncify_start_unwind = wasmExports["asyncify_start_unwind"])(a0);
+var _asyncify_start_rewind = wasmExports["asyncify_start_rewind"];
 
-var _asyncify_stop_unwind = () => (_asyncify_stop_unwind = wasmExports["asyncify_stop_unwind"])();
-
-var _asyncify_start_rewind = a0 => (_asyncify_start_rewind = wasmExports["asyncify_start_rewind"])(a0);
-
-var _asyncify_stop_rewind = () => (_asyncify_stop_rewind = wasmExports["asyncify_stop_rewind"])();
+var _asyncify_stop_rewind = wasmExports["asyncify_stop_rewind"];
 
 function invoke_iiiii(index, a1, a2, a3, a4) {
   var sp = stackSave();
@@ -4603,15 +4585,6 @@ Module["FS"] = FS;
 
 Module["Asyncify"] = Asyncify;
 
-var calledRun;
-
-dependenciesFulfilled = function runCaller() {
-  // If run has never been called, and we should call run (INVOKE_RUN is true, and Module.noInitialRun is not false)
-  if (!calledRun) run();
-  if (!calledRun) dependenciesFulfilled = runCaller;
-};
-
-// try this again later, after new deps are fulfilled
 function callMain(args = []) {
   var entryFunction = _main;
   args.unshift(thisProgram);
@@ -4635,26 +4608,27 @@ function callMain(args = []) {
 
 function run(args = arguments_) {
   if (runDependencies > 0) {
+    dependenciesFulfilled = run;
     return;
   }
   preRun();
   // a preRun added a dependency, run will be called later
   if (runDependencies > 0) {
+    dependenciesFulfilled = run;
     return;
   }
   function doRun() {
     // run may have just been called through dependencies being fulfilled just in this very frame,
     // or while the async setStatus time below was happening
     //EEsim
-//if (calledRun) return;
-    calledRun = true;
-    Module["calledRun"] = true;
+Module["calledRun"] = false;
     if (ABORT) return;
     initRuntime();
     preMain();
     readyPromiseResolve(Module);
     Module["onRuntimeInitialized"]?.();
-    if (shouldRunNow) callMain(args);
+    var noInitialRun = Module["noInitialRun"];
+    if (!noInitialRun) callMain(args);
     postRun();
   }
   if (Module["setStatus"]) {
@@ -4697,11 +4671,6 @@ if (Module["preInit"]) {
     Module["preInit"].pop()();
   }
 }
-
-// shouldRunNow refers to calling main(), not run().
-var shouldRunNow = true;
-
-if (Module["noInitialRun"]) shouldRunNow = false;
 
 run();
 
