@@ -39,8 +39,8 @@ jobs:
     - name: Run Docker Container
       run: docker run -t -v $(realpath ./Docker):/mnt eecircuit
 
-    - name: Run Inject.js
-      run: node ./Docker/inject.js
+    - name: Run Inject.mjs
+      run: node ./Docker/inject.mjs
 
     - name: Rename and Copy Files to Main Directory
       run: |
