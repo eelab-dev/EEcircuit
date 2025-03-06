@@ -1,4 +1,0 @@
-docker build --no-cache -t eecircuit .
-# mkdir build
-docker run -t -v $(realpath .):/mnt eecircuit
-node ./inject.js
