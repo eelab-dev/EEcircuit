@@ -26,26 +26,6 @@ jobs:
         repository: eelab-dev/EEcircuit
         ref: next   # Checkout the "next" branch
 
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Create Empty Build Directory
-      run: mkdir -p Docker/build
-
-    - name: Build Docker Image
-      run: docker build --no-cache -t eecircuit ./Docker
-
-    - name: Run Docker Container
-      run: docker run -t -v $(realpath ./Docker):/mnt eecircuit
-
-    - name: Run Inject.mjs
-      run: node ./Docker/inject.mjs
-
-    - name: Rename and Copy Files to Main Directory
-      run: |
-        cp ./Docker/build/spice.wasm ./src/sim/spice.wasm
-        cp ./Docker/build/spice-eesim.js ./src/sim/spice.js
 
     - name: Update Dependencies
       run: npx --yes npm-check-updates -u
