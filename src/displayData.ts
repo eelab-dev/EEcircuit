@@ -3,7 +3,7 @@
  */
 
 import { ColorType, getColor } from "./colors.ts";
-import type { ResultType } from "./sim/readOutput.ts";
+import type { ResultType } from "eecircuit-engine";
 import { isComplex, ResultArrayType } from "./sim/simulationArray.ts";
 
 export type DisplayDataType = {
@@ -20,24 +20,34 @@ export const mapD2W = (
   resultArray: ResultArrayType
 ): number => {
   const offset = isComplex(resultArray) ? 2 : 1;
-  const sweepLength = resultArray.sweep.length;
+  //const sweepLength = resultArray.sweep.length;
   return displayIndex - offset + sweepIndex * displayDataArray.length;
 };
 
 export const makeDD = (res: ResultType): DisplayDataType[] => {
-  let dd = [] as DisplayDataType[];
-  if (res.param.dataType == "complex") {
-    res.param.variables.forEach((e, i) => {
-      if (i > 0) {
+  const dd = [] as DisplayDataType[];
+  if (res.dataType == "complex") {
+    res.variableNames.forEach((name, index) => {
+      if (index > 0) {
         const color1 = getColor();
-        dd.push({ name: e.name + " (mag)", index: 2 * i, visible: true, color: color1 });
-        dd.push({ name: e.name + " (phase)", index: 2 * i + 1, visible: true, color: color1 });
+        dd.push({
+          name: name + " (mag)",
+          index: 2 * index,
+          visible: true,
+          color: color1,
+        });
+        dd.push({
+          name: name + " (phase)",
+          index: 2 * index + 1,
+          visible: true,
+          color: color1,
+        });
       }
     });
   } else {
-    res.param.variables.forEach((e, i) => {
-      if (i > 0) {
-        dd.push({ name: e.name, index: i, visible: true, color: getColor() });
+    res.variableNames.forEach((name, index) => {
+      if (index > 0) {
+        dd.push({ name: name, index: index, visible: true, color: getColor() });
       }
     });
   }
