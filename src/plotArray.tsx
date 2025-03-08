@@ -4,8 +4,15 @@ import type {
   ComplexDataType,
   RealDataType,
   ResultType,
-} from "./sim/readOutput.ts";
-import { Box, CheckboxCheckedChangeDetails, Grid, GridItem, HStack, SliderValueChangeDetails } from "@chakra-ui/react";
+} from "eecircuit-engine";
+import {
+  Box,
+  CheckboxCheckedChangeDetails,
+  Grid,
+  GridItem,
+  HStack,
+  SliderValueChangeDetails,
+} from "@chakra-ui/react";
 
 import { Checkbox } from "./components/ui/checkbox.tsx";
 import { Tag } from "./components/ui/tag.tsx";
@@ -158,25 +165,29 @@ function PlotArray(
 
   /////////////////////////////////////////////////////////////////////
 
-  const normalLine = (results: ResultType[]) => {
+  const makeLine = (results: ResultType[]) => {
     lineMinMax = [];
-    //console.log("📈2", results);
-    //console.log("📈2", results.length);
     results.forEach((result) => {
-      const data = result.data;
-      getLineMinMaxNormal(data as RealDataType);
+      if (result.dataType == "real") {
+        getLineMinMaxNormal(result.data);
+      }
+      if (result.dataType == "complex") {
+        getLineMinMaxComplex(result.data);
+      }
     });
   };
 
-  const complexLine = (results: ResultType[]) => {
+  /*const complexLine = (results: ResultType[]) => {
     lineMinMax = [];
     results.forEach((result) => {
       const data = result.data;
       getLineMinMaxComplex(data as ComplexDataType);
     });
-  };
+  };*/
 
-  const getLineMinMaxNormal = (data: number[][]) => {
+  const getLineMinMaxNormal = (data: RealDataType[]) => {
+    const numPoints = data[0].values.length;
+    // ignore the first element of the data array which is the x-axis
     for (let col = 1; col < data.length; col++) {
       let color: ColorRGBA;
       if (displayData && displayData[col - 1]) {
@@ -189,15 +200,15 @@ function PlotArray(
       } else {
         color = new ColorRGBA(0.5, 0.5, 0.5, 1);
       }
-      const line = new WebglLine(color, data[0].length);
+      const line = new WebglLine(color, numPoints);
       let minY = 100000;
       let maxY = -100000;
       let minPos = maxY;
       let maxNeg = minY;
 
-      for (let i = 0; i < data[0].length; i++) {
-        line.setX(i, data[0][i]);
-        const y = data[col][i];
+      for (let i = 0; i < numPoints; i++) {
+        line.setX(i, data[0].values[i]);
+        const y = data[col].values[i];
         line.setY(i, y);
         maxY = maxY > y ? maxY : y;
         minY = minY < y ? minY : y;
@@ -213,13 +224,13 @@ function PlotArray(
         maxY: maxY,
         minYPos: minPos,
         maxYNeg: maxNeg,
-        minX: data[0][0],
-        maxX: data[0][data[0].length - 1],
+        minX: data[0].values[0],
+        maxX: data[0].values[numPoints - 1],
       });
     }
   };
 
-  const getLineMinMaxComplex = (data: ComplexDataType) => {
+  const getLineMinMaxComplex = (data: ComplexDataType[]) => {
     const drawLine = (dataY: number[], dataX: number[], index: number) => {
       let color: ColorRGBA;
       if (displayData && displayData[index - 1]) {
@@ -259,15 +270,15 @@ function PlotArray(
       });
     };
 
-    let dataXReal = [] as number[];
+    const dataXReal = [] as number[];
 
     data[0].forEach((e) => {
       dataXReal.push(e.real);
     });
 
     for (let col = 1; col < data.length; col++) {
-      let dataYMag = [] as number[];
-      let dataYPhase = [] as number[];
+      const dataYMag = [] as number[];
+      const dataYPhase = [] as number[];
       data[col].forEach((e) => {
         dataYMag.push(Math.sqrt(Math.pow(e.real, 2) + Math.pow(e.img, 2)));
         dataYPhase.push((Math.sin(e.img / e.real) * 180) / Math.PI);
@@ -289,18 +300,9 @@ function PlotArray(
     console.log("😱", resultArray);
 
     if (resultArray && resultArray.results.length > 0) {
-      if (!isComplex(resultArray)) {
-        //console.log("📈3", resultArray);
-        normalLine(resultArray.results);
-      }
-      if (isComplex(resultArray)) {
-        //const data = results ? results.data : [[]];
-        complexLine(resultArray.results);
-      }
+      makeLine(resultArray.results);
       scaleUpdate(findMinMaxGlobal());
     }
-
-    //?????????????????????
 
     //console.log("line-->", wglp.linesData);
   }, [resultArray, displayData]);
@@ -507,9 +509,9 @@ function PlotArray(
 
   function wheelEvent(e: React.WheelEvent<HTMLCanvasElement>) {
     //e.preventDefault();
-    const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
-    const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
-    const cursorOffsetX = (2 * (e.clientX - eOffset - width / 2)) / width;
+    //const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
+    //const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
+    //const cursorOffsetX = (2 * (e.clientX - eOffset - width / 2)) / width;
     if (e.shiftKey) {
       //offset += e.deltaY * 0.1;
       //wglp.gOffsetX = 0.1 * offset;
@@ -521,25 +523,7 @@ function PlotArray(
         scale = wglp.gScaleX - e.deltaY * (wglp.gScaleX * 0.001);
       }
 
-      //let scale = wglp.gScaleX;
-      //scale = Math.min(100, scale);
-      //scale = Math.max(1, scale);
-      const gScaleXOld = wglp.gScaleX;
-
-      //wglp.gScaleX = 1 * Math.pow(scale, 1.5);
-
-      //if (scale > 1 && scale < 100) {
-      //const offsetFactor = cursorOffsetX * gScaleXOld;
-
       wglp.gScaleX = 1 * scale;
-      //wglp.gOffsetX = -offsetFactor;
-      //}
-      /*if (scale <= 1) {
-        //wglp.gOffsetX = 0;
-        scaleUpdate(findMinMaxGlobal());
-      }*/
-      //console.log("wheel->", cursorOffsetX, offsetFactor, wglp.gOffsetX);
-      //console.log("wheel->", scale, wglp.gScaleX);
     }
   }
 
@@ -567,8 +551,8 @@ function PlotArray(
   };
 
   const sweepCheckBoxHandle = (e: CheckboxCheckedChangeDetails) => {
-    let o = { ...plotOptions };
-    o.sweepSlider = (e.checked === true);
+    const o = { ...plotOptions };
+    o.sweepSlider = e.checked === true;
     setPlotOptions(o);
   };
 

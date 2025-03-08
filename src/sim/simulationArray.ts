@@ -62,7 +62,7 @@ export class SimArray {
     this.log("☀️", await this.simArray[0].getInfo());
     //this.log("☀️", await this.sim2.getInfo());
     this.log("🧨🧨🧨🧨🧨🧨🧨🧨");
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       resolve();
     });
   }
@@ -78,7 +78,9 @@ export class SimArray {
 
     this.error = false;
 
-    let threadPromises = [] as Promise<ResultType[]>[];
+    const threadPromises: Promise<ResultType[]>[] = [] as Promise<
+      ResultType[]
+    >[];
 
     for (let i = 0; i < netListsDist.length; i++) {
       const singleThreadPromise = this.runSimSingleThread(
@@ -120,7 +122,7 @@ export class SimArray {
       this.progressCallback((100 * this.progress) / this.netLists.length);
     }
     this.log("👌👌👌");
-    //this.log(results);
+    this.log(results);
     return results;
   }
 
@@ -144,15 +146,18 @@ export class SimArray {
     return { results: this.results, sweep: this.sweep };
   }
 
-  public progressCallback(n: number) {}
+  public progressCallback(n: number) {
+    void n;
+  }
 
-  private log(message?: any, ...optionalParams: any[]): void {
-    //console.log("simArray -> ", message, optionalParams);
+  private log(message?: unknown, ...optionalParams: unknown[]): void {
+    const isDebug = true;
+    if (isDebug) console.log("simArray -> ", message, optionalParams);
   }
 }
 
 export const isComplex = (ra: ResultArrayType): boolean => {
-  return ra.results[0].param.dataType == "complex";
+  return ra.results[0].dataType === "complex";
 };
 
 //https://codesandbox.io/s/netlist-23m16?file=/src/index.ts
