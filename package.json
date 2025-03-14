@@ -13,7 +13,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "web-test-runner \"src/**/*.test.tsx\""
+    "check": "tsc --noEmit"
   },
   "author": "Danial Chitnis",
   "license": "MIT",

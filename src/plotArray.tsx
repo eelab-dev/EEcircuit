@@ -95,7 +95,7 @@ function PlotArray(
 
   const [crossXY, setCrossXY] = useState<CrossXY>({ x: 0, y: 0 });
 
-  const [zoomStatus, setZoomStatus] = useState<ZoomStatus>({
+  const [, setZoomStatus] = useState<ZoomStatus>({
     scale: 1,
     offset: 0,
   });
@@ -272,16 +272,16 @@ function PlotArray(
 
     const dataXReal = [] as number[];
 
-    data[0].forEach((e) => {
-      dataXReal.push(e.real);
+    data[0].values.forEach((value) => {
+      dataXReal.push(value.real);
     });
 
     for (let col = 1; col < data.length; col++) {
       const dataYMag = [] as number[];
       const dataYPhase = [] as number[];
-      data[col].forEach((e) => {
-        dataYMag.push(Math.sqrt(Math.pow(e.real, 2) + Math.pow(e.img, 2)));
-        dataYPhase.push((Math.sin(e.img / e.real) * 180) / Math.PI);
+      data[col].values.forEach((value) => {
+        dataYMag.push(Math.sqrt(Math.pow(value.real, 2) + Math.pow(value.img, 2)));
+        dataYPhase.push((Math.atan2(value.img , value.real) * 180) / Math.PI);
       });
       drawLine(dataYMag, dataXReal, 2 * col - 1);
       drawLine(dataYPhase, dataXReal, 2 * col);

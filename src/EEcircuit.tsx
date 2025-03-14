@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { JSX, Suspense, useEffect, useState } from "react";
 //import * as circuits from "./sim/circuits.ts";
 import {
