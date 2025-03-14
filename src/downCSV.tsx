@@ -1,76 +1,114 @@
-import { Button } from "@chakra-ui/react";
+import { Button } from "./components/ui/button.tsx";
+import { Checkbox } from "./components/ui/checkbox.tsx";
 import React, { JSX } from "react";
-import type { ComplexDataType, RealDataType } from "./sim/readOutput.ts";
 import { isComplex, ResultArrayType } from "./sim/simulationArray.ts";
+import { ComplexNumber } from "eecircuit-engine";
+import { CheckboxCheckedChangeDetails } from "@chakra-ui/react/checkbox";
+import { VStack } from "@chakra-ui/react";
 
 type Prop = {
   resultArray?: ResultArrayType;
 };
 
+type ComplexPolar = {
+  magnitude: number;
+  phase: number;
+};
+
 const DownCSV = ({ resultArray }: Prop): JSX.Element => {
   const aLink = React.useRef<HTMLAnchorElement>(null);
   const [href, setHref] = React.useState("");
-  //
+  const [complex, setComplex] = React.useState(false);
+  const [polar, setPolar] = React.useState(false);
+
   const printCSVReal = (resultArray: ResultArrayType): string => {
     let str = "";
     let strTop = "";
+    const vars = resultArray.results[0].variableNames;
 
-    const vars = resultArray.results[0].param.variables;
-    vars.forEach((e) => {
+    vars.forEach((name) => {
       for (let i = 0; i < resultArray.results.length; i++) {
-        const sweepIndex = resultArray.sweep.length > 0
+        const sweepIndex = resultArray.sweep.length > i
           ? `[${resultArray.sweep[i]}]`
           : "";
-        strTop = `${strTop}${e.name} ${sweepIndex},`;
+        strTop += `${name} ${sweepIndex},`;
       }
     });
-    strTop = strTop + "\n";
+    strTop += "\n";
 
-    for (let row = 0; row < resultArray.results[0].data[0].length; row++) {
-      for (let col = 0; col < resultArray.results[0].data.length; col++) {
-        for (let i = 0; i < resultArray.results.length; i++) {
-          const data = resultArray.results[i].data as RealDataType;
-          const a = data[col][row];
-          //time-series are unequal length
-          const s = a !== undefined ? a.toExponential() : "NaN";
-          str = `${str}${s},`;
+    const maxRows = resultArray.results.reduce((max, result) => {
+      return Math.max(max, result.data[0].values.length);
+    }, 0);
+
+    for (let row = 0; row < maxRows; row++) {
+      for (let col = 0; col < vars.length; col++) {
+        for (let sweep = 0; sweep < resultArray.results.length; sweep++) {
+          const result = resultArray.results[sweep];
+          if (
+            row < result.data[col].values.length && result.dataType === "real"
+          ) {
+            str += result.data[col].values[row].toExponential() + ",";
+          } else {
+            str += ",";
+          }
         }
       }
-      str = str + "\n";
+      str += "\n";
     }
+
     return strTop + str;
   };
 
+  const convertToMagPhase = (input: ComplexNumber): ComplexPolar => {
+    const magnitude = Math.sqrt(input.real ** 2 + input.img ** 2);
+    const phase = Math.atan2(input.img, input.real) * (180 / Math.PI); // Convert radians to degrees
+
+    return { magnitude, phase };
+  };
+
   const printCSVComplex = (resultArray: ResultArrayType): string => {
+    console.log(resultArray);
     let str = "";
     let strTop = "";
 
-    //const data = resultArray.data  as ComplexDataType;
-    const vars = resultArray.results[0].param.variables;
-    vars.forEach((e) => {
+    const vars = resultArray.results[0].variableNames;
+    vars.forEach((name) => {
       for (let i = 0; i < resultArray.results.length; i++) {
         const sweepIndex = resultArray.sweep.length > 0
           ? `[${resultArray.sweep[i]}]`
           : "";
-        strTop =
-          `${strTop}${e.name} ${sweepIndex} (real),${e.name} ${sweepIndex} (img),`;
+        strTop += `${name} ${sweepIndex} (real),${name} ${sweepIndex} (img),`;
       }
     });
-    strTop = strTop + "\n";
+    strTop += "\n";
 
-    for (let row = 0; row < resultArray.results[0].data[0].length; row++) {
-      for (let col = 0; col < resultArray.results[0].data.length; col++) {
-        //console.log(out2[col][row]);
-        for (let i = 0; i < resultArray.results.length; i++) {
-          const data = resultArray.results[i].data as ComplexDataType;
-          str = `${str}${data[col][row].real.toExponential()},${
-            data[col][
-              row
-            ].img.toExponential()
-          },`;
+    const maxRows = resultArray.results.reduce((max, result) => {
+      return Math.max(max, result.data[0].values.length);
+    }, 0);
+
+    for (let row = 0; row < maxRows; row++) {
+      for (let col = 0; col < vars.length; col++) {
+        for (let sweep = 0; sweep < resultArray.results.length; sweep++) {
+          const result = resultArray.results[sweep];
+          if (
+            row < result.data[col].values.length &&
+            result.dataType === "complex"
+          ) {
+            const complexNumber = result.data[col].values[row];
+            if (polar) {
+              const polarNumber = convertToMagPhase(complexNumber);
+              str += polarNumber.magnitude.toExponential() + "," +
+                polarNumber.phase.toExponential() + ",";
+            } else {
+              str += complexNumber.real.toExponential() + "," +
+                complexNumber.img.toExponential() + ",";
+            }
+          } else {
+            str += ",";
+          }
         }
       }
-      str = str + "\n";
+      str += "\n";
     }
     return strTop + str;
   };
@@ -89,7 +127,12 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
 
   React.useEffect(() => {
     setHref("");
-  }, [resultArray]);
+    if (resultArray) {
+      setComplex(
+        isComplex(resultArray ? resultArray : { results: [], sweep: [] }),
+      );
+    }
+  }, [resultArray, complex]);
 
   React.useEffect(() => {
     if (href.length > 0) {
@@ -105,11 +148,24 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
     );
   };
 
+  const ckAction = (details: CheckboxCheckedChangeDetails) => {
+    const e = details.checked === true ? true : false;
+    setPolar(e);
+  };
+
   return (
     <>
-      <Button type="submit" colorScheme="blue" onClick={btAction}>
-        Download
-      </Button>
+      <VStack gap={5} align="flex-start" ml={4}>
+        {complex && (
+          <Checkbox defaultChecked={true} onCheckedChange={ckAction}>
+            Convert to magnitude and phase
+          </Checkbox>
+        )}
+        <Button type="submit" colorScheme="blue" onClick={btAction}>
+          Download
+        </Button>
+      </VStack>
+
       <a ref={aLink} href={href} download={"EEsim.csv"} />
     </>
   );

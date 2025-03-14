@@ -1,3 +1,5 @@
+/* eslint-disable no-useless-escape */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useRef, useState } from "react";
 import * as MonacoEditor from "monaco-editor/esm/vs/editor/editor.api";
 import "./useWorker.ts";
@@ -37,9 +39,11 @@ const EditorCustom = ({
 }: EditorCustomType) => {
   const [isMonacoReady, setIsMonacoReady] = useState(true);
   const [isEditorCodeMounted, setIsEditorCodeMounted] = useState(false);
-  const editorCodeRef = useRef<MonacoEditor.editor.IStandaloneCodeEditor>();
-  const editorRef = useRef<typeof MonacoEditor.editor>();
-  const monacoRef = useRef<typeof MonacoEditor>();
+  const editorCodeRef = useRef<
+    MonacoEditor.editor.IStandaloneCodeEditor | null
+  >(null);
+  const editorRef = useRef<typeof MonacoEditor.editor | null>(null);
+  const monacoRef = useRef<typeof MonacoEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -336,27 +340,27 @@ const EditorCustom = ({
         triggerCharacters: ["."],
         provideCompletionItems: function (model, position) {
           // find out if we are completing a property in the 'dependencies' object.
-          let textUntilPosition = model.getValueInRange({
+          const textUntilPosition = model.getValueInRange({
             startLineNumber: 1,
             startColumn: 1,
             endLineNumber: position.lineNumber,
             endColumn: position.column,
           });
-          let word = model.getWordUntilPosition(position);
-          let range = {
+          const word = model.getWordUntilPosition(position);
+          const range = {
             startLineNumber: position.lineNumber,
             endLineNumber: position.lineNumber,
             startColumn: word.startColumn,
             endColumn: word.endColumn,
           };
 
-          let c1 = word.startColumn == 1;
+          const c1 = word.startColumn == 1;
           if (c1) {
             //console.log("monaco->😉", position, word);
             return { suggestions: createDependencyProposalsComponents(range) };
           }
 
-          let match = word.startColumn == 2;
+          const match = word.startColumn == 2;
           if (!match) {
             return { suggestions: [] };
           }
@@ -419,7 +423,7 @@ const EditorCustom = ({
     const changedText = e;
     const editorCode = editorCodeRef.current;
     if (editorDidMount) {
-      editorDidMount(editorCode, changedText);
+      editorDidMount(editorCode ?? undefined, changedText);
     }
     if (valueChanged) {
       valueChanged(editorCode?.getValue());
