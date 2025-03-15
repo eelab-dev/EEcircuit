@@ -4,7 +4,6 @@ import type { DisplayDataType } from "./displayData.ts";
 import { Checkbox } from "./components/ui/checkbox.tsx";
 import type { CheckboxCheckedChangeDetails } from "@chakra-ui/react";
 
-
 type Props = {
   displayData: DisplayDataType[];
   checkCallBack: (name: string, check: boolean) => void;
@@ -18,41 +17,34 @@ function DisplayBox({ displayData, checkCallBack }: Props): JSX.Element {
     list.shift();
   }*/
 
-  console.log("I am here");
-
-  const boxStyle = {
-    display: "flex",
-    flexDirection: "column",
-    flexWrap: "wrap",
-    backgroundColor: "rgb(30,30,30)",
-    padding: "1em",
-  } as React.CSSProperties;
-
   return (
     <Box
       borderWidth="1px"
       borderRadius="md"
       maxW="sm"
       p={4}
-      bg="gray.700"
+      bg="bg.muted"
       width="80%"
       maxHeight="25vh"
       overflowY="scroll"
     >
       <Stack direction="column">
         <CheckboxGroup onValueChange={console.log}>
-          {list.map((dd, i) => (
+          {list.map((dd) => (
             <Checkbox
               key={dd.name}
               onCheckedChange={(e: CheckboxCheckedChangeDetails) =>
-                checkCallBack(dd.name, e.checked == true ? true : false)}
+                checkCallBack(dd.name, e.checked == true ? true : false)
+              }
               name={dd.name}
               checked={dd.visible}
-              color={dd.color
-                ? `rgb(${dd.color.r * 255},${dd.color.g * 255},${
-                  dd.color.b * 255
-                })`
-                : `rgb(200,200,200)`}
+              color={
+                dd.color
+                  ? `rgb(${dd.color.r * 255},${dd.color.g * 255},${
+                      dd.color.b * 255
+                    })`
+                  : `rgb(200,200,200)`
+              }
             >
               {dd.name}
             </Checkbox>

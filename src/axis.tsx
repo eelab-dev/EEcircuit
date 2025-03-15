@@ -6,6 +6,7 @@ type AxisType = {
   offset: number;
   yHeight: string;
   axis: "x" | "y";
+  theme: "light" | "dark";
 };
 
 type CanvasSize = {
@@ -15,7 +16,13 @@ type CanvasSize = {
 
 //let ctx: CanvasRenderingContext2D | null;
 
-const Axis = ({ scale, offset, yHeight, axis }: AxisType): JSX.Element => {
+const Axis = ({
+  scale,
+  offset,
+  yHeight,
+  axis,
+  theme,
+}: AxisType): JSX.Element => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ctx, setCtx] = useState<CanvasRenderingContext2D>();
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({
@@ -39,18 +46,26 @@ const Axis = ({ scale, offset, yHeight, axis }: AxisType): JSX.Element => {
       const ctx2d = canvas.getContext("2d");
       if (ctx2d) {
         setCtx(ctx2d);
-        ctx2d.font = "16px Courier New";
-        ctx2d.fillStyle = "white";
-        ctx2d.strokeStyle = "white";
-        axis == "x"
-          ? updateX(ctx2d, canvas.width, canvas.height)
-          : updateY(ctx2d, canvas.width, canvas.height);
+        const rootFontSize = parseFloat(
+          getComputedStyle(document.documentElement).fontSize
+        );
+        console.log("rootFontSize->", rootFontSize);
+        const scaleFactor = window.devicePixelRatio || 1;
+        const fontSize = 0.85 * rootFontSize * scaleFactor; // rem scaled by device pixel ratio
+        ctx2d.font = `${fontSize}px Courier New`;
+        ctx2d.fillStyle = theme === "light" ? "black" : "white";
+        ctx2d.strokeStyle = theme === "light" ? "black" : "white";
+        if (axis === "x") {
+          updateX(ctx2d, canvas.width, canvas.height);
+        } else {
+          updateY(ctx2d, canvas.width, canvas.height);
+        }
       }
 
       //const rect = canvas?.getBoundingClientRect();
       //console.log("axis->", rect);
     }
-  }, [canvasRef]);
+  }, [canvasRef, theme]);
 
   useEffect(() => {
     if (ctx && axis == "x") {
@@ -67,7 +82,7 @@ const Axis = ({ scale, offset, yHeight, axis }: AxisType): JSX.Element => {
   const updateX = (
     ctx2d: CanvasRenderingContext2D,
     width: number,
-    height: number,
+    height: number
   ) => {
     ctx2d.clearRect(0, 0, width, height);
 
@@ -75,7 +90,11 @@ const Axis = ({ scale, offset, yHeight, axis }: AxisType): JSX.Element => {
       const midpoint = -(offset - i / 3 + 1) / scale;
       const x = (i / 6) * width;
 
-      ctx2d.fillText(unitConvert2string(midpoint, 2), x, 15);
+      ctx2d.fillText(
+        unitConvert2string(midpoint, 2),
+        x,
+        15 * (window.devicePixelRatio || 1)
+      );
       //ctx.fillRect(10, 10, 100, 100);
       ctx2d.moveTo(x, 0);
       ctx2d.lineTo(x, 10);
@@ -86,7 +105,7 @@ const Axis = ({ scale, offset, yHeight, axis }: AxisType): JSX.Element => {
   const updateY = (
     ctx2d: CanvasRenderingContext2D,
     width: number,
-    height: number,
+    height: number
   ) => {
     //console.log("yaxis->", canvasSize);
     ctx2d.clearRect(0, 0, width, height);
@@ -94,7 +113,11 @@ const Axis = ({ scale, offset, yHeight, axis }: AxisType): JSX.Element => {
       const midpoint = -(offset + i / 3 - 1) / scale;
       const y = (i / 6) * height;
 
-      ctx2d.fillText(unitConvert2string(midpoint, 2), 5, y);
+      ctx2d.fillText(
+        unitConvert2string(midpoint, 2),
+        5 * (window.devicePixelRatio || 1),
+        y
+      );
       //ctx.fillRect(10, 10, 100, 100);
       ctx2d.moveTo(width - 10, y);
       ctx2d.lineTo(width, y);
@@ -105,8 +128,8 @@ const Axis = ({ scale, offset, yHeight, axis }: AxisType): JSX.Element => {
   return (
     <canvas
       style={{
-        width: `${axis == "x" ? "100%" : "5em"}`,
-        height: `${axis == "x" ? "1.5em" : yHeight}`,
+        width: axis === "x" ? "100%" : "5em",
+        height: axis === "x" ? "1.5em" : yHeight,
       }}
       ref={canvasRef}
     />
