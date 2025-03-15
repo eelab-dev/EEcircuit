@@ -24,12 +24,15 @@ export const mapD2W = (
   return displayIndex - offset + sweepIndex * displayDataArray.length;
 };
 
-export const makeDD = (res: ResultType): DisplayDataType[] => {
+export const makeDD = (
+  res: ResultType,
+  colorMode: "light" | "dark"
+): DisplayDataType[] => {
   const dd = [] as DisplayDataType[];
   if (res.dataType == "complex") {
     res.variableNames.forEach((name, index) => {
       if (index > 0) {
-        const color1 = getColor();
+        const color1 = getColor(colorMode);
         dd.push({
           name: name + " (mag)",
           index: 2 * index,
@@ -47,7 +50,12 @@ export const makeDD = (res: ResultType): DisplayDataType[] => {
   } else {
     res.variableNames.forEach((name, index) => {
       if (index > 0) {
-        dd.push({ name: name, index: index, visible: true, color: getColor() });
+        dd.push({
+          name: name,
+          index: index,
+          visible: true,
+          color: getColor(colorMode),
+        });
       }
     });
   }

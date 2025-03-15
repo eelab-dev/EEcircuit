@@ -19,7 +19,7 @@ type EditorCustomType = {
     changedText: MonacoEditor.editor.IModelContentChangedEvent,
   ) => void;
   valueChanged?: (value: string | undefined) => void;
-  theme?: string;
+  theme?: "light" | "dark";
   line?: number;
   width?: string;
   height?: string;
@@ -387,7 +387,7 @@ const EditorCustom = ({
           roundedSelection: false,
           scrollBeyondLastLine: false,
           readOnly: false,
-          theme: "vs-dark",
+          theme: theme === "light" ? "vs" : "vs-dark",
           automaticLayout: true,
           quickSuggestions: true,
           wordBasedSuggestions: "allDocuments",
@@ -399,6 +399,21 @@ const EditorCustom = ({
       setIsEditorCodeMounted(true);
     }
   }, [isMonacoReady, containerRef]);
+
+  useEffect(() => {
+    if (editorCodeRef.current && isEditorCodeMounted) {
+      editorCodeRef.current.layout();
+    }
+  }, [width, height]);
+
+  useEffect(() => {
+    if (editorCodeRef.current && isEditorCodeMounted) {
+      editorCodeRef.current.updateOptions({
+        theme: theme === "light" ? "vs" : "vs-dark",
+      });
+    }
+  }
+  , [theme]);
 
   useEffect(() => {
     if (editorRef.current && editorCodeRef.current && isEditorCodeMounted) {

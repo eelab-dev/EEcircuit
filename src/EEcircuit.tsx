@@ -57,6 +57,10 @@ import { ProgressBar, ProgressRoot } from "./components/ui/progress.tsx";
 import { getColor } from "./colors.ts";
 import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray.ts";
 import { DisplayDataType, makeDD } from "./displayData.ts";
+import {
+  useColorMode,
+  useColorModeValue,
+} from "./components/ui/color-mode.tsx";
 
 let sim: SimArray;
 const store = globalThis.localStorage;
@@ -92,7 +96,7 @@ export default function EEcircuit(): JSX.Element {
   const [progress, setProgress] = React.useState(0);
   const [threadCountNew, setThreadCountNew] = React.useState(1);
 
-  //const toast = createStandaloneToast();
+  const colorMode = useColorModeValue("light", "dark");
 
   useEffect(() => {
     const loadedNetList = store.getItem("netList");
@@ -101,7 +105,7 @@ export default function EEcircuit(): JSX.Element {
     const loadedDisplayDataString = store.getItem("displayData");
     if (loadedDisplayDataString) {
       const loadedDisplayData = JSON.parse(
-        loadedDisplayDataString,
+        loadedDisplayDataString
       ) as DisplayDataType[];
       setDisplayData(loadedDisplayData);
     }
@@ -132,12 +136,12 @@ export default function EEcircuit(): JSX.Element {
   useEffect(() => {
     //DisplayData logic
     if (resultArray && resultArray.results.length > 0) {
-      const newDD = makeDD(resultArray.results[0]);
+      const newDD = makeDD(resultArray.results[0], colorMode);
       const tempDD = [] as DisplayDataType[];
       newDD.forEach((newData, i) => {
         let match = false;
         let visible = true;
-        let color = getColor();
+        let color = getColor(colorMode);
 
         if (displayData) {
           displayData.forEach((oldData) => {
@@ -246,7 +250,7 @@ export default function EEcircuit(): JSX.Element {
         store.setItem("displayData", stringDD);
       }
     },
-    [displayData, isSimLoaded],
+    [displayData, isSimLoaded]
   );
 
   const handleTabChange = (index: number) => {
@@ -254,7 +258,9 @@ export default function EEcircuit(): JSX.Element {
   };
 
   const handleEditor = React.useCallback((value: string | undefined) => {
-    value ? setNetList(value) : {};
+    if (value) {
+      setNetList(value);
+    }
   }, []);
 
   const handleDeSelectButton = React.useCallback(() => {
@@ -288,11 +294,11 @@ export default function EEcircuit(): JSX.Element {
       const d = [...displayData];
       if (!isComplex(resultArray)) {
         d.forEach((e) => {
-          e.color = getColor();
+          e.color = getColor(colorMode);
         });
       } else {
         for (let i = 0; i < d.length - 1; i = i + 2) {
-          const c = getColor();
+          const c = getColor(colorMode);
           d[i].color = c;
           d[i + 1].color = c;
         }
@@ -376,7 +382,7 @@ export default function EEcircuit(): JSX.Element {
               language="spice"
               value={netList}
               valueChanged={handleEditor}
-              theme="vs-dark"
+              theme={useColorModeValue("light", "dark")}
               key={windowSize.width}
             />
           </Suspense>
@@ -526,9 +532,15 @@ export default function EEcircuit(): JSX.Element {
 
         <Tabs.Content value="plot">
           <Suspense fallback={<Skeleton height="400px" />}>
-            <PlotArray resultArray={resultArray} displayData={displayData} />
+            <PlotArray
+              resultArray={resultArray}
+              displayData={displayData}
+              theme={useColorModeValue("light", "dark")}
+            />
           </Suspense>
-          {displayBreakpoint !== "base" ? <></> : (
+          {displayBreakpoint !== "base" ? (
+            <></>
+          ) : (
             <>
               <Spacer p={2} />
               <Suspense fallback={<Skeleton height="100px" />}>
@@ -542,7 +554,7 @@ export default function EEcircuit(): JSX.Element {
           <Textarea
             readOnly={true}
             aria-label="info"
-            bg="gray.900"
+            bg="bg.muted"
             fontSize="0.9em"
             rows={15}
             value={info}
