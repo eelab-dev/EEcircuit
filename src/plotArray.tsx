@@ -124,6 +124,23 @@ function PlotArray({
 
   useEffect(() => {
     if (canvasMain.current) {
+      crossXLine.color =
+        theme === "dark"
+          ? new ColorRGBA(0.1, 1, 0.1, 1)
+          : new ColorRGBA(0.05, 0.4, 0.05, 1);
+      crossYLine.color =
+        theme === "dark"
+          ? new ColorRGBA(0.1, 1, 0.1, 1)
+          : new ColorRGBA(0.1, 0.5, 0.1, 1);
+      zoomRect.color =
+        theme === "dark"
+          ? new ColorRGBA(0.8, 0.8, 0.2, 0.25)
+          : new ColorRGBA(0.1, 0.1, 0.4, 0.25);
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    if (canvasMain.current) {
       const devicePixelRatio = window.devicePixelRatio || 1;
       canvasMain.current.width =
         canvasMain.current.clientWidth * devicePixelRatio;
