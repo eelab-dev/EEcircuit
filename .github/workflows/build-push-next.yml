@@ -7,8 +7,8 @@ env:
 
 on:
   schedule:
-    - cron: '0 0 * * 0'  # Runs every Sunday at midnight
-  workflow_dispatch:      # Allows manual triggering
+    - cron: "0 0 * * 0" # Runs every Sunday at midnight
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   build-and-deploy:
@@ -20,47 +20,41 @@ jobs:
       contents: write
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        repository: eelab-dev/EEcircuit
-        ref: next   # Checkout the "next" branch
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: eelab-dev/EEcircuit
+          ref: next # Checkout the "next" branch
 
+      - name: Update Dependencies
+        run: npx --yes npm-check-updates -u
 
-    - name: Update Dependencies
-      run: npx --yes npm-check-updates -u
-    
-    - name: Install Dependencies
-      run: npm install
+      - name: Install Dependencies
+        run: npm install
 
-    - name: Update engine to next version
-      run: npm install eecircuit-engine@next
-    
-    - name: Build Project with Vite
-      run: npm run build
+      - name: Update engine to next version
+        run: npm install eecircuit-engine@next
 
-    - name: Deploy to Vercel
-      run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build Project with Vite
+        run: npm run build
 
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
-        
-    - name: Run Playwright tests
-      run: npx playwright test -g "EEcircuit Next"
-      
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
-    
+      - name: Deploy to Vercel
+        run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}
 
-    # auto commit
-    - uses: stefanzweifel/git-auto-commit-action@v5
-      with:
-        commit_message: Auto updates after tests
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
 
+      - name: Run Playwright tests
+        run: npx playwright test -g "EEcircuit Next"
 
-    
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
 
+      # auto commit
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Auto updates after tests

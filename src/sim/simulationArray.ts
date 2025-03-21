@@ -3,12 +3,13 @@
  *
  */
 
-import type { Simulation, simulation } from "./simulationLink";
-import { parser } from "./parser";
-import type { ResultType } from "./readOutput";
+import { ResultType, Simulation } from "eecircuit-engine";
+
+import { simulation } from "./simulationLink.ts";
+import { parser } from "./parser.ts";
 
 import * as ComLink from "comlink";
-import type { ParserType } from "./parser";
+import type { ParserType } from "./parser.ts";
 
 export type ResultArrayType = {
   results: ResultType[];
@@ -42,9 +43,12 @@ export class SimArray {
     this.simArray = [];
     this.threads = threadCount;
     for (let i = 0; i < this.threads; i++) {
-      const worker = new Worker(new URL("./simulationLink.ts", import.meta.url), {
-        type: "module",
-      });
+      const worker = new Worker(
+        new URL("./simulationLink.ts", import.meta.url),
+        {
+          type: "module",
+        }
+      );
       const sim = ComLink.wrap<typeof simulation>(worker);
       this.simArray.push(sim);
     }
@@ -58,7 +62,7 @@ export class SimArray {
     this.log("☀️", await this.simArray[0].getInfo());
     //this.log("☀️", await this.sim2.getInfo());
     this.log("🧨🧨🧨🧨🧨🧨🧨🧨");
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       resolve();
     });
   }
@@ -74,10 +78,15 @@ export class SimArray {
 
     this.error = false;
 
-    let threadPromises = [] as Promise<ResultType[]>[];
+    const threadPromises: Promise<ResultType[]>[] = [] as Promise<
+      ResultType[]
+    >[];
 
     for (let i = 0; i < netListsDist.length; i++) {
-      const singleThreadPromise = this.runSimSingleThread(this.simArray[i], netListsDist[i]);
+      const singleThreadPromise = this.runSimSingleThread(
+        this.simArray[i],
+        netListsDist[i]
+      );
       threadPromises.push(singleThreadPromise);
     }
     const threadResults = await Promise.all(threadPromises);
@@ -87,8 +96,7 @@ export class SimArray {
     //this.log("Final", this.results);
     if (!this.error) {
       console.log("Simulation run completed successfully!");
-    }
-    else {
+    } else {
       console.error("Simulation run completed with errors!");
     }
 
@@ -114,7 +122,7 @@ export class SimArray {
       this.progressCallback((100 * this.progress) / this.netLists.length);
     }
     this.log("👌👌👌");
-    //this.log(results);
+    this.log(results);
     return results;
   }
 
@@ -138,15 +146,18 @@ export class SimArray {
     return { results: this.results, sweep: this.sweep };
   }
 
-  public progressCallback(n: number) { }
+  public progressCallback(n: number) {
+    void n;
+  }
 
-  private log(message?: any, ...optionalParams: any[]): void {
-    //console.log("simArray -> ", message, optionalParams);
+  private log(message?: unknown, ...optionalParams: unknown[]): void {
+    const isDebug = true;
+    if (isDebug) console.log("simArray -> ", message, optionalParams);
   }
 }
 
 export const isComplex = (ra: ResultArrayType): boolean => {
-  return ra.results[0].param.dataType == "complex";
+  return ra.results[0].dataType === "complex";
 };
 
 //https://codesandbox.io/s/netlist-23m16?file=/src/index.ts
@@ -156,7 +167,10 @@ const distNetList = (inputNetLists: string[], threads: number): string[][] => {
   let i = 0;
   while (i < inputNetLists.length) {
     const netListsPerThread = [] as string[];
-    while (thread < inputNetLists.length / threads && i < inputNetLists.length) {
+    while (
+      thread < inputNetLists.length / threads &&
+      i < inputNetLists.length
+    ) {
       netListsPerThread.push(inputNetLists[i]);
       thread++;
       i++;

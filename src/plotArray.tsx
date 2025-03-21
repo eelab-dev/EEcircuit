@@ -1,17 +1,34 @@
-import React, { useState, useEffect, useRef } from "react";
-import { WebglPlot, ColorRGBA, WebglLine, WebglSquare } from "webgl-plot";
-import type { ComplexDataType, RealDataType, ResultType } from "./sim/readOutput";
-import { Box, Checkbox, color, Grid, GridItem, HStack, Tag } from "@chakra-ui/react";
-import { Slider, SliderTrack, SliderFilledTrack, SliderThumb } from "@chakra-ui/react";
-import Axis from "./axis";
-import { unitConvert2string } from "./sim/unitConverter";
-import { isComplex, ResultArrayType } from "./sim/simulationArray";
-import { DisplayDataType, mapD2W } from "./displayData";
-import { changeIntensity } from "./colors";
+import React, { JSX, useEffect, useRef, useState } from "react";
+import { ColorRGBA, WebglLine, WebglPlot, WebglSquare } from "webgl-plot";
+import type {
+  ComplexDataType,
+  RealDataType,
+  ResultType,
+} from "eecircuit-engine";
+import {
+  Box,
+  CheckboxCheckedChangeDetails,
+  Grid,
+  GridItem,
+  HStack,
+  SliderValueChangeDetails,
+} from "@chakra-ui/react";
+
+import { Checkbox } from "./components/ui/checkbox.tsx";
+import { Tag } from "./components/ui/tag.tsx";
+
+import { Slider } from "./components/ui/slider.tsx";
+
+import Axis from "./axis.tsx";
+import { unitConvert2string } from "./sim/unitConverter.ts";
+import { isComplex, ResultArrayType } from "./sim/simulationArray.ts";
+import { DisplayDataType, mapD2W } from "./displayData.ts";
+import { changeIntensity } from "./colors.ts";
 
 type PlotType = {
   resultArray?: ResultArrayType;
   displayData?: DisplayDataType[];
+  theme: "light" | "dark";
 };
 
 type LineMinMaxType = {
@@ -64,7 +81,11 @@ const zoomRect = new WebglSquare(new ColorRGBA(0.8, 0.8, 0.2, 0.25));
 const crossXLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 const crossYLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 
-function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Element {
+function PlotArray({
+  resultArray: resultArray,
+  displayData,
+  theme,
+}: PlotType): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
   const [plotOptions, setPlotOptions] = useState<PlotOptions>({
     crosshair: true,
@@ -77,7 +98,10 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
 
   const [crossXY, setCrossXY] = useState<CrossXY>({ x: 0, y: 0 });
 
-  const [zoomStatus, setZoomStatus] = useState<ZoomStatus>({ scale: 1, offset: 0 });
+  const [, setZoomStatus] = useState<ZoomStatus>({
+    scale: 1,
+    offset: 0,
+  });
 
   const [mouseZoom, setMouseZoom] = useState<MouseZoom>({
     started: false,
@@ -100,11 +124,32 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
 
   useEffect(() => {
     if (canvasMain.current) {
-      const devicePixelRatio = window.devicePixelRatio || 1;
-      canvasMain.current.width = canvasMain.current.clientWidth * devicePixelRatio;
-      canvasMain.current.height = canvasMain.current.clientHeight * devicePixelRatio;
+      crossXLine.color =
+        theme === "dark"
+          ? new ColorRGBA(0.1, 1, 0.1, 1)
+          : new ColorRGBA(0.05, 0.4, 0.05, 1);
+      crossYLine.color =
+        theme === "dark"
+          ? new ColorRGBA(0.1, 1, 0.1, 1)
+          : new ColorRGBA(0.1, 0.5, 0.1, 1);
+      zoomRect.color =
+        theme === "dark"
+          ? new ColorRGBA(0.8, 0.8, 0.2, 0.25)
+          : new ColorRGBA(0.1, 0.1, 0.4, 0.25);
+    }
+  }, [theme]);
 
-      wglp = new WebglPlot(canvasMain.current, { powerPerformance: "high-performance" });
+  useEffect(() => {
+    if (canvasMain.current) {
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      canvasMain.current.width =
+        canvasMain.current.clientWidth * devicePixelRatio;
+      canvasMain.current.height =
+        canvasMain.current.clientHeight * devicePixelRatio;
+
+      wglp = new WebglPlot(canvasMain.current, {
+        powerPerformance: "high-performance",
+      });
 
       const newFrame = () => {
         wglp.update();
@@ -132,30 +177,37 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
   }, [canvasMain]);
 
   useEffect(() => {
-    setZoomStatus({ scale: wglp.gScaleX, offset: wglp.gOffsetX / wglp.gScaleX });
+    setZoomStatus({
+      scale: wglp.gScaleX,
+      offset: wglp.gOffsetX / wglp.gScaleX,
+    });
   }, [mouseDrag]);
 
   /////////////////////////////////////////////////////////////////////
 
-  const normalLine = (results: ResultType[]) => {
+  const makeLine = (results: ResultType[]) => {
     lineMinMax = [];
-    //console.log("📈2", results);
-    //console.log("📈2", results.length);
     results.forEach((result) => {
-      const data = result.data;
-      getLineMinMaxNormal(data as RealDataType);
+      if (result.dataType == "real") {
+        getLineMinMaxNormal(result.data);
+      }
+      if (result.dataType == "complex") {
+        getLineMinMaxComplex(result.data);
+      }
     });
   };
 
-  const complexLine = (results: ResultType[]) => {
+  /*const complexLine = (results: ResultType[]) => {
     lineMinMax = [];
     results.forEach((result) => {
       const data = result.data;
       getLineMinMaxComplex(data as ComplexDataType);
     });
-  };
+  };*/
 
-  const getLineMinMaxNormal = (data: number[][]) => {
+  const getLineMinMaxNormal = (data: RealDataType[]) => {
+    const numPoints = data[0].values.length;
+    // ignore the first element of the data array which is the x-axis
     for (let col = 1; col < data.length; col++) {
       let color: ColorRGBA;
       if (displayData && displayData[col - 1]) {
@@ -168,15 +220,15 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
       } else {
         color = new ColorRGBA(0.5, 0.5, 0.5, 1);
       }
-      const line = new WebglLine(color, data[0].length);
+      const line = new WebglLine(color, numPoints);
       let minY = 100000;
       let maxY = -100000;
       let minPos = maxY;
       let maxNeg = minY;
 
-      for (let i = 0; i < data[0].length; i++) {
-        line.setX(i, data[0][i]);
-        const y = data[col][i];
+      for (let i = 0; i < numPoints; i++) {
+        line.setX(i, data[0].values[i]);
+        const y = data[col].values[i];
         line.setY(i, y);
         maxY = maxY > y ? maxY : y;
         minY = minY < y ? minY : y;
@@ -192,13 +244,13 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
         maxY: maxY,
         minYPos: minPos,
         maxYNeg: maxNeg,
-        minX: data[0][0],
-        maxX: data[0][data[0].length - 1],
+        minX: data[0].values[0],
+        maxX: data[0].values[numPoints - 1],
       });
     }
   };
 
-  const getLineMinMaxComplex = (data: ComplexDataType) => {
+  const getLineMinMaxComplex = (data: ComplexDataType[]) => {
     const drawLine = (dataY: number[], dataX: number[], index: number) => {
       let color: ColorRGBA;
       if (displayData && displayData[index - 1]) {
@@ -238,18 +290,20 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
       });
     };
 
-    let dataXReal = [] as number[];
+    const dataXReal = [] as number[];
 
-    data[0].forEach((e) => {
-      dataXReal.push(e.real);
+    data[0].values.forEach((value) => {
+      dataXReal.push(value.real);
     });
 
     for (let col = 1; col < data.length; col++) {
-      let dataYMag = [] as number[];
-      let dataYPhase = [] as number[];
-      data[col].forEach((e) => {
-        dataYMag.push(Math.sqrt(Math.pow(e.real, 2) + Math.pow(e.img, 2)));
-        dataYPhase.push((Math.sin(e.img / e.real) * 180) / Math.PI);
+      const dataYMag = [] as number[];
+      const dataYPhase = [] as number[];
+      data[col].values.forEach((value) => {
+        dataYMag.push(
+          Math.sqrt(Math.pow(value.real, 2) + Math.pow(value.img, 2))
+        );
+        dataYPhase.push((Math.atan2(value.img, value.real) * 180) / Math.PI);
       });
       drawLine(dataYMag, dataXReal, 2 * col - 1);
       drawLine(dataYPhase, dataXReal, 2 * col);
@@ -268,18 +322,9 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     console.log("😱", resultArray);
 
     if (resultArray && resultArray.results.length > 0) {
-      if (!isComplex(resultArray)) {
-        //console.log("📈3", resultArray);
-        normalLine(resultArray.results);
-      }
-      if (isComplex(resultArray)) {
-        //const data = results ? results.data : [[]];
-        complexLine(resultArray.results);
-      }
+      makeLine(resultArray.results);
       scaleUpdate(findMinMaxGlobal());
     }
-
-    //?????????????????????
 
     //console.log("line-->", wglp.linesData);
   }, [resultArray, displayData]);
@@ -293,7 +338,8 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
           for (let i = 0; i < resultArray.sweep.length; i++) {
             //wglp.linesData[(e.index - 1) * resultsArray.sweep.length + i].visible = e.visible;
             const offset = isComplex(resultArray) ? 2 : 1;
-            const line = wglp.linesData[e.index - offset + i * displayData.length];
+            const line =
+              wglp.linesData[e.index - offset + i * displayData.length];
             if (line) {
               line.visible = e.visible;
             }
@@ -365,31 +411,42 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     wglp.gOffsetX = 0;*/
   };
 
-  const mouseDown = (e: React.MouseEvent) => {
+  const mouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
     //console.log(e.clientX - eOffset); //offset from the edge of the element
 
     if (e.button == 0) {
       (e.target as HTMLCanvasElement).style.cursor = "pointer";
-      const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
+      const width = (e.target as HTMLCanvasElement).getBoundingClientRect()
+        .width;
       const cursorDownX = (2 * (e.clientX - eOffset - width / 2)) / width;
-      setMouseZoom({ started: true, cursorDownX: cursorDownX, cursorOffsetX: 0 });
+      setMouseZoom({
+        started: true,
+        cursorDownX: cursorDownX,
+        cursorOffsetX: 0,
+      });
       zoomRect.visible = true;
     }
     if (e.button == 2) {
       (e.target as HTMLCanvasElement).style.cursor = "grabbing";
       const dragInitialX = (e.clientX - eOffset) * devicePixelRatio;
       const dragOffsetOld = wglp.gOffsetX;
-      setMouseDrag({ started: true, dragInitialX: dragInitialX, dragOffsetOld: dragOffsetOld });
+      setMouseDrag({
+        started: true,
+        dragInitialX: dragInitialX,
+        dragOffsetOld: dragOffsetOld,
+      });
     }
   };
 
-  const mouseMove = (e: React.MouseEvent) => {
-    const xOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().left;
+  const mouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const xOffset = (e.target as HTMLCanvasElement).getBoundingClientRect()
+      .left;
     const yOffSet = (e.target as HTMLCanvasElement).getBoundingClientRect().top;
     const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
-    const height = (e.target as HTMLCanvasElement).getBoundingClientRect().height;
+    const height = (e.target as HTMLCanvasElement).getBoundingClientRect()
+      .height;
     if (mouseZoom.started) {
       const cursorOffsetX = (2 * (e.clientX - xOffset - width / 2)) / width;
       setMouseZoom({
@@ -414,7 +471,8 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     }
     /************Mouse Drag Evenet********* */
     if (mouseDrag.started) {
-      const moveX = (e.clientX - xOffset) * devicePixelRatio - mouseDrag.dragInitialX;
+      const moveX =
+        (e.clientX - xOffset) * devicePixelRatio - mouseDrag.dragInitialX;
       const offsetX = moveX / width;
       wglp.gOffsetX = offsetX + mouseDrag.dragOffsetOld;
     }
@@ -427,11 +485,10 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
       const x = (1 / wglp.gScaleX) * (xPosRel - wglp.gOffsetX);
       //console.log("cross-->", xPosRel, "--> ", x);
 
-      const yPosRel = 1 - 2 * (e.clientY - yOffSet) / height;
+      const yPosRel = 1 - (2 * (e.clientY - yOffSet)) / height;
       const y = (1 / wglp.gScaleY) * (yPosRel - wglp.gOffsetY);
 
       cross(x, y);
-
     }
   };
   const cross = (x: number, y: number): void => {
@@ -440,15 +497,18 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     setCrossXY({ x: x, y: y });
   };
 
-  const mouseUp = (e: React.MouseEvent) => {
+  const mouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
     if (mouseZoom.started) {
-      const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
+      const width = (e.target as HTMLCanvasElement).getBoundingClientRect()
+        .width;
       const cursorUpX = (2 * (e.clientX - eOffset - width / 2)) / width;
-      const zoomFactor = Math.abs(cursorUpX - mouseZoom.cursorDownX) / (2 * wglp.gScaleX);
+      const zoomFactor =
+        Math.abs(cursorUpX - mouseZoom.cursorDownX) / (2 * wglp.gScaleX);
       const offsetFactor =
-        (mouseZoom.cursorDownX + cursorUpX - 2 * wglp.gOffsetX) / (2 * wglp.gScaleX);
+        (mouseZoom.cursorDownX + cursorUpX - 2 * wglp.gOffsetX) /
+        (2 * wglp.gScaleX);
 
       if (zoomFactor > 0) {
         wglp.gScaleX = 1 / zoomFactor;
@@ -463,17 +523,17 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     zoomRect.visible = false;
   };
 
-  const doubleClick = (e: React.MouseEvent) => {
+  const doubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     scaleUpdate(findMinMaxGlobal());
     setZoomStatus({ scale: wglp.gScaleX, offset: wglp.gOffsetX });
   };
 
-  function wheelEvent(e: React.WheelEvent) {
+  function wheelEvent(e: React.WheelEvent<HTMLCanvasElement>) {
     //e.preventDefault();
-    const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
-    const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
-    const cursorOffsetX = (2 * (e.clientX - eOffset - width / 2)) / width;
+    //const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
+    //const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
+    //const cursorOffsetX = (2 * (e.clientX - eOffset - width / 2)) / width;
     if (e.shiftKey) {
       //offset += e.deltaY * 0.1;
       //wglp.gOffsetX = 0.1 * offset;
@@ -485,35 +545,17 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
         scale = wglp.gScaleX - e.deltaY * (wglp.gScaleX * 0.001);
       }
 
-      //let scale = wglp.gScaleX;
-      //scale = Math.min(100, scale);
-      //scale = Math.max(1, scale);
-      const gScaleXOld = wglp.gScaleX;
-
-      //wglp.gScaleX = 1 * Math.pow(scale, 1.5);
-
-      //if (scale > 1 && scale < 100) {
-      //const offsetFactor = cursorOffsetX * gScaleXOld;
-
       wglp.gScaleX = 1 * scale;
-      //wglp.gOffsetX = -offsetFactor;
-      //}
-      /*if (scale <= 1) {
-        //wglp.gOffsetX = 0;
-        scaleUpdate(findMinMaxGlobal());
-      }*/
-      //console.log("wheel->", cursorOffsetX, offsetFactor, wglp.gOffsetX);
-      //console.log("wheel->", scale, wglp.gScaleX);
     }
   }
 
-  const contextMenu = (e: React.MouseEvent) => {
+  const contextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
   };
 
-  const crosshairBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let o = { ...plotOptions };
-    o.crosshair = e.target.checked;
+  const crosshairBoxHandle = (e: CheckboxCheckedChangeDetails) => {
+    const o = { ...plotOptions };
+    o.crosshair = e.checked === true;
     setPlotOptions(o);
   };
 
@@ -526,18 +568,19 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
     }
   }, [plotOptions]);
 
-  const axisBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    SetIsAxis(e.target.checked);
+  const axisBoxHandle = (e: CheckboxCheckedChangeDetails) => {
+    SetIsAxis(e.checked === true);
   };
 
-  const sweepCheckBoxHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let o = { ...plotOptions };
-    o.sweepSlider = e.target.checked;
+  const sweepCheckBoxHandle = (e: CheckboxCheckedChangeDetails) => {
+    const o = { ...plotOptions };
+    o.sweepSlider = e.checked === true;
     setPlotOptions(o);
   };
 
-  const handleSweepSlider = (value: number) => {
+  const handleSweepSlider = (e: SliderValueChangeDetails) => {
     //console.log(displayData);
+    const value = e.value[0];
     if (displayData && resultArray) {
       displayData.forEach((e) => {
         if (e.visible) {
@@ -592,22 +635,29 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
   return (
     <>
       <HStack>
-        <Checkbox defaultChecked={false} onChange={axisBoxHandle}>
+        <Checkbox defaultChecked={false} onCheckedChange={axisBoxHandle}>
           Axis
         </Checkbox>
-        <Checkbox defaultChecked onChange={crosshairBoxHandle}>
+        <Checkbox defaultChecked onCheckedChange={crosshairBoxHandle}>
           Crosshair
         </Checkbox>
         {plotOptions.crosshair ? (
           <>
-            <Tag w="7em" colorScheme="teal">{`X: ${unitConvert2string(crossXY.x, 3)}`}</Tag>
-            <Tag w="7em" colorScheme="teal">{`Y: ${unitConvert2string(crossXY.y, 3)}`}</Tag>
+            <Tag w="7em" colorScheme="teal">
+              {`X: ${unitConvert2string(crossXY.x, 3)}`}
+            </Tag>
+            <Tag w="7em" colorScheme="teal">
+              {`Y: ${unitConvert2string(crossXY.y, 3)}`}
+            </Tag>
           </>
         ) : (
           <></>
         )}
         {isSweep ? (
-          <Checkbox defaultChecked={false} onChange={sweepCheckBoxHandle}>
+          <Checkbox
+            defaultChecked={false}
+            onCheckedChange={sweepCheckBoxHandle}
+          >
             Sweep slider
           </Checkbox>
         ) : (
@@ -615,7 +665,9 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
         )}
         {plotOptions.sweepSlider && isSweep ? (
           <>
-            <Tag colorScheme="teal">{`${unitConvert2string(sliderValue, 3)}`}</Tag>
+            <Tag colorScheme="teal">
+              {`${unitConvert2string(sliderValue, 3)}`}
+            </Tag>
           </>
         ) : (
           <></>
@@ -630,16 +682,11 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
 
       {plotOptions.sweepSlider && isSweep ? (
         <Slider
-          aria-label="slider-ex-1"
-          defaultValue={0}
+          defaultValue={[0]}
           min={0}
           max={resultArray ? resultArray.sweep.length - 1 : 0}
-          onChange={handleSweepSlider}>
-          <SliderTrack>
-            <SliderFilledTrack />
-          </SliderTrack>
-          <SliderThumb />
-        </Slider>
+          onValueChange={handleSweepSlider}
+        />
       ) : (
         <></>
       )}
@@ -647,21 +694,28 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
       <Grid
         templateRows={`1fr ${isAxis ? 1.5 : 0}em`}
         templateColumns={`${isAxis ? 5 : 0}em 1fr`}
-        gap={0}>
-        <GridItem rowStart={1} colStart={1} bg="gray.900" borderRight="solid 2px">
+        gap={0}
+      >
+        <GridItem
+          rowStart={1}
+          colStart={1}
+          bg="bg.subtle"
+          borderRight="solid 2px"
+        >
           {isAxis ? (
             <Axis
               scale={wglp ? wglp.gScaleY : 1}
               offset={wglp ? wglp.gOffsetY : 0}
               axis="y"
               yHeight={canvasStyle.height as string}
+              theme={theme}
             />
           ) : (
             <></>
           )}
         </GridItem>
         <GridItem rowStart={1} colStart={2} bg="papayawhip">
-          <Box bg="gray.900">
+          <Box bg="bg.subtle">
             <canvas
               ref={canvasMain}
               style={canvasStyle}
@@ -670,27 +724,30 @@ function PlotArray({ resultArray: resultArray, displayData }: PlotType): JSX.Ele
               onMouseUp={mouseUp}
               onDoubleClick={doubleClick}
               onWheel={wheelEvent}
-              onContextMenu={contextMenu}></canvas>
+              onContextMenu={contextMenu}
+            ></canvas>
           </Box>
         </GridItem>
         <GridItem
           rowStart={2}
           colStart={1}
-          bg="grey.900"
+          bg="bg.subtle"
           borderTop="solid 2px"
           borderRight="solid 2px"
         />
         <GridItem
           rowStart={2}
           colStart={2}
-          bg="gray.900"
-          borderTop={`${isAxis ? "solid 2px" : ""}`}>
+          bg="bg.subtle"
+          borderTop={`${isAxis ? "solid 2px" : ""}`}
+        >
           {isAxis ? (
             <Axis
               scale={wglp ? wglp.gScaleX : 1}
               offset={wglp ? wglp.gOffsetX : 0}
               axis="x"
               yHeight={canvasStyle.height as string}
+              theme={theme}
             />
           ) : (
             <></>

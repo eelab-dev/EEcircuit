@@ -1,13 +1,15 @@
-import { Box, Checkbox, Stack } from "@chakra-ui/react";
-import React from "react";
-import type { DisplayDataType } from "./displayData";
+import { Box, CheckboxGroup, Stack } from "@chakra-ui/react";
+import React, { JSX } from "react";
+import type { DisplayDataType } from "./displayData.ts";
+import { Checkbox } from "./components/ui/checkbox.tsx";
+import type { CheckboxCheckedChangeDetails } from "@chakra-ui/react";
 
 type Props = {
   displayData: DisplayDataType[];
-  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  checkCallBack: (name: string, check: boolean) => void;
 };
 
-function DisplayBox({ displayData, onChange }: Props): JSX.Element {
+function DisplayBox({ displayData, checkCallBack }: Props): JSX.Element {
   //const list = results.param.variables;
   const list = displayData;
 
@@ -15,48 +17,39 @@ function DisplayBox({ displayData, onChange }: Props): JSX.Element {
     list.shift();
   }*/
 
-  const boxStyle = {
-    display: "flex",
-    flexDirection: "column",
-    flexWrap: "wrap",
-    backgroundColor: "rgb(30,30,30)",
-    padding: "1em",
-  } as React.CSSProperties;
-
   return (
     <Box
       borderWidth="1px"
       borderRadius="md"
       maxW="sm"
       p={4}
-      bg="gray.700"
+      bg="bg.muted"
       width="80%"
       maxHeight="25vh"
-      overflowY="scroll">
-      <Stack spacing={1} direction="column">
-        {list.map((e, i) => (
-          <Checkbox
-            key={e.index}
-            onChange={onChange}
-            name={e.name}
-            isChecked={e.visible}
-            color={
-              e.color
-                ? `rgb(${e.color.r * 255},${e.color.g * 255},${e.color.b * 255})`
-                : `rgb(200,200,200)`
-            }>
-            {e.name}
-          </Checkbox>
-          /*<div key={e.index}>
-          <input
-            type="checkbox"
-            name={e.name}
-            key={e.index}
-            onChange={onChange}
-            defaultChecked={true}></input>
-          <label> {e.name}</label>
-        </div>*/
-        ))}
+      overflowY="scroll"
+    >
+      <Stack direction="column">
+        <CheckboxGroup onValueChange={console.log}>
+          {list.map((dd) => (
+            <Checkbox
+              key={dd.name}
+              onCheckedChange={(e: CheckboxCheckedChangeDetails) =>
+                checkCallBack(dd.name, e.checked == true ? true : false)
+              }
+              name={dd.name}
+              checked={dd.visible}
+              color={
+                dd.color
+                  ? `rgb(${dd.color.r * 255},${dd.color.g * 255},${
+                      dd.color.b * 255
+                    })`
+                  : `rgb(200,200,200)`
+              }
+            >
+              {dd.name}
+            </Checkbox>
+          ))}
+        </CheckboxGroup>
       </Stack>
     </Box>
   );
@@ -64,4 +57,5 @@ function DisplayBox({ displayData, onChange }: Props): JSX.Element {
 
 //export default React.memo(DisplayBox);
 //don't use memo and see why it returns empty?
-export default React.memo(DisplayBox);
+//export default React.memo(DisplayBox);
+export default DisplayBox;
