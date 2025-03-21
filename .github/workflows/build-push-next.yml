@@ -3,6 +3,7 @@ name: Next Build Deploy Test Push
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  GH_TOKEN: ${{secrets.PULL_REQ}}
 
 on:
   schedule:
@@ -13,6 +14,11 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+      contents: write
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -20,31 +26,14 @@ jobs:
           repository: eelab-dev/EEcircuit
           ref: next # Checkout the "next" branch
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Create Empty Build Directory
-        run: mkdir -p Docker/build
-
-      - name: Build Docker Image
-        run: docker build --no-cache -t eecircuit ./Docker
-
-      - name: Run Docker Container
-        run: docker run -t -v $(realpath ./Docker):/mnt eecircuit
-
-      - name: Run Inject.js
-        run: node ./Docker/inject.mjs
-
-      - name: Rename and Copy Files to Main Directory
-        run: |
-          cp ./Docker/build/spice.wasm ./src/sim/spice.wasm
-          cp ./Docker/build/spice-eesim.js ./src/sim/spice.js
-
       - name: Update Dependencies
         run: npx --yes npm-check-updates -u
 
       - name: Install Dependencies
         run: npm install
+
+      - name: Update engine to next version
+        run: npm install eecircuit-engine@next
 
       - name: Build Project with Vite
         run: npm run build
@@ -65,6 +54,7 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
+      # auto commit
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: Auto updates after tests
