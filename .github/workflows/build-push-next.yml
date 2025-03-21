@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: eelab-dev/EEcircuit
-          ref: next # Checkout the "next" branch
+          ref: test # Checkout the "next" branch
 
       - name: Update Dependencies
         run: npx --yes npm-check-updates -u
