@@ -1,89 +1,96 @@
-import { test, expect, Page } from '@playwright/test';
-import { cloneAndGetLatestTag } from './getTags';
-import { compareCSVFiles } from './compareCSV';
-
-
+import { expect, Page, ConsoleMessage } from "@playwright/test";
+import { cloneAndGetLatestTag } from "./getTags";
+import { compareCSVFiles } from "./compareCSV";
 
 export async function testEEcircuit(page: Page, url: string) {
-    const consoleErrors: string[] = [];
+  const consoleErrors: string[] = [];
 
-    let isSimCompleted: boolean = false;
+  let isSimCompleted: boolean = false;
 
-    // Listen for console errors
-    page.on('console', (msg: any) => {
-        if (msg.type() === 'error') {
-            consoleErrors.push(msg.text());
-            console.log('Error:', msg.text());
-        }
-
-        if (msg.text().startsWith('Simulation run completed')) {
-            isSimCompleted = true;
-
-        };
-    });
-
-    // Function to wait for the simulation to complete
-    function waitForSimCompletion(): Promise<void> {
-        return new Promise((resolve) => {
-            const checkCompletion = () => {
-                if (isSimCompleted) {
-                    resolve();
-                } else {
-                    // Re-check after the next console message or event loop tick
-                    page.once('console', checkCompletion);
-                }
-            };
-            checkCompletion();
-        });
+  // Listen for console errors
+  page.on("console", (msg: ConsoleMessage) => {
+    if (msg.type() === "error") {
+      consoleErrors.push(msg.text());
+      console.log("Error:", msg.text());
     }
 
+    if (msg.text().startsWith("Simulation run completed")) {
+      isSimCompleted = true;
+    }
+  });
 
-    await page.goto(url);
+  // Function to wait for the simulation to complete
+  function waitForSimCompletion(): Promise<void> {
+    return new Promise((resolve) => {
+      const checkCompletion = () => {
+        if (isSimCompleted) {
+          resolve();
+        } else {
+          // Re-check after the next console message or event loop tick
+          page.once("console", checkCompletion);
+        }
+      };
+      checkCompletion();
+    });
+  }
 
-    await expect(page).toHaveTitle(/EEcircuit/);
+  await page.goto(url);
 
-    await page.getByRole('button', { name: 'Run' }).click();
+  await expect(page).toHaveTitle(/EEcircuit/);
 
-    await page.getByRole('button', { name: 'De-select all' }).click();
-    await page.getByRole('button', { name: 'Select all', exact: true }).click();
-    await page.getByRole('button', { name: 'De-select all' }).click();
-    await page.locator('label').filter({ hasText: 'v(2)' }).locator('span').first().click();
-    await page.getByRole('button', { name: 'Colorize' }).click();
-    await page.getByRole('button', { name: 'Reset' }).click();
-    await page.getByRole('button', { name: 'Settings' }).click();
-    //await page.getByLabel('Close').click();
+  await page.getByRole("button", { name: "Run" }).click();
 
-    await page.getByRole('button', { name: 'Run' }).click();
+  await page.getByRole("button", { name: "De-select all" }).click();
+  await page.getByRole("button", { name: "Select all", exact: true }).click();
+  await page.getByRole("button", { name: "De-select all" }).click();
+  await page
+    .locator("label")
+    .filter({ hasText: "v(2)" })
+    .locator("span")
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Colorize" }).click();
+  await page.getByRole("button", { name: "Reset" }).click();
+  await page.getByRole("button", { name: "Settings" }).click();
+  //await page.getByLabel('Close').click();
 
-    await page.waitForTimeout(1000);
-    expect(consoleErrors.length).toBe(0);
+  await page.getByRole("button", { name: "Run" }).click();
 
-    await page.getByRole('tab', { name: 'Info' }).click();
+  await page.waitForTimeout(1000);
+  expect(consoleErrors.length).toBe(0);
 
-    // Wait for simulation to complete without using a timeout
-    await waitForSimCompletion();
+  await page.getByRole("tab", { name: "Info" }).click();
 
-    const text = await page.getByLabel('info', { exact: true }).inputValue();
+  // Wait for simulation to complete without using a timeout
+  await waitForSimCompletion();
 
-    const match = text.match(/ngspice-(\d+)/);
-    const number = match ? parseInt(match[1]) : null;
+  const text = await page.getByLabel("info", { exact: true }).inputValue();
 
-    console.log('ngspice version from EEcircuit:', number);
+  const match = text.match(/ngspice-(\d+)/);
+  const number = match ? parseInt(match[1]) : null;
 
-    const tag = await cloneAndGetLatestTag('https://github.com/danchitnis/ngspice-sf-mirror', './tests/repos');
+  console.log("ngspice version from EEcircuit:", number);
 
-    const version = parseInt(tag?.split('-')[1] ?? '');
+  const tag = await cloneAndGetLatestTag(
+    "https://github.com/danchitnis/ngspice-sf-mirror",
+    "./tests/repos"
+  );
 
-    console.log('ngspice version from repo:', version);
+  const version = parseInt(tag?.split("-")[1] ?? "");
 
-    expect(number).toBe(version);
+  console.log("ngspice version from repo:", version);
 
-    await page.getByRole('tab', { name: 'CSV' }).click();
-    const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Download' }).click();
+  expect(number).toBe(version);
 
-    const download = await downloadPromise;
-    await download.saveAs('./tests/output/' + download.suggestedFilename());
+  await page.getByRole("tab", { name: "CSV" }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download" }).click();
 
-    const compare = await compareCSVFiles('./tests/lib/EEcircuit.csv', './tests/output/' + download.suggestedFilename());
+  const download = await downloadPromise;
+  await download.saveAs("./tests/output/" + download.suggestedFilename());
+
+  await compareCSVFiles(
+    "./tests/lib/EEcircuit.csv",
+    "./tests/output/" + download.suggestedFilename()
+  );
 }
