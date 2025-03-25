@@ -110,13 +110,13 @@ export class SimArray {
     const results = [] as ResultType[];
     for (const netList of netLists) {
       sim.setNetList(netList);
-      await sim.runSimP();
+      const result = await sim.runSim();
       const err = await sim.getError();
       if (err.length > 0 || this.error) {
         this.error = true;
         break;
       }
-      const result = await sim.getResult();
+      //const result = await sim.getResult();
       results.push(result);
       this.progress++;
       this.progressCallback((100 * this.progress) / this.netLists.length);
