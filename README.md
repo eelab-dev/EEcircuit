@@ -1,10 +1,10 @@
-[![Yarn Build](https://github.com/eelab-dev/EEcircuit/actions/workflows/build.yml/badge.svg)](https://github.com/eelab-dev/EEcircuit/actions/workflows/build.yml) ![CodeQL](https://github.com/eelab-dev/EEcircuit/workflows/CodeQL/badge.svg) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4781565.svg)](https://doi.org/10.5281/zenodo.4781565)
+[![Npm Build](https://github.com/eelab-dev/EEcircuit/actions/workflows/build.yml/badge.svg)](https://github.com/eelab-dev/EEcircuit/actions/workflows/build.yml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4781565.svg)](https://doi.org/10.5281/zenodo.4781565)
 
 (formerly EEsim.dev)
 
 # EEcircuit
 
-EEcircuit is a circuit simulator based on [ngspice](https://sourceforge.net/p/ngspice/ngspice/) and it runs inside the browser using [WebAssembly](https://webassembly.org/) technology. The input is spice based netlist, and the output is results of the analysis that you're doing in the simulations. You are able to plot and view the results directly in the browser using high-performance WebGL plotting library [webgl-plot](https://github.com/danchitnis/webgl-plot), or download the data in CSV format for further analysis. Notice that your netlist and results are processed locally and _always_ remain inside _your_ browser and are _never_ uploaded to network. The focus of this implementation is rapid analysis, sharing circuits ideas and results in [VLSI](https://en.wikipedia.org/wiki/Very_Large_Scale_Integration) and chip-design communities.
+EEcircuit is a circuit simulator based on [ngspice](https://sourceforge.net/p/ngspice/ngspice/) that operates directly in your browser using [WebAssembly](https://webassembly.org/) technology. It takes a spice-based netlist as input and produces analysis results from your simulations as output. You can visualize and plot the results in the browser using the high-performance WebGL plotting library, [webgl-plot](https://github.com/danchitnis/webgl-plot), or download the data in CSV format for further analysis. Importantly, your netlist and results are processed locally, meaning they always remain within your browser and are never uploaded to a server. This project focuses on facilitating rapid analysis and sharing of circuit ideas and results within the [VLSI](https://en.wikipedia.org/wiki/Very_Large_Scale_Integration) and chip-design communities. Additionally, since EEcircuit uses a text-based netlist as input, you can utilize [Git](https://git-scm.com/) for version control to track your changes effectively.
 
 ## Getting started
 
@@ -48,8 +48,8 @@ See [Transistor Models](https://github.com/eelab-dev/EEcircuit/blob/main/models.
 
 ## Acknowledgments
 
-Thanks to [Konstantinos Bantounos](https://www.linkedin.com/in/kbantounos?originalSubdomain=uk) for testing.
+Thanks to [Xuanhao Bao](https://github.com/XuanhaoBao), [Chang Liu](https://github.com/chang10912), and [Konstantinos Bantounos](https://www.linkedin.com/in/kbantounos?originalSubdomain=uk) for testing.
 
 ## Contributions
 
-[Ngspice](https://sourceforge.net/p/ngspice/ngspice/), [SPICE3f5](https://ptolemy.berkeley.edu/projects/embedded/pubs/), [Emscripten](https://emscripten.org/), [Docker](https://www.docker.com/), [Fedora](https://getfedora.org/), [Snowpack](https://www.snowpack.dev/), [Vercel](https://vercel.com/)
+[Ngspice](https://sourceforge.net/p/ngspice/ngspice/), [SPICE3f5](https://ptolemy.berkeley.edu/projects/embedded/pubs/), [Emscripten](https://emscripten.org/), [Docker](https://www.docker.com/), [Chakra-UI](https://www.chakra-ui.com/), [Vercel](https://vercel.com/)
