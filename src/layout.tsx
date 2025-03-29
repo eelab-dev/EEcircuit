@@ -12,8 +12,8 @@ const Layout = (): JSX.Element => {
     <div>
       <ChakraProvider value={defaultSystem}>
         <ColorModeProvider>
-          <Analytics />
-          <SpeedInsights />
+          {/*<Analytics />
+          <SpeedInsights />*/}
           <EEcircuit />
         </ColorModeProvider>
       </ChakraProvider>

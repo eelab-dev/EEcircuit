@@ -7,5 +7,11 @@ export default defineConfig({
   resolve: {
     preserveSymlinks: true,
   },
+  build: {
+    emptyOutDir: true,
+  },
   plugins: [react(), tsconfigPaths()],
+  optimizeDeps: {
+    exclude: ["eecircuit-schematic"],
+  },
 });

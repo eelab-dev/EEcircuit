@@ -1,5 +1,6 @@
 {
   "include": ["src", "types"],
+  "exclude": ["temp/**/*.tsx", "temp/**/*.ts"],
   "compilerOptions": {
     "module": "esnext",
     "moduleResolution": "Bundler",
@@ -10,12 +11,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "allowImportingTsExtensions": true,
-    "noEmit": true,
-    /*"paths": {
-      "react": ["./node_modules/preact/compat/"],
-      "react/jsx-runtime": ["./node_modules/preact/jsx-runtime"],
-      "react-dom": ["./node_modules/preact/compat/"],
-      "react-dom/": ["./node_modules/preact/compat/*"]
-    }*/
+    "noEmit": true
   }
 }

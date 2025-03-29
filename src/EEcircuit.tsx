@@ -6,9 +6,9 @@ import {
   PopoverOpenChangeDetails,
 } from "@chakra-ui/react";
 
-const EditorCustom = React.lazy(() => import("./editor/editorCustom.tsx"));
-const PlotArray = React.lazy(() => import("./plotArray.tsx"));
-const DisplayBox = React.lazy(() => import("./displayBox.tsx"));
+//const EditorCustom = React.lazy(() => import("./editor/editorCustom.tsx"));
+//const PlotArray = React.lazy(() => import("./plotArray.tsx"));
+//const DisplayBox = React.lazy(() => import("./displayBox.tsx"));
 
 //import PlotArray from "./plotArray.tsx";
 //import DisplayBox from "./displayBox.tsx";
@@ -61,6 +61,7 @@ import {
   useColorMode,
   useColorModeValue,
 } from "./components/ui/color-mode.tsx";
+import Schematic from "./schematic.tsx";
 
 let sim: SimArray;
 const store = globalThis.localStorage;
@@ -327,10 +328,6 @@ export default function EEcircuit(): JSX.Element {
               De-select all
             </Button>
           </Stack>
-          <DisplayBox
-            displayData={displayData ? displayData : []}
-            checkCallBack={change}
-          />
         </Suspense>
       </Box>
     );
@@ -374,197 +371,41 @@ export default function EEcircuit(): JSX.Element {
   return (
     <div>
       <Box border="solid 0px" p={2}>
-        <Flex width="100%">
-          <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
-            <EditorCustom
-              height="30vh"
-              width="100%"
-              language="spice"
-              value={netList}
-              valueChanged={handleEditor}
-              theme={useColorModeValue("light", "dark")}
-              key={windowSize.width}
-            />
-          </Suspense>
-          {displayBreakpoint == "base" ? <></> : LineSelectBox()}
-        </Flex>
-      </Box>
-      <Box p={1} width={{ base: "100%", md: "73%" }}>
-        <Flex>
-          <Button
-            colorScheme="blue"
-            variant="solid"
-            size="lg"
-            m={1}
-            onClick={btRun}
-            loading={isSimRunning || isSimLoading}
-            loadingText={isSimLoading ? "Loading 🚚" : "Running 🏃"}
-          >
-            Run{" "}
-            <Image
-              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F680.min.svg"
-              height="80%"
-            />
-          </Button>
+        <Tabs.Root defaultValue="schematic">
+          <Tabs.List>
+            <Tabs.Trigger value="schematic" marginRight="0.5em">
+              Schematic
+            </Tabs.Trigger>
+            <Tabs.Trigger value="netlist" marginRight="0.5em">
+              Netlist
+            </Tabs.Trigger>
+            <Tabs.Trigger value="plot" marginRight="0.5em">
+              Plot
+            </Tabs.Trigger>
+          </Tabs.List>
 
-          <Spacer />
-          {
-            <PopoverRoot
-              open={open}
-              onOpenChange={(e: PopoverOpenChangeDetails) => setOpen(e.open)}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  colorScheme="blue"
-                  variant="solid"
-                  size="lg"
-                  m={1}
-                  disabled={isSimRunning}
-                >
-                  {displayBreakpoint === "base" ? "" : "Settings"}{" "}
-                  <Image
-                    src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/2699.min.svg"
-                    height="80%"
-                  />
-                </Button>
-              </PopoverTrigger>
-              <PopoverArrow />
-              <PopoverContent p={5}>
-                <PopoverBody>
-                  <PopoverTitle>Threads</PopoverTitle>
+          <Tabs.Content value="schematic">
+            <Schematic />
+          </Tabs.Content>
 
-                  <Box>
-                    {
-                      <NumberInputRoot
-                        max={20}
-                        defaultValue={threadCount.toString()}
-                        min={1}
-                        onValueChange={handleThreadChange}
-                      >
-                        <NumberInputField />
-                      </NumberInputRoot>
-                    }
-                  </Box>
-                </PopoverBody>
-              </PopoverContent>
-            </PopoverRoot>
-          }
-          <Button
-            colorScheme="blue"
-            variant="solid"
-            size="lg"
-            m={1}
-            onClick={btColor}
-            disabled={isSimRunning}
-          >
-            {displayBreakpoint === "base" ? "" : "Colorize"}{" "}
-            <Image
-              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F308.min.svg"
-              height="80%"
-            />
-          </Button>
-          <Button
-            colorScheme="blue"
-            variant="solid"
-            size="lg"
-            m={1}
-            onClick={btReset}
-            disabled={isSimRunning}
-          >
-            {displayBreakpoint === "base" ? "" : "Reset"}{" "}
-            <Image
-              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F5D1.min.svg"
-              height="80%"
-            />
-          </Button>
-        </Flex>
-      </Box>
-
-      <Box p={1}>
-        <ProgressRoot value={progress}>
-          <ProgressBar />
-        </ProgressRoot>
-      </Box>
-
-      <Box p={2}>
-        <Separator />
-      </Box>
-
-      <Tabs.Root defaultValue="plot" colorScheme="teal">
-        <Tabs.List>
-          <Tabs.Trigger
-            value="plot"
-            marginRight="0.5em"
-            paddingLeft="2em"
-            paddingRight="2em"
-          >
-            Plot
-            <Image
-              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4C8.min.svg"
-              maxHeight="80%"
-            />
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="info"
-            marginRight="0.5em"
-            paddingLeft="2em"
-            paddingRight="2em"
-          >
-            Info
-            <Image
-              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F469-200D-1F4BB.min.svg"
-              height="80%"
-            />
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="csv"
-            marginRight="0.5em"
-            paddingLeft="2em"
-            paddingRight="2em"
-          >
-            CSV{" "}
-            <Image
-              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4D1.min.svg"
-              height="80%"
-            />
-          </Tabs.Trigger>
-        </Tabs.List>
-
-        <Tabs.Content value="plot">
-          <Suspense fallback={<Skeleton height="400px" />}>
-            <PlotArray
-              resultArray={resultArray}
-              displayData={displayData}
-              theme={useColorModeValue("light", "dark")}
-            />
-          </Suspense>
-          {displayBreakpoint !== "base" ? (
-            <></>
-          ) : (
-            <>
-              <Spacer p={2} />
-              <Suspense fallback={<Skeleton height="100px" />}>
-                {LineSelectBox()}
+          <Tabs.Content value="netlist">
+            <Flex width="100%">
+              <Suspense fallback={<Skeleton height="50vh" width="100%" />}>
+                {/*<EditorCustom
+                  height="50vh"
+                  width="100%"
+                  language="spice"
+                  value={netList}
+                  valueChanged={handleEditor}
+                  theme={useColorModeValue("light", "dark")}
+                  key={windowSize.width}
+                />*/}
               </Suspense>
-            </>
-          )}
-        </Tabs.Content>
+            </Flex>
+          </Tabs.Content>
+        </Tabs.Root>
+      </Box>
 
-        <Tabs.Content value="info">
-          <Textarea
-            readOnly={true}
-            aria-label="info"
-            bg="bg.muted"
-            fontSize="0.9em"
-            rows={15}
-            value={info}
-          />
-        </Tabs.Content>
-
-        <Tabs.Content value="csv">
-          <DownCSV resultArray={resultArray} />
-        </Tabs.Content>
-      </Tabs.Root>
       <Toaster />
     </div>
   );
