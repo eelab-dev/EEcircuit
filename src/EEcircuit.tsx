@@ -1,10 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { JSX, Suspense, useEffect, useState } from "react";
+"use client";
+import React, { JSX, Suspense, useState } from "react";
 //import * as circuits from "./sim/circuits.ts";
-import {
-  NumberInputValueChangeDetails,
-  PopoverOpenChangeDetails,
-} from "@chakra-ui/react";
+//import { NumberInputValueChangeDetails } from "@chakra-ui/react";
 
 //const EditorCustom = React.lazy(() => import("./editor/editorCustom.tsx"));
 //const PlotArray = React.lazy(() => import("./plotArray.tsx"));
@@ -12,34 +9,9 @@ import {
 
 //import PlotArray from "./plotArray.tsx";
 //import DisplayBox from "./displayBox.tsx";
-import DownCSV from "./downCSV.tsx";
+//import DownCSV from "./downCSV.tsx";
 
-import {
-  Box,
-  Flex,
-  Image,
-  Separator,
-  Spacer,
-  Stack,
-  Tabs,
-  Textarea,
-  useBreakpointValue,
-} from "@chakra-ui/react";
-
-import {
-  PopoverArrow,
-  PopoverBody,
-  PopoverContent,
-  PopoverRoot,
-  PopoverTitle,
-  PopoverTrigger,
-} from "./components/ui/popover.tsx";
-
-import {
-  NumberInputField,
-  NumberInputLabel,
-  NumberInputRoot,
-} from "./components/ui/number-input.tsx";
+import { Box, Flex, Tabs } from "@chakra-ui/react";
 
 /*import {
   NumberDecrementStepper,
@@ -49,26 +21,24 @@ import {
   NumberInputStepper,
 } from "@chakra-ui/react";  */
 
-import { Toaster, toaster } from "./components/ui/toaster.tsx";
-import { Button } from "./components/ui/button.tsx";
-import { Skeleton } from "./components/ui/skeleton.tsx";
-import { ProgressBar, ProgressRoot } from "./components/ui/progress.tsx";
+//import { Toaster, toaster } from "./components/ui/toaster.tsx";
+import { Skeleton } from "../components/ui/skeleton.tsx";
+//import { ProgressBar, ProgressRoot } from "./components/ui/progress.tsx";
 
-import { getColor } from "./colors.ts";
-import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray.ts";
-import { DisplayDataType, makeDD } from "./displayData.ts";
-import {
-  useColorMode,
-  useColorModeValue,
-} from "./components/ui/color-mode.tsx";
+//import { getColor } from "./colors.ts";
+//import { isComplex, ResultArrayType, SimArray } from "./sim/simulationArray.ts";
+//import { DisplayDataType, makeDD } from "./displayData.ts";
+
 import Schematic from "./schematic.tsx";
+import EditorCustom from "./editor/editorCustom.tsx";
+import { useColorModeValue } from "components/ui/color-mode.tsx";
 
-let sim: SimArray;
-const store = globalThis.localStorage;
-let initialSimInfo = "";
-let threadCount = 1;
+//let sim: SimArray;
+//const store = globalThis.localStorage;
+//let initialSimInfo = "";
+//let threadCount = 1;
 
-const circuitDefault = `Basic RLC circuit 
+/*const circuitDefault = `Basic RLC circuit 
 .include modelcard.CMOS90
 
 r vdd 2 100.0
@@ -80,26 +50,26 @@ vdd vdd 0 1.8
 vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
 .tran 0.1 50
 
-.end`;
+.end`;*/
 
 export default function EEcircuit(): JSX.Element {
   // Create the count state.
 
-  const [isSimLoaded, setIsSimLoaded] = React.useState(false);
-  const [isSimLoading, setIsSimLoading] = React.useState(false);
-  const [isSimRunning, setIsSimRunning] = React.useState(false);
-  const [resultArray, setResultArray] = React.useState<ResultArrayType>();
-  const [info, setInfo] = React.useState("");
-  const [netList, setNetList] = React.useState(circuitDefault);
-  const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
-  const [tabIndex, setTabIndex] = React.useState(0);
-  const [sweep, setSweep] = React.useState(false);
-  const [progress, setProgress] = React.useState(0);
-  const [threadCountNew, setThreadCountNew] = React.useState(1);
+  //const [isSimLoaded, setIsSimLoaded] = React.useState(false);
+  //const [isSimLoading, setIsSimLoading] = React.useState(false);
+  //const [isSimRunning, setIsSimRunning] = React.useState(false);
+  //const [resultArray, setResultArray] = React.useState<ResultArrayType>();
+  //const [info, setInfo] = React.useState("");
+  //const [netList, setNetList] = React.useState(circuitDefault);
+  //const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
+  //const [tabIndex, setTabIndex] = React.useState(0);
+  //const [sweep, setSweep] = React.useState(false);
+  //const [progress, setProgress] = React.useState(0);
+  //const [threadCountNew, setThreadCountNew] = React.useState(1);
 
-  const colorMode = useColorModeValue("light", "dark");
+  //const colorMode = useColorModeValue("light", "dark");
 
-  useEffect(() => {
+  /*useEffect(() => {
     const loadedNetList = store.getItem("netList");
     setNetList(loadedNetList ? loadedNetList : circuitDefault);
 
@@ -110,15 +80,15 @@ export default function EEcircuit(): JSX.Element {
       ) as DisplayDataType[];
       setDisplayData(loadedDisplayData);
     }
-  }, []);
+  }, []);*/
 
-  useEffect(() => {
+  /*useEffect(() => {
     if (resultArray && resultArray.results.length > 1) {
       setSweep(true);
     }
-  }, [resultArray]);
+  }, [resultArray]);*/
 
-  useEffect(() => {
+  /*useEffect(() => {
     const displayErrors = async () => {
       const errors = await sim.getError();
       errors.forEach((e) => {
@@ -180,7 +150,7 @@ export default function EEcircuit(): JSX.Element {
       console.log("makeDD->", tempDD);
       setDisplayData([...tempDD]);
     }
-  }, [resultArray]);
+  }, [resultArray]);*/
 
   /*const simOutputCallback = React.useCallback(async () => {
     //none of the React.State are accessible in the callback
@@ -191,7 +161,7 @@ export default function EEcircuit(): JSX.Element {
     setIsSimRunning(false);
   }, []);*/
 
-  const btRun = async () => {
+  /*const btRun = async () => {
     if (sim && threadCount === threadCountNew) {
       setIsSimRunning(true);
       //setParser(getParser(netList));
@@ -217,19 +187,19 @@ export default function EEcircuit(): JSX.Element {
       //initialSimInfo = await sim.getInfo(); //not yet working???????
       btRun();
     }
-  };
+  };*/
 
-  const simProgressCallback = React.useCallback((n: number) => {
+  /*const simProgressCallback = React.useCallback((n: number) => {
     setProgress(n);
     console.log(n);
-  }, []);
+  }, []);*/
 
   /*const simProgressCallback = (n: number) => {
     setProgress(n);
     console.log(n);
   };*/
 
-  const change = React.useCallback(
+  /*const change = React.useCallback(
     (name: string, check: boolean) => {
       //const name = event;
 
@@ -252,19 +222,19 @@ export default function EEcircuit(): JSX.Element {
       }
     },
     [displayData, isSimLoaded]
-  );
+  );*/
 
-  const handleTabChange = (index: number) => {
+  /*const handleTabChange = (index: number) => {
     setTabIndex(index);
-  };
+  };*/
 
   const handleEditor = React.useCallback((value: string | undefined) => {
     if (value) {
-      setNetList(value);
+      //setNetList(value);
     }
   }, []);
 
-  const handleDeSelectButton = React.useCallback(() => {
+  /*const handleDeSelectButton = React.useCallback(() => {
     if (displayData) {
       const disp = [...displayData];
       disp.forEach((e) => {
@@ -288,9 +258,9 @@ export default function EEcircuit(): JSX.Element {
     setResultArray(undefined);
     setDisplayData(undefined);
     store.removeItem("displayData");
-  }, []);
+  }, []);*/
 
-  const btColor = React.useCallback(() => {
+  /*const btColor = React.useCallback(() => {
     if (resultArray && displayData) {
       const d = [...displayData];
       if (!isComplex(resultArray)) {
@@ -308,9 +278,9 @@ export default function EEcircuit(): JSX.Element {
       setDisplayData(d);
       //setResultArray({results:[...results], sweep:[...resultArray.sweep]});
     }
-  }, [displayData]);
+  }, [displayData]);*/
 
-  const LineSelectBox = (): JSX.Element => {
+  /*const LineSelectBox = (): JSX.Element => {
     return (
       <Box w={{ base: "100%", md: "30%" }} marginLeft="5%">
         <Suspense fallback={<Skeleton height="100px" />}>
@@ -331,30 +301,30 @@ export default function EEcircuit(): JSX.Element {
         </Suspense>
       </Box>
     );
-  };
+  };*/
 
   //const { onOpen, onClose } = useDisclosure();
-  const [open, setOpen] = useState(false);
+  /*const [open, setOpen] = useState(false);
   const handleThreadChange = (e: NumberInputValueChangeDetails) => {
     // const valueNumber = parseInt(e.value);
     setThreadCountNew(e.valueAsNumber);
   };
 
   const displayBreakpoint = useBreakpointValue({ base: "base", md: "md" });
-  const [componentsLoaded, setComponentsLoaded] = useState(false);
+  const [componentsLoaded, setComponentsLoaded] = useState(false);*/
   const [windowSize, setWindowSize] = useState({
-    width: globalThis.innerWidth,
-    height: globalThis.innerHeight,
+    width: 800,
+    height: 600,
   });
 
-  useEffect(() => {
+  /*useEffect(() => {
     // Simulate loading of other components
     setTimeout(() => {
       setComponentsLoaded(true);
     }, 10); // Adjust the timeout as needed
-  }, []);
+  }, []);*/
 
-  useEffect(() => {
+  /*useEffect(() => {
     const handleResize = () => {
       setWindowSize({
         width: globalThis.innerWidth,
@@ -366,7 +336,7 @@ export default function EEcircuit(): JSX.Element {
     return () => {
       globalThis.removeEventListener("resize", handleResize);
     };
-  }, []);
+  }, []);*/
 
   return (
     <div>
@@ -391,22 +361,20 @@ export default function EEcircuit(): JSX.Element {
           <Tabs.Content value="netlist">
             <Flex width="100%">
               <Suspense fallback={<Skeleton height="50vh" width="100%" />}>
-                {/*<EditorCustom
+                <EditorCustom
                   height="50vh"
                   width="100%"
                   language="spice"
-                  value={netList}
+                  value={""}
                   valueChanged={handleEditor}
                   theme={useColorModeValue("light", "dark")}
                   key={windowSize.width}
-                />*/}
+                />
               </Suspense>
             </Flex>
           </Tabs.Content>
         </Tabs.Root>
       </Box>
-
-      <Toaster />
     </div>
   );
 }

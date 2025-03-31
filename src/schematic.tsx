@@ -1,5 +1,6 @@
-import React, { JSX, useEffect, useRef, useState } from "react";
-import { initCanvas, MessageToMain } from "eecircuit-schematic";
+"use client";
+import React, { JSX, useEffect, useRef } from "react";
+import { initCanvas } from "eecircuit-schematic";
 
 function Schematic(): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
