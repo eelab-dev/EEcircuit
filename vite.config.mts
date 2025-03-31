@@ -1,5 +1,4 @@
 import { defineConfig } from "vite";
-//import preact from "@preact/preset-vite";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 
@@ -9,9 +8,14 @@ export default defineConfig({
   },
   build: {
     emptyOutDir: true,
+    // Configure worker options here:
+    rollupOptions: {
+      output: {},
+    },
   },
   plugins: [react(), tsconfigPaths()],
   optimizeDeps: {
     exclude: ["eecircuit-schematic"],
   },
+  worker: { format: "es" },
 });

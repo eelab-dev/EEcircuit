@@ -7,10 +7,10 @@
   "scripts": {
     "vercel-prod": "vercel --prod",
     "vercel": "vercel",
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
+    "dev": "vite",
+    "build": "vite build && ./copy_workers.sh",
+    "preview": "vite preview",
+    "lint": "eslint",
     "check": "tsc --noEmit"
   },
   "author": "Danial Chitnis",
@@ -27,6 +27,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "babel-plugin-transform-hook-names": "^1.0.2",
     "csv-parser": "^3.2.0",
+    "esbuild": "^0.25.2",
     "eslint": "^9.23.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-react": "^7.37.4",
