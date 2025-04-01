@@ -1,5 +1,5 @@
 "use client";
-import React, { JSX, Suspense, useState } from "react";
+import React, { JSX, Suspense, useEffect, useState } from "react";
 //import * as circuits from "./sim/circuits.ts";
 //import { NumberInputValueChangeDetails } from "@chakra-ui/react";
 
@@ -313,8 +313,8 @@ export default function EEcircuit(): JSX.Element {
   const displayBreakpoint = useBreakpointValue({ base: "base", md: "md" });
   const [componentsLoaded, setComponentsLoaded] = useState(false);*/
   const [windowSize, setWindowSize] = useState({
-    width: 800,
-    height: 600,
+    width: globalThis.innerWidth,
+    height: globalThis.innerHeight,
   });
 
   /*useEffect(() => {
@@ -324,7 +324,7 @@ export default function EEcircuit(): JSX.Element {
     }, 10); // Adjust the timeout as needed
   }, []);*/
 
-  /*useEffect(() => {
+  useEffect(() => {
     const handleResize = () => {
       setWindowSize({
         width: globalThis.innerWidth,
@@ -336,7 +336,7 @@ export default function EEcircuit(): JSX.Element {
     return () => {
       globalThis.removeEventListener("resize", handleResize);
     };
-  }, []);*/
+  }, []);
 
   return (
     <div>
