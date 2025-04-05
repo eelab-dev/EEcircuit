@@ -7,7 +7,7 @@
   "scripts": {
     "vercel-prod": "vercel --prod",
     "vercel": "vercel",
-    "dev": "vite",
+    "dev": "vite --force",
     "build": "vite build && ./copy_workers.sh",
     "preview": "vite preview",
     "lint": "eslint",
@@ -48,6 +48,7 @@
     "@vercel/speed-insights": "^1.2.0",
     "comlink": "^4.4.2",
     "eecircuit-engine": "^1.5.0",
+    "lucide-react": "^0.487.0",
     "monaco-editor": "^0.52.2",
     "next-themes": "^0.4.6",
     "react": "^19.1.0",
