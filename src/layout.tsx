@@ -9,15 +9,13 @@ import EEcircuit from "./EEcircuit.tsx";
 
 const Layout: React.FC = () => {
   return (
-    <div>
-      <ChakraProvider value={defaultSystem}>
-        <ColorModeProvider>
-          {/*<Analytics />
+    <ChakraProvider value={defaultSystem}>
+      <ColorModeProvider>
+        {/*<Analytics />
           <SpeedInsights />*/}
-          <EEcircuit />
-        </ColorModeProvider>
-      </ChakraProvider>
-    </div>
+        <EEcircuit />
+      </ColorModeProvider>
+    </ChakraProvider>
   );
 };
 

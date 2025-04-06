@@ -11,7 +11,7 @@ import React, { Suspense, useEffect, useState } from "react";
 //import DisplayBox from "./displayBox.tsx";
 //import DownCSV from "./downCSV.tsx";
 
-import { Box, Flex, Tabs } from "@chakra-ui/react";
+import { Box, Flex, Tabs, Text } from "@chakra-ui/react";
 
 /*import {
   NumberDecrementStepper,
@@ -32,6 +32,7 @@ import { Box, Flex, Tabs } from "@chakra-ui/react";
 import Schematic from "./schematic/schematic.tsx";
 import NetlistEditor from "./netlistEditor.tsx";
 import { TabsValueChangeDetails } from "node_modules/@chakra-ui/react/dist/types/components/tabs/tabs";
+import Logo from "./logo.tsx";
 
 //let sim: SimArray;
 //const store = globalThis.localStorage;
@@ -336,7 +337,24 @@ const EEcircuit: React.FC = () => {
   );
 
   return (
-    <Box border="solid 0px" p={2} height={"100vh"} display={"flex"}>
+    <Box
+      border="solid 0px"
+      p={2}
+      height={"100vh"}
+      display={"flex"}
+      flexDirection={"column"}
+      flexGrow={0}
+    >
+      <Flex
+        direction="row"
+        alignItems={"self-end"}
+        gapX={2}
+        flex={1}
+        flexGrow={0}
+      >
+        <Logo />
+        <Text>a SPICE based circuit simulator</Text>
+      </Flex>
       <Tabs.Root
         defaultValue="schematic"
         value={tabValue}

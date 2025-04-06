@@ -13,6 +13,7 @@ import {
   Move,
   Trash2,
 } from "lucide-react";
+import { sendCommand } from "eecircuit-schematic";
 
 const Actions: React.FC = () => {
   return (
@@ -54,7 +55,11 @@ const Actions: React.FC = () => {
         <Hand />
       </IconButton>
       <IconButton>
-        <Fullscreen />
+        <Fullscreen
+          onClick={() => {
+            sendCommand("fit");
+          }}
+        />
       </IconButton>
       <IconButton>
         <CircleDot />
