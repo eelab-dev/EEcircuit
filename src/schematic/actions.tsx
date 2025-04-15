@@ -13,11 +13,79 @@ import {
   Move,
   Trash2,
 } from "lucide-react";
-import { sendCommand } from "eecircuit-schematic";
+import { AvailableComponent, sendCommand } from "eecircuit-schematic";
 
-const Actions: React.FC = () => {
+type ActionsProps = {
+  availableComponents: AvailableComponent[];
+};
+
+type ComponentListProps = {
+  availableComponents: AvailableComponent[];
+  clickCallback: () => void;
+};
+
+// Create an internal component to render the list and handle closing
+const ComponentList: React.FC<ComponentListProps> = ({
+  availableComponents,
+  clickCallback,
+}) => {
   return (
-    <Flex direction="column" spaceY={2}>
+    <Flex
+      direction="row"
+      justify="space-between"
+      align="center"
+      width="100%"
+      height="100%"
+      padding="2"
+      overflow="hidden"
+      flexWrap="wrap"
+    >
+      {availableComponents.map((component) => (
+        <Flex
+          key={component.type}
+          direction="column"
+          align="center"
+          width="45%"
+          padding="2"
+          margin="1"
+          borderWidth="1px"
+          borderRadius="md"
+          cursor="pointer"
+          _hover={{ bg: "gray.900" }}
+          onClick={() => {
+            sendCommand({
+              command: "add",
+              instanceType: component.type,
+            });
+            clickCallback();
+          }}
+        >
+          <span style={{ fontSize: "0.8rem", textAlign: "center" }}>
+            {component.type}
+          </span>
+          <Flex justify="center" align="center" height="3em" overflow="hidden">
+            <div
+              style={{ width: "100%", height: "100%" }}
+              dangerouslySetInnerHTML={{
+                __html: component.svg,
+              }}
+            />
+          </Flex>
+        </Flex>
+      ))}
+    </Flex>
+  );
+};
+
+const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  const clickCallBack = React.useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
+  return (
+    <Flex direction="column" spaceY={2} flexWrap={"wrap"}>
       <IconButton>
         <MousePointer />
       </IconButton>
@@ -31,17 +99,28 @@ const Actions: React.FC = () => {
       <Popover.Root
         positioning={{ placement: "right" }}
         closeOnInteractOutside={false}
+        open={isOpen}
+        modal={true}
       >
         <Popover.Trigger asChild>
-          <IconButton>
+          <IconButton
+            onClick={() => {
+              setIsOpen(!isOpen);
+            }}
+          >
             <CopyPlus />
           </IconButton>
         </Popover.Trigger>
         <Portal>
           <Popover.Positioner>
-            <Popover.Content>
+            <Popover.Content width="20em" maxWidth="70vw">
               <Popover.Arrow />
-              <Popover.Body>Some content</Popover.Body>
+              <Popover.Body>
+                <ComponentList
+                  availableComponents={availableComponents}
+                  clickCallback={clickCallBack}
+                />
+              </Popover.Body>
             </Popover.Content>
           </Popover.Positioner>
         </Portal>
@@ -54,12 +133,12 @@ const Actions: React.FC = () => {
       <IconButton>
         <Hand />
       </IconButton>
-      <IconButton>
-        <Fullscreen
-          onClick={() => {
-            sendCommand("fit");
-          }}
-        />
+      <IconButton
+        onClick={() => {
+          sendCommand({ command: "view", viewType: "fit" });
+        }}
+      >
+        <Fullscreen />
       </IconButton>
       <IconButton>
         <CircleDot />

@@ -1,5 +1,5 @@
 "use client";
-import React, { Suspense, useEffect, useState } from "react";
+import React from "react";
 //import * as circuits from "./sim/circuits.ts";
 //import { NumberInputValueChangeDetails } from "@chakra-ui/react";
 

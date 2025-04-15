@@ -1,5 +1,10 @@
 import React, { useEffect, useRef } from "react";
-import { initCanvas, MessageToApp, resizeOffscreen } from "eecircuit-schematic";
+import {
+  AvailableComponent,
+  initCanvas,
+  MessageToApp,
+  resizeOffscreen,
+} from "eecircuit-schematic";
 import { Box, Flex, Float, IconButton } from "@chakra-ui/react";
 import { Button } from "@chakra-ui/react";
 
@@ -16,6 +21,9 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
   const [coord, setCoord] = React.useState({ x: 0, y: 0 });
   const [pointerInfo, setPointerInfo] = React.useState<string>("");
   const [selectedItemName, setSelectedItemName] = React.useState<string>("");
+  const [availableComponents, setAvailableComponents] = React.useState<
+    AvailableComponent[]
+  >([]);
 
   const [fullscreen, setFullscreen] = React.useState(false);
 
@@ -88,6 +96,9 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
       case "netList":
         onNetlistExported(msg.netList);
         break;
+      case "availableComponents":
+        setAvailableComponents(msg.availableComponents);
+        break;
     }
   }, []);
 
@@ -108,10 +119,10 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
   }, [fullscreen]);
 
   return (
-    <Flex direction="column" height={"100%"} flexGrow={0}>
-      <Box position="relative" flex="1" minHeight={0}>
+    <Flex direction="column" height={"100%"}>
+      <Box position="relative" flex="1">
         <Float offset="10" placement="middle-start">
-          <Actions />
+          <Actions availableComponents={availableComponents} />
         </Float>
         <canvas
           ref={canvasRef}
