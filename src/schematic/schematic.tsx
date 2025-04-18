@@ -10,6 +10,7 @@ import { Button } from "@chakra-ui/react";
 
 import { ArrowBigRight, Expand, SquareX } from "lucide-react";
 import Actions from "./actions";
+import Properties from "./properties";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
@@ -24,8 +25,8 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
   const [availableComponents, setAvailableComponents] = React.useState<
     AvailableComponent[]
   >([]);
-
   const [fullscreen, setFullscreen] = React.useState(false);
+  const [propertiesOpen, setPropertiesOpen] = React.useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -54,7 +55,7 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
 
       // Only update if changed
 
-      resizeOffscreen(parent.getBoundingClientRect());
+      resizeOffscreen(canvas.getBoundingClientRect());
 
       // first set the canvas size small to find the parent size otherwise parent size is
       // distorted because of fixed canvas size before resizing
@@ -118,6 +119,18 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
     }
   }, [fullscreen]);
 
+  const propertiesCallBack = React.useCallback(() => {
+    setPropertiesOpen(!propertiesOpen);
+  }, [propertiesOpen]);
+
+  useEffect(() => {
+    if (!(selectedItemName === "")) {
+      setPropertiesOpen(true);
+    } else {
+      setPropertiesOpen(false);
+    }
+  }, [selectedItemName]);
+
   return (
     <Flex direction="column" height={"100%"}>
       <Box position="relative" flex="1">
@@ -139,6 +152,10 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
             {!fullscreen ? <Expand /> : <SquareX />}
           </IconButton>
         </Float>
+
+        {propertiesOpen && (
+          <Properties onCloseButtonClick={propertiesCallBack} />
+        )}
       </Box>
 
       <Flex spaceX={2} direction="row">

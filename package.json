@@ -11,7 +11,8 @@
     "build": "vite build && ./copy_workers.sh",
     "preview": "vite preview",
     "lint": "eslint",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "vercel-build": "vercel build"
   },
   "author": "Danial Chitnis",
   "license": "MIT",
@@ -54,6 +55,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",
-    "webgl-plot": "^0.7.2"
+    "webgl-plot": "^0.7.2",
+    "eecircuit-schematic": "file:../eecircuit-schematic/"
   }
 }

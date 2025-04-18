@@ -85,7 +85,14 @@ const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
   }, []);
 
   return (
-    <Flex direction="column" spaceY={2} flexWrap={"wrap"}>
+    <Flex
+      direction="column"
+      spaceY={2}
+      flexWrap={"wrap"}
+      bg="gray.800"
+      padding={1.5}
+      borderRadius="md"
+    >
       <IconButton>
         <MousePointer />
       </IconButton>
