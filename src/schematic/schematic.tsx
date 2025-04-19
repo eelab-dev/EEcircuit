@@ -1,14 +1,13 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useCallback, useState } from "react";
 import {
   AvailableComponent,
   initCanvas,
   MessageToApp,
-  resizeOffscreen,
 } from "eecircuit-schematic";
-import { Box, Flex, Float, IconButton } from "@chakra-ui/react";
-import { Button } from "@chakra-ui/react";
-
+import { Box, Flex, Float, IconButton, Button } from "@chakra-ui/react";
 import { ArrowBigRight, Expand, SquareX } from "lucide-react";
+import debounce from "lodash.debounce";
+
 import Actions from "./actions";
 import Properties from "./properties";
 
@@ -16,91 +15,171 @@ type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
 };
 
+const INITIAL_CANVAS_SIZE = 150; // Small fixed size for the first pass
+
 const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const initializedRef = useRef<boolean>(false);
-  const [coord, setCoord] = React.useState({ x: 0, y: 0 });
-  const [pointerInfo, setPointerInfo] = React.useState<string>("");
-  const [selectedItemName, setSelectedItemName] = React.useState<string>("");
-  const [availableComponents, setAvailableComponents] = React.useState<
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Ref to store the requestAnimationFrame ID for cancellation
+  const rafIdRef = useRef<number | null>(null);
+
+  const [coord, setCoord] = useState({ x: 0, y: 0 });
+  const [pointerInfo, setPointerInfo] = useState<string>("");
+  const [selectedItemName, setSelectedItemName] = useState<string>("");
+  const [availableComponents, setAvailableComponents] = useState<
     AvailableComponent[]
   >([]);
-  const [fullscreen, setFullscreen] = React.useState(false);
-  const [propertiesOpen, setPropertiesOpen] = React.useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [propertiesOpen, setPropertiesOpen] = useState(false);
+
+  const msgCallback = useCallback(
+    (msg: MessageToApp) => {
+      // ... (same msgCallback implementation as before)
+      switch (msg.type) {
+        case "pointerCoords":
+          setCoord({ x: msg.pointerCoords.x, y: msg.pointerCoords.y });
+          break;
+        case "pointerInfo":
+          setPointerInfo(msg.pointerInfo);
+          break;
+        case "selectedItem":
+          setSelectedItemName(msg.selectedItemName);
+          break;
+        case "netList":
+          onNetlistExported(msg.netList);
+          break;
+        case "availableComponents":
+          setAvailableComponents(msg.availableComponents);
+          break;
+      }
+    },
+    [onNetlistExported]
+  );
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    if (canvasRef.current && !initializedRef.current) {
-      console.log("Canvas ref is set:", canvasRef.current);
-      initCanvas(canvasRef.current, msgCallback);
-      initializedRef.current = true;
-    }
-  }, []);
+    const container = containerRef.current;
+    if (!container) return;
 
-  const buttonHandler = React.useCallback(() => {
-    console.log("Button clicked");
-  }, []);
+    const handleResize = () => {
+      if (!containerRef.current) return;
+      const parent = containerRef.current;
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+      // --- Two-Pass Resize Logic ---
 
-    const resizeCanvas = () => {
-      const parent = canvas.parentElement;
-      if (!parent) return;
-      if (!canvasRef.current) return;
+      // 0. Cancel any pending animation frame from previous resize events
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
 
-      // Get the computed size
+      // 1. Remove previous canvas if it exists
+      if (canvasRef.current && canvasRef.current.parentNode === parent) {
+        console.log("Removing previous canvas");
+        parent.removeChild(canvasRef.current);
+        canvasRef.current = null;
+      }
 
-      // Only update if changed
+      // --- Pass 1: Create and add small canvas ---
+      console.log(
+        `Pass 1: Creating small canvas (${INITIAL_CANVAS_SIZE}x${INITIAL_CANVAS_SIZE})`
+      );
+      const newCanvas = document.createElement("canvas");
 
-      resizeOffscreen(canvas.getBoundingClientRect());
+      // Set attributes and style to the *initial* small size
+      newCanvas.width = INITIAL_CANVAS_SIZE;
+      newCanvas.height = INITIAL_CANVAS_SIZE;
+      newCanvas.style.width = `${INITIAL_CANVAS_SIZE}px`;
+      newCanvas.style.height = `${INITIAL_CANVAS_SIZE}px`;
+      newCanvas.style.display = "block";
+      newCanvas.style.border = "solid 1px orange"; // Indicate temporary size
 
-      // first set the canvas size small to find the parent size otherwise parent size is
-      // distorted because of fixed canvas size before resizing
+      // Append the small canvas
+      parent.appendChild(newCanvas);
 
-      canvas.style.width = 100 + "px";
-      canvas.style.height = 100 + "px";
+      // Update ref, but DO NOT initialize yet
+      canvasRef.current = newCanvas;
 
-      canvas.style.width = `${parent.clientWidth}px`;
-      canvas.style.height = `${parent.clientHeight}px`;
+      // --- Pass 2: Defer final sizing and initialization ---
+      rafIdRef.current = requestAnimationFrame(() => {
+        // Check if component/container/canvas still exist before proceeding
+        if (
+          !containerRef.current ||
+          !canvasRef.current ||
+          canvasRef.current !== newCanvas
+        ) {
+          console.warn(
+            "Resize Pass 2 skipped: Component or elements changed/unmounted."
+          );
+          rafIdRef.current = null;
+          return;
+        }
+
+        const currentContainer = containerRef.current; // Use variable for clarity
+        const currentCanvas = canvasRef.current; // Use variable for clarity
+
+        // Read parent dimensions *after* layout calculation with small canvas
+        const finalWidth = currentContainer.clientWidth;
+        const finalHeight = currentContainer.clientHeight;
+
+        console.log(
+          `Pass 2: Resizing canvas to final size (${finalWidth}x${finalHeight}) and initializing.`
+        );
+
+        // Update canvas attributes (drawing buffer)
+        currentCanvas.width = finalWidth;
+        currentCanvas.height = finalHeight;
+
+        // Update canvas style (display size)
+        currentCanvas.style.width = `${finalWidth}px`;
+        currentCanvas.style.height = `${finalHeight}px`;
+        currentCanvas.style.border = "solid 1px green"; // Indicate final size (optional)
+
+        // *** Initialize the library *now* with the final canvas size ***
+        initCanvas(currentCanvas, msgCallback);
+
+        rafIdRef.current = null; // Clear the ref after execution
+      });
+      // --- End Two-Pass Resize Logic ---
     };
 
-    // Initial resize
-    resizeCanvas();
+    // Debounce the entire two-pass handler
+    const debouncedResizeHandler = debounce(handleResize, 250); // Adjust delay
 
-    // Resize on window resize
-    window.addEventListener("resize", resizeCanvas);
+    // Initial setup call
+    handleResize(); // Trigger the two-pass process for the first time
 
-    // Optional: Resize on parent resize (more precise)
-    const resizeObserver = new ResizeObserver(resizeCanvas);
-    resizeObserver.observe(canvas.parentElement!);
+    // Event listeners
+    window.addEventListener("resize", debouncedResizeHandler);
+    const resizeObserver = new ResizeObserver(debouncedResizeHandler);
+    resizeObserver.observe(container);
 
+    // Cleanup
     return () => {
-      window.removeEventListener("resize", resizeCanvas);
+      console.log(
+        "Cleaning up schematic listeners, canvas, and animation frame"
+      );
+      window.removeEventListener("resize", debouncedResizeHandler);
       resizeObserver.disconnect();
-    };
-  }, []);
+      debouncedResizeHandler.cancel();
 
-  const msgCallback = React.useCallback((msg: MessageToApp) => {
-    switch (msg.type) {
-      case "pointerCoords":
-        setCoord({ x: msg.pointerCoords.x, y: msg.pointerCoords.y });
-        break;
-      case "pointerInfo":
-        setPointerInfo(msg.pointerInfo);
-        break;
-      case "selectedItem":
-        setSelectedItemName(msg.selectedItemName);
-        break;
-      case "netList":
-        onNetlistExported(msg.netList);
-        break;
-      case "availableComponents":
-        setAvailableComponents(msg.availableComponents);
-        break;
-    }
+      // Cancel pending animation frame on unmount
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+
+      // Remove the last canvas
+      if (canvasRef.current && canvasRef.current.parentNode === container) {
+        container.removeChild(canvasRef.current);
+        canvasRef.current = null;
+      }
+    };
+  }, [msgCallback]); // msgCallback is stable
+
+  // ... (rest of the component: buttonHandler, fullscreenHandler, propertiesCallBack, useEffect for propertiesOpen, return JSX) ...
+
+  const buttonHandler = useCallback(() => {
+    /* ... */
   }, []);
 
   const fullscreenHandler = React.useCallback(() => {
@@ -115,7 +194,6 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         console.error(`Error entering fullscreen: ${err.message}`);
       });
       setFullscreen(true);
-      resizeOffscreen(canvasRef.current.getBoundingClientRect());
     }
   }, [fullscreen]);
 
@@ -133,40 +211,35 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
 
   return (
     <Flex direction="column" height={"100%"}>
-      <Box position="relative" flex="1">
+      <Box
+        position="relative"
+        flex="1"
+        ref={containerRef}
+        id="canvas-container"
+      >
+        {/* Canvas added dynamically */}
         <Float offset="10" placement="middle-start">
           <Actions availableComponents={availableComponents} />
         </Float>
-        <canvas
-          ref={canvasRef}
-          style={{
-            border: "solid 1px red",
-            width: "100%",
-            height: "100%",
-            display: "block",
-          }}
-        />
-
         <Float offset="10">
           <IconButton aria-label="Fullscreen" onClick={fullscreenHandler}>
             {!fullscreen ? <Expand /> : <SquareX />}
           </IconButton>
         </Float>
-
         {propertiesOpen && (
           <Properties onCloseButtonClick={propertiesCallBack} />
         )}
       </Box>
-
-      <Flex spaceX={2} direction="row">
-        <Button>{`X:${coord.x}, Y:${coord.y}`}</Button>
-        <Button>{pointerInfo}</Button>
-        <Button>{selectedItemName}</Button>
+      <Flex spaceX={2} direction="row" p={2}>
+        {/* ... status bar buttons ... */}
+        <Button size="sm">{`X:${coord.x}, Y:${coord.y}`}</Button>
+        <Button size="sm">{pointerInfo || "Info"}</Button>
+        <Button size="sm">{selectedItemName || "none"}</Button>
         <Box flex="1" />
-        <Button>Status</Button>
+        <Button size="sm">Status</Button>
         <Box flex="1" />
-        <Button onClick={buttonHandler}>
-          Send to Netlist <ArrowBigRight />
+        <Button size="sm" onClick={buttonHandler}>
+          Send to Netlist <ArrowBigRight size={16} />
         </Button>
       </Flex>
     </Flex>
