@@ -11,6 +11,7 @@ import debounce from "lodash.debounce";
 
 import Actions from "./actions";
 import Properties from "./properties";
+import Status from "./status";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
@@ -33,30 +34,30 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
   const [fullscreen, setFullscreen] = useState(false);
   const [propertiesOpen, setPropertiesOpen] = useState(false);
   const [dragBox, setDragBox] = useState(false);
+  const [info, setInfo] = useState<string[]>([]);
 
-  const msgCallback = useCallback(
-    (msg: MessageToApp) => {
-      // ... (same msgCallback implementation as before)
-      switch (msg.type) {
-        case "pointerCoords":
-          setCoord({ x: msg.pointerCoords.x, y: msg.pointerCoords.y });
-          break;
-        case "pointerInfo":
-          setPointerInfo(msg.pointerInfo);
-          break;
-        case "selectedItem":
-          setSelectedItemName(msg.selectedItemName);
-          break;
-        case "netList":
-          onNetlistExported(msg.netList);
-          break;
-        case "availableComponents":
-          setAvailableComponents(msg.availableComponents);
-          break;
-      }
-    },
-    [onNetlistExported]
-  );
+  const msgCallback = useCallback((msg: MessageToApp) => {
+    switch (msg.type) {
+      case "pointerCoords":
+        setCoord({ x: msg.pointerCoords.x, y: msg.pointerCoords.y });
+        break;
+      case "pointerInfo":
+        setPointerInfo(msg.pointerInfo);
+        break;
+      case "selectedItem":
+        setSelectedItemName(msg.selectedItemName);
+        break;
+      case "netList":
+        onNetlistExported(msg.netList);
+        break;
+      case "availableComponents":
+        setAvailableComponents(msg.availableComponents);
+        break;
+      case "info":
+        setInfo((prevInfo) => [...prevInfo, `${msg.mType}: ${msg.info}`]);
+        break;
+    }
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -319,7 +320,9 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         <Button size="sm">{pointerInfo || "Info"}</Button>
         <Button size="sm">{selectedItemName || "none"}</Button>
         <Box flex="1" />
-        <Button size="sm">Status</Button>
+
+        <Status info={info} />
+
         <Box flex="1" />
         <Button size="sm" onClick={buttonHandler}>
           Send to Netlist <ArrowBigRight size={16} />
