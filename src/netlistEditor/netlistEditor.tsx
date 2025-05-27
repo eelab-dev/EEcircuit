@@ -24,6 +24,8 @@ const NetlistEditor: React.FC<NetlistEditorProps> = ({ netList = "" }) => {
   });
 
   const [selectedSimType, setSelectedSimType] = useState(simType[0]);
+  const [simConfig, setSimConfig] = useState("");
+  const [netListToSim, setNetListToSim] = useState(netList);
 
   useEffect(() => {
     const handleResize = () => {
@@ -43,6 +45,19 @@ const NetlistEditor: React.FC<NetlistEditorProps> = ({ netList = "" }) => {
       //setNetList(value);
     }
   }, []);
+
+  useEffect(() => {
+    const newNetList = netList + "\n\n" + simConfig + "\n\n" + ".end";
+    setNetListToSim(newNetList);
+  }, [netList, netListToSim, simConfig]);
+
+  const handleConfigChange = React.useCallback(
+    (config: string) => {
+      setSimConfig(config);
+    },
+    [simConfig]
+  );
+
   return (
     <Flex width="100%" flexDirection={"column"} gap={4}>
       <Suspense fallback={<Skeleton height="40vh" width="100%" />}>
@@ -50,7 +65,7 @@ const NetlistEditor: React.FC<NetlistEditorProps> = ({ netList = "" }) => {
           height="50vh"
           width="100%"
           language="spice"
-          value={netList}
+          value={netListToSim}
           valueChanged={handleEditor}
           theme={useColorModeValue("light", "dark")}
           key={windowSize.width}
@@ -86,11 +101,11 @@ const NetlistEditor: React.FC<NetlistEditorProps> = ({ netList = "" }) => {
         {(() => {
           switch (selectedSimType) {
             case "DC":
-              return <DcConfig />;
+              return <DcConfig onConfigChange={handleConfigChange} />;
             case "AC":
               return <AcConfig />;
             case "Trans":
-              return <TransConfig />;
+              return <TransConfig onConfigChange={handleConfigChange} />;
           }
         })()}
       </Flex>

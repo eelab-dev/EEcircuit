@@ -1,7 +1,11 @@
 import { Field, Fieldset, Input, Stack, Text } from "@chakra-ui/react";
 import React, { useState, useEffect } from "react";
 
-const DcConfig: React.FC = () => {
+interface DcConfigProps {
+  onConfigChange: (config: string) => void;
+}
+
+const DcConfig: React.FC<DcConfigProps> = ({ onConfigChange }) => {
   const [formData, setFormData] = useState({
     dcSource: "",
     dcStart: "",
@@ -9,20 +13,21 @@ const DcConfig: React.FC = () => {
     dcStep: "",
   });
 
-  const [combinedString, setCombinedString] = useState("");
+  const [dcSimConfig, setDcSimConfig] = useState("");
 
   // Update combined string whenever form data changes
   useEffect(() => {
-    const combined = `.dc: ${formData.dcSource} ${formData.dcStart} ${formData.dcEnd} ${formData.dcStep}`;
-    setCombinedString(combined);
-  }, [formData]);
+    const combined = `.dc ${formData.dcSource} ${formData.dcStart} ${formData.dcEnd} ${formData.dcStep}`;
+    setDcSimConfig(combined);
+
+    // Call the callback with the updated config
+    if (onConfigChange) {
+      onConfigChange(combined);
+    }
+  }, [formData, onConfigChange]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleInputCapture = (e: React.SyntheticEvent) => {
-    console.log("Input captured:", e);
   };
 
   return (
@@ -37,15 +42,11 @@ const DcConfig: React.FC = () => {
             bg="gray.50"
             borderRadius="md"
           >
-            Combined Config: {combinedString}
+            Combined Config: {dcSimConfig}
           </Text>
         </Stack>
 
-        <Fieldset.Content
-          onInputCapture={(e) => {
-            handleInputCapture(e);
-          }}
-        >
+        <Fieldset.Content>
           <Field.Root>
             <Field.Label>Sweep Source</Field.Label>
             <Input
