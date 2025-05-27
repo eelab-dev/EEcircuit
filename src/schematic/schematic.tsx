@@ -13,9 +13,7 @@ import Actions from "./actions";
 import Properties from "./properties";
 import Status from "./status";
 
-type SchematicProps = {
-  onNetlistExported: (netlist: string) => void;
-};
+type SchematicProps = { onNetlistExported: (netlist: string) => void };
 
 const INITIAL_CANVAS_SIZE = 150; // Small fixed size for the first pass
 
@@ -180,8 +178,10 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
     };
   }, [msgCallback]); // msgCallback is stable
 
-  const buttonHandler = useCallback(() => {
-    /* ... */
+  const sendToNetListButtonHandler = useCallback(() => {
+    if (!canvasRef.current) return;
+    // Send command to export netlist
+    sendCommand({ command: "export", exportType: "netList" });
   }, []);
 
   const fullscreenHandler = React.useCallback(() => {
@@ -324,7 +324,7 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         <Status info={info} />
 
         <Box flex="1" />
-        <Button size="sm" onClick={buttonHandler}>
+        <Button size="sm" onClick={sendToNetListButtonHandler}>
           Send to Netlist <ArrowBigRight size={16} />
         </Button>
       </Flex>

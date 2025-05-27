@@ -30,7 +30,7 @@ import { Box, Flex, Tabs, Text } from "@chakra-ui/react";
 //import { DisplayDataType, makeDD } from "./displayData.ts";
 
 import Schematic from "./schematic/schematic.tsx";
-import NetlistEditor from "./netlistEditor.tsx";
+import NetlistEditor from "./netlistEditor/netlistEditor.tsx";
 import { TabsValueChangeDetails } from "node_modules/@chakra-ui/react/dist/types/components/tabs/tabs";
 import Logo from "./logo.tsx";
 
