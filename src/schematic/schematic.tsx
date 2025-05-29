@@ -57,6 +57,33 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
     }
   }, []);
 
+  // Initialize the canvas and set up the message callback
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Create the canvas element
+    const canvas =
+      (document.getElementById("schematic-canvas") as HTMLCanvasElement) ||
+      document.createElement("canvas");
+    canvas.id = "schematic-canvas";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.display = "block";
+    canvas.style.border = "solid 1px gray"; // Initial border for visibility
+
+    // Initialize the schematic library with the new canvas and message callback
+    initCanvas(canvas, () => {});
+
+    // Cleanup function to remove the canvas on unmount
+    return () => {
+      if (canvasRef.current && canvasRef.current.parentNode === container) {
+        container.removeChild(canvasRef.current);
+        canvasRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -176,7 +203,7 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         canvasRef.current = null;
       }
     };
-  }, [msgCallback]); // msgCallback is stable
+  }, []); // msgCallback is stable*/
 
   const sendToNetListButtonHandler = useCallback(() => {
     if (!canvasRef.current) return;
@@ -303,7 +330,7 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         ) : null}
 
         <Float offset="10" placement="middle-start">
-          <Actions availableComponents={availableComponents} />
+          {<Actions availableComponents={availableComponents} />}
         </Float>
         <Float offset="10">
           <IconButton aria-label="Fullscreen" onClick={fullscreenHandler}>
@@ -321,7 +348,7 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         <Button size="sm">{selectedItemName || "none"}</Button>
         <Box flex="1" />
 
-        <Status info={info} />
+        {<Status info={info} />}
 
         <Box flex="1" />
         <Button size="sm" onClick={sendToNetListButtonHandler}>
