@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { ResultType } from "eecircuit-engine";
 import { Box, Checkbox, CheckboxGroup, Fieldset, For } from "@chakra-ui/react";
 import { LineInitData, WebglLineThick, WebglPlot } from "webgl-plot";
@@ -9,6 +9,15 @@ interface PlotProps {
 
 const Plot: React.FC<PlotProps> = ({ results }) => {
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
+
+  // Initialize with all variables selected by default
+  useEffect(() => {
+    if (results.length > 0 && results[0].variableNames) {
+      // Skip the first variable (usually time) and select all others by default
+      setSelectedVariables(results[0].variableNames.slice(1));
+    }
+  }, [results]);
 
   useEffect(() => {
     if (!canvasRef.current || results.length === 0) return;
@@ -21,7 +30,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
       // Get the computed style dimensions
       const rect = canvas.getBoundingClientRect();
       const width = rect.width || 800; // fallback to 800px
-      const height = rect.height || 500; // fallback to 800px
+      const height = rect.height || 500; // fallback to 500px
 
       canvas.width = width * devicePixelRatio;
       canvas.height = height * devicePixelRatio;
@@ -39,15 +48,28 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
       const maxLines = results[0].numVariables;
       const numX = results[0].numPoints;
       console.log("maxLines", maxLines, "numX", numX);
+
       const wglp = new WebglPlot(canvas);
-      const plotLine = new WebglLineThick(wglp, maxLines);
+
+      // Only create lines for selected variables (excluding the X-axis variable at index 0)
+      const selectedIndices = selectedVariables
+        .map((varName) => results[0].variableNames.indexOf(varName))
+        .filter((index) => index > 0); // Exclude index 0 (X-axis variable)
+
+      if (selectedIndices.length === 0) {
+        // If no variables selected, just clear the canvas
+        wglp.update();
+        return;
+      }
+
+      const plotLine = new WebglLineThick(wglp, selectedIndices.length);
       const array = new Float32Array(numX * 2);
       const arrays: LineInitData[] = [];
 
-      for (let line = 1; line < maxLines; line++) {
-        for (let i = 1; i < numX; i++) {
+      selectedIndices.forEach((lineIndex) => {
+        for (let i = 0; i < numX; i++) {
           array[i * 2] = results[0].data[0].values[i] as number;
-          array[i * 2 + 1] = results[0].data[line].values[i] as number;
+          array[i * 2 + 1] = results[0].data[lineIndex].values[i] as number;
         }
         arrays.push({
           points: new Float32Array(array),
@@ -56,7 +78,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
           color: [Math.random(), Math.random(), Math.random(), 1],
           thickness: 0.01,
         });
-      }
+      });
 
       plotLine.initLines(arrays);
       plotLine.draw();
@@ -64,7 +86,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
 
     // Use requestAnimationFrame to ensure the canvas is properly rendered
     requestAnimationFrame(setupCanvas);
-  }, [results]);
+  }, [results, selectedVariables]);
 
   return (
     <Box width="800px" height="500px">
@@ -73,12 +95,17 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
         style={{ width: "100%", height: "100%", display: "block" }}
       />
       <Fieldset.Root>
-        <CheckboxGroup defaultValue={["react"]} name="framework">
+        <CheckboxGroup
+          value={selectedVariables}
+          onValueChange={setSelectedVariables}
+          name="variables"
+        >
           <Fieldset.Legend fontSize="sm" mb="2">
-            Select framework
+            X-axis: {results[0].variableNames[0]} | Select Y-axis variables to
+            plot
           </Fieldset.Legend>
           <Fieldset.Content>
-            <For each={results[0].variableNames}>
+            <For each={results[0].variableNames.slice(1)}>
               {(value) => (
                 <Checkbox.Root key={value} value={value}>
                   <Checkbox.HiddenInput />
