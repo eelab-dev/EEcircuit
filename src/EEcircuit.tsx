@@ -33,6 +33,8 @@ import Schematic from "./schematic/schematic.tsx";
 import NetlistEditor from "./netlistEditor/netlistEditor.tsx";
 import { TabsValueChangeDetails } from "node_modules/@chakra-ui/react/dist/types/components/tabs/tabs";
 import Logo from "./logo.tsx";
+import Plot from "./plot/plot.tsx";
+import { ResultType } from "eecircuit-engine";
 
 //let sim: SimArray;
 //const store = globalThis.localStorage;
@@ -69,6 +71,8 @@ const EEcircuit: React.FC = () => {
   //const [threadCountNew, setThreadCountNew] = React.useState(1);
 
   //const colorMode = useColorModeValue("light", "dark");
+
+  const [results, setResults] = React.useState<ResultType[]>([]);
 
   /*useEffect(() => {
     const loadedNetList = store.getItem("netList");
@@ -333,6 +337,11 @@ const EEcircuit: React.FC = () => {
     []
   );
 
+  const handleNewResults = React.useCallback((newResults: ResultType[]) => {
+    setResults(newResults);
+    setTabValue("plot");
+  }, []);
+
   return (
     <Box
       border="solid 0px"
@@ -378,10 +387,14 @@ const EEcircuit: React.FC = () => {
         </Tabs.Content>
 
         <Tabs.Content value="netlist" flex={1}>
-          <NetlistEditor netList={netList} />
+          <NetlistEditor
+            netList={netList}
+            onResultsObtained={handleNewResults}
+          />
         </Tabs.Content>
 
         <Tabs.Content value="plot" flex={1}>
+          <Plot results={results} />
           {/* <PlotArray
               resultArray={resultArray}
               displayData={displayData}

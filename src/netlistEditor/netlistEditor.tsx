@@ -12,11 +12,18 @@ import { Skeleton } from "@chakra-ui/react";
 import DcConfig from "./simConfigs/dc";
 import AcConfig from "./simConfigs/ac";
 import TransConfig from "./simConfigs/trans";
+import { ResultType } from "eecircuit-engine";
 
-type NetlistEditorProps = { netList: string };
+type NetlistEditorProps = {
+  netList: string;
+  onResultsObtained: (results: ResultType[]) => void;
+};
 
-const NetlistEditor: React.FC<NetlistEditorProps> = ({ netList = "" }) => {
-  const simType = ["DC", "AC", "Trans"];
+const NetlistEditor: React.FC<NetlistEditorProps> = ({
+  netList = "",
+  onResultsObtained,
+}) => {
+  const simType = ["None", "DC", "AC", "Trans"];
 
   const [windowSize, setWindowSize] = useState({
     width: globalThis.innerWidth,
@@ -47,9 +54,15 @@ const NetlistEditor: React.FC<NetlistEditorProps> = ({ netList = "" }) => {
   }, []);
 
   useEffect(() => {
-    const newNetList = netList + "\n\n" + simConfig + "\n\n" + ".end";
-    setNetListToSim(newNetList);
-  }, [netList, netListToSim, simConfig]);
+    if (selectedSimType === "None") {
+      setSimConfig("");
+      setNetListToSim(netList);
+      return;
+    } else {
+      const newNetList = netList + "\n\n" + simConfig + "\n\n" + ".end";
+      setNetListToSim(newNetList);
+    }
+  }, [netList, netListToSim, simConfig, selectedSimType]);
 
   const handleConfigChange = React.useCallback(
     (config: string) => {
@@ -57,6 +70,27 @@ const NetlistEditor: React.FC<NetlistEditorProps> = ({ netList = "" }) => {
     },
     [simConfig]
   );
+
+  const handleSimRun = async () => {
+    const { Simulation } = await import("eecircuit-engine");
+
+    const sim = new Simulation();
+    await sim.start();
+
+    sim.setNetList(netListToSim);
+
+    const result = await sim.runSim();
+
+    console.log(sim.getInfo());
+    console.log("Simulation Result:", result);
+    if (result) {
+      // Assuming onResultsObtained is a prop function to handle results
+      // You can replace this with your actual result handling logic
+      onResultsObtained([result]);
+    } else {
+      console.error("Simulation failed or returned no results.");
+    }
+  };
 
   return (
     <Flex width="100%" flexDirection={"column"} gap={4}>
@@ -100,16 +134,22 @@ const NetlistEditor: React.FC<NetlistEditorProps> = ({ netList = "" }) => {
         </RadioCard.Root>
         {(() => {
           switch (selectedSimType) {
+            case "None":
+              return (
+                <>
+                  <p>No addition to the netlist</p>
+                </>
+              );
             case "DC":
               return <DcConfig onConfigChange={handleConfigChange} />;
             case "AC":
-              return <AcConfig />;
+              return <AcConfig onConfigChange={handleConfigChange} />;
             case "Trans":
               return <TransConfig onConfigChange={handleConfigChange} />;
           }
         })()}
       </Flex>
-      <Button>Run Simulation</Button>
+      <Button onClick={handleSimRun}>Run Simulation</Button>
     </Flex>
   );
 };
