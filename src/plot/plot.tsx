@@ -1,7 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { ResultType } from "eecircuit-engine";
-import { Box, Checkbox, CheckboxGroup, Fieldset, For } from "@chakra-ui/react";
+import { Checkbox, CheckboxGroup, Fieldset, Flex, For } from "@chakra-ui/react";
 import { LineInitData, WebglLineThick, WebglPlot } from "webgl-plot";
+import { useColorMode } from "../components/ui/color-mode";
+import {
+  generatePlotColor,
+  clearColorCache,
+  type PlotColor,
+} from "./colorUtils";
 
 interface PlotProps {
   results: ResultType[];
@@ -9,7 +15,13 @@ interface PlotProps {
 
 const Plot: React.FC<PlotProps> = ({ results }) => {
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const wglpRef = useRef<WebglPlot | null>(null);
+  const plotLineRef = useRef<WebglLineThick | null>(null);
+  const lineDataRef = useRef<LineInitData[]>([]);
+  const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
   const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
+  const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
+  const { colorMode } = useColorMode();
 
   // Initialize with all variables selected by default
   useEffect(() => {
@@ -19,77 +31,114 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
     }
   }, [results]);
 
+  // Clear color cache when color mode changes
+  useEffect(() => {
+    clearColorCache(colorMapRef.current);
+    // Regenerate colors if canvas is already initialized
+    if (isCanvasInitialized) {
+      updatePlot();
+    }
+  }, [colorMode]);
+
+  // Update plot visibility and colors
+  const updatePlot = () => {
+    if (!wglpRef.current || !plotLineRef.current || results.length === 0)
+      return;
+
+    wglpRef.current.clear();
+
+    if (selectedVariables.length === 0) {
+      wglpRef.current.update();
+      return;
+    }
+
+    // Update line visibility based on selected variables
+    const variableNames = results[0].variableNames.slice(1); // Exclude X-axis
+
+    lineDataRef.current.forEach((lineData, index) => {
+      const variableName = variableNames[index];
+      const isSelected = selectedVariables.includes(variableName);
+
+      // Regenerate color for current theme if not cached
+      const currentColor = generatePlotColor(
+        variableName,
+        colorMode,
+        colorMapRef.current
+      );
+      lineData.color = [...currentColor];
+
+      // Set alpha to 0 for hidden lines, 1 for visible lines
+      lineData.color[3] = isSelected ? 1 : 0;
+    });
+
+    // Reinitialize with updated visibility
+    plotLineRef.current.initLines(lineDataRef.current);
+    plotLineRef.current.draw();
+  };
+
+  // Initialize canvas and WebGL plot only once when results change
   useEffect(() => {
     if (!canvasRef.current || results.length === 0) return;
+
     const canvas = canvasRef.current;
+    const devicePixelRatio = window.devicePixelRatio || 1;
 
-    // Wait for the next frame to ensure the canvas is rendered and has dimensions
-    const setupCanvas = () => {
-      const devicePixelRatio = window.devicePixelRatio || 1;
+    // Get the computed style dimensions
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width || 500;
+    const height = rect.height || 500;
 
-      // Get the computed style dimensions
-      const rect = canvas.getBoundingClientRect();
-      const width = rect.width || 800; // fallback to 800px
-      const height = rect.height || 500; // fallback to 500px
+    canvas.width = width * devicePixelRatio;
+    canvas.height = height * devicePixelRatio;
 
-      canvas.width = width * devicePixelRatio;
-      canvas.height = height * devicePixelRatio;
+    // Initialize WebGL plot
+    wglpRef.current = new WebglPlot(canvas);
 
-      console.log(
-        "clientWidth",
-        canvas.clientWidth,
-        "clientHeight",
-        canvas.clientHeight
-      );
+    const numX = results[0].numPoints;
+    const numVariables = results[0].numVariables;
 
-      console.log("getBoundingClientRect width", width, "height", height);
-      console.log("canvas width", canvas.width, "canvas height", canvas.height);
+    // Create plot line with maximum possible lines
+    plotLineRef.current = new WebglLineThick(wglpRef.current, numVariables - 1);
 
-      const maxLines = results[0].numVariables;
-      const numX = results[0].numPoints;
-      console.log("maxLines", maxLines, "numX", numX);
+    // Prepare line data for all variables (excluding X-axis at index 0)
+    const allLineData: LineInitData[] = [];
+    const array = new Float32Array(numX * 2);
 
-      const wglp = new WebglPlot(canvas);
+    for (let lineIndex = 1; lineIndex < numVariables; lineIndex++) {
+      const variableName = results[0].variableNames[lineIndex];
 
-      // Only create lines for selected variables (excluding the X-axis variable at index 0)
-      const selectedIndices = selectedVariables
-        .map((varName) => results[0].variableNames.indexOf(varName))
-        .filter((index) => index > 0); // Exclude index 0 (X-axis variable)
-
-      if (selectedIndices.length === 0) {
-        // If no variables selected, just clear the canvas
-        wglp.update();
-        return;
+      // Fill array with x,y data
+      for (let i = 0; i < numX; i++) {
+        array[i * 2] = results[0].data[0].values[i] as number; // X-axis data
+        array[i * 2 + 1] = results[0].data[lineIndex].values[i] as number; // Y-axis data
       }
 
-      const plotLine = new WebglLineThick(wglp, selectedIndices.length);
-      const array = new Float32Array(numX * 2);
-      const arrays: LineInitData[] = [];
-
-      selectedIndices.forEach((lineIndex) => {
-        for (let i = 0; i < numX; i++) {
-          array[i * 2] = results[0].data[0].values[i] as number;
-          array[i * 2 + 1] = results[0].data[lineIndex].values[i] as number;
-        }
-        arrays.push({
-          points: new Float32Array(array),
-          scale: [1, 1],
-          offset: [0, 0],
-          color: [Math.random(), Math.random(), Math.random(), 1],
-          thickness: 0.01,
-        });
+      allLineData.push({
+        points: new Float32Array(array),
+        scale: [1, 1],
+        offset: [0, 0],
+        color: generatePlotColor(variableName, colorMode, colorMapRef.current),
+        thickness: 0.01,
       });
+    }
 
-      plotLine.initLines(arrays);
-      plotLine.draw();
-    };
+    lineDataRef.current = allLineData;
+    plotLineRef.current.initLines(allLineData);
+    setIsCanvasInitialized(true);
 
-    // Use requestAnimationFrame to ensure the canvas is properly rendered
-    requestAnimationFrame(setupCanvas);
-  }, [results, selectedVariables]);
+    // Initial draw with all variables selected
+    updatePlot();
+  }, [results]);
+
+  // Update plot visibility when selected variables change
+  useEffect(() => {
+    if (isCanvasInitialized) {
+      updatePlot();
+    }
+  }, [selectedVariables, isCanvasInitialized]);
 
   return (
-    <Box width="800px" height="500px">
+    <Flex direction="row" w="100%" h="60vh" gap={4} p={4}>
       <canvas
         ref={canvasRef}
         style={{ width: "100%", height: "100%", display: "block" }}
@@ -102,8 +151,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
             name="variables"
           >
             <Fieldset.Legend fontSize="sm" mb="2">
-              X-axis: {results[0].variableNames[0]} | Select Y-axis variables to
-              plot
+              X-axis: {results[0].variableNames[0]}
             </Fieldset.Legend>
             <Fieldset.Content>
               <For each={results[0].variableNames.slice(1)}>
@@ -119,7 +167,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
           </CheckboxGroup>
         </Fieldset.Root>
       )}
-    </Box>
+    </Flex>
   );
 };
 
