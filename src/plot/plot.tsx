@@ -40,38 +40,15 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
     }
   }, [colorMode]);
 
-  // Update plot visibility and colors
-  const updatePlot = () => {
-    if (!wglpRef.current || !plotLineRef.current || results.length === 0)
-      return;
-
-    wglpRef.current.clear();
-
-    if (selectedVariables.length === 0) {
-      wglpRef.current.update();
+  // Calculate and apply auto-scaling transform for visible lines
+  const calculateAndApplyScaling = () => {
+    if (!plotLineRef.current || selectedVariables.length === 0) {
+      // Fallback to default transform if no visible lines
+      plotLineRef.current?.setGlobalTransform([1, 1], [-1, -1]);
       return;
     }
 
-    // Update line visibility based on selected variables
     const variableNames = results[0].variableNames.slice(1); // Exclude X-axis
-
-    lineDataRef.current.forEach((lineData, index) => {
-      const variableName = variableNames[index];
-      const isSelected = selectedVariables.includes(variableName);
-
-      // Regenerate color for current theme if not cached
-      const currentColor = generatePlotColor(
-        variableName,
-        colorMode,
-        colorMapRef.current
-      );
-      lineData.color = [...currentColor];
-
-      // Set alpha to 0 for hidden lines, 1 for visible lines
-      lineData.color[3] = isSelected ? 1 : 0;
-    });
-
-    // Calculate bounds for visible lines to auto-scale
     let xMin = Infinity,
       xMax = -Infinity;
     let yMin = Infinity,
@@ -142,6 +119,41 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
       // Fallback to default transform if no valid data
       plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
     }
+  };
+
+  // Update plot visibility and colors
+  const updatePlot = () => {
+    if (!wglpRef.current || !plotLineRef.current || results.length === 0)
+      return;
+
+    wglpRef.current.clear();
+
+    if (selectedVariables.length === 0) {
+      wglpRef.current.update();
+      return;
+    }
+
+    // Update line visibility based on selected variables
+    const variableNames = results[0].variableNames.slice(1); // Exclude X-axis
+
+    lineDataRef.current.forEach((lineData, index) => {
+      const variableName = variableNames[index];
+      const isSelected = selectedVariables.includes(variableName);
+
+      // Regenerate color for current theme if not cached
+      const currentColor = generatePlotColor(
+        variableName,
+        colorMode,
+        colorMapRef.current
+      );
+      lineData.color = [...currentColor];
+
+      // Set alpha to 0 for hidden lines, 1 for visible lines
+      lineData.color[3] = isSelected ? 1 : 0;
+    });
+
+    // Calculate and apply auto-scaling for visible lines
+    calculateAndApplyScaling();
 
     // Reinitialize with updated visibility
     plotLineRef.current.initLines(lineDataRef.current);
