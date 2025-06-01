@@ -20,6 +20,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
   const lineDataRef = useRef<LineInitData[]>([]);
   const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
   const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
+  const [hoveredVariable, setHoveredVariable] = useState<string | null>(null);
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
   const { colorMode } = useColorMode();
 
@@ -38,7 +39,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
     if (isCanvasInitialized) {
       updatePlot();
     }
-  }, [colorMode]);
+  }, [colorMode, isCanvasInitialized]);
 
   // Calculate and apply auto-scaling transform for visible lines
   const calculateAndApplyScaling = () => {
@@ -139,6 +140,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
     lineDataRef.current.forEach((lineData, index) => {
       const variableName = variableNames[index];
       const isSelected = selectedVariables.includes(variableName);
+      const isHovered = hoveredVariable === variableName;
 
       // Regenerate color for current theme if not cached
       const currentColor = generatePlotColor(
@@ -150,6 +152,9 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
 
       // Set alpha to 0 for hidden lines, 1 for visible lines
       lineData.color[3] = isSelected ? 1 : 0;
+
+      // Increase thickness for hovered lines if they are selected
+      lineData.thickness = isSelected && isHovered ? 0.02 : 0.01;
     });
 
     // Calculate and apply auto-scaling for visible lines
@@ -222,6 +227,13 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
     }
   }, [selectedVariables, isCanvasInitialized]);
 
+  // Update plot when hover state changes
+  useEffect(() => {
+    if (isCanvasInitialized) {
+      updatePlot();
+    }
+  }, [hoveredVariable, isCanvasInitialized]);
+
   return (
     <Flex direction="row" w="100%" h="60vh" gap={4} p={4}>
       <Flex flex="1" minW="0">
@@ -244,10 +256,22 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
               <Fieldset.Content>
                 <For each={results[0].variableNames.slice(1)}>
                   {(value) => (
-                    <Checkbox.Root key={value} value={value}>
+                    <Checkbox.Root
+                      key={value}
+                      value={value}
+                      onMouseEnter={() => setHoveredVariable(value)}
+                      onMouseLeave={() => setHoveredVariable(null)}
+                    >
                       <Checkbox.HiddenInput />
                       <Checkbox.Control />
-                      <Checkbox.Label>{value}</Checkbox.Label>
+                      <Checkbox.Label
+                        fontWeight={
+                          hoveredVariable === value ? "semibold" : "normal"
+                        }
+                        transition="font-weight 0.1s ease"
+                      >
+                        {value}
+                      </Checkbox.Label>
                     </Checkbox.Root>
                   )}
                 </For>
