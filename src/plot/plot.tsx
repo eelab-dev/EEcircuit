@@ -94,29 +94,31 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
         ref={canvasRef}
         style={{ width: "100%", height: "100%", display: "block" }}
       />
-      <Fieldset.Root>
-        <CheckboxGroup
-          value={selectedVariables}
-          onValueChange={setSelectedVariables}
-          name="variables"
-        >
-          <Fieldset.Legend fontSize="sm" mb="2">
-            X-axis: {results[0].variableNames[0]} | Select Y-axis variables to
-            plot
-          </Fieldset.Legend>
-          <Fieldset.Content>
-            <For each={results[0].variableNames.slice(1)}>
-              {(value) => (
-                <Checkbox.Root key={value} value={value}>
-                  <Checkbox.HiddenInput />
-                  <Checkbox.Control />
-                  <Checkbox.Label>{value}</Checkbox.Label>
-                </Checkbox.Root>
-              )}
-            </For>
-          </Fieldset.Content>
-        </CheckboxGroup>
-      </Fieldset.Root>
+      {results.length > 0 && results[0].variableNames && (
+        <Fieldset.Root>
+          <CheckboxGroup
+            value={selectedVariables}
+            onValueChange={setSelectedVariables}
+            name="variables"
+          >
+            <Fieldset.Legend fontSize="sm" mb="2">
+              X-axis: {results[0].variableNames[0]} | Select Y-axis variables to
+              plot
+            </Fieldset.Legend>
+            <Fieldset.Content>
+              <For each={results[0].variableNames.slice(1)}>
+                {(value) => (
+                  <Checkbox.Root key={value} value={value}>
+                    <Checkbox.HiddenInput />
+                    <Checkbox.Control />
+                    <Checkbox.Label>{value}</Checkbox.Label>
+                  </Checkbox.Root>
+                )}
+              </For>
+            </Fieldset.Content>
+          </CheckboxGroup>
+        </Fieldset.Root>
+      )}
     </Box>
   );
 };
