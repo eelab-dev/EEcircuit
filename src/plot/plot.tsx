@@ -139,33 +139,37 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
 
   return (
     <Flex direction="row" w="100%" h="60vh" gap={4} p={4}>
-      <canvas
-        ref={canvasRef}
-        style={{ width: "100%", height: "100%", display: "block" }}
-      />
+      <Flex flex="1" minW="0">
+        <canvas
+          ref={canvasRef}
+          style={{ width: "100%", height: "100%", display: "block" }}
+        />
+      </Flex>
       {results.length > 0 && results[0].variableNames && (
-        <Fieldset.Root>
-          <CheckboxGroup
-            value={selectedVariables}
-            onValueChange={setSelectedVariables}
-            name="variables"
-          >
-            <Fieldset.Legend fontSize="sm" mb="2">
-              X-axis: {results[0].variableNames[0]}
-            </Fieldset.Legend>
-            <Fieldset.Content>
-              <For each={results[0].variableNames.slice(1)}>
-                {(value) => (
-                  <Checkbox.Root key={value} value={value}>
-                    <Checkbox.HiddenInput />
-                    <Checkbox.Control />
-                    <Checkbox.Label>{value}</Checkbox.Label>
-                  </Checkbox.Root>
-                )}
-              </For>
-            </Fieldset.Content>
-          </CheckboxGroup>
-        </Fieldset.Root>
+        <Flex flexShrink="0" w="10em">
+          <Fieldset.Root w="100%">
+            <CheckboxGroup
+              value={selectedVariables}
+              onValueChange={setSelectedVariables}
+              name="variables"
+            >
+              <Fieldset.Legend fontSize="sm" mb="2">
+                X-axis: {results[0].variableNames[0]}
+              </Fieldset.Legend>
+              <Fieldset.Content>
+                <For each={results[0].variableNames.slice(1)}>
+                  {(value) => (
+                    <Checkbox.Root key={value} value={value}>
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control />
+                      <Checkbox.Label>{value}</Checkbox.Label>
+                    </Checkbox.Root>
+                  )}
+                </For>
+              </Fieldset.Content>
+            </CheckboxGroup>
+          </Fieldset.Root>
+        </Flex>
       )}
     </Flex>
   );
