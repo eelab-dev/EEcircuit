@@ -71,6 +71,78 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
       lineData.color[3] = isSelected ? 1 : 0;
     });
 
+    // Calculate bounds for visible lines to auto-scale
+    let xMin = Infinity,
+      xMax = -Infinity;
+    let yMin = Infinity,
+      yMax = -Infinity;
+
+    // Calculate X-axis bounds once (same for all lines)
+    const firstVisibleLineIndex = lineDataRef.current.findIndex((_, index) => {
+      const variableName = variableNames[index];
+      return selectedVariables.includes(variableName);
+    });
+
+    if (firstVisibleLineIndex !== -1) {
+      const points = lineDataRef.current[firstVisibleLineIndex].points;
+      for (let i = 0; i < points.length; i += 2) {
+        const x = points[i];
+        xMin = Math.min(xMin, x);
+        xMax = Math.max(xMax, x);
+      }
+    }
+
+    // Calculate Y-axis bounds for all visible lines
+    lineDataRef.current.forEach((lineData, index) => {
+      const variableName = variableNames[index];
+      const isSelected = selectedVariables.includes(variableName);
+
+      if (isSelected) {
+        const points = lineData.points;
+        for (let i = 1; i < points.length; i += 2) {
+          const y = points[i];
+          yMin = Math.min(yMin, y);
+          yMax = Math.max(yMax, y);
+        }
+      }
+    });
+
+    // Apply auto-scaling if we have valid bounds
+    if (isFinite(xMin) && isFinite(xMax) && isFinite(yMin) && isFinite(yMax)) {
+      const xRange = xMax - xMin;
+      const yRange = yMax - yMin;
+
+      // Add small padding to avoid edge cases
+      const xPadding = xRange * 0.05;
+      const yPadding = yRange * 0.05;
+
+      xMin -= xPadding;
+      xMax += xPadding;
+      yMin -= yPadding;
+      yMax += yPadding;
+
+      const finalXRange = xMax - xMin;
+      const finalYRange = yMax - yMin;
+
+      // Calculate scale and offset for fitting data to [-1, 1] range
+      // Scale: how much to shrink/expand the data
+      const scaleX = finalXRange > 0 ? 2 / finalXRange : 1;
+      const scaleY = finalYRange > 0 ? 2 / finalYRange : 1;
+
+      // Offset: where to position the center of the data
+      // Transform from data space to [-1, 1] space
+      const offsetX = -1 - xMin * scaleX;
+      const offsetY = -1 - yMin * scaleY;
+
+      plotLineRef.current.setGlobalTransform(
+        [scaleX, scaleY],
+        [offsetX, offsetY]
+      );
+    } else {
+      // Fallback to default transform if no valid data
+      plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
+    }
+
     // Reinitialize with updated visibility
     plotLineRef.current.initLines(lineDataRef.current);
     plotLineRef.current.draw();
@@ -124,6 +196,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
 
     lineDataRef.current = allLineData;
     plotLineRef.current.initLines(allLineData);
+    plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
     setIsCanvasInitialized(true);
 
     // Initial draw with all variables selected
