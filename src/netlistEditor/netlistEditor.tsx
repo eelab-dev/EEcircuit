@@ -47,11 +47,14 @@ const NetlistEditor: React.FC<NetlistEditorProps> = ({
       globalThis.removeEventListener("resize", handleResize);
     };
   }, []);
-  const handleEditor = React.useCallback((value: string | undefined) => {
-    if (value) {
-      //setNetList(value);
-    }
-  }, []);
+  const handleEditor = React.useCallback(
+    (value: string | undefined) => {
+      if (value !== undefined) {
+        setNetListToSim(value);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     if (selectedSimType === "None") {
@@ -62,7 +65,7 @@ const NetlistEditor: React.FC<NetlistEditorProps> = ({
       const newNetList = netList + "\n\n" + simConfig + "\n\n" + ".end";
       setNetListToSim(newNetList);
     }
-  }, [netList, netListToSim, simConfig, selectedSimType]);
+  }, [netList, simConfig, selectedSimType]);
 
   const handleConfigChange = React.useCallback(
     (config: string) => {
