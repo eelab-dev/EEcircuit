@@ -1,6 +1,15 @@
 import React, { useEffect, useState, useRef } from "react";
 import { ResultType } from "eecircuit-engine";
-import { Checkbox, CheckboxGroup, Fieldset, Flex, For } from "@chakra-ui/react";
+import {
+  Box,
+  Checkbox,
+  CheckboxGroup,
+  Fieldset,
+  Flex,
+  For,
+  Grid,
+  GridItem,
+} from "@chakra-ui/react";
 import { LineInitData, WebglLineThick, WebglPlot } from "webgl-plot";
 import { useColorMode } from "../components/ui/color-mode";
 import {
@@ -8,6 +17,7 @@ import {
   clearColorCache,
   type PlotColor,
 } from "./colorUtils";
+import Axis from "./axis";
 
 interface PlotProps {
   results: ResultType[];
@@ -22,7 +32,18 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
   const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
   const [hoveredVariable, setHoveredVariable] = useState<string | null>(null);
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
+  const [canvasDimensions, setCanvasDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
+  const [axisScales, setAxisScales] = useState({
+    scaleX: 1,
+    scaleY: 1,
+    offsetX: 0,
+    offsetY: 0,
+  });
   const { colorMode } = useColorMode();
+  const [isAxis] = useState(true);
 
   // Initialize with all variables selected by default
   useEffect(() => {
@@ -40,6 +61,76 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
       updatePlot();
     }
   }, [colorMode, isCanvasInitialized]);
+
+  // Monitor canvas size changes
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+
+    const updateCanvasDimensions = () => {
+      const rect = canvas.getBoundingClientRect();
+      const newWidth = rect.width;
+      const newHeight = rect.height;
+
+      setCanvasDimensions({
+        width: newWidth,
+        height: newHeight,
+      });
+
+      // If the canvas is initialized and size changed, update WebGL canvas size
+      if (isCanvasInitialized) {
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        const newCanvasWidth = newWidth * devicePixelRatio;
+        const newCanvasHeight = newHeight * devicePixelRatio;
+
+        if (
+          canvas.width !== newCanvasWidth ||
+          canvas.height !== newCanvasHeight
+        ) {
+          canvas.width = newCanvasWidth;
+          canvas.height = newCanvasHeight;
+
+          // Update WebGL viewport to match new canvas size
+          if (wglpRef.current) {
+            wglpRef.current.viewport(0, 0, newCanvasWidth, newCanvasHeight);
+          }
+
+          // Redraw the plot with new canvas size
+          if (wglpRef.current) {
+            updatePlot();
+          }
+        }
+      }
+    };
+
+    // Initial size update with a small delay to ensure layout is complete
+    const initialUpdate = () => {
+      requestAnimationFrame(() => {
+        updateCanvasDimensions();
+      });
+    };
+
+    initialUpdate();
+
+    // Use ResizeObserver to monitor canvas size changes
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(updateCanvasDimensions);
+    });
+    resizeObserver.observe(canvas);
+
+    // Also add window resize listener as backup
+    const handleWindowResize = () => {
+      requestAnimationFrame(updateCanvasDimensions);
+    };
+
+    window.addEventListener("resize", handleWindowResize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", handleWindowResize);
+    };
+  }, [canvasRef.current, isCanvasInitialized]); // Watch for canvas ref changes and initialization
 
   // Calculate and apply auto-scaling transform for visible lines
   const calculateAndApplyScaling = () => {
@@ -116,9 +207,13 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
         [scaleX, scaleY],
         [offsetX, offsetY]
       );
+
+      // Update axis scales for synchronization
+      setAxisScales({ scaleX, scaleY, offsetX, offsetY });
     } else {
       // Fallback to default transform if no valid data
       plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
+      setAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
     }
   };
 
@@ -170,54 +265,72 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
     if (!canvasRef.current || results.length === 0) return;
 
     const canvas = canvasRef.current;
-    const devicePixelRatio = window.devicePixelRatio || 1;
 
-    // Get the computed style dimensions
-    const rect = canvas.getBoundingClientRect();
-    const width = rect.width || 500;
-    const height = rect.height || 500;
+    // Use requestAnimationFrame to defer initialization until after layout
+    const rafId = requestAnimationFrame(() => {
+      if (!canvasRef.current || results.length === 0) return;
 
-    canvas.width = width * devicePixelRatio;
-    canvas.height = height * devicePixelRatio;
+      const devicePixelRatio = window.devicePixelRatio || 1;
 
-    // Initialize WebGL plot
-    wglpRef.current = new WebglPlot(canvas);
+      // Get the computed style dimensions after layout is complete
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width || 500;
+      const height = rect.height || 500;
 
-    const numX = results[0].numPoints;
-    const numVariables = results[0].numVariables;
+      canvas.width = width * devicePixelRatio;
+      canvas.height = height * devicePixelRatio;
 
-    // Create plot line with maximum possible lines
-    plotLineRef.current = new WebglLineThick(wglpRef.current, numVariables - 1);
+      // Initialize WebGL plot
+      wglpRef.current = new WebglPlot(canvas);
 
-    // Prepare line data for all variables (excluding X-axis at index 0)
-    const allLineData: LineInitData[] = [];
-    const array = new Float32Array(numX * 2);
+      const numX = results[0].numPoints;
+      const numVariables = results[0].numVariables;
 
-    for (let lineIndex = 1; lineIndex < numVariables; lineIndex++) {
-      const variableName = results[0].variableNames[lineIndex];
+      // Create plot line with maximum possible lines
+      plotLineRef.current = new WebglLineThick(
+        wglpRef.current,
+        numVariables - 1
+      );
 
-      // Fill array with x,y data
-      for (let i = 0; i < numX; i++) {
-        array[i * 2] = results[0].data[0].values[i] as number; // X-axis data
-        array[i * 2 + 1] = results[0].data[lineIndex].values[i] as number; // Y-axis data
+      // Prepare line data for all variables (excluding X-axis at index 0)
+      const allLineData: LineInitData[] = [];
+      const array = new Float32Array(numX * 2);
+
+      for (let lineIndex = 1; lineIndex < numVariables; lineIndex++) {
+        const variableName = results[0].variableNames[lineIndex];
+
+        // Fill array with x,y data
+        for (let i = 0; i < numX; i++) {
+          array[i * 2] = results[0].data[0].values[i] as number; // X-axis data
+          array[i * 2 + 1] = results[0].data[lineIndex].values[i] as number; // Y-axis data
+        }
+
+        allLineData.push({
+          points: new Float32Array(array),
+          scale: [1, 1],
+          offset: [0, 0],
+          color: generatePlotColor(
+            variableName,
+            colorMode,
+            colorMapRef.current
+          ),
+          thickness: 0.01,
+        });
       }
 
-      allLineData.push({
-        points: new Float32Array(array),
-        scale: [1, 1],
-        offset: [0, 0],
-        color: generatePlotColor(variableName, colorMode, colorMapRef.current),
-        thickness: 0.01,
-      });
-    }
+      lineDataRef.current = allLineData;
+      plotLineRef.current.initLines(allLineData);
+      plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
+      setIsCanvasInitialized(true);
 
-    lineDataRef.current = allLineData;
-    plotLineRef.current.initLines(allLineData);
-    plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
-    setIsCanvasInitialized(true);
+      // Initial draw with all variables selected
+      updatePlot();
+    });
 
-    // Initial draw with all variables selected
-    updatePlot();
+    // Cleanup function to cancel the animation frame if component unmounts
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
   }, [results]);
 
   // Update plot visibility when selected variables change
@@ -237,10 +350,67 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
   return (
     <Flex direction="row" w="100%" h="60vh" gap={4} p={4}>
       <Flex flex="1" minW="0">
-        <canvas
-          ref={canvasRef}
-          style={{ width: "100%", height: "100%", display: "block" }}
-        />
+        <Grid
+          templateRows={`1fr ${isAxis ? 1.5 : 0}em`}
+          templateColumns={`${isAxis ? 5 : 0}em 1fr`}
+          gap={0}
+        >
+          <GridItem
+            rowStart={1}
+            colStart={1}
+            bg="bg.subtle"
+            borderRight="solid 2px"
+          >
+            {isAxis ? (
+              <Axis
+                scale={axisScales.scaleY}
+                offset={axisScales.offsetY}
+                axis="y"
+                yHeight={`${canvasDimensions.height}px`}
+                theme={colorMode}
+              />
+            ) : (
+              <></>
+            )}
+          </GridItem>
+          <GridItem rowStart={1} colStart={2} bg="papayawhip">
+            <Box bg="bg.subtle">
+              <canvas
+                ref={canvasRef}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  display: "block",
+                }}
+              ></canvas>
+            </Box>
+          </GridItem>
+          <GridItem
+            rowStart={2}
+            colStart={1}
+            bg="bg.subtle"
+            borderTop="solid 2px"
+            borderRight="solid 2px"
+          />
+          <GridItem
+            rowStart={2}
+            colStart={2}
+            bg="bg.subtle"
+            borderTop={`${isAxis ? "solid 2px" : ""}`}
+          >
+            {isAxis ? (
+              <Axis
+                scale={axisScales.scaleX}
+                offset={axisScales.offsetX}
+                axis="x"
+                yHeight={`${canvasDimensions.height}px`}
+                theme={colorMode}
+              />
+            ) : (
+              <></>
+            )}
+          </GridItem>
+        </Grid>
       </Flex>
       {results.length > 0 && results[0].variableNames && (
         <Flex flexShrink="0" w="10em">
