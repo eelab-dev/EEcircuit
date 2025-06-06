@@ -239,8 +239,8 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
   }, [fullscreen]);
 
   const propertiesCallBack = React.useCallback(() => {
-    setPropertiesOpen(!propertiesOpen);
-  }, [propertiesOpen]);
+    setPropertiesOpen(false);
+  }, []);
 
   useEffect(() => {
     if (
@@ -359,7 +359,6 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
                 command: "setSelectedItemValue",
                 value: value,
               });
-              setSelectedItemNameValue({ name, value });
             }}
             onCloseButtonClick={propertiesCallBack}
           />
