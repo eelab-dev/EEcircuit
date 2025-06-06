@@ -356,7 +356,8 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
             nameValue={selectedItemNameValue}
             onApply={(name, value) => {
               sendCommand({
-                command: "setSelectedItemValue",
+                command: "setSelectedItemNameValue",
+                name: name,
                 value: value,
               });
             }}
