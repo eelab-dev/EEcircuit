@@ -14,8 +14,6 @@ type CanvasSize = {
   height: number;
 };
 
-//let ctx: CanvasRenderingContext2D | null;
-
 const Axis = ({
   scale,
   offset,
@@ -29,9 +27,6 @@ const Axis = ({
     width: 0,
     height: 0,
   });
-
-  //console.log("axis->", axis == "y");
-  //console.log("axis->", midpoint);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -58,7 +53,7 @@ const Axis = ({
           );
           console.log("rootFontSize->", rootFontSize);
           const scaleFactor = window.devicePixelRatio || 1;
-          const fontSize = 0.85 * rootFontSize * scaleFactor; // rem scaled by device pixel ratio
+          const fontSize = 0.85 * rootFontSize * scaleFactor;
           ctx2d.font = `${fontSize}px Courier New`;
           ctx2d.fillStyle = theme === "light" ? "black" : "white";
           ctx2d.strokeStyle = theme === "light" ? "black" : "white";
@@ -96,7 +91,7 @@ const Axis = ({
         resizeObserver.disconnect();
       };
     }
-  }, [canvasRef, theme, yHeight]); // Added yHeight to dependency array
+  }, [canvasRef, theme, yHeight]);
 
   useEffect(() => {
     if (ctx && axis == "x") {
@@ -139,6 +134,7 @@ const Axis = ({
     width: number,
     height: number
   ) => {
+    // Clear the canvas
     ctx2d.clearRect(0, 0, width, height);
 
     // Ensure context styling is set
@@ -152,16 +148,30 @@ const Axis = ({
     ctx2d.strokeStyle = theme === "light" ? "black" : "white";
 
     ctx2d.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const midpoint = -(offset - i / 3 + 1) / scale;
-      const x = (i / 6) * width;
+
+    // Calculate minimum spacing needed for text to avoid overlap
+    const sampleText = unitConvert2string(0, 2);
+    const textMetrics = ctx2d.measureText(sampleText);
+    const textWidth = textMetrics.width;
+    const minSpacing = textWidth + 10;
+
+    // Determine how many ticks we can actually fit
+    const maxTicks = Math.max(2, Math.floor(width / minSpacing));
+    const actualTicks = Math.min(6, maxTicks);
+
+    for (let i = 0; i < actualTicks; i++) {
+      const midpoint = -(offset - (i / (actualTicks - 1)) * 2 + 1) / scale;
+      const x = (i / (actualTicks - 1)) * width;
+
+      // Center the text horizontally at each tick position
+      const textX = Math.max(textWidth / 2, Math.min(width - textWidth / 2, x));
 
       ctx2d.fillText(
         unitConvert2string(midpoint, 2),
-        x,
+        textX - textWidth / 2,
         15 * (window.devicePixelRatio || 1)
       );
-      //ctx.fillRect(10, 10, 100, 100);
+
       ctx2d.moveTo(x, 0);
       ctx2d.lineTo(x, 10);
     }
@@ -173,7 +183,7 @@ const Axis = ({
     width: number,
     height: number
   ) => {
-    //console.log("yaxis->", canvasSize);
+    // Clear the canvas
     ctx2d.clearRect(0, 0, width, height);
 
     // Ensure context styling is set
@@ -196,7 +206,6 @@ const Axis = ({
         5 * (window.devicePixelRatio || 1),
         y
       );
-      //ctx.fillRect(10, 10, 100, 100);
       ctx2d.moveTo(width - 10, y);
       ctx2d.lineTo(width, y);
     }
@@ -208,6 +217,7 @@ const Axis = ({
       style={{
         width: axis === "x" ? "100%" : "5em",
         height: axis === "x" ? "1.5em" : yHeight,
+        backgroundColor: "transparent",
       }}
       ref={canvasRef}
     />

@@ -373,14 +373,15 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
               <></>
             )}
           </GridItem>
-          <GridItem rowStart={1} colStart={2} bg="papayawhip">
-            <Box bg="bg.subtle">
+          <GridItem rowStart={1} colStart={2}>
+            <Box>
               <canvas
                 ref={canvasRef}
                 style={{
                   width: "100%",
                   height: "100%",
                   display: "block",
+                  backgroundColor: "transparent",
                 }}
               ></canvas>
             </Box>
