@@ -15,6 +15,11 @@ import Status from "./status";
 
 type SchematicProps = { onNetlistExported: (netlist: string) => void };
 
+export type NameValuePair = {
+  name: string;
+  value: string;
+};
+
 const INITIAL_CANVAS_SIZE = 150; // Small fixed size for the first pass
 
 const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
@@ -25,7 +30,11 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
 
   const [coord, setCoord] = useState({ x: 0, y: 0 });
   const [pointerInfo, setPointerInfo] = useState<string>("");
-  const [selectedItemName, setSelectedItemName] = useState<string>("");
+  const [selectedItemNameValue, setSelectedItemNameValue] =
+    useState<NameValuePair>({
+      name: "",
+      value: "",
+    });
   const [availableComponents, setAvailableComponents] = useState<
     AvailableComponent[]
   >([]);
@@ -43,7 +52,10 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         setPointerInfo(msg.pointerInfo);
         break;
       case "selectedItem":
-        setSelectedItemName(msg.selectedItemName);
+        setSelectedItemNameValue({
+          name: msg.selectedItemName,
+          value: msg.selectedItemValue,
+        });
         break;
       case "netList":
         onNetlistExported(msg.netList);
@@ -231,12 +243,14 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
   }, [propertiesOpen]);
 
   useEffect(() => {
-    if (!(selectedItemName === "")) {
+    if (
+      !(selectedItemNameValue.name === "" && selectedItemNameValue.value === "")
+    ) {
       setPropertiesOpen(true);
     } else {
       setPropertiesOpen(false);
     }
-  }, [selectedItemName]);
+  }, [selectedItemNameValue]);
 
   // Add drag and drop support for schematic files
   useEffect(() => {
@@ -338,14 +352,24 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
           </IconButton>
         </Float>
         {propertiesOpen && (
-          <Properties onCloseButtonClick={propertiesCallBack} />
+          <Properties
+            nameValue={selectedItemNameValue}
+            onApply={(name, value) => {
+              sendCommand({
+                command: "setSelectedItemValue",
+                value: value,
+              });
+              setSelectedItemNameValue({ name, value });
+            }}
+            onCloseButtonClick={propertiesCallBack}
+          />
         )}
       </Box>
       <Flex spaceX={2} direction="row" p={2}>
         {/* ... status bar buttons ... */}
         <Button size="sm">{`X:${coord.x}, Y:${coord.y}`}</Button>
         <Button size="sm">{pointerInfo || "Info"}</Button>
-        <Button size="sm">{selectedItemName || "none"}</Button>
+        <Button size="sm">{selectedItemNameValue.name || "none"}</Button>
         <Box flex="1" />
 
         {<Status info={info} />}

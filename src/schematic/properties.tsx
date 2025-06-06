@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Button,
   CloseButton,
   Field,
   Flex,
@@ -9,13 +10,60 @@ import {
   Span,
   Stack,
 } from "@chakra-ui/react";
-import React from "react";
+import React, { useState } from "react";
+import { NameValuePair } from "./schematic";
 
 type PropertiesProps = {
   onCloseButtonClick: () => void;
+  nameValue: NameValuePair;
+  onApply: (name: string, value: string) => void;
 };
 
-const Properties: React.FC<PropertiesProps> = ({ onCloseButtonClick }) => {
+const Properties: React.FC<PropertiesProps> = ({
+  onCloseButtonClick,
+  nameValue = { name: "", value: "" },
+  onApply,
+}) => {
+  const [localNameValue, setLocalNameValue] = useState(nameValue);
+
+  // Track initial values to detect changes - only set once when component mounts or nameValue prop changes
+  const [initialNameValue, setInitialNameValue] = useState(nameValue);
+
+  // Use a ref to track the last nameValue to detect when it actually changes
+  const prevNameValueRef = React.useRef(nameValue);
+
+  // Only update when nameValue prop actually changes (not on every render)
+  React.useEffect(() => {
+    const prev = prevNameValueRef.current;
+    if (nameValue.name !== prev.name || nameValue.value !== prev.value) {
+      setLocalNameValue(nameValue);
+      setInitialNameValue(nameValue);
+      prevNameValueRef.current = nameValue;
+    }
+  }, [nameValue.name, nameValue.value]);
+
+  // Check if values have changed
+  const hasChanges =
+    localNameValue.name !== initialNameValue.name ||
+    localNameValue.value !== initialNameValue.value;
+
+  const handleNameChange = (newName: string) => {
+    setLocalNameValue((prev) => ({ ...prev, name: newName }));
+  };
+
+  const handleValueChange = (newValue: string) => {
+    setLocalNameValue((prev) => ({ ...prev, value: newValue }));
+  };
+
+  const handleApply = () => {
+    onApply?.(localNameValue.name, localNameValue.value);
+    setInitialNameValue(localNameValue);
+    onCloseButtonClick();
+  };
+
+  const handleCancel = () => {
+    setLocalNameValue(initialNameValue);
+  };
   return (
     <Float offset="10rem" placement="middle-end">
       <Flex
@@ -33,13 +81,54 @@ const Properties: React.FC<PropertiesProps> = ({ onCloseButtonClick }) => {
             <Span>Properties</Span>
             <Field.Root>
               <Field.Label>Name</Field.Label>
-              <Input placeholder="John Doe" />
+              <Input
+                placeholder="name"
+                value={localNameValue.name}
+                onChange={(e) => handleNameChange(e.target.value)}
+              />
             </Field.Root>
 
             <Field.Root>
-              <Field.Label>Email</Field.Label>
-              <Input placeholder="me@example.com" value={"10k"} />
+              <Field.Label>Value</Field.Label>
+              <Input
+                placeholder="value"
+                value={localNameValue.value}
+                onChange={(e) => handleValueChange(e.target.value)}
+              />
             </Field.Root>
+
+            {/* Action buttons */}
+            <Flex gap="2" mt="4">
+              {hasChanges ? (
+                <>
+                  <Button
+                    colorScheme="blue"
+                    size="sm"
+                    flex="1"
+                    onClick={handleApply}
+                  >
+                    Apply
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    flex="1"
+                    onClick={handleCancel}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  width="100%"
+                  onClick={onCloseButtonClick}
+                >
+                  Close
+                </Button>
+              )}
+            </Flex>
           </Stack>
         </Flex>
       </Flex>
