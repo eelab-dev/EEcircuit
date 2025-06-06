@@ -73,6 +73,8 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
       const newWidth = rect.width;
       const newHeight = rect.height;
 
+      console.log("Canvas dimensions update:", { newWidth, newHeight });
+
       setCanvasDimensions({
         width: newWidth,
         height: newHeight,
@@ -96,9 +98,10 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
             wglpRef.current.viewport(0, 0, newCanvasWidth, newCanvasHeight);
           }
 
-          // Redraw the plot with new canvas size
-          if (wglpRef.current) {
-            updatePlot();
+          // Force recalculation of scaling and redraw with new aspect ratio
+          if (wglpRef.current && plotLineRef.current) {
+            calculateAndApplyScaling();
+            plotLineRef.current.draw();
           }
         }
       }
@@ -193,8 +196,8 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
       const finalXRange = xMax - xMin;
       const finalYRange = yMax - yMin;
 
-      // Calculate scale and offset for fitting data to [-1, 1] range
-      // Scale: how much to shrink/expand the data
+      // Calculate scale to fit data to [-1, 1] range
+      // Let the plot fill the entire canvas without aspect ratio constraints
       const scaleX = finalXRange > 0 ? 2 / finalXRange : 1;
       const scaleY = finalYRange > 0 ? 2 / finalYRange : 1;
 
@@ -349,18 +352,15 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
 
   return (
     <Flex direction="row" w="100%" h="60vh" gap={4} p={4}>
-      <Flex flex="1" minW="0">
+      <Flex flex="1" minW="0" direction="column">
         <Grid
-          templateRows={`1fr ${isAxis ? 1.5 : 0}em`}
-          templateColumns={`${isAxis ? 5 : 0}em 1fr`}
+          templateRows={`minmax(0, 1fr) ${isAxis ? 1.5 : 0}em`}
+          templateColumns={`${isAxis ? 5 : 0}em minmax(0, 1fr)`}
           gap={0}
+          w="100%"
+          h="100%"
         >
-          <GridItem
-            rowStart={1}
-            colStart={1}
-            bg="bg.subtle"
-            borderRight="solid 2px"
-          >
+          <GridItem rowStart={1} colStart={1} borderRight="solid 2px">
             {isAxis ? (
               <Axis
                 scale={axisScales.scaleY}
@@ -373,8 +373,8 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
               <></>
             )}
           </GridItem>
-          <GridItem rowStart={1} colStart={2}>
-            <Box>
+          <GridItem rowStart={1} colStart={2} minW="0" minH="0">
+            <Box w="100%" h="100%" minW="0" minH="0">
               <canvas
                 ref={canvasRef}
                 style={{
@@ -389,14 +389,12 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
           <GridItem
             rowStart={2}
             colStart={1}
-            bg="bg.subtle"
             borderTop="solid 2px"
             borderRight="solid 2px"
           />
           <GridItem
             rowStart={2}
             colStart={2}
-            bg="bg.subtle"
             borderTop={`${isAxis ? "solid 2px" : ""}`}
           >
             {isAxis ? (
