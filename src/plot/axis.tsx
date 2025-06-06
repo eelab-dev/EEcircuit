@@ -37,33 +37,64 @@ const Axis = ({
     const canvas = canvasRef.current;
 
     if (canvas) {
-      const devicePixelRatio = window.devicePixelRatio || 1;
-      canvas.width = canvas.clientWidth * devicePixelRatio;
-      canvas.height = canvas.clientHeight * devicePixelRatio;
+      const setupCanvas = () => {
+        const devicePixelRatio = window.devicePixelRatio || 1;
 
-      setCanvasSize({ width: canvas.width, height: canvas.height });
-
-      const ctx2d = canvas.getContext("2d");
-      if (ctx2d) {
-        setCtx(ctx2d);
-        const rootFontSize = parseFloat(
-          getComputedStyle(document.documentElement).fontSize
-        );
-        console.log("rootFontSize->", rootFontSize);
-        const scaleFactor = window.devicePixelRatio || 1;
-        const fontSize = 0.85 * rootFontSize * scaleFactor; // rem scaled by device pixel ratio
-        ctx2d.font = `${fontSize}px Courier New`;
-        ctx2d.fillStyle = theme === "light" ? "black" : "white";
-        ctx2d.strokeStyle = theme === "light" ? "black" : "white";
-        if (axis === "x") {
-          updateX(ctx2d, canvas.width, canvas.height);
-        } else {
-          updateY(ctx2d, canvas.width, canvas.height);
+        // Check if canvas has proper dimensions
+        if (canvas.clientWidth === 0 || canvas.clientHeight === 0) {
+          console.log("Canvas dimensions not ready, skipping setup");
+          return;
         }
-      }
 
-      //const rect = canvas?.getBoundingClientRect();
-      //console.log("axis->", rect);
+        canvas.width = canvas.clientWidth * devicePixelRatio;
+        canvas.height = canvas.clientHeight * devicePixelRatio;
+
+        setCanvasSize({ width: canvas.width, height: canvas.height });
+
+        const ctx2d = canvas.getContext("2d");
+        if (ctx2d) {
+          const rootFontSize = parseFloat(
+            getComputedStyle(document.documentElement).fontSize
+          );
+          console.log("rootFontSize->", rootFontSize);
+          const scaleFactor = window.devicePixelRatio || 1;
+          const fontSize = 0.85 * rootFontSize * scaleFactor; // rem scaled by device pixel ratio
+          ctx2d.font = `${fontSize}px Courier New`;
+          ctx2d.fillStyle = theme === "light" ? "black" : "white";
+          ctx2d.strokeStyle = theme === "light" ? "black" : "white";
+
+          setCtx(ctx2d);
+
+          // Draw after context is fully configured
+          if (axis === "x") {
+            updateX(ctx2d, canvas.width, canvas.height);
+          } else {
+            updateY(ctx2d, canvas.width, canvas.height);
+          }
+        }
+        console.log("Visual size:", {
+          width: canvas.clientWidth,
+          height: canvas.clientHeight,
+        });
+        console.log("Buffer size:", {
+          width: canvas.width,
+          height: canvas.height,
+        });
+      };
+
+      // Set up ResizeObserver to handle dimension changes
+      const resizeObserver = new ResizeObserver(() => {
+        setupCanvas();
+      });
+
+      resizeObserver.observe(canvas);
+
+      // Initial setup
+      setupCanvas();
+
+      return () => {
+        resizeObserver.disconnect();
+      };
     }
   }, [canvasRef, theme, yHeight]); // Added yHeight to dependency array
 
@@ -110,6 +141,17 @@ const Axis = ({
   ) => {
     ctx2d.clearRect(0, 0, width, height);
 
+    // Ensure context styling is set
+    const rootFontSize = parseFloat(
+      getComputedStyle(document.documentElement).fontSize
+    );
+    const scaleFactor = window.devicePixelRatio || 1;
+    const fontSize = 0.85 * rootFontSize * scaleFactor;
+    ctx2d.font = `${fontSize}px Courier New`;
+    ctx2d.fillStyle = theme === "light" ? "black" : "white";
+    ctx2d.strokeStyle = theme === "light" ? "black" : "white";
+
+    ctx2d.beginPath();
     for (let i = 0; i < 6; i++) {
       const midpoint = -(offset - i / 3 + 1) / scale;
       const x = (i / 6) * width;
@@ -122,8 +164,8 @@ const Axis = ({
       //ctx.fillRect(10, 10, 100, 100);
       ctx2d.moveTo(x, 0);
       ctx2d.lineTo(x, 10);
-      ctx2d.stroke();
     }
+    ctx2d.stroke();
   };
 
   const updateY = (
@@ -133,6 +175,18 @@ const Axis = ({
   ) => {
     //console.log("yaxis->", canvasSize);
     ctx2d.clearRect(0, 0, width, height);
+
+    // Ensure context styling is set
+    const rootFontSize = parseFloat(
+      getComputedStyle(document.documentElement).fontSize
+    );
+    const scaleFactor = window.devicePixelRatio || 1;
+    const fontSize = 0.85 * rootFontSize * scaleFactor;
+    ctx2d.font = `${fontSize}px Courier New`;
+    ctx2d.fillStyle = theme === "light" ? "black" : "white";
+    ctx2d.strokeStyle = theme === "light" ? "black" : "white";
+
+    ctx2d.beginPath();
     for (let i = 0; i < 6; i++) {
       const midpoint = -(offset + i / 3 - 1) / scale;
       const y = (i / 6) * height;
@@ -145,8 +199,8 @@ const Axis = ({
       //ctx.fillRect(10, 10, 100, 100);
       ctx2d.moveTo(width - 10, y);
       ctx2d.lineTo(width, y);
-      ctx2d.stroke();
     }
+    ctx2d.stroke();
   };
 
   return (
