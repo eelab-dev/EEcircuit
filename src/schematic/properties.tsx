@@ -58,11 +58,27 @@ const Properties: React.FC<PropertiesProps> = ({
   const handleApply = () => {
     onApply?.(localNameValue.name, localNameValue.value);
     setInitialNameValue(localNameValue);
+    // Don't auto-close when applying via Enter key
+  };
+
+  const handleApplyAndClose = () => {
+    onApply?.(localNameValue.name, localNameValue.value);
+    setInitialNameValue(localNameValue);
     onCloseButtonClick();
   };
 
   const handleCancel = () => {
     setLocalNameValue(initialNameValue);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleApply();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onCloseButtonClick();
+    }
   };
   return (
     <Float offset="10rem" placement="middle-end">
@@ -85,6 +101,7 @@ const Properties: React.FC<PropertiesProps> = ({
                 placeholder="name"
                 value={localNameValue.name}
                 onChange={(e) => handleNameChange(e.target.value)}
+                onKeyDown={handleKeyDown}
               />
             </Field.Root>
 
@@ -94,6 +111,7 @@ const Properties: React.FC<PropertiesProps> = ({
                 placeholder="value"
                 value={localNameValue.value}
                 onChange={(e) => handleValueChange(e.target.value)}
+                onKeyDown={handleKeyDown}
               />
             </Field.Root>
 
@@ -105,7 +123,7 @@ const Properties: React.FC<PropertiesProps> = ({
                     colorScheme="blue"
                     size="sm"
                     flex="1"
-                    onClick={handleApply}
+                    onClick={handleApplyAndClose}
                   >
                     Apply
                   </Button>
