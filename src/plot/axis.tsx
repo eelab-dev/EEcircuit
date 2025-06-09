@@ -218,9 +218,9 @@ const Axis = ({
     // WebGL plot uses normalized coordinates from -1 to +1
     // The transformation is: normalizedCoord = (value * scale + offset)
     // So: value = (normalizedCoord - offset) / scale
-    
-    const leftValue = (-1 - offset) / scale;   // Value at left edge (normalized coord = -1)
-    const rightValue = (1 - offset) / scale;   // Value at right edge (normalized coord = +1)
+
+    const leftValue = (-1 - offset) / scale; // Value at left edge (normalized coord = -1)
+    const rightValue = (1 - offset) / scale; // Value at right edge (normalized coord = +1)
     const minValue = Math.min(leftValue, rightValue);
     const maxValue = Math.max(leftValue, rightValue);
 
@@ -247,7 +247,7 @@ const Axis = ({
       // WebGL transformation: normalizedCoord = (value * scale + offset)
       // Canvas position: x = (normalizedCoord + 1) / 2 * width
       const normalizedCoord = tickValue * scale + offset;
-      const x = (normalizedCoord + 1) / 2 * width;
+      const x = ((normalizedCoord + 1) / 2) * width;
 
       // Draw ticks at exact pixel positions (no tolerance needed for exact alignment)
       if (x >= 0 && x <= width) {
@@ -300,9 +300,9 @@ const Axis = ({
     // WebGL plot uses normalized coordinates from -1 to +1
     // The transformation is: normalizedCoord = (value * scale + offset)
     // So: value = (normalizedCoord - offset) / scale
-    
-    const topValue = (-1 - offset) / scale;      // Value at top edge (normalized coord = -1)
-    const bottomValue = (1 - offset) / scale;   // Value at bottom edge (normalized coord = +1)
+
+    const topValue = (-1 - offset) / scale; // Value at top edge (normalized coord = -1)
+    const bottomValue = (1 - offset) / scale; // Value at bottom edge (normalized coord = +1)
     const minValue = Math.min(topValue, bottomValue);
     const maxValue = Math.max(topValue, bottomValue);
 
@@ -327,7 +327,7 @@ const Axis = ({
       // WebGL transformation: normalizedCoord = (value * scale + offset)
       // Canvas position: y = (1 - normalizedCoord) / 2 * height (inverted Y for screen coordinates)
       const normalizedCoord = tickValue * scale + offset;
-      const y = (1 - normalizedCoord) / 2 * height;
+      const y = ((1 - normalizedCoord) / 2) * height;
 
       // Draw ticks at exact pixel positions (no tolerance needed for exact alignment)
       if (y >= 0 && y <= height) {
@@ -338,7 +338,7 @@ const Axis = ({
           5 * (window.devicePixelRatio || 1),
           y + textHeight / 3 // Offset text vertically to center it on the tick
         );
-        
+
         // Draw tick mark at exact position
         ctx2d.moveTo(width - 10, y);
         ctx2d.lineTo(width, y);
