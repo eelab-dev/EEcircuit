@@ -129,6 +129,69 @@ const Axis = ({
     }
   }, [yHeight, ctx, axis, canvasSize.width, canvasSize.height]);
 
+  // Function to generate nice tick intervals
+  const getNiceTickInterval = (range: number, maxTicks: number): number => {
+    if (range === 0) return 1;
+
+    const roughInterval = range / (maxTicks - 1);
+    const magnitude = Math.pow(
+      10,
+      Math.floor(Math.log10(Math.abs(roughInterval)))
+    );
+    const normalizedInterval = roughInterval / magnitude;
+
+    let niceInterval: number;
+    if (normalizedInterval <= 1) {
+      niceInterval = 1;
+    } else if (normalizedInterval <= 2) {
+      niceInterval = 2;
+    } else if (normalizedInterval <= 5) {
+      niceInterval = 5;
+    } else {
+      niceInterval = 10;
+    }
+
+    return niceInterval * magnitude;
+  };
+
+  const generateNiceTicks = (
+    min: number,
+    max: number,
+    maxTicks: number
+  ): number[] => {
+    const range = Math.abs(max - min);
+    if (range === 0) return [min];
+
+    const tickInterval = getNiceTickInterval(range, maxTicks);
+
+    // Find the first tick that covers the range properly
+    const startValue = Math.min(min, max);
+    const endValue = Math.max(min, max);
+
+    // Align first tick to a nice boundary
+    const firstTick = Math.floor(startValue / tickInterval) * tickInterval;
+
+    const ticks: number[] = [];
+    let tick = firstTick;
+
+    // Generate ticks from start to end
+    while (tick <= endValue + tickInterval * 0.001 && ticks.length < maxTicks) {
+      // Small epsilon for floating point
+      if (tick >= startValue - tickInterval * 0.001) {
+        // Include ticks slightly before start
+        ticks.push(tick);
+      }
+      tick += tickInterval;
+    }
+
+    // Ensure we have at least 2 ticks
+    if (ticks.length < 2) {
+      return [startValue, endValue];
+    }
+
+    return ticks;
+  };
+
   const updateX = (
     ctx2d: CanvasRenderingContext2D,
     width: number,
@@ -149,31 +212,57 @@ const Axis = ({
 
     ctx2d.beginPath();
 
+    // Calculate the value range for the visible area
+    const leftValue = -(offset - -1) / scale; // Value at left edge
+    const rightValue = -(offset - 1) / scale; // Value at right edge
+    const minValue = Math.min(leftValue, rightValue);
+    const maxValue = Math.max(leftValue, rightValue);
+
     // Calculate minimum spacing needed for text to avoid overlap
-    const sampleText = unitConvert2string(0, 2);
+    const sampleText = unitConvert2string(
+      Math.abs(maxValue) > Math.abs(minValue) ? maxValue : minValue,
+      2
+    );
     const textMetrics = ctx2d.measureText(sampleText);
     const textWidth = textMetrics.width;
-    const minSpacing = textWidth + 10;
+    const minSpacing = textWidth + 30; // Extra padding for readability
 
     // Determine how many ticks we can actually fit
     const maxTicks = Math.max(2, Math.floor(width / minSpacing));
-    const actualTicks = Math.min(6, maxTicks);
 
-    for (let i = 0; i < actualTicks; i++) {
-      const midpoint = -(offset - (i / (actualTicks - 1)) * 2 + 1) / scale;
-      const x = (i / (actualTicks - 1)) * width;
+    // Generate nice tick values
+    const tickValues = generateNiceTicks(minValue, maxValue, maxTicks);
 
-      // Center the text horizontally at each tick position
-      const textX = Math.max(textWidth / 2, Math.min(width - textWidth / 2, x));
+    // Sort tick values to ensure proper order
+    tickValues.sort((a, b) => a - b);
 
-      ctx2d.fillText(
-        unitConvert2string(midpoint, 2),
-        textX - textWidth / 2,
-        15 * (window.devicePixelRatio || 1)
-      );
+    for (const tickValue of tickValues) {
+      // Convert tick value back to x position
+      // Reverse the transformation: x = (value - leftValue) / (rightValue - leftValue) * width
+      const normalizedPos = (tickValue - leftValue) / (rightValue - leftValue);
+      const x = normalizedPos * width;
 
-      ctx2d.moveTo(x, 0);
-      ctx2d.lineTo(x, 10);
+      // Only draw if within canvas bounds with some tolerance
+      if (x >= -5 && x <= width + 5) {
+        const text = unitConvert2string(tickValue, 2);
+        const currentTextMetrics = ctx2d.measureText(text);
+        const currentTextWidth = currentTextMetrics.width;
+
+        // Center the text horizontally at each tick position
+        const textX = Math.max(
+          currentTextWidth / 2,
+          Math.min(width - currentTextWidth / 2, x)
+        );
+
+        ctx2d.fillText(
+          text,
+          textX - currentTextWidth / 2,
+          15 * (window.devicePixelRatio || 1)
+        );
+
+        ctx2d.moveTo(x, 0);
+        ctx2d.lineTo(x, 10);
+      }
     }
     ctx2d.stroke();
   };
@@ -197,17 +286,47 @@ const Axis = ({
     ctx2d.strokeStyle = theme === "light" ? "black" : "white";
 
     ctx2d.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const midpoint = -(offset + i / 3 - 1) / scale;
-      const y = (i / 6) * height;
 
-      ctx2d.fillText(
-        unitConvert2string(midpoint, 2),
-        5 * (window.devicePixelRatio || 1),
-        y
-      );
-      ctx2d.moveTo(width - 10, y);
-      ctx2d.lineTo(width, y);
+    // Calculate the value range for the visible area
+    const topValue = -(offset + 0 - 1) / scale; // Value at top edge
+    const bottomValue = -(offset + 1 - 1) / scale; // Value at bottom edge
+    const minValue = Math.min(topValue, bottomValue);
+    const maxValue = Math.max(topValue, bottomValue);
+
+    // Calculate minimum spacing needed for text to avoid overlap
+    const textHeight =
+      0.85 *
+      parseFloat(getComputedStyle(document.documentElement).fontSize) *
+      (window.devicePixelRatio || 1);
+    const minSpacing = textHeight + 15; // Extra padding for readability
+
+    // Determine how many ticks we can actually fit
+    const maxTicks = Math.max(2, Math.floor(height / minSpacing));
+
+    // Generate nice tick values
+    const tickValues = generateNiceTicks(minValue, maxValue, maxTicks);
+
+    // Sort tick values to ensure proper order
+    tickValues.sort((a, b) => a - b);
+
+    for (const tickValue of tickValues) {
+      // Convert tick value back to y position
+      // For Y-axis, we need to map from value space to pixel space
+      const normalizedPos = (tickValue - topValue) / (bottomValue - topValue);
+      const y = normalizedPos * height;
+
+      // Only draw if within canvas bounds with some tolerance
+      if (y >= -5 && y <= height + 5) {
+        const text = unitConvert2string(tickValue, 2);
+
+        ctx2d.fillText(
+          text,
+          5 * (window.devicePixelRatio || 1),
+          y + textHeight / 3 // Offset text vertically to center it on the tick
+        );
+        ctx2d.moveTo(width - 10, y);
+        ctx2d.lineTo(width, y);
+      }
     }
     ctx2d.stroke();
   };
