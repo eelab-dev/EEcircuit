@@ -215,8 +215,12 @@ const Axis = ({
 
     // Calculate the value range for the visible area
     // These calculations must match exactly with the plot canvas coordinate system
-    const leftValue = -(offset - (-1)) / scale;  // Value at left edge (x = 0)
-    const rightValue = -(offset - 1) / scale;    // Value at right edge (x = width)
+    // WebGL plot uses normalized coordinates from -1 to +1
+    // The transformation is: normalizedCoord = (value * scale + offset)
+    // So: value = (normalizedCoord - offset) / scale
+    
+    const leftValue = (-1 - offset) / scale;   // Value at left edge (normalized coord = -1)
+    const rightValue = (1 - offset) / scale;   // Value at right edge (normalized coord = +1)
     const minValue = Math.min(leftValue, rightValue);
     const maxValue = Math.max(leftValue, rightValue);
 
@@ -240,9 +244,10 @@ const Axis = ({
 
     for (const tickValue of tickValues) {
       // Convert tick value back to x position using the exact same transformation as the plot
-      // This ensures perfect alignment between axis and canvas
-      const normalizedPos = (tickValue - leftValue) / (rightValue - leftValue);
-      const x = normalizedPos * width;
+      // WebGL transformation: normalizedCoord = (value * scale + offset)
+      // Canvas position: x = (normalizedCoord + 1) / 2 * width
+      const normalizedCoord = tickValue * scale + offset;
+      const x = (normalizedCoord + 1) / 2 * width;
 
       // Draw ticks at exact pixel positions (no tolerance needed for exact alignment)
       if (x >= 0 && x <= width) {
@@ -292,8 +297,12 @@ const Axis = ({
 
     // Calculate the value range for the visible area
     // These calculations must match exactly with the plot canvas coordinate system
-    const topValue = -(offset + 0 - 1) / scale;     // Value at top edge (y = 0)
-    const bottomValue = -(offset + 1 - 1) / scale;  // Value at bottom edge (y = height)
+    // WebGL plot uses normalized coordinates from -1 to +1
+    // The transformation is: normalizedCoord = (value * scale + offset)
+    // So: value = (normalizedCoord - offset) / scale
+    
+    const topValue = (-1 - offset) / scale;      // Value at top edge (normalized coord = -1)
+    const bottomValue = (1 - offset) / scale;   // Value at bottom edge (normalized coord = +1)
     const minValue = Math.min(topValue, bottomValue);
     const maxValue = Math.max(topValue, bottomValue);
 
@@ -315,9 +324,10 @@ const Axis = ({
 
     for (const tickValue of tickValues) {
       // Convert tick value back to y position using the exact same transformation as the plot
-      // This ensures perfect alignment between axis and canvas
-      const normalizedPos = (tickValue - topValue) / (bottomValue - topValue);
-      const y = normalizedPos * height;
+      // WebGL transformation: normalizedCoord = (value * scale + offset)
+      // Canvas position: y = (1 - normalizedCoord) / 2 * height (inverted Y for screen coordinates)
+      const normalizedCoord = tickValue * scale + offset;
+      const y = (1 - normalizedCoord) / 2 * height;
 
       // Draw ticks at exact pixel positions (no tolerance needed for exact alignment)
       if (y >= 0 && y <= height) {
