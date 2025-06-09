@@ -179,7 +179,8 @@ const Axis = ({
       // Small epsilon for floating point
       if (tick >= startValue - tickInterval * 0.001) {
         // Include ticks slightly before start
-        ticks.push(tick);
+        // Round to avoid floating point precision issues
+        ticks.push(Math.round(tick / tickInterval) * tickInterval);
       }
       tick += tickInterval;
     }
@@ -213,8 +214,9 @@ const Axis = ({
     ctx2d.beginPath();
 
     // Calculate the value range for the visible area
-    const leftValue = -(offset - -1) / scale; // Value at left edge
-    const rightValue = -(offset - 1) / scale; // Value at right edge
+    // These calculations must match exactly with the plot canvas coordinate system
+    const leftValue = -(offset - (-1)) / scale;  // Value at left edge (x = 0)
+    const rightValue = -(offset - 1) / scale;    // Value at right edge (x = width)
     const minValue = Math.min(leftValue, rightValue);
     const maxValue = Math.max(leftValue, rightValue);
 
@@ -237,13 +239,13 @@ const Axis = ({
     tickValues.sort((a, b) => a - b);
 
     for (const tickValue of tickValues) {
-      // Convert tick value back to x position
-      // Reverse the transformation: x = (value - leftValue) / (rightValue - leftValue) * width
+      // Convert tick value back to x position using the exact same transformation as the plot
+      // This ensures perfect alignment between axis and canvas
       const normalizedPos = (tickValue - leftValue) / (rightValue - leftValue);
       const x = normalizedPos * width;
 
-      // Only draw if within canvas bounds with some tolerance
-      if (x >= -5 && x <= width + 5) {
+      // Draw ticks at exact pixel positions (no tolerance needed for exact alignment)
+      if (x >= 0 && x <= width) {
         const text = unitConvert2string(tickValue, 2);
         const currentTextMetrics = ctx2d.measureText(text);
         const currentTextWidth = currentTextMetrics.width;
@@ -260,6 +262,7 @@ const Axis = ({
           15 * (window.devicePixelRatio || 1)
         );
 
+        // Draw tick mark at exact position
         ctx2d.moveTo(x, 0);
         ctx2d.lineTo(x, 10);
       }
@@ -288,8 +291,9 @@ const Axis = ({
     ctx2d.beginPath();
 
     // Calculate the value range for the visible area
-    const topValue = -(offset + 0 - 1) / scale; // Value at top edge
-    const bottomValue = -(offset + 1 - 1) / scale; // Value at bottom edge
+    // These calculations must match exactly with the plot canvas coordinate system
+    const topValue = -(offset + 0 - 1) / scale;     // Value at top edge (y = 0)
+    const bottomValue = -(offset + 1 - 1) / scale;  // Value at bottom edge (y = height)
     const minValue = Math.min(topValue, bottomValue);
     const maxValue = Math.max(topValue, bottomValue);
 
@@ -310,13 +314,13 @@ const Axis = ({
     tickValues.sort((a, b) => a - b);
 
     for (const tickValue of tickValues) {
-      // Convert tick value back to y position
-      // For Y-axis, we need to map from value space to pixel space
+      // Convert tick value back to y position using the exact same transformation as the plot
+      // This ensures perfect alignment between axis and canvas
       const normalizedPos = (tickValue - topValue) / (bottomValue - topValue);
       const y = normalizedPos * height;
 
-      // Only draw if within canvas bounds with some tolerance
-      if (y >= -5 && y <= height + 5) {
+      // Draw ticks at exact pixel positions (no tolerance needed for exact alignment)
+      if (y >= 0 && y <= height) {
         const text = unitConvert2string(tickValue, 2);
 
         ctx2d.fillText(
@@ -324,6 +328,8 @@ const Axis = ({
           5 * (window.devicePixelRatio || 1),
           y + textHeight / 3 // Offset text vertically to center it on the tick
         );
+        
+        // Draw tick mark at exact position
         ctx2d.moveTo(width - 10, y);
         ctx2d.lineTo(width, y);
       }

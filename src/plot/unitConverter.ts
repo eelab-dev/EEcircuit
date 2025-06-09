@@ -3,6 +3,11 @@
  */
 
 export const unitConvert2string = (n: number, fractDigits?: number): string => {
+  // Handle zero case
+  if (n === 0) {
+    return "0";
+  }
+
   const nLog10 = Math.log10(Math.abs(n));
 
   let nLog10Near = 0;
