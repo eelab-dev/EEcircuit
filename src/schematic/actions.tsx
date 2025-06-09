@@ -65,7 +65,11 @@ const ComponentList: React.FC<ComponentListProps> = ({
           </span>
           <Flex justify="center" align="center" height="3em" overflow="hidden">
             <div
-              style={{ width: "100%", height: "100%" }}
+              style={{
+                width: "100%",
+                height: "100%",
+                transform: "scaleY(-1)",
+              }}
               dangerouslySetInnerHTML={{
                 __html: component.svg,
               }}
