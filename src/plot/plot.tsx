@@ -184,9 +184,10 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
       const xRange = xMax - xMin;
       const yRange = yMax - yMin;
 
-      // Add small padding to avoid edge cases
-      const xPadding = xRange * 0.05;
-      const yPadding = yRange * 0.05;
+      // Add padding to avoid edge cases and ensure constant values are visible
+      // For constant values (zero range), use minimum padding to create visual separation
+      const xPadding = xRange > 0 ? xRange * 0.05 : Math.abs(xMin) * 0.1 || 1;
+      const yPadding = yRange > 0 ? yRange * 0.05 : Math.abs(yMin) * 0.1 || 1;
 
       xMin -= xPadding;
       xMax += xPadding;
