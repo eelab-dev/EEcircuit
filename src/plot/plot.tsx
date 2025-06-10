@@ -253,7 +253,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
       lineData.color[3] = isSelected ? 1 : 0;
 
       // Increase thickness for hovered lines if they are selected
-      lineData.thickness = isSelected && isHovered ? 0.02 : 0.01;
+      lineData.thickness = isSelected && isHovered ? 10 : 5;
     });
 
     // Calculate and apply auto-scaling for visible lines
@@ -318,7 +318,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
             colorMode,
             colorMapRef.current
           ),
-          thickness: 0.01,
+          thickness: 5,
         });
       }
 
