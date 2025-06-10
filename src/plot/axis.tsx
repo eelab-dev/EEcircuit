@@ -19,7 +19,7 @@ const Axis = ({
   axis,
   theme = "dark",
 }: AxisType): JSX.Element => {
-  console.log(`Axis ${axis} component rendered with:`, { scale, offset });
+  // console.log(`Axis ${axis} component rendered with:`, { scale, offset });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ctx, setCtx] = useState<CanvasRenderingContext2D>();
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({
@@ -89,26 +89,26 @@ const Axis = ({
 
   useEffect(() => {
     if (ctx && axis == "x") {
-      console.log("X-axis scale:", scale, "offset:", offset);
+      // console.log("X-axis scale:", scale, "offset:", offset);
       // Only update if we have meaningful scale/offset values (not default initial values)
       if (!(scale === 1 && offset === 0)) {
-        console.log("X-axis calling updateX with valid values");
+        // console.log("X-axis calling updateX with valid values");
         updateX(ctx, canvasSize.width, canvasSize.height);
       } else {
-        console.log("X-axis skipping updateX - using default values");
+        // console.log("X-axis skipping updateX - using default values");
       }
     }
   }, [ctx, scale, offset, canvasSize.width, canvasSize.height]);
 
   useEffect(() => {
     if (ctx && axis == "y") {
-      console.log("Y-axis scale:", scale, "offset:", offset);
+      // console.log("Y-axis scale:", scale, "offset:", offset);
       // Only update if we have meaningful scale/offset values (not default initial values)
       if (!(scale === 1 && offset === 0)) {
-        console.log("Y-axis calling updateY with valid values");
+        // console.log("Y-axis calling updateY with valid values");
         updateY(ctx, canvasSize.width, canvasSize.height);
       } else {
-        console.log("Y-axis skipping updateY - using default values");
+        // console.log("Y-axis skipping updateY - using default values");
       }
     }
   }, [ctx, scale, offset, canvasSize.width, canvasSize.height]);
@@ -208,16 +208,16 @@ const Axis = ({
     const minValue = Math.min(leftValue, rightValue);
     const maxValue = Math.max(leftValue, rightValue);
 
-    console.log(
-      "X-axis: scale=",
-      scale,
-      "offset=",
-      offset,
-      "leftValue=",
-      leftValue,
-      "rightValue=",
-      rightValue
-    );
+    // console.log(
+    //   "X-axis: scale=",
+    //   scale,
+    //   "offset=",
+    //   offset,
+    //   "leftValue=",
+    //   leftValue,
+    //   "rightValue=",
+    //   rightValue
+    // );
 
     // Calculate minimum spacing needed for text to avoid overlap
     const sampleText = unitConvert2string(
