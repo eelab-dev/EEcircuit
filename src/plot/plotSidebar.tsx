@@ -49,7 +49,7 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             X-axis: {variableNames[0]}
           </Fieldset.Legend>
 
-          <HStack mb="3" spacing="1" w="100%">
+          <HStack mb="3" gap="1" w="100%">
             <Button
               size="xs"
               variant="outline"
