@@ -19,6 +19,7 @@ const Axis = ({
   axis,
   theme = "dark",
 }: AxisType): JSX.Element => {
+  console.log(`Axis ${axis} component rendered with:`, { scale, offset });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ctx, setCtx] = useState<CanvasRenderingContext2D>();
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({
@@ -58,12 +59,7 @@ const Axis = ({
 
           setCtx(ctx2d);
 
-          // Draw after context is fully configured
-          if (axis === "x") {
-            updateX(ctx2d, canvas.width, canvas.height);
-          } else {
-            updateY(ctx2d, canvas.width, canvas.height);
-          }
+          // Don't draw initially - let the useEffect handle drawing when scale/offset are ready
         }
         console.log("Visual size:", {
           width: canvas.clientWidth,
@@ -93,15 +89,29 @@ const Axis = ({
 
   useEffect(() => {
     if (ctx && axis == "x") {
-      updateX(ctx, canvasSize.width, canvasSize.height);
+      console.log("X-axis scale:", scale, "offset:", offset);
+      // Only update if we have meaningful scale/offset values (not default initial values)
+      if (!(scale === 1 && offset === 0)) {
+        console.log("X-axis calling updateX with valid values");
+        updateX(ctx, canvasSize.width, canvasSize.height);
+      } else {
+        console.log("X-axis skipping updateX - using default values");
+      }
     }
-  }, [scale, offset]);
+  }, [ctx, scale, offset, canvasSize.width, canvasSize.height]);
 
   useEffect(() => {
     if (ctx && axis == "y") {
-      updateY(ctx, canvasSize.width, canvasSize.height);
+      console.log("Y-axis scale:", scale, "offset:", offset);
+      // Only update if we have meaningful scale/offset values (not default initial values)
+      if (!(scale === 1 && offset === 0)) {
+        console.log("Y-axis calling updateY with valid values");
+        updateY(ctx, canvasSize.width, canvasSize.height);
+      } else {
+        console.log("Y-axis skipping updateY - using default values");
+      }
     }
-  }, [scale, offset]);
+  }, [ctx, scale, offset, canvasSize.width, canvasSize.height]);
 
   // Function to generate nice tick intervals
   const getNiceTickInterval = (range: number, maxTicks: number): number => {
@@ -197,6 +207,17 @@ const Axis = ({
     const rightValue = (1 - offset) / scale; // Value at right edge (normalized coord = +1)
     const minValue = Math.min(leftValue, rightValue);
     const maxValue = Math.max(leftValue, rightValue);
+
+    console.log(
+      "X-axis: scale=",
+      scale,
+      "offset=",
+      offset,
+      "leftValue=",
+      leftValue,
+      "rightValue=",
+      rightValue
+    );
 
     // Calculate minimum spacing needed for text to avoid overlap
     const sampleText = unitConvert2string(

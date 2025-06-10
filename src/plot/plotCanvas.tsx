@@ -43,6 +43,11 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   });
   const [isAxis] = useState(true);
 
+  // Debug: Log axisScales changes
+  useEffect(() => {
+    console.log("axisScales state updated:", axisScales);
+  }, [axisScales]);
+
   // Clear color cache when color mode changes
   useEffect(() => {
     clearColorCache(colorMapRef.current);
@@ -122,9 +127,15 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
   // Calculate and apply auto-scaling transform for visible lines
   const calculateAndApplyScaling = () => {
+    console.log(
+      "calculateAndApplyScaling called, selectedVariables:",
+      selectedVariables
+    );
     if (!plotLineRef.current || selectedVariables.length === 0) {
       // Fallback to default transform if no visible lines
+      console.log("Using fallback transform");
       plotLineRef.current?.setGlobalTransform([1, 1], [-1, -1]);
+      setAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
       return;
     }
 
@@ -198,7 +209,10 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       );
 
       // Update axis scales for synchronization
+      console.log("Setting axis scales:", { scaleX, scaleY, offsetX, offsetY });
+      console.log("Data bounds:", { xMin, xMax, yMin, yMax });
       setAxisScales({ scaleX, scaleY, offsetX, offsetY });
+      console.log("axisScales state after setAxisScales call");
     } else {
       // Fallback to default transform if no valid data
       plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
