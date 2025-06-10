@@ -349,15 +349,9 @@ const EEcircuit: React.FC = () => {
       height={"100vh"}
       display={"flex"}
       flexDirection={"column"}
-      flexGrow={0}
+      overflow="hidden"
     >
-      <Flex
-        direction="row"
-        alignItems={"self-end"}
-        gapX={2}
-        flex={1}
-        flexGrow={0}
-      >
+      <Flex direction="row" alignItems={"self-end"} gapX={2} flexShrink={0}>
         <Logo />
         <Text>a SPICE based circuit simulator</Text>
       </Flex>
@@ -369,6 +363,7 @@ const EEcircuit: React.FC = () => {
         display={"flex"}
         flexDirection="column"
         flex={1}
+        minHeight={0}
       >
         <Tabs.List flexShrink={0}>
           <Tabs.Trigger value="schematic" marginRight="0.5em">
@@ -382,18 +377,18 @@ const EEcircuit: React.FC = () => {
           </Tabs.Trigger>
         </Tabs.List>
 
-        <Tabs.Content value="schematic" flex={1}>
+        <Tabs.Content value="schematic" flex={1} minHeight={0}>
           <Schematic onNetlistExported={exportedNetlist} />
         </Tabs.Content>
 
-        <Tabs.Content value="netlist" flex={1}>
+        <Tabs.Content value="netlist" flex={1} minHeight={0}>
           <NetlistEditor
             netList={netList}
             onResultsObtained={handleNewResults}
           />
         </Tabs.Content>
 
-        <Tabs.Content value="plot" flex={1}>
+        <Tabs.Content value="plot" flex={1} minHeight={0}>
           <Plot results={results} />
           {/* <PlotArray
               resultArray={resultArray}

@@ -4,7 +4,6 @@ import { unitConvert2string } from "./unitConverter.ts";
 type AxisType = {
   scale: number;
   offset: number;
-  yHeight: string;
   axis: "x" | "y";
   theme?: "light" | "dark";
 };
@@ -17,7 +16,6 @@ type CanvasSize = {
 const Axis = ({
   scale,
   offset,
-  yHeight,
   axis,
   theme = "dark",
 }: AxisType): JSX.Element => {
@@ -91,7 +89,7 @@ const Axis = ({
         resizeObserver.disconnect();
       };
     }
-  }, [canvasRef, theme, yHeight]);
+  }, [canvasRef, theme]); // Remove yHeight dependency
 
   useEffect(() => {
     if (ctx && axis == "x") {
@@ -104,30 +102,6 @@ const Axis = ({
       updateY(ctx, canvasSize.width, canvasSize.height);
     }
   }, [scale, offset]);
-
-  // Handle canvas resize when yHeight changes
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (canvas && ctx) {
-      const devicePixelRatio = window.devicePixelRatio || 1;
-      const newWidth = canvas.clientWidth * devicePixelRatio;
-      const newHeight = canvas.clientHeight * devicePixelRatio;
-
-      // Only update if dimensions actually changed
-      if (newWidth !== canvasSize.width || newHeight !== canvasSize.height) {
-        canvas.width = newWidth;
-        canvas.height = newHeight;
-        setCanvasSize({ width: newWidth, height: newHeight });
-
-        // Redraw with new dimensions
-        if (axis === "x") {
-          updateX(ctx, newWidth, newHeight);
-        } else {
-          updateY(ctx, newWidth, newHeight);
-        }
-      }
-    }
-  }, [yHeight, ctx, axis, canvasSize.width, canvasSize.height]);
 
   // Function to generate nice tick intervals
   const getNiceTickInterval = (range: number, maxTicks: number): number => {
@@ -351,7 +325,7 @@ const Axis = ({
     <canvas
       style={{
         width: axis === "x" ? "100%" : "5em",
-        height: axis === "x" ? "1.5em" : yHeight,
+        height: axis === "x" ? "1.5em" : "100%",
         backgroundColor: "transparent",
       }}
       ref={canvasRef}

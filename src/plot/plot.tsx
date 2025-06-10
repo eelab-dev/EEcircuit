@@ -32,10 +32,6 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
   const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
   const [hoveredVariable, setHoveredVariable] = useState<string | null>(null);
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
-  const [canvasDimensions, setCanvasDimensions] = useState({
-    width: 0,
-    height: 0,
-  });
   const [axisScales, setAxisScales] = useState({
     scaleX: 1,
     scaleY: 1,
@@ -74,11 +70,6 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
       const newHeight = rect.height;
 
       console.log("Canvas dimensions update:", { newWidth, newHeight });
-
-      setCanvasDimensions({
-        width: newWidth,
-        height: newHeight,
-      });
 
       // If the canvas is initialized and size changed, update WebGL canvas size
       if (isCanvasInitialized) {
@@ -352,14 +343,15 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
   }, [hoveredVariable, isCanvasInitialized]);
 
   return (
-    <Flex direction="row" w="100%" h="60vh" gap={4} p={4}>
-      <Flex flex="1" minW="0" direction="column">
+    <Flex direction="row" w="100%" h="100%" gap={4} p={4} overflow="hidden">
+      <Flex flex="1" minW="0" direction="column" minHeight={0}>
         <Grid
           templateRows={`minmax(0, 1fr) ${isAxis ? 1.5 : 0}em`}
           templateColumns={`${isAxis ? 5 : 0}em minmax(0, 1fr)`}
           gap={0}
           w="100%"
           h="100%"
+          minHeight={0}
         >
           <GridItem rowStart={1} colStart={1} borderRight="solid 2px">
             {isAxis ? (
@@ -367,15 +359,20 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
                 scale={axisScales.scaleY}
                 offset={axisScales.offsetY}
                 axis="y"
-                yHeight={`${canvasDimensions.height}px`}
                 theme={colorMode}
               />
             ) : (
               <></>
             )}
           </GridItem>
-          <GridItem rowStart={1} colStart={2} minW="0" minH="0">
-            <Box w="100%" h="100%" minW="0" minH="0">
+          <GridItem
+            rowStart={1}
+            colStart={2}
+            minW="0"
+            minH="0"
+            overflow="hidden"
+          >
+            <Box w="100%" h="100%" minW="0" minH="0" overflow="hidden">
               <canvas
                 ref={canvasRef}
                 style={{
@@ -403,7 +400,6 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
                 scale={axisScales.scaleX}
                 offset={axisScales.offsetX}
                 axis="x"
-                yHeight={`${canvasDimensions.height}px`}
                 theme={colorMode}
               />
             ) : (
@@ -413,8 +409,8 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
         </Grid>
       </Flex>
       {results.length > 0 && results[0].variableNames && (
-        <Flex flexShrink="0" w="10em">
-          <Fieldset.Root w="100%">
+        <Flex flexShrink="0" w="10em" minHeight={0} overflow="hidden">
+          <Fieldset.Root w="100%" h="100%">
             <CheckboxGroup
               value={selectedVariables}
               onValueChange={setSelectedVariables}
@@ -423,7 +419,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
               <Fieldset.Legend fontSize="sm" mb="2">
                 X-axis: {results[0].variableNames[0]}
               </Fieldset.Legend>
-              <Fieldset.Content>
+              <Fieldset.Content overflowY="auto" maxHeight="100%">
                 <For each={results[0].variableNames.slice(1)}>
                   {(value) => (
                     <Checkbox.Root
