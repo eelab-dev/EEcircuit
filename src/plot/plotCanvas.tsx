@@ -117,11 +117,27 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       requestAnimationFrame(updateCanvasDimensions);
     };
 
+    // Handle page visibility changes (when switching tabs)
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isCanvasInitialized) {
+        // Page became visible again - redraw plot
+        console.log("Page became visible, redrawing plot");
+        requestAnimationFrame(() => {
+          if (wglpRef.current && plotLineRef.current) {
+            calculateAndApplyScaling();
+            plotLineRef.current.draw();
+          }
+        });
+      }
+    };
+
     window.addEventListener("resize", handleWindowResize);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener("resize", handleWindowResize);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [canvasRef.current, isCanvasInitialized]); // Watch for canvas ref changes and initialization
 

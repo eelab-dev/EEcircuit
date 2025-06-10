@@ -26,6 +26,7 @@ const Axis = ({
     width: 0,
     height: 0,
   });
+  const [forceRedraw, setForceRedraw] = useState(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -34,9 +35,12 @@ const Axis = ({
       const setupCanvas = () => {
         const devicePixelRatio = window.devicePixelRatio || 1;
 
-        // Check if canvas has proper dimensions
+        // Check if canvas has proper dimensions - but don't skip if dimensions are 0
+        // Instead, we'll handle zero dimensions gracefully
         if (canvas.clientWidth === 0 || canvas.clientHeight === 0) {
-          console.log("Canvas dimensions not ready, skipping setup");
+          // Clear the context and canvas size so drawing effects won't try to draw
+          setCtx(undefined);
+          setCanvasSize({ width: 0, height: 0 });
           return;
         }
 
@@ -50,7 +54,6 @@ const Axis = ({
           const rootFontSize = parseFloat(
             getComputedStyle(document.documentElement).fontSize
           );
-          console.log("rootFontSize->", rootFontSize);
           const scaleFactor = window.devicePixelRatio || 1;
           const fontSize = 0.85 * rootFontSize * scaleFactor;
           ctx2d.font = `${fontSize}px Courier New`;
@@ -61,57 +64,81 @@ const Axis = ({
 
           // Don't draw initially - let the useEffect handle drawing when scale/offset are ready
         }
-        console.log("Visual size:", {
-          width: canvas.clientWidth,
-          height: canvas.clientHeight,
-        });
-        console.log("Buffer size:", {
-          width: canvas.width,
-          height: canvas.height,
-        });
       };
 
       // Set up ResizeObserver to handle dimension changes
       const resizeObserver = new ResizeObserver(() => {
-        setupCanvas();
+        // Use requestAnimationFrame to ensure proper timing
+        requestAnimationFrame(() => {
+          setupCanvas();
+        });
       });
 
       resizeObserver.observe(canvas);
 
-      // Initial setup
-      setupCanvas();
+      // Handle page visibility changes (when switching tabs)
+      const handleVisibilityChange = () => {
+        if (!document.hidden) {
+          // Page became visible again - redraw axes
+          setForceRedraw((prev) => prev + 1);
+          requestAnimationFrame(() => {
+            setupCanvas();
+          });
+        }
+      };
+
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+
+      // Initial setup with a slight delay to ensure DOM is ready
+      requestAnimationFrame(() => {
+        setupCanvas();
+      });
 
       return () => {
         resizeObserver.disconnect();
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange
+        );
       };
     }
   }, [canvasRef, theme]); // Remove yHeight dependency
 
+  // Add an effect to ensure we redraw when context becomes available after being lost
   useEffect(() => {
-    if (ctx && axis == "x") {
-      // console.log("X-axis scale:", scale, "offset:", offset);
-      // Only update if we have meaningful scale/offset values (not default initial values)
-      if (!(scale === 1 && offset === 0)) {
-        // console.log("X-axis calling updateX with valid values");
-        updateX(ctx, canvasSize.width, canvasSize.height);
-      } else {
-        // console.log("X-axis skipping updateX - using default values");
-      }
+    if (ctx && canvasSize.width > 0 && canvasSize.height > 0) {
+      // Force redraw when context becomes available
+      setForceRedraw((prev) => prev + 1);
     }
-  }, [ctx, scale, offset, canvasSize.width, canvasSize.height]);
+  }, [ctx, axis]);
 
   useEffect(() => {
-    if (ctx && axis == "y") {
-      // console.log("Y-axis scale:", scale, "offset:", offset);
-      // Only update if we have meaningful scale/offset values (not default initial values)
-      if (!(scale === 1 && offset === 0)) {
-        // console.log("Y-axis calling updateY with valid values");
-        updateY(ctx, canvasSize.width, canvasSize.height);
-      } else {
-        // console.log("Y-axis skipping updateY - using default values");
-      }
+    if (ctx && axis == "x" && canvasSize.width > 0 && canvasSize.height > 0) {
+      updateX(ctx, canvasSize.width, canvasSize.height);
     }
-  }, [ctx, scale, offset, canvasSize.width, canvasSize.height]);
+  }, [
+    ctx,
+    scale,
+    offset,
+    canvasSize.width,
+    canvasSize.height,
+    theme,
+    forceRedraw,
+  ]);
+
+  useEffect(() => {
+    if (ctx && axis == "y" && canvasSize.width > 0 && canvasSize.height > 0) {
+      updateY(ctx, canvasSize.width, canvasSize.height);
+    }
+  }, [
+    ctx,
+    scale,
+    offset,
+    canvasSize.width,
+    canvasSize.height,
+    theme,
+    forceRedraw,
+  ]);
 
   // Function to generate nice tick intervals
   const getNiceTickInterval = (range: number, maxTicks: number): number => {
