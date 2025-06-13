@@ -534,9 +534,9 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
             position="absolute"
             top="10px"
             right="10px"
-            size="sm"
+            size="md"
             variant={crosshairSnapToLines ? "solid" : "outline"}
-            colorScheme={crosshairSnapToLines ? "blue" : "gray"}
+            colorScheme={crosshairSnapToLines ? "white" : "gray.800"}
             onClick={() => setCrosshairSnapToLines(!crosshairSnapToLines)}
             fontSize="xs"
             px={2}
@@ -552,8 +552,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
             boxShadow="sm"
             bg={
               colorMode === "dark"
-                ? "rgba(45, 55, 72, 0.8)"
-                : "rgba(255, 255, 255, 0.8)"
+                ? "rgba(45, 55, 72, 0.7)"
+                : "rgba(255, 255, 255, 0.7)"
             }
             backdropFilter="blur(4px)"
             _hover={{
@@ -574,8 +574,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               left="10px"
               bg={
                 colorMode === "dark"
-                  ? "rgba(26, 32, 44, 0.5)"
-                  : "rgba(255, 255, 255, 0.5)"
+                  ? "rgba(26, 32, 44, 0.7)"
+                  : "rgba(255, 255, 255, 0.7)"
               }
               backdropFilter="blur(4px)"
               color={colorMode === "dark" ? "white" : "black"}
@@ -585,8 +585,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               border="1px solid"
               borderColor={
                 colorMode === "dark"
-                  ? "rgba(113, 128, 150, 0.1)"
-                  : "rgba(203, 213, 224, 0.1)"
+                  ? "rgba(113, 128, 150, 0.5)"
+                  : "rgba(203, 213, 224, 0.5)"
               }
               fontSize="sm"
               fontFamily="monospace"
