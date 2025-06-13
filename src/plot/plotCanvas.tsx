@@ -12,6 +12,7 @@ import {
   clearColorCache,
   type PlotColor,
 } from "./colorUtils";
+import { formatEngineering } from "./formatUtils";
 import Axis from "./axis";
 
 interface PlotCanvasProps {
@@ -42,6 +43,10 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
   const [showCrosshair, setShowCrosshair] = useState(false);
+  const [crosshairCoords, setCrosshairCoords] = useState<{
+    x: number;
+    y: number;
+  }>({ x: 0, y: 0 });
   const [axisScales, setAxisScales] = useState<AxisScales>({
     scaleX: 1,
     scaleY: 1,
@@ -158,6 +163,13 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     // Convert mouse coordinates to normalized device coordinates [-1, 1]
     const ndcX = (mouseX / rect.width) * 2 - 1;
     const ndcY = -((mouseY / rect.height) * 2 - 1); // Flip Y coordinate
+
+    // Convert NDC coordinates back to data coordinates
+    const dataX = (ndcX - axisScales.offsetX) / axisScales.scaleX;
+    const dataY = (ndcY - axisScales.offsetY) / axisScales.scaleY;
+
+    // Update crosshair coordinates state
+    setCrosshairCoords({ x: dataX, y: dataY });
 
     // Create horizontal line (constant Y, varying X)
     const horizontalPoints = new Float32Array([-1, ndcY, 1, ndcY]);
@@ -441,7 +453,36 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
         )}
       </GridItem>
       <GridItem rowStart={1} colStart={2} minW="0" minH="0" overflow="hidden">
-        <Box w="100%" h="100%" minW="0" minH="0" overflow="hidden">
+        <Box
+          w="100%"
+          h="100%"
+          minW="0"
+          minH="0"
+          overflow="hidden"
+          position="relative"
+        >
+          {/* Crosshair coordinates display */}
+          {showCrosshair && (
+            <Box
+              position="absolute"
+              top="10px"
+              left="10px"
+              bg={colorMode === "dark" ? "gray.800" : "white"}
+              color={colorMode === "dark" ? "white" : "black"}
+              px="8px"
+              py="4px"
+              borderRadius="md"
+              border="1px solid"
+              borderColor={colorMode === "dark" ? "gray.600" : "gray.300"}
+              fontSize="sm"
+              fontFamily="monospace"
+              zIndex={10}
+              boxShadow="sm"
+            >
+              X: {formatEngineering(crosshairCoords.x)}, Y:{" "}
+              {formatEngineering(crosshairCoords.y)}
+            </Box>
+          )}
           <canvas
             ref={canvasRef}
             style={{
