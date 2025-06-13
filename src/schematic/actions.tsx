@@ -84,19 +84,49 @@ const ComponentList: React.FC<ComponentListProps> = ({
 
 const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isCompact, setIsCompact] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   const clickCallBack = React.useCallback(() => {
     setIsOpen(false);
   }, []);
 
+  React.useEffect(() => {
+    const handleResize = () => {
+      // Use viewport height units - 45rem is approximately 720px
+      const viewportHeight = window.innerHeight;
+      const shouldBeCompact = viewportHeight < 40 * 16; // 40rem in pixels (640px)
+
+      console.log(
+        "Viewport height:",
+        viewportHeight,
+        "Should be compact:",
+        shouldBeCompact
+      );
+      setIsCompact(shouldBeCompact);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   return (
-    <Flex
-      direction="column"
-      spaceY={2}
-      flexWrap={"wrap"}
-      bg="gray.800"
-      padding={1.5}
-      borderRadius="md"
+    <div
+      ref={containerRef}
+      style={{
+        display: "grid",
+        gridTemplateColumns: isCompact ? "1fr 1fr" : "1fr",
+        gap: isCompact ? "0.25rem" : "0.5rem",
+        backgroundColor: "var(--chakra-colors-gray-800)",
+        padding: "0.375rem",
+        borderRadius: "0.375rem",
+        width: "fit-content",
+        maxWidth: isCompact ? "7rem" : "auto",
+      }}
     >
       <Tooltip content="Select/Move" showArrow openDelay={300}>
         <IconButton>
@@ -108,7 +138,7 @@ const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
           <Move />
         </IconButton>
       </Tooltip>
-      <Separator />
+      <Separator display={isCompact ? "none" : "block"} />
       <Tooltip content="Add Wire" showArrow openDelay={300}>
         <IconButton>
           <Cable />
@@ -145,13 +175,13 @@ const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
           </Popover.Positioner>
         </Portal>
       </Popover.Root>
-      <Separator />
+      <Separator display={isCompact ? "none" : "block"} />
       <Tooltip content="Delete Selected" showArrow openDelay={300}>
         <IconButton>
           <Trash2 />
         </IconButton>
       </Tooltip>
-      <Separator />
+      <Separator display={isCompact ? "none" : "block"} />
       <Tooltip content="Hand Tool" showArrow openDelay={300}>
         <IconButton>
           <Hand />
@@ -181,7 +211,7 @@ const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
           <FileDown />
         </IconButton>
       </Tooltip>
-    </Flex>
+    </div>
   );
 };
 
