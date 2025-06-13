@@ -1,5 +1,6 @@
 import React from "react";
 import { Flex, IconButton, Popover, Portal, Separator } from "@chakra-ui/react";
+import { Tooltip } from "../components/ui/tooltip";
 
 import {
   Cable,
@@ -97,16 +98,22 @@ const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
       padding={1.5}
       borderRadius="md"
     >
-      <IconButton>
-        <MousePointer />
-      </IconButton>
-      <IconButton>
-        <Move />
-      </IconButton>
+      <Tooltip content="Select/Move" showArrow openDelay={300}>
+        <IconButton>
+          <MousePointer />
+        </IconButton>
+      </Tooltip>
+      <Tooltip content="Pan View" showArrow openDelay={300}>
+        <IconButton>
+          <Move />
+        </IconButton>
+      </Tooltip>
       <Separator />
-      <IconButton>
-        <Cable />
-      </IconButton>
+      <Tooltip content="Add Wire" showArrow openDelay={300}>
+        <IconButton>
+          <Cable />
+        </IconButton>
+      </Tooltip>
       <Popover.Root
         positioning={{ placement: "right" }}
         closeOnInteractOutside={false}
@@ -114,13 +121,15 @@ const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
         modal={true}
       >
         <Popover.Trigger asChild>
-          <IconButton
-            onClick={() => {
-              setIsOpen(!isOpen);
-            }}
-          >
-            <CopyPlus />
-          </IconButton>
+          <Tooltip content="Add Component" showArrow openDelay={300}>
+            <IconButton
+              onClick={() => {
+                setIsOpen(!isOpen);
+              }}
+            >
+              <CopyPlus />
+            </IconButton>
+          </Tooltip>
         </Popover.Trigger>
         <Portal>
           <Popover.Positioner>
@@ -137,29 +146,41 @@ const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
         </Portal>
       </Popover.Root>
       <Separator />
-      <IconButton>
-        <Trash2 />
-      </IconButton>
+      <Tooltip content="Delete Selected" showArrow openDelay={300}>
+        <IconButton>
+          <Trash2 />
+        </IconButton>
+      </Tooltip>
       <Separator />
-      <IconButton>
-        <Hand />
-      </IconButton>
-      <IconButton
-        onClick={() => {
-          sendCommand({ command: "view", viewType: "fit" });
-        }}
-      >
-        <Fullscreen />
-      </IconButton>
-      <IconButton>
-        <CircleDot />
-      </IconButton>
-      <IconButton>
-        <ImageDown />
-      </IconButton>
-      <IconButton>
-        <FileDown />
-      </IconButton>
+      <Tooltip content="Hand Tool" showArrow openDelay={300}>
+        <IconButton>
+          <Hand />
+        </IconButton>
+      </Tooltip>
+      <Tooltip content="Fit to Screen" showArrow openDelay={300}>
+        <IconButton
+          onClick={() => {
+            sendCommand({ command: "view", viewType: "fit" });
+          }}
+        >
+          <Fullscreen />
+        </IconButton>
+      </Tooltip>
+      <Tooltip content="Add Node" showArrow openDelay={300}>
+        <IconButton>
+          <CircleDot />
+        </IconButton>
+      </Tooltip>
+      <Tooltip content="Export Image" showArrow openDelay={300}>
+        <IconButton>
+          <ImageDown />
+        </IconButton>
+      </Tooltip>
+      <Tooltip content="Export File" showArrow openDelay={300}>
+        <IconButton>
+          <FileDown />
+        </IconButton>
+      </Tooltip>
     </Flex>
   );
 };
