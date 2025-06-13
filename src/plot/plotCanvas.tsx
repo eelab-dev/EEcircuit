@@ -1,7 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ResultType } from "eecircuit-engine";
 import { Box, Grid, GridItem } from "@chakra-ui/react";
-import { LineConfig, WebglLineThick, WebglPlot } from "webgl-plot";
+import {
+  LineConfig,
+  WebglLineThick,
+  WebglLinePlot,
+  WebglPlot,
+} from "webgl-plot";
 import {
   generatePlotColor,
   clearColorCache,
@@ -32,9 +37,11 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wglpRef = useRef<WebglPlot | null>(null);
   const plotLineRef = useRef<WebglLineThick | null>(null);
+  const crosshairRef = useRef<WebglLinePlot | null>(null);
   const lineDataRef = useRef<LineConfig[]>([]);
   const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
+  const [showCrosshair, setShowCrosshair] = useState(false);
   const [axisScales, setAxisScales] = useState<AxisScales>({
     scaleX: 1,
     scaleY: 1,
@@ -140,6 +147,28 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [canvasRef.current, isCanvasInitialized]); // Watch for canvas ref changes and initialization
+
+  // Update crosshair position
+  const updateCrosshair = (mouseX: number, mouseY: number) => {
+    if (!crosshairRef.current || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+
+    // Convert mouse coordinates to normalized device coordinates [-1, 1]
+    const ndcX = (mouseX / rect.width) * 2 - 1;
+    const ndcY = -((mouseY / rect.height) * 2 - 1); // Flip Y coordinate
+
+    // Create horizontal line (constant Y, varying X)
+    const horizontalPoints = new Float32Array([-1, ndcY, 1, ndcY]);
+
+    // Create vertical line (constant X, varying Y)
+    const verticalPoints = new Float32Array([ndcX, -1, ndcX, 1]);
+
+    // Update crosshair lines
+    crosshairRef.current.updateLinePoints(0, horizontalPoints); // Horizontal line
+    crosshairRef.current.updateLinePoints(1, verticalPoints); // Vertical line
+  };
 
   // Calculate and apply auto-scaling transform for visible lines
   const calculateAndApplyScaling = () => {
@@ -274,6 +303,11 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     calculateAndApplyScaling();
 
     plotLineRef.current.draw();
+
+    // Draw crosshair if visible
+    if (showCrosshair && crosshairRef.current) {
+      crosshairRef.current.draw();
+    }
   };
 
   // Initialize canvas and WebGL plot only once when results change
@@ -298,6 +332,27 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
       // Initialize WebGL plot
       wglpRef.current = new WebglPlot(canvas);
+
+      // Initialize crosshair (thin lines)
+      crosshairRef.current = wglpRef.current.newThinLinePlotter(2);
+
+      // Create crosshair lines data (2 lines: horizontal and vertical)
+      const crosshairLines: LineConfig[] = [
+        {
+          points: new Float32Array([-1, 0, 1, 0]), // Horizontal line
+          color: [0, 1, 0, 0.8], // Green with transparency
+          thickness: 1,
+          enabled: true,
+        },
+        {
+          points: new Float32Array([0, -1, 0, 1]), // Vertical line
+          color: [0, 1, 0, 0.8], // Green with transparency
+          thickness: 1,
+          enabled: true,
+        },
+      ];
+
+      crosshairRef.current.initLines(crosshairLines);
 
       const numX = results[0].numPoints;
       const numVariables = results[0].numVariables;
@@ -394,6 +449,25 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               height: "100%",
               display: "block",
               backgroundColor: "transparent",
+              cursor: showCrosshair ? "crosshair" : "default",
+            }}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const mouseX = e.clientX - rect.left;
+              const mouseY = e.clientY - rect.top;
+              updateCrosshair(mouseX, mouseY);
+              if (isCanvasInitialized) {
+                updatePlot();
+              }
+            }}
+            onMouseEnter={() => {
+              setShowCrosshair(true);
+            }}
+            onMouseLeave={() => {
+              setShowCrosshair(false);
+              if (isCanvasInitialized) {
+                updatePlot();
+              }
             }}
           ></canvas>
         </Box>
