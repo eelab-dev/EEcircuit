@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ResultType } from "eecircuit-engine";
 import { Box, Grid, GridItem } from "@chakra-ui/react";
-import { LineInitData, WebglLineThick, WebglPlot } from "webgl-plot";
+import { LineConfig, WebglLineThick, WebglPlot } from "webgl-plot";
 import {
   generatePlotColor,
   clearColorCache,
@@ -32,7 +32,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wglpRef = useRef<WebglPlot | null>(null);
   const plotLineRef = useRef<WebglLineThick | null>(null);
-  const lineDataRef = useRef<LineInitData[]>([]);
+  const lineDataRef = useRef<LineConfig[]>([]);
   const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
   const [axisScales, setAxisScales] = useState<AxisScales>({
@@ -255,20 +255,24 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
         colorMode,
         colorMapRef.current
       );
-      lineData.color = [...currentColor];
 
-      // Set alpha to 0 for hidden lines, 1 for visible lines
-      lineData.color[3] = isSelected ? 1 : 0;
+      // Update line properties using the new API methods
+      plotLineRef.current!.updateLineColor(index, currentColor);
+      plotLineRef.current!.setLineEnabled(index, isSelected);
 
       // Increase thickness for hovered lines if they are selected
-      lineData.thickness = isSelected && isHovered ? 10 : 5;
+      const thickness = isSelected && isHovered ? 10 : 5;
+      plotLineRef.current!.updateLineThickness(index, thickness);
+
+      // Update local cache for consistency
+      lineData.color = [...currentColor];
+      lineData.enabled = isSelected;
+      lineData.thickness = thickness;
     });
 
     // Calculate and apply auto-scaling for visible lines
     calculateAndApplyScaling();
 
-    // Reinitialize with updated visibility
-    plotLineRef.current.initLines(lineDataRef.current);
     plotLineRef.current.draw();
   };
 
@@ -300,12 +304,12 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
       // Create plot line with maximum possible lines
       plotLineRef.current = new WebglLineThick(
-        wglpRef.current,
+        { gl: wglpRef.current.gl },
         numVariables - 1
       );
 
       // Prepare line data for all variables (excluding X-axis at index 0)
-      const allLineData: LineInitData[] = [];
+      const allLineData: LineConfig[] = [];
       const array = new Float32Array(numX * 2);
 
       for (let lineIndex = 1; lineIndex < numVariables; lineIndex++) {
@@ -319,14 +323,15 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
         allLineData.push({
           points: new Float32Array(array),
-          scale: [1, 1],
-          offset: [0, 0],
           color: generatePlotColor(
             variableName,
             colorMode,
             colorMapRef.current
           ),
           thickness: 5,
+          scale: [1, 1],
+          offset: [0, 0],
+          enabled: true,
         });
       }
 
