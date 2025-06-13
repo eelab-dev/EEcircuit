@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ResultType } from "eecircuit-engine";
-import { Box, Grid, GridItem } from "@chakra-ui/react";
+import { Box, Grid, GridItem, Button } from "@chakra-ui/react";
 import {
   LineConfig,
   WebglLineThick,
@@ -43,6 +43,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
   const [showCrosshair, setShowCrosshair] = useState(false);
+  const [crosshairSnapToLines, setCrosshairSnapToLines] = useState(false);
   const [crosshairCoords, setCrosshairCoords] = useState<{
     x: number;
     y: number;
@@ -153,7 +154,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     };
   }, [canvasRef.current, isCanvasInitialized]); // Watch for canvas ref changes and initialization
 
-  // Update crosshair position
+  // Update crosshair position - can snap to nearest plot line or move freely
   const updateCrosshair = (mouseX: number, mouseY: number) => {
     if (!crosshairRef.current || !canvasRef.current) return;
 
@@ -161,21 +162,88 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     const rect = canvas.getBoundingClientRect();
 
     // Convert mouse coordinates to normalized device coordinates [-1, 1]
-    const ndcX = (mouseX / rect.width) * 2 - 1;
-    const ndcY = -((mouseY / rect.height) * 2 - 1); // Flip Y coordinate
+    const mouseNdcX = (mouseX / rect.width) * 2 - 1;
+    const mouseNdcY = -((mouseY / rect.height) * 2 - 1); // Flip Y coordinate
 
-    // Convert NDC coordinates back to data coordinates
-    const dataX = (ndcX - axisScales.offsetX) / axisScales.scaleX;
-    const dataY = (ndcY - axisScales.offsetY) / axisScales.scaleY;
+    let finalDataX, finalDataY, finalNdcX, finalNdcY;
+
+    if (
+      crosshairSnapToLines &&
+      results.length &&
+      selectedVariables.length > 0
+    ) {
+      // SNAP TO LINES MODE: Find the closest point on any visible line
+      const mouseDataX = (mouseNdcX - axisScales.offsetX) / axisScales.scaleX;
+      const mouseDataY = (mouseNdcY - axisScales.offsetY) / axisScales.scaleY;
+
+      let closestPoint = { x: mouseDataX, y: mouseDataY, distance: Infinity };
+
+      const variableNames = results[0].variableNames.slice(1); // Exclude X-axis
+
+      lineDataRef.current.forEach((lineData, index) => {
+        const variableName = variableNames[index];
+        const isSelected = selectedVariables.includes(variableName);
+
+        if (!isSelected || !lineData.enabled) return;
+
+        const points = lineData.points;
+
+        // Find the closest X value in the data
+        let closestXIndex = 0;
+        let minXDiff = Infinity;
+
+        for (let i = 0; i < points.length; i += 2) {
+          const x = points[i];
+          const xDiff = Math.abs(x - mouseDataX);
+          if (xDiff < minXDiff) {
+            minXDiff = xDiff;
+            closestXIndex = i;
+          }
+        }
+
+        // Check the closest point and its neighbors for the best Y match
+        const checkIndices = [closestXIndex];
+        if (closestXIndex > 0) checkIndices.push(closestXIndex - 2);
+        if (closestXIndex < points.length - 2)
+          checkIndices.push(closestXIndex + 2);
+
+        for (const idx of checkIndices) {
+          if (idx >= 0 && idx < points.length) {
+            const x = points[idx];
+            const y = points[idx + 1];
+
+            // Calculate distance to mouse position (weighted more towards Y difference)
+            const xDiff = Math.abs(x - mouseDataX);
+            const yDiff = Math.abs(y - mouseDataY);
+            const distance = xDiff * 0.3 + yDiff * 0.7; // Prioritize Y proximity
+
+            if (distance < closestPoint.distance) {
+              closestPoint = { x, y, distance };
+            }
+          }
+        }
+      });
+
+      finalDataX = closestPoint.x;
+      finalDataY = closestPoint.y;
+      finalNdcX = closestPoint.x * axisScales.scaleX + axisScales.offsetX;
+      finalNdcY = closestPoint.y * axisScales.scaleY + axisScales.offsetY;
+    } else {
+      // FREE ROAMING MODE: Use mouse position directly
+      finalDataX = (mouseNdcX - axisScales.offsetX) / axisScales.scaleX;
+      finalDataY = (mouseNdcY - axisScales.offsetY) / axisScales.scaleY;
+      finalNdcX = mouseNdcX;
+      finalNdcY = mouseNdcY;
+    }
 
     // Update crosshair coordinates state
-    setCrosshairCoords({ x: dataX, y: dataY });
+    setCrosshairCoords({ x: finalDataX, y: finalDataY });
 
     // Create horizontal line (constant Y, varying X)
-    const horizontalPoints = new Float32Array([-1, ndcY, 1, ndcY]);
+    const horizontalPoints = new Float32Array([-1, finalNdcY, 1, finalNdcY]);
 
     // Create vertical line (constant X, varying Y)
-    const verticalPoints = new Float32Array([ndcX, -1, ndcX, 1]);
+    const verticalPoints = new Float32Array([finalNdcX, -1, finalNdcX, 1]);
 
     // Update crosshair lines
     crosshairRef.current.updateLinePoints(0, horizontalPoints); // Horizontal line
@@ -461,19 +529,65 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
           overflow="hidden"
           position="relative"
         >
-          {/* Crosshair coordinates display */}
+          {/* Crosshair snap toggle button - always visible */}
+          <Button
+            position="absolute"
+            top="10px"
+            right="10px"
+            size="sm"
+            variant={crosshairSnapToLines ? "solid" : "outline"}
+            colorScheme={crosshairSnapToLines ? "blue" : "gray"}
+            onClick={() => setCrosshairSnapToLines(!crosshairSnapToLines)}
+            fontSize="xs"
+            px={2}
+            py={1}
+            height="auto"
+            minW="auto"
+            zIndex={10}
+            title={
+              crosshairSnapToLines
+                ? "Crosshair snaps to lines (Click to disable)"
+                : "Crosshair moves freely (Click to snap to lines)"
+            }
+            boxShadow="sm"
+            bg={
+              colorMode === "dark"
+                ? "rgba(45, 55, 72, 0.8)"
+                : "rgba(255, 255, 255, 0.8)"
+            }
+            backdropFilter="blur(4px)"
+            _hover={{
+              bg:
+                colorMode === "dark"
+                  ? "rgba(45, 55, 72, 0.9)"
+                  : "rgba(255, 255, 255, 0.9)",
+            }}
+          >
+            {crosshairSnapToLines ? "📍 Snap" : "🎯 Free"}
+          </Button>
+
+          {/* Crosshair coordinates display - only when crosshair is active */}
           {showCrosshair && (
             <Box
               position="absolute"
               top="10px"
               left="10px"
-              bg={colorMode === "dark" ? "gray.800" : "white"}
+              bg={
+                colorMode === "dark"
+                  ? "rgba(26, 32, 44, 0.5)"
+                  : "rgba(255, 255, 255, 0.5)"
+              }
+              backdropFilter="blur(4px)"
               color={colorMode === "dark" ? "white" : "black"}
               px="8px"
               py="4px"
               borderRadius="md"
               border="1px solid"
-              borderColor={colorMode === "dark" ? "gray.600" : "gray.300"}
+              borderColor={
+                colorMode === "dark"
+                  ? "rgba(113, 128, 150, 0.1)"
+                  : "rgba(203, 213, 224, 0.1)"
+              }
               fontSize="sm"
               fontFamily="monospace"
               zIndex={10}
