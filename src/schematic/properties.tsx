@@ -12,6 +12,13 @@ import {
 } from "@chakra-ui/react";
 import { SelectedItem } from "eecircuit-schematic";
 import React, { useState } from "react";
+import {
+  ComponentType,
+  getComponentPropertyConfig,
+  PropertyField,
+  getPropertiesFromSelectedItem,
+  applyPropertiesToSelectedItem,
+} from "../types/componentTypes";
 
 type PropertiesProps = {
   onCloseButtonClick: () => void;
@@ -26,60 +33,13 @@ const Properties: React.FC<PropertiesProps> = ({
 }) => {
   // Helper function to get properties from selectedItem
   const getItemProperties = () => {
-    if (selectedItem.type === "none") {
-      return { name: "", value: "" };
-    }
-
-    // Handle instance types (components like resistor, capacitor, etc.)
-    if (selectedItem.type === "instance") {
-      return {
-        name: selectedItem.name || "",
-        value: selectedItem.value || "",
-      };
-    }
-
-    // Handle wire types
-    if (selectedItem.type === "wire") {
-      return {
-        name: selectedItem.netName || "",
-        value: "", // Wires typically don't have values
-      };
-    }
-
-    // Fallback for other item types
-    return { name: "", value: "" };
+    return getPropertiesFromSelectedItem(selectedItem);
   };
 
-  // Helper function to get appropriate placeholder text for different component types
-  const getValuePlaceholder = (typeName: string) => {
-    switch (typeName) {
-      case "resistor":
-        return "Resistance (e.g., 1k, 10ohm)";
-      case "capacitor":
-        return "Capacitance (e.g., 10uF, 100pF)";
-      case "inductor":
-        return "Inductance (e.g., 1mH, 10uH)";
-      case "vdc":
-        return "DC Voltage (e.g., 5V, 1.8V)";
-      case "idc":
-        return "DC Current (e.g., 1mA, 10uA)";
-      case "nFET":
-      case "pFET":
-        return "W=width L=length (e.g., W=10u L=0.18u)";
-      case "VDD":
-      case "GND":
-        return "Voltage level (e.g., 1.8V, 0V)";
-      case "port":
-        return "Port specification";
-      default:
-        return "Component value";
-    }
-  };
-
-  const [localNameValue, setLocalNameValue] = useState(getItemProperties());
+  const [localValues, setLocalValues] = useState(getItemProperties());
 
   // Track initial values to detect changes - only set once when component mounts or selectedItem changes
-  const [initialNameValue, setInitialNameValue] = useState(getItemProperties());
+  const [initialValues, setInitialValues] = useState(getItemProperties());
 
   // Use a ref to track the last selectedItem to detect when it actually changes
   const prevSelectedItemRef = React.useRef(selectedItem);
@@ -92,49 +52,45 @@ const Properties: React.FC<PropertiesProps> = ({
     // Check if the selectedItem has actually changed
     if (JSON.stringify(current) !== JSON.stringify(prev)) {
       const newProperties = getItemProperties();
-      setLocalNameValue(newProperties);
-      setInitialNameValue(newProperties);
+      setLocalValues(newProperties);
+      setInitialValues(newProperties);
       prevSelectedItemRef.current = selectedItem;
     }
   }, [selectedItem]);
 
   // Check if values have changed
   const hasChanges =
-    localNameValue.name !== initialNameValue.name ||
-    localNameValue.value !== initialNameValue.value;
+    JSON.stringify(localValues) !== JSON.stringify(initialValues);
 
   const handleNameChange = (newName: string) => {
-    setLocalNameValue((prev) => ({ ...prev, name: newName }));
+    setLocalValues((prev) => ({ ...prev, name: newName }));
   };
 
-  const handleValueChange = (newValue: string) => {
-    setLocalNameValue((prev) => ({ ...prev, value: newValue }));
+  const handlePropertyChange = (key: string, value: string) => {
+    setLocalValues((prev) => ({
+      ...prev,
+      properties: { ...prev.properties, [key]: value },
+    }));
   };
 
   const handleApply = () => {
-    // For wire types, apply netName instead of value
-    if (selectedItem.type === "wire") {
-      onApply?.(localNameValue.name, ""); // Wire name goes to name parameter, no value
-    } else {
-      onApply?.(localNameValue.name, localNameValue.value);
-    }
-    setInitialNameValue(localNameValue);
+    const result = applyPropertiesToSelectedItem(
+      selectedItem,
+      localValues.name,
+      localValues.properties
+    );
+    onApply?.(result.name, result.value);
+    setInitialValues(localValues);
     // Don't auto-close when applying via Enter key
   };
 
   const handleApplyAndClose = () => {
-    // For wire types, apply netName instead of value
-    if (selectedItem.type === "wire") {
-      onApply?.(localNameValue.name, ""); // Wire name goes to name parameter, no value
-    } else {
-      onApply?.(localNameValue.name, localNameValue.value);
-    }
-    setInitialNameValue(localNameValue);
+    handleApply();
     onCloseButtonClick();
   };
 
   const handleCancel = () => {
-    setLocalNameValue(initialNameValue);
+    setLocalValues(initialValues);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -145,6 +101,44 @@ const Properties: React.FC<PropertiesProps> = ({
       e.preventDefault();
       onCloseButtonClick();
     }
+  };
+
+  // Render property fields based on component type
+  const renderPropertyFields = () => {
+    if (selectedItem.type !== "instance") return null;
+
+    const componentType = selectedItem.typeName as ComponentType;
+    const propertyConfig = getComponentPropertyConfig(componentType);
+
+    return propertyConfig.map((field: PropertyField) => {
+      const currentValue =
+        (localValues.properties as Record<string, string>)[field.key] || "";
+
+      return (
+        <Field.Root key={field.key}>
+          <Field.Label>
+            {field.label}
+            {field.unit && ` (${field.unit})`}
+            {field.required && " *"}
+          </Field.Label>
+          {field.type === "select" && field.options ? (
+            <Input
+              placeholder={field.placeholder}
+              value={currentValue}
+              onChange={(e) => handlePropertyChange(field.key, e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+          ) : (
+            <Input
+              placeholder={field.placeholder}
+              value={currentValue}
+              onChange={(e) => handlePropertyChange(field.key, e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+          )}
+        </Field.Root>
+      );
+    });
   };
   return (
     <Float offset="10rem" placement="middle-end">
@@ -175,21 +169,13 @@ const Properties: React.FC<PropertiesProps> = ({
                   <Field.Label>Name</Field.Label>
                   <Input
                     placeholder="Component name (e.g., R1, C1)"
-                    value={localNameValue.name}
+                    value={localValues.name}
                     onChange={(e) => handleNameChange(e.target.value)}
                     onKeyDown={handleKeyDown}
                   />
                 </Field.Root>
 
-                <Field.Root>
-                  <Field.Label>Value</Field.Label>
-                  <Input
-                    placeholder={getValuePlaceholder(selectedItem.typeName)}
-                    value={localNameValue.value}
-                    onChange={(e) => handleValueChange(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                  />
-                </Field.Root>
+                {renderPropertyFields()}
               </>
             )}
 
@@ -203,7 +189,7 @@ const Properties: React.FC<PropertiesProps> = ({
                   <Field.Label>Net Name</Field.Label>
                   <Input
                     placeholder="Network name (e.g., VDD, GND, net1)"
-                    value={localNameValue.name}
+                    value={localValues.name}
                     onChange={(e) => handleNameChange(e.target.value)}
                     onKeyDown={handleKeyDown}
                   />
