@@ -82,8 +82,13 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       const rect = canvas.getBoundingClientRect();
       const newWidth = rect.width;
       const newHeight = rect.height;
+      const aspectRatio = newWidth / newHeight;
 
-      console.log("Canvas dimensions update:", { newWidth, newHeight });
+      console.log("Canvas dimensions update:", {
+        newWidth,
+        newHeight,
+        aspectRatio,
+      });
 
       // If the canvas is initialized and size changed, update WebGL canvas size
       if (isCanvasInitialized) {
@@ -253,16 +258,54 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
     // Update snap circle position and visibility
     if (snapCircleRef.current) {
-      // Update circle position using transform instead of recreating
+      // Calculate aspect ratio for dynamic scaling
+      const rect = canvasRef.current.getBoundingClientRect();
+      const aspectRatio = rect.width / rect.height;
+
+      // Apply aspect ratio correction through scaling
+      let scaleX = 1;
+      let scaleY = 1;
+
+      if (aspectRatio > 1) {
+        // Wide canvas: compress horizontally to maintain circular appearance
+        scaleX = 1 / aspectRatio;
+      } else {
+        // Tall canvas: compress vertically to maintain circular appearance
+        scaleY = aspectRatio;
+      }
+
+      // Update circle position using NDC coordinates with aspect ratio scaling
       snapCircleRef.current.updatePolygonTransform(
         0,
-        [1, 1],
+        [scaleX, scaleY],
         [finalNdcX, finalNdcY]
       );
 
       // Enable/disable the circle based on snap mode
       snapCircleRef.current.setPolygonEnabled(0, crosshairSnapToLines);
     }
+  };
+
+  // Create the snap circle (fixed size, aspect ratio handled by transform scaling)
+  const createSnapCircle = () => {
+    if (!snapCircleRef.current || !wglpRef.current) return;
+
+    // Create circle with fixed radius in NDC space
+    const baseRadius = 0.04; // Base radius in NDC coordinates
+
+    const snapCircle = WebglPolygonPlot.createCircle({
+      center: [0, 0], // Will be updated when crosshair moves
+      radius: baseRadius,
+      segments: 20,
+      fillColor: [0, 0, 0, 0], // Transparent fill (hollow)
+      strokeColor: [1, 0.9, 0.1, 0.8], // Yellow stroke border
+      strokeWeight: 3, // Thicker border for better visibility
+      isFilled: false, // No fill - hollow
+      isStroked: true, // Only stroke border
+      enabled: false, // Initially disabled, enabled only in snap mode
+    });
+
+    snapCircleRef.current.initPolygons([snapCircle]);
   };
 
   // Calculate and apply auto-scaling transform for visible lines
@@ -344,11 +387,16 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
         [offsetX, offsetY]
       );
 
+      // Don't apply global transform to snap circle as it's already in NDC coordinates
+
       // Update axis scales for synchronization
       setAxisScales({ scaleX, scaleY, offsetX, offsetY });
     } else {
       // Fallback to default transform if no valid data
       plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
+
+      // Don't apply transform to snap circle as it's in NDC coordinates
+
       setAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
     }
   };
@@ -457,20 +505,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       // Initialize snap circle (polygon plot)
       snapCircleRef.current = new WebglPolygonPlot(wglpRef.current);
 
-      // Create a small hollow circle at the crosshair intersection for snap mode
-      const snapCircle = WebglPolygonPlot.createCircle({
-        center: [0, 0], // Will be updated when crosshair moves
-        radius: 0.04, // Small radius in NDC coordinates
-        segments: 20,
-        fillColor: [0, 0, 0, 0], // Transparent fill (hollow)
-        strokeColor: [1, 0.9, 0.1, 0.8], // Blue stroke border
-        strokeWeight: 5, // Thicker border for better visibility
-        isFilled: false, // No fill - hollow
-        isStroked: true, // Only stroke border
-        enabled: false, // Initially disabled, enabled only in snap mode
-      });
-
-      snapCircleRef.current.initPolygons([snapCircle]);
+      // Create the initial circle
+      createSnapCircle();
 
       const numX = results[0].numPoints;
       const numVariables = results[0].numVariables;
@@ -511,6 +547,9 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       lineDataRef.current = allLineData;
       plotLineRef.current.initLines(allLineData);
       plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
+
+      // Don't apply initial transform to snap circle as it's in NDC coordinates
+
       setIsCanvasInitialized(true);
 
       // Initial draw with all variables selected
