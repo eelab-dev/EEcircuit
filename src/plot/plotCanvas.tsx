@@ -6,6 +6,7 @@ import {
   WebglLineThick,
   WebglLinePlot,
   WebglPlot,
+  WebglPolygonPlot,
 } from "webgl-plot";
 import {
   generatePlotColor,
@@ -39,6 +40,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   const wglpRef = useRef<WebglPlot | null>(null);
   const plotLineRef = useRef<WebglLineThick | null>(null);
   const crosshairRef = useRef<WebglLinePlot | null>(null);
+  const snapCircleRef = useRef<WebglPolygonPlot | null>(null);
   const lineDataRef = useRef<LineConfig[]>([]);
   const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
@@ -248,6 +250,19 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     // Update crosshair lines
     crosshairRef.current.updateLinePoints(0, horizontalPoints); // Horizontal line
     crosshairRef.current.updateLinePoints(1, verticalPoints); // Vertical line
+
+    // Update snap circle position and visibility
+    if (snapCircleRef.current) {
+      // Update circle position using transform instead of recreating
+      snapCircleRef.current.updatePolygonTransform(
+        0,
+        [1, 1],
+        [finalNdcX, finalNdcY]
+      );
+
+      // Enable/disable the circle based on snap mode
+      snapCircleRef.current.setPolygonEnabled(0, crosshairSnapToLines);
+    }
   };
 
   // Calculate and apply auto-scaling transform for visible lines
@@ -388,6 +403,11 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     if (showCrosshair && crosshairRef.current) {
       crosshairRef.current.draw();
     }
+
+    // Draw snap circle if in snap mode
+    if (showCrosshair && crosshairSnapToLines && snapCircleRef.current) {
+      snapCircleRef.current.draw();
+    }
   };
 
   // Initialize canvas and WebGL plot only once when results change
@@ -433,6 +453,24 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       ];
 
       crosshairRef.current.initLines(crosshairLines);
+
+      // Initialize snap circle (polygon plot)
+      snapCircleRef.current = new WebglPolygonPlot(wglpRef.current);
+
+      // Create a small hollow circle at the crosshair intersection for snap mode
+      const snapCircle = WebglPolygonPlot.createCircle({
+        center: [0, 0], // Will be updated when crosshair moves
+        radius: 0.04, // Small radius in NDC coordinates
+        segments: 20,
+        fillColor: [0, 0, 0, 0], // Transparent fill (hollow)
+        strokeColor: [1, 0.9, 0.1, 0.8], // Blue stroke border
+        strokeWeight: 5, // Thicker border for better visibility
+        isFilled: false, // No fill - hollow
+        isStroked: true, // Only stroke border
+        enabled: false, // Initially disabled, enabled only in snap mode
+      });
+
+      snapCircleRef.current.initPolygons([snapCircle]);
 
       const numX = results[0].numPoints;
       const numVariables = results[0].numVariables;
