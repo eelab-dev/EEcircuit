@@ -53,7 +53,7 @@ export interface PowerNodeProperties extends BaseComponentProperties {
 
 export interface PortProperties extends BaseComponentProperties {
   portType?: "input" | "output" | "inout";
-  value?: string; // Optional value for ports
+  netName: string; // Net name for the port
 }
 
 // Union type for all component properties
@@ -215,18 +215,18 @@ export const componentPropertyConfigs: Record<ComponentType, PropertyField[]> =
     GND: [],
     port: [
       {
+        key: "netName",
+        label: "Net Name",
+        type: "text",
+        placeholder: "e.g., clk, data, reset",
+        required: true,
+      },
+      {
         key: "portType",
         label: "Port Type",
         type: "select",
         required: false,
         options: ["input", "output", "inout"],
-      },
-      {
-        key: "value",
-        label: "Port Value",
-        type: "text",
-        placeholder: "Optional port specification",
-        required: false,
       },
     ],
   };
@@ -310,6 +310,12 @@ export function parseComponentProperties(
     return properties;
   }
 
+  // For port components, the value string is the netName
+  if (componentType === "port") {
+    properties.netName = valueString;
+    return properties;
+  }
+
   // Default fallback
   properties.value = valueString;
   return properties;
@@ -338,6 +344,12 @@ export function serializeComponentProperties(
     if (props.as) parts.push(`as=${props.as}`);
 
     return parts.join(" ");
+  }
+
+  // For port components, serialize the netName
+  if (componentType === "port") {
+    const props = properties as Partial<PortProperties>;
+    return props.netName || "";
   }
 
   // For simple components, return the value
