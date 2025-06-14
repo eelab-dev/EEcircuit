@@ -202,16 +202,7 @@ export const componentPropertyConfigs: Record<ComponentType, PropertyField[]> =
     ],
     nFET: baseFETConfig,
     pFET: baseFETConfig,
-    VDD: [
-      {
-        key: "value",
-        label: "Voltage Level",
-        type: "text",
-        placeholder: "e.g., 1.8V, 3.3V, 5V",
-        required: false,
-        unit: "V",
-      },
-    ],
+    VDD: [],
     GND: [],
     port: [
       {
