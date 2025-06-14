@@ -23,12 +23,14 @@ import {
 type PropertiesProps = {
   onCloseButtonClick: () => void;
   selectedItem: SelectedItem;
+  canvasHeight: number;
   onApply: (name: string, value: string) => void;
 };
 
 const Properties: React.FC<PropertiesProps> = ({
   onCloseButtonClick,
   selectedItem,
+  canvasHeight,
   onApply,
 }) => {
   // Helper function to get properties from selectedItem
@@ -147,12 +149,24 @@ const Properties: React.FC<PropertiesProps> = ({
         bg="gray.900"
         padding={1.5}
         borderRadius="md"
-        width="15rem"
+        width={{ base: "14rem", md: "15rem", lg: "16rem" }}
+        maxHeight={
+          canvasHeight > 0
+            ? `${canvasHeight * 0.9}px`
+            : { base: "70vh", md: "80vh" }
+        }
+        overflowY="hidden"
       >
         <Flex alignItems="end" width={"100%"} justify="flex-end">
           <CloseButton onClick={onCloseButtonClick} />
         </Flex>
-        <Flex width={"100%"} padding={1}>
+        <Flex
+          width={"100%"}
+          padding={1}
+          flex="1"
+          overflowY="auto"
+          direction="column"
+        >
           <Stack gap="3" maxW="sm">
             <Span>Properties</Span>
             {selectedItem.type === "none" && (

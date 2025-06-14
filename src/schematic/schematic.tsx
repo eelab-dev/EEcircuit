@@ -37,6 +37,7 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
   const [propertiesOpen, setPropertiesOpen] = useState(false);
   const [dragBox, setDragBox] = useState(false);
   const [info, setInfo] = useState<string[]>([]);
+  const [canvasHeight, setCanvasHeight] = useState(0);
 
   const msgCallback = useCallback((msg: MessageToApp) => {
     switch (msg.type) {
@@ -167,6 +168,9 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         currentCanvas.style.width = `${finalWidth}px`;
         currentCanvas.style.height = `${finalHeight}px`;
         currentCanvas.style.border = "solid 1px green"; // Indicate final size (optional)
+
+        // Update canvas height state
+        setCanvasHeight(finalHeight);
 
         // *** Initialize the library *now* with the final canvas size ***
         initCanvas(currentCanvas, msgCallback);
@@ -346,6 +350,7 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         {propertiesOpen && (
           <Properties
             selectedItem={selectedItem}
+            canvasHeight={canvasHeight}
             onApply={(name, value) => {
               sendCommand({
                 command: "setSelectedItemNameValue",
