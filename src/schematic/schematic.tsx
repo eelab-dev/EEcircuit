@@ -3,6 +3,7 @@ import {
   AvailableComponent,
   initCanvas,
   MessageToApp,
+  SelectedItem,
   sendCommand,
 } from "eecircuit-schematic";
 import { Box, Flex, Float, IconButton, Button } from "@chakra-ui/react";
@@ -15,11 +16,6 @@ import Status from "./status";
 
 type SchematicProps = { onNetlistExported: (netlist: string) => void };
 
-export type NameValuePair = {
-  name: string;
-  value: string;
-};
-
 const INITIAL_CANVAS_SIZE = 150; // Small fixed size for the first pass
 
 const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
@@ -30,11 +26,10 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
 
   const [coord, setCoord] = useState({ x: 0, y: 0 });
   const [pointerInfo, setPointerInfo] = useState<string>("");
-  const [selectedItemNameValue, setSelectedItemNameValue] =
-    useState<NameValuePair>({
-      name: "",
-      value: "",
-    });
+  const [selectedItem, setSelectedItem] = useState<SelectedItem>({
+    type: "none",
+  } as SelectedItem);
+
   const [availableComponents, setAvailableComponents] = useState<
     AvailableComponent[]
   >([]);
@@ -52,10 +47,9 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         setPointerInfo(msg.pointerInfo);
         break;
       case "selectedItem":
-        setSelectedItemNameValue({
-          name: msg.selectedItemName,
-          value: msg.selectedItemValue,
-        });
+        if (msg.selectedItem !== undefined) {
+          setSelectedItem(msg.selectedItem);
+        }
         break;
       case "netList":
         onNetlistExported(msg.netList);
@@ -243,14 +237,12 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
   }, []);
 
   useEffect(() => {
-    if (
-      !(selectedItemNameValue.name === "" && selectedItemNameValue.value === "")
-    ) {
-      setPropertiesOpen(true);
-    } else {
+    if (!selectedItem || selectedItem.type === "none") {
       setPropertiesOpen(false);
+    } else {
+      setPropertiesOpen(true);
     }
-  }, [selectedItemNameValue]);
+  }, [selectedItem]);
 
   // Add drag and drop support for schematic files
   useEffect(() => {
@@ -353,7 +345,7 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         </Float>
         {propertiesOpen && (
           <Properties
-            nameValue={selectedItemNameValue}
+            selectedItem={selectedItem}
             onApply={(name, value) => {
               sendCommand({
                 command: "setSelectedItemNameValue",
@@ -369,7 +361,7 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         {/* ... status bar buttons ... */}
         <Button size="sm">{`X:${coord.x}, Y:${coord.y}`}</Button>
         <Button size="sm">{pointerInfo || "Info"}</Button>
-        <Button size="sm">{selectedItemNameValue.name || "none"}</Button>
+        <Button size="sm">{"none"}</Button>
         <Box flex="1" />
 
         {<Status info={info} />}
