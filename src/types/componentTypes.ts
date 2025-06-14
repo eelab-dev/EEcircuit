@@ -276,37 +276,37 @@ export function parseComponentProperties(
     // Parse format: "ModelName W=value L=value"
     // The model is the first token (no prefix), followed by W= and L= parameters
     const tokens = valueString.trim().split(/\s+/);
-    
+
     if (tokens.length > 0) {
       // First token is the model name
       const firstToken = tokens[0];
-      
+
       // Check if first token looks like a parameter (contains =), if not it's the model
-      if (!firstToken.includes('=')) {
+      if (!firstToken.includes("=")) {
         properties.model = firstToken;
       }
-      
+
       // Parse W and L parameters from the remaining tokens
       const wMatch = valueString.match(/W=([^\s]+)/i);
       const lMatch = valueString.match(/L=([^\s]+)/i);
-      
+
       if (wMatch) {
         properties.W = wMatch[1];
       }
       if (lMatch) {
         properties.L = lMatch[1];
       }
-      
+
       // Parse other optional parameters
       const mMatch = valueString.match(/m=([^\s]+)/i);
       const adMatch = valueString.match(/ad=([^\s]+)/i);
       const asMatch = valueString.match(/as=([^\s]+)/i);
-      
+
       if (mMatch) properties.m = mMatch[1];
       if (adMatch) properties.ad = adMatch[1];
       if (asMatch) properties.as = asMatch[1];
     }
-    
+
     return properties;
   }
 
@@ -327,11 +327,11 @@ export function serializeComponentProperties(
 
     // Model comes first without prefix (e.g., "N90")
     if (props.model) parts.push(props.model);
-    
+
     // Then W and L with prefixes
     if (props.W) parts.push(`W=${props.W}`);
     if (props.L) parts.push(`L=${props.L}`);
-    
+
     // Optional parameters
     if (props.m) parts.push(`m=${props.m}`);
     if (props.ad) parts.push(`ad=${props.ad}`);
