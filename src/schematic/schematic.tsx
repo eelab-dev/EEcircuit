@@ -13,6 +13,7 @@ import debounce from "lodash.debounce";
 import Actions from "./actions";
 import Properties from "./properties";
 import Status from "./status";
+import { Tooltip } from "../components/ui/tooltip";
 
 type SchematicProps = { onNetlistExported: (netlist: string) => void };
 
@@ -343,9 +344,13 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
           {<Actions availableComponents={availableComponents} />}
         </Float>
         <Float offset="10">
-          <IconButton aria-label="Fullscreen" onClick={fullscreenHandler}>
-            {!fullscreen ? <Expand /> : <SquareX />}
-          </IconButton>
+          <Tooltip
+            content={fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+          >
+            <IconButton aria-label="Fullscreen" onClick={fullscreenHandler}>
+              {!fullscreen ? <Expand /> : <SquareX />}
+            </IconButton>
+          </Tooltip>
         </Float>
         {propertiesOpen && (
           <Properties
