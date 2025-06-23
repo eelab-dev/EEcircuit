@@ -36,6 +36,7 @@ const Schematic: React.FC<SchematicProps> = ({
     width: 0,
     height: 0,
   });
+  const initializedCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [coord, setCoord] = useState({ x: 0, y: 0 });
   const [pointerInfo, setPointerInfo] = useState<string>("");
@@ -81,6 +82,20 @@ const Schematic: React.FC<SchematicProps> = ({
     [onNetlistExported]
   );
 
+  // Helper function to safely initialize canvas only once
+  const safeInitCanvas = useCallback((canvas: HTMLCanvasElement) => {
+    if (initializedCanvasRef.current === canvas) {
+      console.log("Canvas already initialized, skipping...");
+      return false; // Already initialized
+    }
+
+    console.log("Initializing canvas...");
+    initCanvas(canvas, msgCallback);
+    initializedCanvasRef.current = canvas;
+    setIsCanvasReady(true);
+    return true; // Successfully initialized
+  }, [msgCallback]);
+
   // Handle fit to screen when requested
   useEffect(() => {
     if (shouldFitToScreen && canvasRef.current && isCanvasReady) {
@@ -92,11 +107,10 @@ const Schematic: React.FC<SchematicProps> = ({
     } else if (shouldFitToScreen && canvasRef.current && !isCanvasReady) {
       // Canvas exists but not ready, initialize it first
       console.log("Initializing canvas for fit-to-screen...");
-      initCanvas(canvasRef.current, msgCallback);
-      setIsCanvasReady(true);
+      safeInitCanvas(canvasRef.current);
       // The fit command will be triggered when isCanvasReady becomes true
     }
-  }, [shouldFitToScreen, isCanvasReady, msgCallback]);
+  }, [shouldFitToScreen, isCanvasReady, safeInitCanvas]);
 
   // Initialize the canvas and set up the message callback
   useEffect(() => {
@@ -162,8 +176,7 @@ const Schematic: React.FC<SchematicProps> = ({
         // If canvas exists and size hasn't changed, just ensure it's properly initialized
         if (!isCanvasReady) {
           console.log("Canvas exists but not ready, initializing...");
-          initCanvas(canvasRef.current, msgCallback);
-          setIsCanvasReady(true);
+          safeInitCanvas(canvasRef.current);
         }
         return;
       }
@@ -189,6 +202,10 @@ const Schematic: React.FC<SchematicProps> = ({
       // 1. Remove previous canvas if it exists
       if (canvasRef.current && canvasRef.current.parentNode === parent) {
         console.log("Removing previous canvas");
+        // Reset the initialized canvas ref since we're removing the old canvas
+        if (initializedCanvasRef.current === canvasRef.current) {
+          initializedCanvasRef.current = null;
+        }
         parent.removeChild(canvasRef.current);
         canvasRef.current = null;
       }
@@ -252,10 +269,7 @@ const Schematic: React.FC<SchematicProps> = ({
         setCanvasHeight(finalHeight);
 
         // *** Initialize the library *now* with the final canvas size ***
-        initCanvas(currentCanvas, msgCallback);
-
-        // Mark canvas as ready
-        setIsCanvasReady(true);
+        safeInitCanvas(currentCanvas);
 
         // Notify parent that canvas has been resized
         onCanvasResized?.();
@@ -282,8 +296,7 @@ const Schematic: React.FC<SchematicProps> = ({
           console.log("Container became visible, ensuring canvas is ready...");
           setTimeout(() => {
             if (canvasRef.current && !isCanvasReady) {
-              initCanvas(canvasRef.current, msgCallback);
-              setIsCanvasReady(true);
+              safeInitCanvas(canvasRef.current);
             }
           }, 100);
         }
@@ -327,11 +340,15 @@ const Schematic: React.FC<SchematicProps> = ({
 
       // Remove the last canvas
       if (canvasRef.current && canvasRef.current.parentNode === container) {
+        // Reset the initialized canvas ref since we're removing the canvas
+        if (initializedCanvasRef.current === canvasRef.current) {
+          initializedCanvasRef.current = null;
+        }
         container.removeChild(canvasRef.current);
         canvasRef.current = null;
       }
     };
-  }, []); // msgCallback is stable*/
+  }, [safeInitCanvas]); // Include safeInitCanvas in dependencies
 
   const sendToNetListButtonHandler = useCallback(() => {
     if (!canvasRef.current) return;
