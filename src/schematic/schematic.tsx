@@ -15,15 +15,27 @@ import Properties from "./properties";
 import Status from "./status";
 import { Tooltip } from "../components/ui/tooltip";
 
-type SchematicProps = { onNetlistExported: (netlist: string) => void };
+type SchematicProps = {
+  onNetlistExported: (netlist: string) => void;
+  shouldFitToScreen?: boolean;
+  onCanvasResized?: () => void;
+};
 
 const INITIAL_CANVAS_SIZE = 150; // Small fixed size for the first pass
 
-const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
+const Schematic: React.FC<SchematicProps> = ({
+  onNetlistExported,
+  shouldFitToScreen,
+  onCanvasResized,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // Ref to store the requestAnimationFrame ID for cancellation
   const rafIdRef = useRef<number | null>(null);
+  const lastSizeRef = useRef<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
 
   const [coord, setCoord] = useState({ x: 0, y: 0 });
   const [pointerInfo, setPointerInfo] = useState<string>("");
@@ -39,56 +51,83 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
   const [dragBox, setDragBox] = useState(false);
   const [info, setInfo] = useState<string[]>([]);
   const [canvasHeight, setCanvasHeight] = useState(0);
+  const [isCanvasReady, setIsCanvasReady] = useState(false);
 
-  const msgCallback = useCallback((msg: MessageToApp) => {
-    switch (msg.type) {
-      case "pointerCoords":
-        setCoord({ x: msg.pointerCoords.x, y: msg.pointerCoords.y });
-        break;
-      case "pointerInfo":
-        setPointerInfo(msg.pointerInfo);
-        break;
-      case "selectedItem":
-        if (msg.selectedItem !== undefined) {
-          setSelectedItem(msg.selectedItem);
-        }
-        break;
-      case "netList":
-        onNetlistExported(msg.netList);
-        break;
-      case "availableComponents":
-        setAvailableComponents(msg.availableComponents);
-        break;
-      case "info":
-        setInfo((prevInfo) => [...prevInfo, `${msg.mType}: ${msg.info}`]);
-        break;
+  const msgCallback = useCallback(
+    (msg: MessageToApp) => {
+      switch (msg.type) {
+        case "pointerCoords":
+          setCoord({ x: msg.pointerCoords.x, y: msg.pointerCoords.y });
+          break;
+        case "pointerInfo":
+          setPointerInfo(msg.pointerInfo);
+          break;
+        case "selectedItem":
+          if (msg.selectedItem !== undefined) {
+            setSelectedItem(msg.selectedItem);
+          }
+          break;
+        case "netList":
+          onNetlistExported(msg.netList);
+          break;
+        case "availableComponents":
+          setAvailableComponents(msg.availableComponents);
+          break;
+        case "info":
+          setInfo((prevInfo) => [...prevInfo, `${msg.mType}: ${msg.info}`]);
+          break;
+      }
+    },
+    [onNetlistExported]
+  );
+
+  // Handle fit to screen when requested
+  useEffect(() => {
+    if (shouldFitToScreen && canvasRef.current && isCanvasReady) {
+      // Add a small delay to ensure the canvas is fully rendered
+      const timer = setTimeout(() => {
+        sendCommand({ command: "view", viewType: "fit" });
+      }, 50);
+      return () => clearTimeout(timer);
+    } else if (shouldFitToScreen && canvasRef.current && !isCanvasReady) {
+      // Canvas exists but not ready, initialize it first
+      console.log("Initializing canvas for fit-to-screen...");
+      initCanvas(canvasRef.current, msgCallback);
+      setIsCanvasReady(true);
+      // The fit command will be triggered when isCanvasReady becomes true
     }
-  }, []);
+  }, [shouldFitToScreen, isCanvasReady, msgCallback]);
 
   // Initialize the canvas and set up the message callback
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Create the canvas element
-    const canvas =
-      (document.getElementById("schematic-canvas") as HTMLCanvasElement) ||
-      document.createElement("canvas");
-    canvas.id = "schematic-canvas";
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
-    canvas.style.display = "block";
-    canvas.style.border = "solid 1px gray"; // Initial border for visibility
+    // Check if canvas already exists to avoid recreation
+    let canvas = document.getElementById(
+      "schematic-canvas"
+    ) as HTMLCanvasElement;
 
-    // Initialize the schematic library with the new canvas and message callback
-    initCanvas(canvas, () => {});
+    if (!canvas) {
+      // Create the canvas element only if it doesn't exist
+      canvas = document.createElement("canvas");
+      canvas.id = "schematic-canvas";
+      canvas.style.width = "100%";
+      canvas.style.height = "100%";
+      canvas.style.display = "block";
+      canvas.style.border = "solid 1px gray"; // Initial border for visibility
+
+      // Don't initialize yet - let the resize handler do it
+      canvasRef.current = canvas;
+      container.appendChild(canvas);
+    } else {
+      // Canvas exists, just update the ref
+      canvasRef.current = canvas;
+    }
 
     // Cleanup function to remove the canvas on unmount
     return () => {
-      if (canvasRef.current && canvasRef.current.parentNode === container) {
-        container.removeChild(canvasRef.current);
-        canvasRef.current = null;
-      }
+      // Don't remove canvas on cleanup - let it persist for tab switching
     };
   }, []);
 
@@ -99,6 +138,45 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
     const handleResize = () => {
       if (!containerRef.current) return;
       const parent = containerRef.current;
+
+      // Check if the container is actually visible (not hidden by tabs)
+      const rect = parent.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        console.log("Skipping resize - container not visible");
+        return;
+      }
+
+      // Check current dimensions
+      const currentWidth = parent.clientWidth;
+      const currentHeight = parent.clientHeight;
+
+      // Skip if dimensions haven't changed significantly (allow for small variations)
+      const lastSize = lastSizeRef.current;
+      const widthDiff = Math.abs(currentWidth - lastSize.width);
+      const heightDiff = Math.abs(currentHeight - lastSize.height);
+
+      if (canvasRef.current && widthDiff < 10 && heightDiff < 10) {
+        console.log(
+          `Skipping resize - dimensions haven't changed significantly (${widthDiff}x${heightDiff})`
+        );
+        // If canvas exists and size hasn't changed, just ensure it's properly initialized
+        if (!isCanvasReady) {
+          console.log("Canvas exists but not ready, initializing...");
+          initCanvas(canvasRef.current, msgCallback);
+          setIsCanvasReady(true);
+        }
+        return;
+      }
+
+      // Update last known size
+      lastSizeRef.current = { width: currentWidth, height: currentHeight };
+
+      console.log(
+        `Resizing canvas from (${lastSize.width}x${lastSize.height}) to (${currentWidth}x${currentHeight})`
+      );
+
+      // Reset canvas ready state
+      setIsCanvasReady(false);
 
       // --- Two-Pass Resize Logic ---
 
@@ -176,6 +254,12 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
         // *** Initialize the library *now* with the final canvas size ***
         initCanvas(currentCanvas, msgCallback);
 
+        // Mark canvas as ready
+        setIsCanvasReady(true);
+
+        // Notify parent that canvas has been resized
+        onCanvasResized?.();
+
         rafIdRef.current = null; // Clear the ref after execution
 
         // --- End Two-Pass Resize Logic ---
@@ -185,12 +269,44 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
     // Debounce the entire two-pass handler
     const debouncedResizeHandler = debounce(handleResize, 250); // Adjust delay
 
+    // Use IntersectionObserver to track visibility
+    let isVisible = false;
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        const wasVisible = isVisible;
+        isVisible = entry.isIntersecting && entry.intersectionRatio > 0;
+
+        // If container just became visible and we have a canvas, ensure it's ready
+        if (isVisible && !wasVisible && canvasRef.current && !isCanvasReady) {
+          console.log("Container became visible, ensuring canvas is ready...");
+          setTimeout(() => {
+            if (canvasRef.current && !isCanvasReady) {
+              initCanvas(canvasRef.current, msgCallback);
+              setIsCanvasReady(true);
+            }
+          }, 100);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    intersectionObserver.observe(container);
+
+    // Wrapper for resize handler that checks visibility
+    const visibilityAwareResizeHandler = () => {
+      if (isVisible) {
+        debouncedResizeHandler();
+      } else {
+        console.log("Skipping resize - container not visible");
+      }
+    };
+
     // Initial setup call
     handleResize(); // Trigger the two-pass process for the first time
 
     // Event listeners
-    window.addEventListener("resize", debouncedResizeHandler);
-    const resizeObserver = new ResizeObserver(debouncedResizeHandler);
+    window.addEventListener("resize", visibilityAwareResizeHandler);
+    const resizeObserver = new ResizeObserver(visibilityAwareResizeHandler);
     resizeObserver.observe(container);
 
     // Cleanup
@@ -198,8 +314,9 @@ const Schematic: React.FC<SchematicProps> = ({ onNetlistExported }) => {
       console.log(
         "Cleaning up schematic listeners, canvas, and animation frame"
       );
-      window.removeEventListener("resize", debouncedResizeHandler);
+      window.removeEventListener("resize", visibilityAwareResizeHandler);
       resizeObserver.disconnect();
+      intersectionObserver.disconnect();
       debouncedResizeHandler.cancel();
 
       // Cancel pending animation frame on unmount

@@ -66,6 +66,10 @@ const EEcircuit: React.FC = () => {
   const [netList, setNetList] = React.useState("");
   //const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
   const [tabValue, setTabValue] = React.useState("schematic");
+  const [shouldFitToScreen, setShouldFitToScreen] = React.useState(false);
+  const [hasResizedSinceSchematicView, setHasResizedSinceSchematicView] =
+    React.useState(false);
+  const [hasViewedSchematic, setHasViewedSchematic] = React.useState(false);
   //const [sweep, setSweep] = React.useState(false);
   //const [progress, setProgress] = React.useState(0);
   //const [threadCountNew, setThreadCountNew] = React.useState(1);
@@ -73,6 +77,43 @@ const EEcircuit: React.FC = () => {
   //const colorMode = useColorModeValue("light", "dark");
 
   const [results, setResults] = React.useState<ResultType[]>([]);
+
+  // Track window resize events
+  React.useEffect(() => {
+    const handleResize = () => {
+      setHasResizedSinceSchematicView(true);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Handle initial schematic view (when component mounts and schematic is the default tab)
+  React.useEffect(() => {
+    if (tabValue === "schematic" && !hasViewedSchematic) {
+      // Delay the fit command to ensure canvas is ready
+      const timer = setTimeout(() => {
+        setShouldFitToScreen(true);
+        setHasViewedSchematic(true);
+      }, 200); // Longer delay for initial load
+      return () => clearTimeout(timer);
+    }
+  }, [tabValue, hasViewedSchematic]);
+
+  // Reset shouldFitToScreen flag after it's been processed
+  React.useEffect(() => {
+    if (shouldFitToScreen) {
+      const timer = setTimeout(() => {
+        setShouldFitToScreen(false);
+      }, 100); // Small delay to ensure the command is processed
+      return () => clearTimeout(timer);
+    }
+  }, [shouldFitToScreen]);
+
+  // Callback when canvas is resized
+  const handleCanvasResized = React.useCallback(() => {
+    setHasResizedSinceSchematicView(false);
+  }, []);
 
   /*useEffect(() => {
     const loadedNetList = store.getItem("netList");
@@ -333,8 +374,25 @@ const EEcircuit: React.FC = () => {
   const handleTabValueChange = React.useCallback(
     (details: TabsValueChangeDetails) => {
       setTabValue(details.value);
+
+      // Handle schematic tab activation
+      if (details.value === "schematic") {
+        // Fit to screen if this is the first time viewing or if window was resized
+        if (!hasViewedSchematic || hasResizedSinceSchematicView) {
+          // Small delay to ensure tab content is visible and canvas is ready
+          setTimeout(() => {
+            setShouldFitToScreen(true);
+            setHasViewedSchematic(true);
+            // Note: hasResizedSinceSchematicView will be reset by the onCanvasResized callback
+            // when the canvas is actually resized, not immediately here
+          }, 100);
+        }
+      } else {
+        // Reset fit to screen flag when leaving schematic tab
+        setShouldFitToScreen(false);
+      }
     },
-    []
+    [hasViewedSchematic, hasResizedSinceSchematicView]
   );
 
   const handleNewResults = React.useCallback((newResults: ResultType[]) => {
@@ -378,7 +436,11 @@ const EEcircuit: React.FC = () => {
         </Tabs.List>
 
         <Tabs.Content value="schematic" flex={1} minHeight={0}>
-          <Schematic onNetlistExported={exportedNetlist} />
+          <Schematic
+            onNetlistExported={exportedNetlist}
+            shouldFitToScreen={shouldFitToScreen}
+            onCanvasResized={handleCanvasResized}
+          />
         </Tabs.Content>
 
         <Tabs.Content value="netlist" flex={1} minHeight={0}>
