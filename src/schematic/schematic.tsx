@@ -82,35 +82,78 @@ const Schematic: React.FC<SchematicProps> = ({
     [onNetlistExported]
   );
 
-  // Helper function to safely initialize canvas only once
-  const safeInitCanvas = useCallback((canvas: HTMLCanvasElement) => {
-    if (initializedCanvasRef.current === canvas) {
-      console.log("Canvas already initialized, skipping...");
-      return false; // Already initialized
-    }
+  // Helper function to wait for canvas to be ready for commands
+  const waitForCanvasReady = useCallback(
+    async (canvas: HTMLCanvasElement): Promise<boolean> => {
+      return new Promise((resolve) => {
+        const startTime = Date.now();
+        const TIMEOUT_MS = 5000; // 5 second timeout
 
-    console.log("Initializing canvas...");
-    initCanvas(canvas, msgCallback);
-    initializedCanvasRef.current = canvas;
-    setIsCanvasReady(true);
-    return true; // Successfully initialized
-  }, [msgCallback]);
+        // Check if canvas has valid dimensions and is attached to DOM
+        const checkReady = () => {
+          const isAttached = canvas.parentElement !== null;
+          const hasValidDimensions = canvas.width > 0 && canvas.height > 0;
+          const isVisible = canvas.offsetWidth > 0 && canvas.offsetHeight > 0;
+
+          if (isAttached && hasValidDimensions && isVisible) {
+            console.log("Canvas is ready for commands");
+            resolve(true);
+          } else if (Date.now() - startTime > TIMEOUT_MS) {
+            console.warn("Canvas ready check timed out, proceeding anyway");
+            resolve(false);
+          } else {
+            console.log(
+              `Canvas not ready yet - attached: ${isAttached}, dimensions: ${canvas.width}x${canvas.height}, visible: ${canvas.offsetWidth}x${canvas.offsetHeight}`
+            );
+            // Use requestAnimationFrame to wait for next render cycle
+            requestAnimationFrame(checkReady);
+          }
+        };
+
+        checkReady();
+      });
+    },
+    []
+  );
+
+  // Helper function to safely initialize canvas only once
+  const safeInitCanvas = useCallback(
+    async (canvas: HTMLCanvasElement) => {
+      if (initializedCanvasRef.current === canvas) {
+        console.log("Canvas already initialized, skipping...");
+        return false; // Already initialized
+      }
+
+      console.log("Initializing canvas...");
+
+      // Wait for canvas to be ready first
+      await waitForCanvasReady(canvas);
+
+      initCanvas(canvas, msgCallback);
+      initializedCanvasRef.current = canvas;
+      setIsCanvasReady(true);
+      return true; // Successfully initialized
+    },
+    [msgCallback, waitForCanvasReady]
+  );
 
   // Handle fit to screen when requested
   useEffect(() => {
-    if (shouldFitToScreen && canvasRef.current && isCanvasReady) {
-      // Add a small delay to ensure the canvas is fully rendered
-      const timer = setTimeout(() => {
+    const handleFitToScreen = async () => {
+      if (shouldFitToScreen && canvasRef.current && isCanvasReady) {
+        // Wait for canvas to be properly ready before sending command
+        await waitForCanvasReady(canvasRef.current);
         sendCommand({ command: "view", viewType: "fit" });
-      }, 50);
-      return () => clearTimeout(timer);
-    } else if (shouldFitToScreen && canvasRef.current && !isCanvasReady) {
-      // Canvas exists but not ready, initialize it first
-      console.log("Initializing canvas for fit-to-screen...");
-      safeInitCanvas(canvasRef.current);
-      // The fit command will be triggered when isCanvasReady becomes true
-    }
-  }, [shouldFitToScreen, isCanvasReady, safeInitCanvas]);
+      } else if (shouldFitToScreen && canvasRef.current && !isCanvasReady) {
+        // Canvas exists but not ready, initialize it first
+        console.log("Initializing canvas for fit-to-screen...");
+        safeInitCanvas(canvasRef.current).catch(console.error);
+        // The fit command will be triggered when isCanvasReady becomes true
+      }
+    };
+
+    handleFitToScreen();
+  }, [shouldFitToScreen, isCanvasReady, safeInitCanvas, waitForCanvasReady]);
 
   // Initialize the canvas and set up the message callback
   useEffect(() => {
@@ -176,7 +219,7 @@ const Schematic: React.FC<SchematicProps> = ({
         // If canvas exists and size hasn't changed, just ensure it's properly initialized
         if (!isCanvasReady) {
           console.log("Canvas exists but not ready, initializing...");
-          safeInitCanvas(canvasRef.current);
+          safeInitCanvas(canvasRef.current).catch(console.error);
         }
         return;
       }
@@ -269,10 +312,12 @@ const Schematic: React.FC<SchematicProps> = ({
         setCanvasHeight(finalHeight);
 
         // *** Initialize the library *now* with the final canvas size ***
-        safeInitCanvas(currentCanvas);
-
-        // Notify parent that canvas has been resized
-        onCanvasResized?.();
+        safeInitCanvas(currentCanvas)
+          .then(() => {
+            // Notify parent that canvas has been resized after successful initialization
+            onCanvasResized?.();
+          })
+          .catch(console.error);
 
         rafIdRef.current = null; // Clear the ref after execution
 
@@ -296,7 +341,7 @@ const Schematic: React.FC<SchematicProps> = ({
           console.log("Container became visible, ensuring canvas is ready...");
           setTimeout(() => {
             if (canvasRef.current && !isCanvasReady) {
-              safeInitCanvas(canvasRef.current);
+              safeInitCanvas(canvasRef.current).catch(console.error);
             }
           }, 100);
         }
