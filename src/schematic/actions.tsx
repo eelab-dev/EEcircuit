@@ -1,14 +1,7 @@
 import React from "react";
-import {
-  Flex,
-  IconButton,
-  Popover,
-  Portal,
-  Separator,
-  Dialog,
-  Button,
-} from "@chakra-ui/react";
+import { Flex, IconButton, Popover, Portal, Separator } from "@chakra-ui/react";
 import { Tooltip } from "../components/ui/tooltip";
+import ClearSchematicDialog from "./ClearSchematicDialog";
 
 import {
   Cable,
@@ -22,7 +15,6 @@ import {
   MousePointer,
   Move,
   Trash2,
-  X,
 } from "lucide-react";
 import { AvailableComponent, sendCommand } from "eecircuit-schematic";
 
@@ -102,12 +94,7 @@ const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
     setIsOpen(false);
   }, []);
 
-  const handleClearSchematic = React.useCallback(() => {
-    sendCommand({ command: "clearSchematic" });
-    setShowClearDialog(false);
-  }, []);
-
-  const handleCancelClear = React.useCallback(() => {
+  const handleCloseClearDialog = React.useCallback(() => {
     setShowClearDialog(false);
   }, []);
 
@@ -237,57 +224,11 @@ const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
         </IconButton>
       </Tooltip>
 
-      {/* Clear Schematic Confirmation Dialog - Rendered outside of component container */}
-      <Portal>
-        <Dialog.Root
-          open={showClearDialog}
-          onOpenChange={(details) => setShowClearDialog(details.open)}
-        >
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content
-              maxW="400px"
-              position="fixed"
-              top="50%"
-              left="50%"
-              transform="translate(-50%, -50%)"
-              zIndex="modal"
-            >
-              <Dialog.Header position="relative" pb="4">
-                <Dialog.Title>Clear Schematic</Dialog.Title>
-                <Dialog.CloseTrigger asChild>
-                  <IconButton
-                    position="absolute"
-                    top="0"
-                    right="0"
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleCancelClear}
-                  >
-                    <X />
-                  </IconButton>
-                </Dialog.CloseTrigger>
-              </Dialog.Header>
-              <Dialog.Body pb="6">
-                <p>
-                  Are you sure you want to clear the schematic? This action will
-                  delete all your current work and cannot be undone.
-                </p>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Flex justify="space-between" width="100%">
-                  <Button variant="outline" onClick={handleCancelClear}>
-                    No, Cancel
-                  </Button>
-                  <Button colorScheme="red" onClick={handleClearSchematic}>
-                    Yes, Clear All
-                  </Button>
-                </Flex>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Dialog.Root>
-      </Portal>
+      {/* Clear Schematic Confirmation Dialog */}
+      <ClearSchematicDialog
+        isOpen={showClearDialog}
+        onClose={handleCloseClearDialog}
+      />
     </div>
   );
 };
