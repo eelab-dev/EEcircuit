@@ -1,7 +1,7 @@
 import React from "react";
 import { Flex, IconButton, Popover, Portal } from "@chakra-ui/react";
 import { Tooltip } from "../components/ui/tooltip";
-import { CopyPlus } from "lucide-react";
+import { CopyPlus, X } from "lucide-react";
 import { AvailableComponent, sendCommand } from "eecircuit-schematic";
 
 type AddComponentPopoverProps = {
@@ -75,9 +75,30 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
 
+  const closePopover = React.useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
   const clickCallBack = React.useCallback(() => {
     setIsOpen(false);
   }, []);
+
+  // Handle ESC key press
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && isOpen) {
+        closePopover();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, closePopover]);
 
   return (
     <Popover.Root
@@ -101,7 +122,18 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
         <Popover.Positioner>
           <Popover.Content width="20em" maxWidth="70vw">
             <Popover.Arrow />
-            <Popover.Body>
+            <Popover.Body position="relative">
+              <IconButton
+                size="xs"
+                variant="ghost"
+                position="absolute"
+                top="1"
+                right="1"
+                zIndex="1"
+                onClick={closePopover}
+              >
+                <X size={12} />
+              </IconButton>
               <ComponentList
                 availableComponents={availableComponents}
                 clickCallback={clickCallBack}
