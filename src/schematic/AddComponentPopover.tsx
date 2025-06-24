@@ -1,5 +1,6 @@
 import React from "react";
-import { Flex, IconButton, Popover, Portal } from "@chakra-ui/react";
+import { Flex, IconButton, Box } from "@chakra-ui/react";
+import { createPortal } from "react-dom";
 import { Tooltip } from "../components/ui/tooltip";
 import { CopyPlus, X } from "lucide-react";
 import { AvailableComponent, sendCommand } from "eecircuit-schematic";
@@ -74,6 +75,11 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   availableComponents,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [popoverPosition, setPopoverPosition] = React.useState({
+    top: 0,
+    left: 0,
+  });
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
 
   const closePopover = React.useCallback(() => {
     setIsOpen(false);
@@ -81,6 +87,21 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
 
   const clickCallBack = React.useCallback(() => {
     setIsOpen(false);
+  }, []);
+
+  const openPopover = React.useCallback(() => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+
+      // Force it to appear at a very specific position - top-left area
+      const top = 100; // Fixed 100px from top
+      const left = rect.right + 8;
+
+      console.log("Forcing position to:", { top, left });
+
+      setPopoverPosition({ top, left });
+      setIsOpen(true);
+    }
   }, []);
 
   // Handle ESC key press
@@ -100,29 +121,58 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
     };
   }, [isOpen, closePopover]);
 
+  // Handle click outside to close
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isOpen &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        const popoverElement = document.getElementById("component-popover");
+        if (popoverElement && !popoverElement.contains(event.target as Node)) {
+          closePopover();
+        }
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, closePopover]);
+
   return (
-    <Popover.Root
-      positioning={{ placement: "right" }}
-      closeOnInteractOutside={false}
-      open={isOpen}
-      modal={true}
-    >
-      <Popover.Trigger asChild>
-        <Tooltip content="Add Component" showArrow openDelay={300}>
-          <IconButton
-            onClick={() => {
-              setIsOpen(!isOpen);
-            }}
+    <>
+      <Tooltip content="Add Component" showArrow openDelay={300}>
+        <IconButton ref={buttonRef} onClick={openPopover}>
+          <CopyPlus />
+        </IconButton>
+      </Tooltip>
+
+      {isOpen &&
+        createPortal(
+          <Box
+            id="component-popover"
+            position="fixed"
+            top={`${popoverPosition.top}px`}
+            left={`${popoverPosition.left}px`}
+            width="16em"
+            maxWidth="60vw"
+            height="500px"
+            maxHeight="80vh"
+            bg="gray.800"
+            borderRadius="md"
+            boxShadow="lg"
+            border="1px solid"
+            borderColor="gray.600"
+            zIndex={1500}
+            overflowY="auto"
           >
-            <CopyPlus />
-          </IconButton>
-        </Tooltip>
-      </Popover.Trigger>
-      <Portal>
-        <Popover.Positioner>
-          <Popover.Content width="20em" maxWidth="70vw">
-            <Popover.Arrow />
-            <Popover.Body position="relative">
+            <Box position="relative" p={4}>
               <IconButton
                 size="xs"
                 variant="ghost"
@@ -138,11 +188,11 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
                 availableComponents={availableComponents}
                 clickCallback={clickCallBack}
               />
-            </Popover.Body>
-          </Popover.Content>
-        </Popover.Positioner>
-      </Portal>
-    </Popover.Root>
+            </Box>
+          </Box>,
+          document.body
+        )}
+    </>
   );
 };
 
