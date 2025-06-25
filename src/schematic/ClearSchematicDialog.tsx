@@ -24,6 +24,7 @@ const ClearSchematicDialog: React.FC<ClearSchematicDialogProps> = ({
   return (
     <Portal>
       <Dialog.Root
+        role="alertdialog"
         open={isOpen}
         onOpenChange={(details) => {
           if (!details.open) {
@@ -67,7 +68,7 @@ const ClearSchematicDialog: React.FC<ClearSchematicDialogProps> = ({
                 <Button variant="outline" onClick={handleCancel}>
                   No, Cancel
                 </Button>
-                <Button colorScheme="red" onClick={handleClearSchematic}>
+                <Button colorPalette="red" onClick={handleClearSchematic}>
                   Yes, Clear All
                 </Button>
               </Flex>
