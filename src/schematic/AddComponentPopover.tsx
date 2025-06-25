@@ -53,7 +53,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
           <span style={{ fontSize: "0.8rem", textAlign: "center" }}>
             {component.type}
           </span>
-          <Flex justify="center" align="center" height="3em" overflow="hidden">
+          <Flex justify="center" align="center" height="3rem" overflow="hidden">
             <div
               style={{
                 width: "100%",
@@ -94,12 +94,12 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
       const rect = buttonRef.current.getBoundingClientRect();
 
       // Force it to appear at a very specific position - top-left area
-      const top = 100; // Fixed 100px from top
+      const top = "6.25rem"; // Fixed 6.25rem from top (100px equivalent)
       const left = rect.right + 8;
 
       console.log("Forcing position to:", { top, left });
 
-      setPopoverPosition({ top, left });
+      setPopoverPosition({ top: parseFloat(top) * 16, left }); // Convert rem to px for positioning
       setIsOpen(true);
     }
   }, []);
@@ -160,9 +160,9 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
             position="fixed"
             top={`${popoverPosition.top}px`}
             left={`${popoverPosition.left}px`}
-            width="16em"
+            width="16rem"
             maxWidth="60vw"
-            height="500px"
+            height="31.25rem"
             maxHeight="80vh"
             bg="gray.800"
             borderRadius="md"
@@ -177,8 +177,8 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
                 size="xs"
                 variant="ghost"
                 position="absolute"
-                top="1"
-                right="1"
+                top="0.25rem"
+                right="0.25rem"
                 zIndex="1"
                 onClick={closePopover}
               >
