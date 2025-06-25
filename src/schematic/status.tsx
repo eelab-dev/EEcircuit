@@ -18,6 +18,7 @@ type StatusProps = {
 };
 
 const Status: React.FC<StatusProps> = ({ info }) => {
+  const errors = info.filter((line) => line.startsWith("error:"));
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
@@ -25,10 +26,10 @@ const Status: React.FC<StatusProps> = ({ info }) => {
           <Float>
             <Circle
               size="5"
-              bg={info.length === 0 ? "green" : "red"}
+              bg={errors.length === 0 ? "green" : "red"}
               color="white"
             >
-              {info.length === 0 ? <span>✓</span> : <span>{info.length}</span>}
+              {errors.length === 0 ? <span>✓</span> : <span>{errors.length}</span>}
             </Circle>
           </Float>
           Status
