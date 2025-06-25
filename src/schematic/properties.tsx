@@ -76,12 +76,16 @@ const Properties: React.FC<PropertiesProps> = ({
   };
 
   const handleApply = () => {
-    const result = applyPropertiesToSelectedItem(
-      selectedItem,
-      localValues.name,
-      localValues.properties
-    );
-    onApply?.(result.name, result.value);
+    if (selectedItem.type === "wire") {
+      onApply?.("name", localValues.name);
+    } else {
+      const result = applyPropertiesToSelectedItem(
+        selectedItem,
+        localValues.name,
+        localValues.properties
+      );
+      onApply?.(result.name, result.value);
+    }
     setInitialValues(localValues);
     // Don't auto-close when applying via Enter key
   };
