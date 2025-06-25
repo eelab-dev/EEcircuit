@@ -99,13 +99,31 @@ const Properties: React.FC<PropertiesProps> = ({
     setLocalValues(initialValues);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleApply();
-    } else if (e.key === "Escape") {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
       e.preventDefault();
       onCloseButtonClick();
+      return;
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const form = e.currentTarget.form;
+      if (!form) return;
+
+      const inputs = Array.from(
+        form.querySelectorAll("input:not([disabled])")
+      ).filter((input) => (input as HTMLInputElement).offsetParent !== null); // Only visible inputs
+
+      const currentIndex = inputs.indexOf(e.currentTarget);
+      const nextIndex = currentIndex + 1;
+
+      if (nextIndex < inputs.length) {
+        (inputs[nextIndex] as HTMLInputElement).focus();
+      } else {
+        // If it's the last input, apply and close
+        handleApplyAndClose();
+      }
     }
   };
 
@@ -171,7 +189,12 @@ const Properties: React.FC<PropertiesProps> = ({
           overflowY="auto"
           direction="column"
         >
-          <Stack gap="3" maxW="sm">
+          <Stack
+            as="form"
+            gap="3"
+            maxW="sm"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <Span>Properties</Span>
             {selectedItem.type === "none" && (
               <Span color="gray.500">No item selected</Span>
