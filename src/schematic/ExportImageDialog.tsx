@@ -101,8 +101,8 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                   display="flex"
                   justifyContent="center"
                   alignItems="center"
-                  minH="200px"
-                  minW="400px"
+                  minH="min(50vh, 12.5rem)"
+                  minW="min(80vw, 25rem)"
                 >
                   <Spinner size="xl" />
                 </Box>
@@ -115,8 +115,8 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                   bg="white"
                   p={4}
                   w="100%"
-                  maxW="min(600px, 80vw)"
-                  h="min(500px, 60vh)"
+                  maxW="min(37.5rem, 80vw)"
+                  h="min(31.25rem, 60vh)"
                   overflow={isFullScale ? "auto" : "hidden"}
                   display={isFullScale ? "block" : "flex"}
                   justifyContent={isFullScale ? "unset" : "center"}
@@ -153,7 +153,7 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                     onClick={() => setIsFullScale(!isFullScale)}
                   >
                     {isFullScale ? <ZoomOut /> : <ZoomIn />}
-                    <span style={{ marginLeft: "8px" }}>
+                    <span style={{ marginLeft: "0.5rem" }}>
                       {isFullScale ? "Fit to View" : "1:1 Scale"}
                     </span>
                   </Button>
