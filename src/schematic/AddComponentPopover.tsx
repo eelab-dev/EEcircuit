@@ -12,64 +12,68 @@ type AddComponentPopoverProps = {
 type ComponentListProps = {
   availableComponents: AvailableComponent[];
   clickCallback: () => void;
+  focusedIndex: number;
 };
 
 // Component list to render available components
-const ComponentList: React.FC<ComponentListProps> = ({
-  availableComponents,
-  clickCallback,
-}) => {
-  return (
-    <Flex
-      direction="row"
-      justify="space-between"
-      align="center"
-      width="100%"
-      height="100%"
-      padding="2"
-      overflow="hidden"
-      flexWrap="wrap"
-    >
-      {availableComponents.map((component) => (
-        <Flex
-          key={component.type}
-          direction="column"
-          align="center"
-          width="45%"
-          padding="2"
-          margin="1"
-          borderWidth="1px"
-          borderRadius="md"
-          cursor="pointer"
-          _hover={{ bg: "gray.900" }}
-          onClick={() => {
-            sendCommand({
-              command: "add",
-              instanceType: component.type,
-            });
-            clickCallback();
-          }}
-        >
-          <span style={{ fontSize: "0.8rem", textAlign: "center" }}>
-            {component.type}
-          </span>
-          <Flex justify="center" align="center" height="3rem" overflow="hidden">
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                transform: "scaleY(-1)",
-              }}
-              dangerouslySetInnerHTML={{
-                __html: component.svg,
-              }}
-            />
+const ComponentList = React.forwardRef<HTMLDivElement, ComponentListProps>(
+  ({ availableComponents, clickCallback, focusedIndex }, ref) => {
+    return (
+      <Flex
+        ref={ref}
+        direction="row"
+        justify="space-between"
+        align="center"
+        width="100%"
+        height="100%"
+        padding="2"
+        overflow="hidden"
+        flexWrap="wrap"
+      >
+        {availableComponents.map((component, index) => (
+          <Flex
+            key={component.type}
+            direction="column"
+            align="center"
+            width="45%"
+            padding="2"
+            margin="1"
+            borderWidth="1px"
+            borderRadius="md"
+            cursor="pointer"
+            _hover={{ bg: "gray.900" }}
+            bg={focusedIndex === index ? "gray.700" : "transparent"}
+            tabIndex={-1} // Make it programmatically focusable
+            onClick={() => {
+              sendCommand({
+                command: "add",
+                instanceType: component.type,
+              });
+              clickCallback();
+            }}
+          >
+            <span style={{ fontSize: "0.8rem", textAlign: "center" }}>
+              {component.type}
+            </span>
+            <Flex justify="center" align="center" height="3rem" overflow="hidden">
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  transform: "scaleY(-1)",
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: component.svg,
+                }}
+              />
+            </Flex>
           </Flex>
-        </Flex>
-      ))}
-    </Flex>
-  );
-};
+        ))}
+      </Flex>
+    );
+  }
+);
+ComponentList.displayName = "ComponentList";
 
 const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   availableComponents,
@@ -82,50 +86,121 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   });
   const buttonRef = React.useRef<HTMLButtonElement>(null);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const [focusedIndex, setFocusedIndex] = React.useState(-1);
 
   const closePopover = React.useCallback(() => {
     setIsOpen(false);
     setSearchQuery("");
+    setFocusedIndex(-1);
   }, []);
 
   const clickCallBack = React.useCallback(() => {
     setIsOpen(false);
     setSearchQuery("");
+    setFocusedIndex(-1);
   }, []);
 
   const openPopover = React.useCallback(() => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-
-      // Force it to appear at a very specific position - top-left area
-      const top = "6.25rem"; // Fixed 6.25rem from top (100px equivalent)
+      const top = "6.25rem";
       const left = rect.right + 8;
-
-      console.log("Forcing position to:", { top, left });
-
-      setPopoverPosition({ top: parseFloat(top) * 16, left }); // Convert rem to px for positioning
+      setPopoverPosition({ top: parseFloat(top) * 16, left });
       setIsOpen(true);
     }
   }, []);
 
-  // Handle ESC key press
   React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+    if (isOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isOpen]);
+
+  const filteredComponents = availableComponents.filter((component) =>
+    component.type.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      if (document.activeElement === searchInputRef.current) {
+        if (filteredComponents.length > 0) {
+          setFocusedIndex(0);
+          (listRef.current?.childNodes[0] as HTMLElement)?.focus();
+        }
+      } else {
+        setFocusedIndex(-1);
+        searchInputRef.current?.focus();
+      }
+      return;
+    }
+
+    if (document.activeElement === searchInputRef.current) {
+      if (e.key === "ArrowDown") {
+        if (filteredComponents.length > 0) {
+          e.preventDefault();
+          setFocusedIndex(0);
+          (listRef.current?.childNodes[0] as HTMLElement)?.focus();
+        }
+      }
+      return;
+    }
+
+    if (focusedIndex >= 0) {
+      let newIndex = focusedIndex;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        newIndex = Math.min(focusedIndex + 2, filteredComponents.length - 1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (focusedIndex < 2) {
+          setFocusedIndex(-1);
+          searchInputRef.current?.focus();
+          return;
+        }
+        newIndex = Math.max(focusedIndex - 2, 0);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        if (focusedIndex % 2 === 0) {
+          newIndex = Math.min(focusedIndex + 1, filteredComponents.length - 1);
+        }
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (focusedIndex % 2 !== 0) {
+          newIndex = Math.max(focusedIndex - 1, 0);
+        }
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        sendCommand({
+          command: "add",
+          instanceType: filteredComponents[focusedIndex].type,
+        });
+        clickCallBack();
+        return;
+      }
+
+      if (newIndex !== focusedIndex) {
+        setFocusedIndex(newIndex);
+        (listRef.current?.childNodes[newIndex] as HTMLElement)?.focus();
+      }
+    }
+  };
+
+  React.useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && isOpen) {
         closePopover();
       }
     };
-
     if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
+      document.addEventListener("keydown", handleGlobalKeyDown);
     }
-
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", handleGlobalKeyDown);
     };
   }, [isOpen, closePopover]);
 
-  // Handle click outside to close
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -139,25 +214,13 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
         }
       }
     };
-
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen, closePopover]);
-
-  React.useEffect(() => {
-    if (isOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [isOpen]);
-
-  const filteredComponents = availableComponents.filter((component) =>
-    component.type.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <>
@@ -185,6 +248,7 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
             borderColor="gray.600"
             zIndex={1500}
             overflowY="auto"
+            onKeyDown={handleKeyDown}
           >
             <Box position="relative" p={4}>
               <IconButton
@@ -202,14 +266,19 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
                 ref={searchInputRef}
                 placeholder="Search components..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setFocusedIndex(-1);
+                }}
                 mb={4}
                 bg="gray.700"
                 borderColor="gray.600"
               />
               <ComponentList
+                ref={listRef}
                 availableComponents={filteredComponents}
                 clickCallback={clickCallBack}
+                focusedIndex={focusedIndex}
               />
             </Box>
           </Box>,
