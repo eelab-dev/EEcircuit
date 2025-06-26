@@ -20,9 +20,10 @@ import { AvailableComponent, sendCommand } from "eecircuit-schematic";
 
 type ActionsProps = {
   availableComponents: AvailableComponent[];
+  onExportImage: () => void;
 };
 
-const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
+const Actions: React.FC<ActionsProps> = ({ availableComponents, onExportImage }) => {
   const [isCompact, setIsCompact] = React.useState(false);
   const [showClearDialog, setShowClearDialog] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -117,7 +118,7 @@ const Actions: React.FC<ActionsProps> = ({ availableComponents }) => {
         </IconButton>
       </Tooltip>
       <Tooltip content="Export Image" showArrow openDelay={300}>
-        <IconButton>
+        <IconButton onClick={onExportImage}>
           <ImageDown />
         </IconButton>
       </Tooltip>

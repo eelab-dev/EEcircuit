@@ -14,6 +14,7 @@ import Actions from "./actions";
 import Properties from "./properties";
 import Status from "./status";
 import { Tooltip } from "../components/ui/tooltip";
+import ExportImageDialog from "./ExportImageDialog";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
@@ -53,6 +54,9 @@ const Schematic: React.FC<SchematicProps> = ({
   const [info, setInfo] = useState<string[]>([]);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
+  const [showExportImageDialog, setShowExportImageDialog] = useState(false);
+  const [svgContent, setSvgContent] = useState<string | null>(null);
+  const [loadingSvg, setLoadingSvg] = useState(false);
 
   const msgCallback = useCallback(
     (msg: MessageToApp) => {
@@ -76,6 +80,10 @@ const Schematic: React.FC<SchematicProps> = ({
           break;
         case "info":
           setInfo((prevInfo) => [...prevInfo, `${msg.mType}: ${msg.info}`]);
+          break;
+        case "svg":
+          setSvgContent(msg.svg);
+          setLoadingSvg(false);
           break;
       }
     },
@@ -487,6 +495,13 @@ const Schematic: React.FC<SchematicProps> = ({
     };
   }, [dragBox]);
 
+  const handleExportImage = () => {
+    setLoadingSvg(true);
+    setSvgContent(null);
+    setShowExportImageDialog(true);
+    sendCommand({ command: "export", exportType: "svg" });
+  };
+
   return (
     <Flex direction="column" height={"100%"}>
       <Box
@@ -520,7 +535,7 @@ const Schematic: React.FC<SchematicProps> = ({
         ) : null}
 
         <Float offset="10" placement="middle-start">
-          {<Actions availableComponents={availableComponents} />}
+          {<Actions availableComponents={availableComponents} onExportImage={handleExportImage} />}
         </Float>
         <Float offset="10">
           <Tooltip
@@ -560,6 +575,12 @@ const Schematic: React.FC<SchematicProps> = ({
           Send to Netlist <ArrowBigRight size={16} />
         </Button>
       </Flex>
+      <ExportImageDialog
+        isOpen={showExportImageDialog}
+        onClose={() => setShowExportImageDialog(false)}
+        svgContent={svgContent}
+        loading={loadingSvg}
+      />
     </Flex>
   );
 };
