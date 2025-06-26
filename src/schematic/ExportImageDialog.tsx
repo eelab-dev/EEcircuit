@@ -70,13 +70,15 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content
-            maxW="700px"
-            maxH="90vh"
+            maxW="90vw"
+            maxH="85vh"
+            w="auto"
             position="fixed"
             top="50%"
             left="50%"
             transform="translate(-50%, -50%)"
             zIndex="modal"
+            margin="auto"
           >
             <Dialog.Header position="relative" pb="4">
               <Dialog.Title>Export Schematic as SVG</Dialog.Title>
@@ -113,8 +115,8 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                   bg="white"
                   p={4}
                   w="100%"
-                  maxW="600px"
-                  h="500px"
+                  maxW="min(600px, 80vw)"
+                  h="min(500px, 60vh)"
                   overflow={isFullScale ? "auto" : "hidden"}
                   display={isFullScale ? "block" : "flex"}
                   justifyContent={isFullScale ? "unset" : "center"}
