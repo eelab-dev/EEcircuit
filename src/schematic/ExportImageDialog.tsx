@@ -43,7 +43,7 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
     };
   }, [svgDataUrl]);
 
-  const handleDownload = () => {
+  const handleDownloadSVG = () => {
     if (svgContent) {
       const blob = new Blob([svgContent], { type: "image/svg+xml" });
       const url = URL.createObjectURL(blob);
@@ -55,6 +55,47 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
+  };
+
+  const handleDownloadPNG = () => {
+    if (!svgContent) return;
+
+    // Create a temporary canvas to convert SVG to PNG
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Create an image element to load the SVG
+    const img = new Image();
+
+    img.onload = () => {
+      // Set canvas size to match the image
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+
+      // Disable anti-aliasing for crisp edges
+      ctx.imageSmoothingEnabled = false;
+
+      // Draw the SVG image onto the canvas (transparent background by default)
+      ctx.drawImage(img, 0, 0);
+
+      // Convert canvas to PNG blob and download
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "schematic.png";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      }, "image/png");
+    };
+
+    // Load the SVG data URL into the image
+    img.src = svgDataUrl;
   };
 
   return (
@@ -163,11 +204,19 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                     Close
                   </Button>
                   <Button
+                    variant="outline"
+                    onClick={handleDownloadSVG}
+                    disabled={!svgContent}
+                    mr={2}
+                  >
+                    Download SVG
+                  </Button>
+                  <Button
                     colorScheme="blue"
-                    onClick={handleDownload}
+                    onClick={handleDownloadPNG}
                     disabled={!svgContent}
                   >
-                    Download
+                    Download PNG
                   </Button>
                 </Flex>
               </Flex>
