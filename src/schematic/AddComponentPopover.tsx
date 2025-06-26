@@ -1,5 +1,5 @@
 import React from "react";
-import { Flex, IconButton, Box } from "@chakra-ui/react";
+import { Flex, IconButton, Box, Input } from "@chakra-ui/react";
 import { createPortal } from "react-dom";
 import { Tooltip } from "../components/ui/tooltip";
 import { CopyPlus, X } from "lucide-react";
@@ -75,18 +75,22 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   availableComponents,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
   const [popoverPosition, setPopoverPosition] = React.useState({
     top: 0,
     left: 0,
   });
   const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   const closePopover = React.useCallback(() => {
     setIsOpen(false);
+    setSearchQuery("");
   }, []);
 
   const clickCallBack = React.useCallback(() => {
     setIsOpen(false);
+    setSearchQuery("");
   }, []);
 
   const openPopover = React.useCallback(() => {
@@ -145,6 +149,16 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
     };
   }, [isOpen, closePopover]);
 
+  React.useEffect(() => {
+    if (isOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isOpen]);
+
+  const filteredComponents = availableComponents.filter((component) =>
+    component.type.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <>
       <Tooltip content="Add Component" showArrow openDelay={300}>
@@ -184,8 +198,17 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
               >
                 <X size={12} />
               </IconButton>
+              <Input
+                ref={searchInputRef}
+                placeholder="Search components..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                mb={4}
+                bg="gray.700"
+                borderColor="gray.600"
+              />
               <ComponentList
-                availableComponents={availableComponents}
+                availableComponents={filteredComponents}
                 clickCallback={clickCallBack}
               />
             </Box>
