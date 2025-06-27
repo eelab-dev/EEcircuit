@@ -9,6 +9,7 @@ import {
   Spinner,
 } from "@chakra-ui/react";
 import { X, ZoomIn, ZoomOut } from "lucide-react";
+import { convertSvgToPdf } from "../utils/svgToPdf";
 
 type ExportImageDialogProps = {
   isOpen: boolean;
@@ -98,6 +99,36 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
     img.src = svgDataUrl;
   };
 
+  const handleDownloadPDF = async () => {
+    if (!svgContent) return;
+
+    try {
+      console.log("Starting PDF generation...");
+
+      // Use the new utility function to convert SVG to PDF
+      const pdfBytes = await convertSvgToPdf(svgContent, {
+        backgroundColor: "white",
+        scale: 1,
+      });
+
+      // Download the PDF
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "schematic.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      console.log("PDF download completed successfully");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Error generating PDF. Please check the console for details.");
+    }
+  };
+
   return (
     <Portal>
       <Dialog.Root
@@ -122,7 +153,7 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
             margin="auto"
           >
             <Dialog.Header position="relative" pb="4">
-              <Dialog.Title>Export Schematic as SVG</Dialog.Title>
+              <Dialog.Title>Export Schematic</Dialog.Title>
               <Dialog.CloseTrigger asChild>
                 <IconButton
                   position="absolute"
@@ -212,11 +243,19 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                     Download SVG
                   </Button>
                   <Button
-                    colorScheme="blue"
+                    variant="outline"
                     onClick={handleDownloadPNG}
                     disabled={!svgContent}
+                    mr={2}
                   >
                     Download PNG
+                  </Button>
+                  <Button
+                    colorScheme="blue"
+                    onClick={handleDownloadPDF}
+                    disabled={!svgContent}
+                  >
+                    Download PDF
                   </Button>
                 </Flex>
               </Flex>
