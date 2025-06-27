@@ -546,6 +546,46 @@ export function parseComponentProperties(
     return properties;
   }
 
+  // For SIN sources, parse format: "SIN(offset amplitude frequency delay damping phase)"
+  if (componentType === "vsin" || componentType === "isin") {
+    const sinMatch = valueString.match(/SIN\s*\(\s*([^)]+)\s*\)/i);
+    if (sinMatch) {
+      const params = sinMatch[1].split(/\s+/);
+      const keys = ["offset", "amplitude", "frequency", "delay", "damping", "phase"];
+      
+      params.forEach((param, index) => {
+        if (param.trim() && index < keys.length) {
+          properties[keys[index]] = param.trim();
+        }
+      });
+      return properties;
+    }
+    // Fallback to default value parsing if not in SIN format
+    properties.value = valueString;
+    return properties;
+  }
+
+  // For PULSE sources, parse format: "PULSE(v1 v2 time_delay rise_time fall_time width period)"
+  if (componentType === "vpulse" || componentType === "ipulse") {
+    const pulseMatch = valueString.match(/PULSE\s*\(\s*([^)]+)\s*\)/i);
+    if (pulseMatch) {
+      const params = pulseMatch[1].split(/\s+/);
+      const keys = componentType === "vpulse" 
+        ? ["v1", "v2", "timeDelay", "riseTime", "fallTime", "width", "period"]
+        : ["i1", "i2", "timeDelay", "riseTime", "fallTime", "width", "period"];
+      
+      params.forEach((param, index) => {
+        if (param.trim() && index < keys.length) {
+          properties[keys[index]] = param.trim();
+        }
+      });
+      return properties;
+    }
+    // Fallback to default value parsing if not in PULSE format
+    properties.value = valueString;
+    return properties;
+  }
+
   // For MOSFET components, parse model, W and L from value string like "N90 W=1u L=0.09u"
   if (componentType === "nFET" || componentType === "pFET") {
     // Parse format: "ModelName W=value L=value"
@@ -601,6 +641,90 @@ export function serializeComponentProperties(
   componentType: ComponentType,
   properties: Partial<ComponentProperties>
 ): string {
+  // For SIN sources, serialize to "SIN(offset amplitude frequency delay damping phase)"
+  if (componentType === "vsin" || componentType === "isin") {
+    const isVoltage = componentType === "vsin";
+    
+    if (isVoltage) {
+      const props = properties as Partial<VoltageSourceProperties>;
+      const params = [
+        props.offset || "0",
+        props.amplitude || "0", 
+        props.frequency || "0",
+        props.delay || "0",
+        props.damping || "0",
+        props.phase || "0"
+      ];
+      
+      // Remove trailing zeros for cleaner output
+      while (params.length > 2 && params[params.length - 1] === "0") {
+        params.pop();
+      }
+      
+      return `SIN(${params.join(" ")})`;
+    } else {
+      const props = properties as Partial<CurrentSourceProperties>;
+      const params = [
+        props.offset || "0",
+        props.amplitude || "0", 
+        props.frequency || "0",
+        props.delay || "0",
+        props.damping || "0",
+        props.phase || "0"
+      ];
+      
+      // Remove trailing zeros for cleaner output
+      while (params.length > 2 && params[params.length - 1] === "0") {
+        params.pop();
+      }
+      
+      return `SIN(${params.join(" ")})`;
+    }
+  }
+
+  // For PULSE sources, serialize to "PULSE(v1/i1 v2/i2 time_delay rise_time fall_time width period)"
+  if (componentType === "vpulse" || componentType === "ipulse") {
+    const isVoltage = componentType === "vpulse";
+    
+    if (isVoltage) {
+      const props = properties as Partial<VoltageSourceProperties>;
+      const params = [
+        props.v1 || "0",
+        props.v2 || "0",
+        props.timeDelay || "0",
+        props.riseTime || "0",
+        props.fallTime || "0",
+        props.width || "0",
+        props.period || "0"
+      ];
+      
+      // Remove trailing zeros for cleaner output (but keep at least width and period)
+      while (params.length > 6 && params[params.length - 1] === "0") {
+        params.pop();
+      }
+      
+      return `PULSE(${params.join(" ")})`;
+    } else {
+      const props = properties as Partial<CurrentSourceProperties>;
+      const params = [
+        props.i1 || "0",
+        props.i2 || "0",
+        props.timeDelay || "0",
+        props.riseTime || "0",
+        props.fallTime || "0",
+        props.width || "0",
+        props.period || "0"
+      ];
+      
+      // Remove trailing zeros for cleaner output (but keep at least width and period)
+      while (params.length > 6 && params[params.length - 1] === "0") {
+        params.pop();
+      }
+      
+      return `PULSE(${params.join(" ")})`;
+    }
+  }
+
   // For MOSFET components, serialize W and L
   if (componentType === "nFET" || componentType === "pFET") {
     const props = properties as Partial<FETProperties>;
