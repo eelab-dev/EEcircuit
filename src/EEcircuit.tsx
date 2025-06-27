@@ -80,6 +80,10 @@ const EEcircuit: React.FC = () => {
 
   const [results, setResults] = React.useState<ResultType[]>([]);
 
+  // Tab enablement states
+  const [isSimulateTabEnabled, setIsSimulateTabEnabled] = React.useState(false);
+  const [isPlotTabEnabled, setIsPlotTabEnabled] = React.useState(false);
+
   // Track window resize events
   React.useEffect(() => {
     const handleResize = () => {
@@ -370,15 +374,26 @@ const EEcircuit: React.FC = () => {
 
     const netlistWithPreamble = netListPreamble + netlist;
     setNetList(netlistWithPreamble);
+    setIsSimulateTabEnabled(true); // Enable simulate tab when netlist is exported
     setTabValue("simulate");
   }, []);
 
   const handleTabValueChange = React.useCallback(
     (details: TabsValueChangeDetails) => {
-      setTabValue(details.value as TabsValue);
+      const newTabValue = details.value as TabsValue;
+
+      // Prevent switching to disabled tabs
+      if (newTabValue === "simulate" && !isSimulateTabEnabled) {
+        return;
+      }
+      if (newTabValue === "plot" && !isPlotTabEnabled) {
+        return;
+      }
+
+      setTabValue(newTabValue);
 
       // Handle schematic tab activation
-      if (details.value === "schematic") {
+      if (newTabValue === "schematic") {
         // Fit to screen if this is the first time viewing or if window was resized
         if (!hasViewedSchematic || hasResizedSinceSchematicView) {
           // Small delay to ensure tab content is visible and canvas is ready
@@ -394,11 +409,17 @@ const EEcircuit: React.FC = () => {
         setShouldFitToScreen(false);
       }
     },
-    [hasViewedSchematic, hasResizedSinceSchematicView]
+    [
+      hasViewedSchematic,
+      hasResizedSinceSchematicView,
+      isSimulateTabEnabled,
+      isPlotTabEnabled,
+    ]
   );
 
   const handleNewResults = React.useCallback((newResults: ResultType[]) => {
     setResults(newResults);
+    setIsPlotTabEnabled(true); // Enable plot tab when results are obtained
     setTabValue("plot");
   }, []);
 
@@ -429,10 +450,26 @@ const EEcircuit: React.FC = () => {
           <Tabs.Trigger value="schematic" marginRight="0.5em">
             Schematic
           </Tabs.Trigger>
-          <Tabs.Trigger value="simulate" marginRight="0.5em">
+          <Tabs.Trigger
+            value="simulate"
+            marginRight="0.5em"
+            disabled={!isSimulateTabEnabled}
+            style={{
+              opacity: isSimulateTabEnabled ? 1 : 0.5,
+              cursor: isSimulateTabEnabled ? "pointer" : "not-allowed",
+            }}
+          >
             Simulate
           </Tabs.Trigger>
-          <Tabs.Trigger value="plot" marginRight="0.5em">
+          <Tabs.Trigger
+            value="plot"
+            marginRight="0.5em"
+            disabled={!isPlotTabEnabled}
+            style={{
+              opacity: isPlotTabEnabled ? 1 : 0.5,
+              cursor: isPlotTabEnabled ? "pointer" : "not-allowed",
+            }}
+          >
             Plot
           </Tabs.Trigger>
         </Tabs.List>
