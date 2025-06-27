@@ -251,7 +251,7 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                     Download PNG
                   </Button>
                   <Button
-                    colorScheme="blue"
+                    variant="outline"
                     onClick={handleDownloadPDF}
                     disabled={!svgContent}
                   >
