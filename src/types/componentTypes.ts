@@ -200,6 +200,86 @@ export const componentPropertyConfigs: Record<ComponentType, PropertyField[]> =
         unit: "A",
       },
     ],
+    vsin: [
+      {
+        key: "value",
+        label: "Sinusoidal Voltage",
+        type: "text",
+        placeholder: "e.g., 5V, 1.8V",
+        required: true,
+        unit: "V",
+      },
+    ],
+    vpulse: [
+      {
+        key: "value",
+        label: "Pulse Voltage",
+        type: "text",
+        placeholder: "e.g., 5V, 1.8V",
+        required: true,
+        unit: "V",
+      },
+    ],
+    isin: [
+      {
+        key: "value",
+        label: "Sinusoidal Current",
+        type: "text",
+        placeholder: "e.g., 1mA, 10uA",
+        required: true,
+        unit: "A",
+      },
+    ],
+    ipulse: [
+      {
+        key: "value",
+        label: "Pulse Current",
+        type: "text",
+        placeholder: "e.g., 1mA, 10uA",
+        required: true,
+        unit: "A",
+      },
+    ],
+    VCVS: [
+      {
+        key: "value",
+        label: "Voltage Gain",
+        type: "text",
+        placeholder: "e.g., 10, 0.5",
+        required: true,
+        unit: "V/V",
+      },
+    ],
+    VCCS: [
+      {
+        key: "value",
+        label: "Transconductance",
+        type: "text",
+        placeholder: "e.g., 1m, 100u",
+        required: true,
+        unit: "S",
+      },
+    ],
+    CCVS: [
+      {
+        key: "value",
+        label: "Transresistance",
+        type: "text",
+        placeholder: "e.g., 1k, 100",
+        required: true,
+        unit: "Ω",
+      },
+    ],
+    CCCS: [
+      {
+        key: "value",
+        label: "Current Gain",
+        type: "text",
+        placeholder: "e.g., 10, 0.5",
+        required: true,
+        unit: "A/A",
+      },
+    ],
     nFET: baseFETConfig,
     pFET: baseFETConfig,
     VDD: [],
