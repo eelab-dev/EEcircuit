@@ -551,8 +551,15 @@ export function parseComponentProperties(
     const sinMatch = valueString.match(/SIN\s*\(\s*([^)]+)\s*\)/i);
     if (sinMatch) {
       const params = sinMatch[1].split(/\s+/);
-      const keys = ["offset", "amplitude", "frequency", "delay", "damping", "phase"];
-      
+      const keys = [
+        "offset",
+        "amplitude",
+        "frequency",
+        "delay",
+        "damping",
+        "phase",
+      ];
+
       params.forEach((param, index) => {
         if (param.trim() && index < keys.length) {
           properties[keys[index]] = param.trim();
@@ -570,10 +577,19 @@ export function parseComponentProperties(
     const pulseMatch = valueString.match(/PULSE\s*\(\s*([^)]+)\s*\)/i);
     if (pulseMatch) {
       const params = pulseMatch[1].split(/\s+/);
-      const keys = componentType === "vpulse" 
-        ? ["v1", "v2", "timeDelay", "riseTime", "fallTime", "width", "period"]
-        : ["i1", "i2", "timeDelay", "riseTime", "fallTime", "width", "period"];
-      
+      const keys =
+        componentType === "vpulse"
+          ? ["v1", "v2", "timeDelay", "riseTime", "fallTime", "width", "period"]
+          : [
+              "i1",
+              "i2",
+              "timeDelay",
+              "riseTime",
+              "fallTime",
+              "width",
+              "period",
+            ];
+
       params.forEach((param, index) => {
         if (param.trim() && index < keys.length) {
           properties[keys[index]] = param.trim();
@@ -644,40 +660,40 @@ export function serializeComponentProperties(
   // For SIN sources, serialize to "SIN(offset amplitude frequency delay damping phase)"
   if (componentType === "vsin" || componentType === "isin") {
     const isVoltage = componentType === "vsin";
-    
+
     if (isVoltage) {
       const props = properties as Partial<VoltageSourceProperties>;
       const params = [
         props.offset || "0",
-        props.amplitude || "0", 
+        props.amplitude || "0",
         props.frequency || "0",
         props.delay || "0",
         props.damping || "0",
-        props.phase || "0"
+        props.phase || "0",
       ];
-      
+
       // Remove trailing zeros for cleaner output
       while (params.length > 2 && params[params.length - 1] === "0") {
         params.pop();
       }
-      
+
       return `SIN(${params.join(" ")})`;
     } else {
       const props = properties as Partial<CurrentSourceProperties>;
       const params = [
         props.offset || "0",
-        props.amplitude || "0", 
+        props.amplitude || "0",
         props.frequency || "0",
         props.delay || "0",
         props.damping || "0",
-        props.phase || "0"
+        props.phase || "0",
       ];
-      
+
       // Remove trailing zeros for cleaner output
       while (params.length > 2 && params[params.length - 1] === "0") {
         params.pop();
       }
-      
+
       return `SIN(${params.join(" ")})`;
     }
   }
@@ -685,7 +701,7 @@ export function serializeComponentProperties(
   // For PULSE sources, serialize to "PULSE(v1/i1 v2/i2 time_delay rise_time fall_time width period)"
   if (componentType === "vpulse" || componentType === "ipulse") {
     const isVoltage = componentType === "vpulse";
-    
+
     if (isVoltage) {
       const props = properties as Partial<VoltageSourceProperties>;
       const params = [
@@ -695,14 +711,14 @@ export function serializeComponentProperties(
         props.riseTime || "0",
         props.fallTime || "0",
         props.width || "0",
-        props.period || "0"
+        props.period || "0",
       ];
-      
+
       // Remove trailing zeros for cleaner output (but keep at least width and period)
       while (params.length > 6 && params[params.length - 1] === "0") {
         params.pop();
       }
-      
+
       return `PULSE(${params.join(" ")})`;
     } else {
       const props = properties as Partial<CurrentSourceProperties>;
@@ -713,14 +729,14 @@ export function serializeComponentProperties(
         props.riseTime || "0",
         props.fallTime || "0",
         props.width || "0",
-        props.period || "0"
+        props.period || "0",
       ];
-      
+
       // Remove trailing zeros for cleaner output (but keep at least width and period)
       while (params.length > 6 && params[params.length - 1] === "0") {
         params.pop();
       }
-      
+
       return `PULSE(${params.join(" ")})`;
     }
   }
