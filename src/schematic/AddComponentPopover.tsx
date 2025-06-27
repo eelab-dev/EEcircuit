@@ -9,8 +9,9 @@ import {
   sendCommand,
 } from "eecircuit-schematic";
 
-// Type-safe category priority mapping
-// This will generate TypeScript errors if we try to use categories that don't exist in ComponentCategory
+// Type-safe category priority mapping that stays perfectly in sync with ComponentCategory
+// This will generate TypeScript errors if we try to use categories that don't exist
+// or if we miss any categories that do exist
 const createCategoryPriority = (): Record<ComponentCategory, number> => {
   const priorities: Record<ComponentCategory, number> = {
     passive: 1, // resistors, capacitors, inductors
@@ -20,6 +21,7 @@ const createCategoryPriority = (): Record<ComponentCategory, number> => {
     "dependent-source": 5, // dependent sources (VCVS, CCCS, etc.)
     connection: 6, // ports, connections
   };
+
   return priorities;
 };
 
@@ -42,8 +44,8 @@ const groupComponentsByCategory = (components: AvailableComponent[]) => {
   const sortedGroups: Record<string, AvailableComponent[]> = {};
   Object.keys(groups)
     .sort((a, b) => {
-      const priorityA = categoryPriority[a as ComponentCategory];
-      const priorityB = categoryPriority[b as ComponentCategory];
+      const priorityA = categoryPriority[a as ComponentCategory] ?? 999;
+      const priorityB = categoryPriority[b as ComponentCategory] ?? 999;
 
       if (priorityA !== priorityB) {
         return priorityA - priorityB;
