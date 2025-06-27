@@ -73,7 +73,7 @@ export const convertSvgToPdf = async (
 
   // Create PDF document
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([finalWidth * scale, finalHeight * scale]);
+  const page = pdfDoc.addPage([finalWidth, finalHeight]);
 
   // Set background color if specified
   if (options.backgroundColor) {
@@ -81,22 +81,22 @@ export const convertSvgToPdf = async (
     page.drawRectangle({
       x: 0,
       y: 0,
-      width: finalWidth * scale,
-      height: finalHeight * scale,
+      width: finalWidth,
+      height: finalHeight,
       color: bgColor,
     });
   }
 
   console.log(
-    `Created PDF page with dimensions: ${finalWidth * scale} x ${finalHeight * scale}`
+    `Created PDF page with dimensions: ${finalWidth} x ${finalHeight}`
   );
 
   // Convert SVG elements to PDF operations
   await processSvgElements(
     svgElement,
     page,
-    finalWidth * scale,
-    finalHeight * scale,
+    finalWidth,
+    finalHeight,
     scale,
     viewBox
   );
@@ -389,7 +389,7 @@ const processSvgElements = async (
             page.drawCircle({
               x: pdfX,
               y: pdfY,
-              size: r * 2 * Math.min(scaleX, scaleY),
+              size: r * Math.min(scaleX, scaleY),
               color: fillColor,
             });
           }
@@ -399,7 +399,7 @@ const processSvgElements = async (
             page.drawCircle({
               x: pdfX,
               y: pdfY,
-              size: r * 2 * Math.min(scaleX, scaleY),
+              size: r * Math.min(scaleX, scaleY),
               borderColor: strokeColor,
               borderWidth: strokeWidth * Math.min(scaleX, scaleY),
             });
