@@ -23,6 +23,8 @@ import { Box, Flex, Tabs, Text } from "@chakra-ui/react";
 
 //import { Toaster, toaster } from "./components/ui/toaster.tsx";
 
+import { Toaster } from "./components/ui/toaster.tsx";
+
 //import { ProgressBar, ProgressRoot } from "./components/ui/progress.tsx";
 
 //import { getColor } from "./colors.ts";
@@ -418,9 +420,33 @@ const EEcircuit: React.FC = () => {
   );
 
   const handleNewResults = React.useCallback((newResults: ResultType[]) => {
-    setResults(newResults);
-    setIsPlotTabEnabled(true); // Enable plot tab when results are obtained
-    setTabValue("plot");
+    // Double-check that we have valid results before enabling plot tab
+    const hasValidResults =
+      newResults &&
+      newResults.length > 0 &&
+      newResults[0].data &&
+      newResults[0].data.length > 0 &&
+      newResults[0].variableNames &&
+      newResults[0].variableNames.length > 0;
+
+    // Additional check for actual data points
+    let hasDataPoints = false;
+    if (hasValidResults) {
+      hasDataPoints = newResults[0].data.some(
+        (dataSet) => dataSet.values && dataSet.values.length > 0
+      );
+    }
+
+    if (hasValidResults && hasDataPoints) {
+      setResults(newResults);
+      setIsPlotTabEnabled(true); // Enable plot tab when valid results are obtained
+      setTabValue("plot");
+    } else {
+      // This should not happen if simulate.tsx is working correctly, but just in case
+      console.warn(
+        "handleNewResults called with invalid results, not enabling plot tab"
+      );
+    }
   }, []);
 
   return (
@@ -503,6 +529,7 @@ const EEcircuit: React.FC = () => {
             /> */}
         </Tabs.Content>
       </Tabs.Root>
+      <Toaster />
     </Box>
   );
 };

@@ -13,6 +13,7 @@ import DcConfig from "./simConfigs/dc";
 import AcConfig from "./simConfigs/ac";
 import TransConfig from "./simConfigs/trans";
 import { ResultType } from "eecircuit-engine";
+import { toaster } from "../components/ui/toaster";
 
 type SimulationEditorProps = {
   netList: string;
@@ -83,11 +84,44 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
     console.log(sim.getInfo());
     console.log("Simulation Result:", result);
+
     if (result) {
-      // Assuming onResultsObtained is a prop function to handle results
-      // You can replace this with your actual result handling logic
+      // Check if the result has valid data and variables
+      const hasData = result.data && result.data.length > 0;
+      const hasVariables =
+        result.variableNames && result.variableNames.length > 0;
+
+      // Additional check for actual data points in the result
+      let hasDataPoints = false;
+      if (hasData) {
+        hasDataPoints = result.data.some(
+          (dataSet) => dataSet.values && dataSet.values.length > 0
+        );
+      }
+
+      if (!hasData || !hasVariables || !hasDataPoints) {
+        // Show error toast for empty results
+        toaster.create({
+          title: "Simulation Error",
+          description:
+            "Simulation run but no results were generated. Check your netlist and simulation configuration.",
+          type: "error",
+          duration: 5000,
+        });
+        console.error("Simulation completed but returned empty results.");
+        return; // Don't call onResultsObtained, preventing tab switch
+      }
+
+      // Valid results, proceed normally
       onResultsObtained([result]);
     } else {
+      // Show error toast for failed simulation
+      toaster.create({
+        title: "Simulation Error",
+        description: "Simulation failed to run. Check your netlist for errors.",
+        type: "error",
+        duration: 5000,
+      });
       console.error("Simulation failed or returned no results.");
     }
   };
