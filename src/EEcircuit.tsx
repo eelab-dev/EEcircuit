@@ -375,7 +375,7 @@ const EEcircuit: React.FC = () => {
 
   const handleTabValueChange = React.useCallback(
     (details: TabsValueChangeDetails) => {
-      setTabValue(details.value);
+      setTabValue(details.value as TabsValue);
 
       // Handle schematic tab activation
       if (details.value === "schematic") {
