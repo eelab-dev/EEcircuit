@@ -231,16 +231,9 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
     if (!query) return true;
 
     const componentType = component.type.toLowerCase();
-    const componentCategory = component.category.toLowerCase();
 
-    // More precise matching: prioritize starts-with matches
-    return (
-      componentType.startsWith(query) ||
-      componentCategory.startsWith(query) ||
-      // Fallback to includes for partial matches, but only if query is longer
-      (query.length > 1 &&
-        (componentType.includes(query) || componentCategory.includes(query)))
-    );
+    // Filter any component that includes the search term in the component name/type only
+    return componentType.includes(query);
   });
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
