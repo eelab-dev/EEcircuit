@@ -1,9 +1,32 @@
 import React from "react";
-import { Flex, IconButton, Box, Input } from "@chakra-ui/react";
+import { Flex, IconButton, Box, Input, Text } from "@chakra-ui/react";
 import { createPortal } from "react-dom";
 import { Tooltip } from "../components/ui/tooltip";
 import { CopyPlus, X } from "lucide-react";
 import { AvailableComponent, sendCommand } from "eecircuit-schematic";
+
+// Helper function to group components by category
+const groupComponentsByCategory = (components: AvailableComponent[]) => {
+  const groups: Record<string, AvailableComponent[]> = {};
+
+  components.forEach((component) => {
+    const category = component.category;
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    groups[category].push(component);
+  });
+
+  // Sort categories for consistent display
+  const sortedGroups: Record<string, AvailableComponent[]> = {};
+  Object.keys(groups)
+    .sort()
+    .forEach((category) => {
+      sortedGroups[category] = groups[category];
+    });
+
+  return sortedGroups;
+};
 
 type AddComponentPopoverProps = {
   availableComponents: AvailableComponent[];
@@ -15,60 +38,113 @@ type ComponentListProps = {
   focusedIndex: number;
 };
 
-// Component list to render available components
+// Component list to render available components grouped by category
 const ComponentList = React.forwardRef<HTMLDivElement, ComponentListProps>(
   ({ availableComponents, clickCallback, focusedIndex }, ref) => {
+    const groupedComponents = groupComponentsByCategory(availableComponents);
+
+    // Create a flattened list for focus management
+    const flattenedComponents: AvailableComponent[] = [];
+    Object.values(groupedComponents).forEach((categoryComponents) => {
+      flattenedComponents.push(...categoryComponents);
+    });
+
     return (
       <Flex
         ref={ref}
-        direction="row"
-        justify="space-between"
-        align="center"
+        direction="column"
         width="100%"
         height="100%"
         padding="2"
         overflow="hidden"
-        flexWrap="wrap"
+        gap="3"
       >
-        {availableComponents.map((component, index) => (
-          <Flex
-            key={component.type}
-            direction="column"
-            align="center"
-            width="45%"
-            padding="2"
-            margin="1"
-            borderWidth="1px"
-            borderRadius="md"
-            cursor="pointer"
-            _hover={{ bg: "gray.900" }}
-            bg={focusedIndex === index ? "gray.700" : "transparent"}
-            tabIndex={-1} // Make it programmatically focusable
-            onClick={() => {
-              sendCommand({
-                command: "add",
-                instanceType: component.type,
-              });
-              clickCallback();
-            }}
-          >
-            <span style={{ fontSize: "0.8rem", textAlign: "center" }}>
-              {component.type}
-            </span>
-            <Flex justify="center" align="center" height="3rem" overflow="hidden">
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  transform: "scaleY(-1)",
-                }}
-                dangerouslySetInnerHTML={{
-                  __html: component.svg,
-                }}
-              />
-            </Flex>
-          </Flex>
-        ))}
+        {Object.entries(groupedComponents).map(
+          ([category, categoryComponents], categoryIndex) => {
+            const startIndex = flattenedComponents.findIndex((comp) =>
+              categoryComponents.includes(comp)
+            );
+
+            return (
+              <Box key={category}>
+                {categoryIndex > 0 && (
+                  <Box height="1px" bg="gray.600" width="100%" mb="3" />
+                )}
+                <Text
+                  fontSize="xs"
+                  fontWeight="medium"
+                  color="gray.500"
+                  mb="2"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                >
+                  {category}
+                </Text>
+                <Flex
+                  direction="row"
+                  justify="flex-start"
+                  align="center"
+                  width="100%"
+                  flexWrap="wrap"
+                  gap="2"
+                >
+                  {categoryComponents.map((component, categoryIndex) => {
+                    const globalIndex = startIndex + categoryIndex;
+                    return (
+                      <Flex
+                        key={component.type}
+                        direction="column"
+                        align="center"
+                        width="45%"
+                        padding="2"
+                        borderWidth="1px"
+                        borderRadius="md"
+                        cursor="pointer"
+                        _hover={{ bg: "gray.900" }}
+                        bg={
+                          focusedIndex === globalIndex
+                            ? "gray.700"
+                            : "transparent"
+                        }
+                        tabIndex={-1}
+                        onClick={() => {
+                          sendCommand({
+                            command: "add",
+                            instanceType: component.type,
+                          });
+                          clickCallback();
+                        }}
+                      >
+                        <span
+                          style={{ fontSize: "0.8rem", textAlign: "center" }}
+                        >
+                          {component.type}
+                        </span>
+                        <Flex
+                          justify="center"
+                          align="center"
+                          height="3rem"
+                          overflow="hidden"
+                        >
+                          <div
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              transform: "scaleY(-1)",
+                            }}
+                            dangerouslySetInnerHTML={{
+                              __html: component.svg,
+                            }}
+                          />
+                        </Flex>
+                      </Flex>
+                    );
+                  })}
+                </Flex>
+              </Box>
+            );
+          }
+        )}
       </Flex>
     );
   }
@@ -117,8 +193,10 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
     }
   }, [isOpen]);
 
-  const filteredComponents = availableComponents.filter((component) =>
-    component.type.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredComponents = availableComponents.filter(
+    (component) =>
+      component.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      component.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -127,7 +205,6 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
       if (document.activeElement === searchInputRef.current) {
         if (filteredComponents.length > 0) {
           setFocusedIndex(0);
-          (listRef.current?.childNodes[0] as HTMLElement)?.focus();
         }
       } else {
         setFocusedIndex(-1);
@@ -141,7 +218,6 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
         if (filteredComponents.length > 0) {
           e.preventDefault();
           setFocusedIndex(0);
-          (listRef.current?.childNodes[0] as HTMLElement)?.focus();
         }
       }
       return;
@@ -182,7 +258,6 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
 
       if (newIndex !== focusedIndex) {
         setFocusedIndex(newIndex);
-        (listRef.current?.childNodes[newIndex] as HTMLElement)?.focus();
       }
     }
   };
