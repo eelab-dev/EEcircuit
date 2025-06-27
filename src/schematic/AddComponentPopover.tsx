@@ -3,7 +3,25 @@ import { Flex, IconButton, Box, Input, Text } from "@chakra-ui/react";
 import { createPortal } from "react-dom";
 import { Tooltip } from "../components/ui/tooltip";
 import { CopyPlus, X } from "lucide-react";
-import { AvailableComponent, sendCommand } from "eecircuit-schematic";
+import {
+  AvailableComponent,
+  ComponentCategory,
+  sendCommand,
+} from "eecircuit-schematic";
+
+// Type-safe category priority mapping
+// This will generate TypeScript errors if we try to use categories that don't exist in ComponentCategory
+const createCategoryPriority = (): Record<ComponentCategory, number> => {
+  const priorities: Record<ComponentCategory, number> = {
+    passive: 1, // resistors, capacitors, inductors
+    transistor: 2, // nFET, pFET
+    source: 3, // voltage and current sources
+    power: 4, // VDD, GND
+    "dependent-source": 5, // dependent sources (VCVS, CCCS, etc.)
+    connection: 6, // ports, connections
+  };
+  return priorities;
+};
 
 // Helper function to group components by category
 const groupComponentsByCategory = (components: AvailableComponent[]) => {
@@ -17,10 +35,23 @@ const groupComponentsByCategory = (components: AvailableComponent[]) => {
     groups[category].push(component);
   });
 
-  // Sort categories for consistent display
+  // Get type-safe category priority mapping
+  const categoryPriority = createCategoryPriority();
+
+  // Sort categories by priority, then alphabetically for same priority
   const sortedGroups: Record<string, AvailableComponent[]> = {};
   Object.keys(groups)
-    .sort()
+    .sort((a, b) => {
+      const priorityA = categoryPriority[a as ComponentCategory];
+      const priorityB = categoryPriority[b as ComponentCategory];
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // If same priority, sort alphabetically
+      return a.localeCompare(b);
+    })
     .forEach((category) => {
       sortedGroups[category] = groups[category];
     });
