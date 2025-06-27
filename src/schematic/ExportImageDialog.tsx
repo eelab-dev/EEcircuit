@@ -7,8 +7,9 @@ import {
   Portal,
   Box,
   Spinner,
+  Menu,
 } from "@chakra-ui/react";
-import { X, ZoomIn, ZoomOut } from "lucide-react";
+import { X, ZoomIn, ZoomOut, Download, ChevronDown } from "lucide-react";
 import { convertSvgToPdf } from "../utils/svgToPdf";
 
 type ExportImageDialogProps = {
@@ -234,29 +235,28 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                   <Button variant="outline" onClick={onClose} mr={3}>
                     Close
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleDownloadSVG}
-                    disabled={!svgContent}
-                    mr={2}
-                  >
-                    Download SVG
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleDownloadPNG}
-                    disabled={!svgContent}
-                    mr={2}
-                  >
-                    Download PNG
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleDownloadPDF}
-                    disabled={!svgContent}
-                  >
-                    Download PDF
-                  </Button>
+                  <Menu.Root>
+                    <Menu.Trigger asChild>
+                      <Button variant="outline" disabled={!svgContent}>
+                        <Download />
+                        <span style={{ marginLeft: "0.5rem" }}>Download</span>
+                        <ChevronDown style={{ marginLeft: "0.5rem" }} />
+                      </Button>
+                    </Menu.Trigger>
+                    <Menu.Positioner>
+                      <Menu.Content>
+                        <Menu.Item value="svg" onClick={handleDownloadSVG}>
+                          Download as SVG
+                        </Menu.Item>
+                        <Menu.Item value="png" onClick={handleDownloadPNG}>
+                          Download as PNG
+                        </Menu.Item>
+                        <Menu.Item value="pdf" onClick={handleDownloadPDF}>
+                          Download as PDF
+                        </Menu.Item>
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Menu.Root>
                 </Flex>
               </Flex>
             </Dialog.Footer>
