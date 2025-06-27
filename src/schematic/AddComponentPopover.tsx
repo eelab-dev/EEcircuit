@@ -226,11 +226,22 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
     }
   }, [isOpen]);
 
-  const filteredComponents = availableComponents.filter(
-    (component) =>
-      component.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      component.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredComponents = availableComponents.filter((component) => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return true;
+
+    const componentType = component.type.toLowerCase();
+    const componentCategory = component.category.toLowerCase();
+
+    // More precise matching: prioritize starts-with matches
+    return (
+      componentType.startsWith(query) ||
+      componentCategory.startsWith(query) ||
+      // Fallback to includes for partial matches, but only if query is longer
+      (query.length > 1 &&
+        (componentType.includes(query) || componentCategory.includes(query)))
+    );
+  });
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Tab") {
