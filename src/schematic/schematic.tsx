@@ -535,7 +535,12 @@ const Schematic: React.FC<SchematicProps> = ({
         ) : null}
 
         <Float offset="10" placement="middle-start">
-          {<Actions availableComponents={availableComponents} onExportImage={handleExportImage} />}
+          {
+            <Actions
+              availableComponents={availableComponents}
+              onExportImage={handleExportImage}
+            />
+          }
         </Float>
         <Float offset="10">
           <Tooltip
@@ -572,7 +577,7 @@ const Schematic: React.FC<SchematicProps> = ({
 
         <Box flex="1" />
         <Button size="sm" onClick={sendToNetListButtonHandler}>
-          Send to Netlist <ArrowBigRight size={16} />
+          Simulate (Netlist) <ArrowBigRight size={16} />
         </Button>
       </Flex>
       <ExportImageDialog

@@ -30,11 +30,13 @@ import { Box, Flex, Tabs, Text } from "@chakra-ui/react";
 //import { DisplayDataType, makeDD } from "./displayData.ts";
 
 import Schematic from "./schematic/schematic.tsx";
-import NetlistEditor from "./netlistEditor/netlistEditor.tsx";
+import SimulationEditor from "./Simulate/simulate.tsx";
 import { TabsValueChangeDetails } from "node_modules/@chakra-ui/react/dist/types/components/tabs/tabs";
 import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
 import { ResultType } from "eecircuit-engine";
+
+type TabsValue = "schematic" | "simulate" | "plot";
 
 //let sim: SimArray;
 //const store = globalThis.localStorage;
@@ -65,7 +67,7 @@ const EEcircuit: React.FC = () => {
   //const [info, setInfo] = React.useState("");
   const [netList, setNetList] = React.useState("");
   //const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
-  const [tabValue, setTabValue] = React.useState("schematic");
+  const [tabValue, setTabValue] = React.useState<TabsValue>("schematic");
   const [shouldFitToScreen, setShouldFitToScreen] = React.useState(false);
   const [hasResizedSinceSchematicView, setHasResizedSinceSchematicView] =
     React.useState(false);
@@ -368,7 +370,7 @@ const EEcircuit: React.FC = () => {
 
     const netlistWithPreamble = netListPreamble + netlist;
     setNetList(netlistWithPreamble);
-    setTabValue("netlist");
+    setTabValue("simulate");
   }, []);
 
   const handleTabValueChange = React.useCallback(
@@ -427,8 +429,8 @@ const EEcircuit: React.FC = () => {
           <Tabs.Trigger value="schematic" marginRight="0.5em">
             Schematic
           </Tabs.Trigger>
-          <Tabs.Trigger value="netlist" marginRight="0.5em">
-            Netlist
+          <Tabs.Trigger value="simulate" marginRight="0.5em">
+            Simulate
           </Tabs.Trigger>
           <Tabs.Trigger value="plot" marginRight="0.5em">
             Plot
@@ -443,8 +445,8 @@ const EEcircuit: React.FC = () => {
           />
         </Tabs.Content>
 
-        <Tabs.Content value="netlist" flex={1} minHeight={0}>
-          <NetlistEditor
+        <Tabs.Content value="simulate" flex={1} minHeight={0}>
+          <SimulationEditor
             netList={netList}
             onResultsObtained={handleNewResults}
           />

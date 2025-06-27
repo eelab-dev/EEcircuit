@@ -14,12 +14,12 @@ import AcConfig from "./simConfigs/ac";
 import TransConfig from "./simConfigs/trans";
 import { ResultType } from "eecircuit-engine";
 
-type NetlistEditorProps = {
+type SimulationEditorProps = {
   netList: string;
   onResultsObtained: (results: ResultType[]) => void;
 };
 
-const NetlistEditor: React.FC<NetlistEditorProps> = ({
+const SimulationEditor: React.FC<SimulationEditorProps> = ({
   netList = "",
   onResultsObtained,
 }) => {
@@ -231,4 +231,4 @@ const NetlistEditor: React.FC<NetlistEditorProps> = ({
   );
 };
 
-export default NetlistEditor;
+export default SimulationEditor;
