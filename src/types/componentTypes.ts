@@ -22,11 +22,41 @@ export interface InductorProperties extends BaseComponentProperties {
 export interface VoltageSourceProperties extends BaseComponentProperties {
   value: string; // e.g., "5V", "1.8V"
   type?: "dc" | "ac" | "pulse" | "sin"; // Source type
+  // SIN parameters: (offset_voltage amplitude frequency delay damping_factor phase)
+  offset?: string; // Offset voltage
+  amplitude?: string; // Amplitude
+  frequency?: string; // Frequency
+  delay?: string; // Time delay
+  damping?: string; // Damping factor
+  phase?: string; // Phase
+  // PULSE parameters: (v1 v2 time_delay rise_time fall_time width period)
+  v1?: string; // Initial value
+  v2?: string; // Pulsed value
+  timeDelay?: string; // Time delay
+  riseTime?: string; // Rise time
+  fallTime?: string; // Fall time
+  width?: string; // Pulse width
+  period?: string; // Period
 }
 
 export interface CurrentSourceProperties extends BaseComponentProperties {
   value: string; // e.g., "1mA", "10uA"
   type?: "dc" | "ac" | "pulse" | "sin"; // Source type
+  // SIN parameters: (offset_current amplitude frequency delay damping_factor phase)
+  offset?: string; // Offset current
+  amplitude?: string; // Amplitude
+  frequency?: string; // Frequency
+  delay?: string; // Time delay
+  damping?: string; // Damping factor
+  phase?: string; // Phase
+  // PULSE parameters: (i1 i2 time_delay rise_time fall_time width period)
+  i1?: string; // Initial value
+  i2?: string; // Pulsed value
+  timeDelay?: string; // Time delay
+  riseTime?: string; // Rise time
+  fallTime?: string; // Fall time
+  width?: string; // Pulse width
+  period?: string; // Period
 }
 
 export interface FETProperties extends BaseComponentProperties {
@@ -202,42 +232,216 @@ export const componentPropertyConfigs: Record<ComponentType, PropertyField[]> =
     ],
     vsin: [
       {
-        key: "value",
-        label: "Sinusoidal Voltage",
+        key: "offset",
+        label: "Offset Voltage",
         type: "text",
-        placeholder: "e.g., 5V, 1.8V",
+        placeholder: "e.g., 0V, 2.5V",
+        required: false,
+        unit: "V",
+      },
+      {
+        key: "amplitude",
+        label: "Amplitude",
+        type: "text",
+        placeholder: "e.g., 1V, 500mV",
         required: true,
         unit: "V",
+      },
+      {
+        key: "frequency",
+        label: "Frequency",
+        type: "text",
+        placeholder: "e.g., 1kHz, 50Hz",
+        required: true,
+        unit: "Hz",
+      },
+      {
+        key: "delay",
+        label: "Delay",
+        type: "text",
+        placeholder: "e.g., 0s, 1ms",
+        required: false,
+        unit: "s",
+      },
+      {
+        key: "damping",
+        label: "Damping Factor",
+        type: "text",
+        placeholder: "e.g., 0, 0.1",
+        required: false,
+      },
+      {
+        key: "phase",
+        label: "Phase",
+        type: "text",
+        placeholder: "e.g., 0°, 90°",
+        required: false,
+        unit: "°",
       },
     ],
     vpulse: [
       {
-        key: "value",
-        label: "Pulse Voltage",
+        key: "v1",
+        label: "Initial Value (V1)",
         type: "text",
-        placeholder: "e.g., 5V, 1.8V",
+        placeholder: "e.g., 0V, -5V",
         required: true,
         unit: "V",
+      },
+      {
+        key: "v2",
+        label: "Pulsed Value (V2)",
+        type: "text",
+        placeholder: "e.g., 5V, 3.3V",
+        required: true,
+        unit: "V",
+      },
+      {
+        key: "timeDelay",
+        label: "Time Delay",
+        type: "text",
+        placeholder: "e.g., 0s, 1ns",
+        required: false,
+        unit: "s",
+      },
+      {
+        key: "riseTime",
+        label: "Rise Time",
+        type: "text",
+        placeholder: "e.g., 1ns, 10ps",
+        required: false,
+        unit: "s",
+      },
+      {
+        key: "fallTime",
+        label: "Fall Time",
+        type: "text",
+        placeholder: "e.g., 1ns, 10ps",
+        required: false,
+        unit: "s",
+      },
+      {
+        key: "width",
+        label: "Pulse Width",
+        type: "text",
+        placeholder: "e.g., 10ns, 1us",
+        required: true,
+        unit: "s",
+      },
+      {
+        key: "period",
+        label: "Period",
+        type: "text",
+        placeholder: "e.g., 20ns, 2us",
+        required: true,
+        unit: "s",
       },
     ],
     isin: [
       {
-        key: "value",
-        label: "Sinusoidal Current",
+        key: "offset",
+        label: "Offset Current",
         type: "text",
-        placeholder: "e.g., 1mA, 10uA",
+        placeholder: "e.g., 0A, 1mA",
+        required: false,
+        unit: "A",
+      },
+      {
+        key: "amplitude",
+        label: "Amplitude",
+        type: "text",
+        placeholder: "e.g., 1mA, 500uA",
         required: true,
         unit: "A",
+      },
+      {
+        key: "frequency",
+        label: "Frequency",
+        type: "text",
+        placeholder: "e.g., 1kHz, 50Hz",
+        required: true,
+        unit: "Hz",
+      },
+      {
+        key: "delay",
+        label: "Delay",
+        type: "text",
+        placeholder: "e.g., 0s, 1ms",
+        required: false,
+        unit: "s",
+      },
+      {
+        key: "damping",
+        label: "Damping Factor",
+        type: "text",
+        placeholder: "e.g., 0, 0.1",
+        required: false,
+      },
+      {
+        key: "phase",
+        label: "Phase",
+        type: "text",
+        placeholder: "e.g., 0°, 90°",
+        required: false,
+        unit: "°",
       },
     ],
     ipulse: [
       {
-        key: "value",
-        label: "Pulse Current",
+        key: "i1",
+        label: "Initial Value (I1)",
         type: "text",
-        placeholder: "e.g., 1mA, 10uA",
+        placeholder: "e.g., 0A, -1mA",
         required: true,
         unit: "A",
+      },
+      {
+        key: "i2",
+        label: "Pulsed Value (I2)",
+        type: "text",
+        placeholder: "e.g., 1mA, 500uA",
+        required: true,
+        unit: "A",
+      },
+      {
+        key: "timeDelay",
+        label: "Time Delay",
+        type: "text",
+        placeholder: "e.g., 0s, 1ns",
+        required: false,
+        unit: "s",
+      },
+      {
+        key: "riseTime",
+        label: "Rise Time",
+        type: "text",
+        placeholder: "e.g., 1ns, 10ps",
+        required: false,
+        unit: "s",
+      },
+      {
+        key: "fallTime",
+        label: "Fall Time",
+        type: "text",
+        placeholder: "e.g., 1ns, 10ps",
+        required: false,
+        unit: "s",
+      },
+      {
+        key: "width",
+        label: "Pulse Width",
+        type: "text",
+        placeholder: "e.g., 10ns, 1us",
+        required: true,
+        unit: "s",
+      },
+      {
+        key: "period",
+        label: "Period",
+        type: "text",
+        placeholder: "e.g., 20ns, 2us",
+        required: true,
+        unit: "s",
       },
     ],
     VCVS: [
