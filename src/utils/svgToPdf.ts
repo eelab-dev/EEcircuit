@@ -73,7 +73,7 @@ export const convertSvgToPdf = async (
 
   // Create PDF document
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([finalWidth, finalHeight]);
+  const page = pdfDoc.addPage([finalWidth * scale, finalHeight * scale]);
 
   // Set background color if specified
   if (options.backgroundColor) {
@@ -81,22 +81,22 @@ export const convertSvgToPdf = async (
     page.drawRectangle({
       x: 0,
       y: 0,
-      width: finalWidth,
-      height: finalHeight,
+      width: finalWidth * scale,
+      height: finalHeight * scale,
       color: bgColor,
     });
   }
 
   console.log(
-    `Created PDF page with dimensions: ${finalWidth} x ${finalHeight}`
+    `Created PDF page with dimensions: ${finalWidth * scale} x ${finalHeight * scale}`
   );
 
   // Convert SVG elements to PDF operations
   await processSvgElements(
     svgElement,
     page,
-    finalWidth,
-    finalHeight,
+    finalWidth * scale,
+    finalHeight * scale,
     scale,
     viewBox
   );
@@ -160,12 +160,24 @@ const processSvgElements = async (
   // Calculate transformation matrix for viewBox
   let transformX = 0;
   let transformY = 0;
-  const scaleX = scale;
-  const scaleY = scale;
+  let viewBoxScale = 1;
 
   if (viewBox) {
-    transformX = -viewBox.x * scale;
-    transformY = -viewBox.y * scale;
+    // Calculate scale to fit viewBox into page
+    const scaleX = pageWidth / viewBox.width;
+    const scaleY = pageHeight / viewBox.height;
+    viewBoxScale = Math.min(scaleX, scaleY);
+
+    // Calculate offset to center the viewBox content
+    transformX = -viewBox.x * viewBoxScale;
+    transformY = -viewBox.y * viewBoxScale;
+
+    // Center the content if it doesn't fill the entire page
+    if (scaleX > scaleY) {
+      transformX += (pageWidth - viewBox.width * viewBoxScale) / 2;
+    } else {
+      transformY += (pageHeight - viewBox.height * viewBoxScale) / 2;
+    }
   }
 
   const processElement = (
@@ -276,17 +288,16 @@ const processSvgElements = async (
             // Apply all transforms to both points
             const point1 = applyAllTransforms(x1, y1);
             const point2 = applyAllTransforms(x2, y2);
-
             page.drawLine({
               start: {
-                x: transformX + point1.x * scaleX,
-                y: pageHeight - (transformY + point1.y * scaleY),
+                x: transformX + point1.x * viewBoxScale,
+                y: pageHeight - (transformY + point1.y * viewBoxScale),
               },
               end: {
-                x: transformX + point2.x * scaleX,
-                y: pageHeight - (transformY + point2.y * scaleY),
+                x: transformX + point2.x * viewBoxScale,
+                y: pageHeight - (transformY + point2.y * viewBoxScale),
               },
-              thickness: strokeWidth * Math.min(scaleX, scaleY),
+              thickness: strokeWidth * scale,
               color: strokeColor,
             });
           }
@@ -322,14 +333,14 @@ const processSvgElements = async (
 
                 page.drawLine({
                   start: {
-                    x: transformX + start.x * scaleX,
-                    y: pageHeight - (transformY + start.y * scaleY),
+                    x: transformX + start.x * viewBoxScale,
+                    y: pageHeight - (transformY + start.y * viewBoxScale),
                   },
                   end: {
-                    x: transformX + end.x * scaleX,
-                    y: pageHeight - (transformY + end.y * scaleY),
+                    x: transformX + end.x * viewBoxScale,
+                    y: pageHeight - (transformY + end.y * viewBoxScale),
                   },
-                  thickness: strokeWidth * Math.min(scaleX, scaleY),
+                  thickness: strokeWidth * scale,
                   color: strokeColor,
                 });
               }
@@ -345,17 +356,19 @@ const processSvgElements = async (
           } else {
             // Non-rotated/non-transformed rectangle - use the standard approach
             const point = applyAllTransforms(x, y);
-            const pdfX = transformX + point.x * scaleX;
+            const pdfX = transformX + point.x * viewBoxScale;
             const pdfY =
-              pageHeight - (transformY + (point.y + height) * scaleY);
+              pageHeight -
+              (transformY +
+                (point.y + height * currentTransform.scaleY) * viewBoxScale);
 
             // Draw fill first
             if (fillColor) {
               page.drawRectangle({
                 x: pdfX,
                 y: pdfY,
-                width: width * scaleX,
-                height: height * scaleY,
+                width: width * currentTransform.scaleX * viewBoxScale,
+                height: height * currentTransform.scaleY * viewBoxScale,
                 color: fillColor,
               });
             }
@@ -365,10 +378,10 @@ const processSvgElements = async (
               page.drawRectangle({
                 x: pdfX,
                 y: pdfY,
-                width: width * scaleX,
-                height: height * scaleY,
+                width: width * currentTransform.scaleX * viewBoxScale,
+                height: height * currentTransform.scaleY * viewBoxScale,
                 borderColor: strokeColor,
-                borderWidth: strokeWidth * Math.min(scaleX, scaleY),
+                borderWidth: strokeWidth * scale,
               });
             }
           }
@@ -381,15 +394,18 @@ const processSvgElements = async (
           const r = parseFloat(element.getAttribute("r") || "0");
 
           const point = applyAllTransforms(cx, cy);
-          const pdfX = transformX + point.x * scaleX;
-          const pdfY = pageHeight - (transformY + point.y * scaleY);
+          const pdfX = transformX + point.x * viewBoxScale;
+          const pdfY = pageHeight - (transformY + point.y * viewBoxScale);
 
           // Draw fill first
           if (fillColor) {
             page.drawCircle({
               x: pdfX,
               y: pdfY,
-              size: r * Math.min(scaleX, scaleY),
+              size:
+                r *
+                viewBoxScale *
+                Math.min(currentTransform.scaleX, currentTransform.scaleY),
               color: fillColor,
             });
           }
@@ -399,9 +415,12 @@ const processSvgElements = async (
             page.drawCircle({
               x: pdfX,
               y: pdfY,
-              size: r * Math.min(scaleX, scaleY),
+              size:
+                r *
+                viewBoxScale *
+                Math.min(currentTransform.scaleX, currentTransform.scaleY),
               borderColor: strokeColor,
-              borderWidth: strokeWidth * Math.min(scaleX, scaleY),
+              borderWidth: strokeWidth * scale,
             });
           }
           break;
@@ -414,16 +433,16 @@ const processSvgElements = async (
           const ry = parseFloat(element.getAttribute("ry") || "0");
 
           const point = applyAllTransforms(cx, cy);
-          const pdfX = transformX + point.x * scaleX;
-          const pdfY = pageHeight - (transformY + point.y * scaleY);
+          const pdfX = transformX + point.x * viewBoxScale;
+          const pdfY = pageHeight - (transformY + point.y * viewBoxScale);
 
           // Draw fill first
           if (fillColor) {
             page.drawEllipse({
               x: pdfX,
               y: pdfY,
-              xScale: rx * scaleX,
-              yScale: ry * scaleY,
+              xScale: rx * currentTransform.scaleX * viewBoxScale,
+              yScale: ry * currentTransform.scaleY * viewBoxScale,
               color: fillColor,
             });
           }
@@ -433,10 +452,10 @@ const processSvgElements = async (
             page.drawEllipse({
               x: pdfX,
               y: pdfY,
-              xScale: rx * scaleX,
-              yScale: ry * scaleY,
+              xScale: rx * currentTransform.scaleX * viewBoxScale,
+              yScale: ry * currentTransform.scaleY * viewBoxScale,
               borderColor: strokeColor,
-              borderWidth: strokeWidth * Math.min(scaleX, scaleY),
+              borderWidth: strokeWidth * scale,
             });
           }
           break;
@@ -457,9 +476,12 @@ const processSvgElements = async (
             const point = applyAllTransforms(x, y);
 
             page.drawText(text, {
-              x: transformX + point.x * scaleX,
-              y: pageHeight - (transformY + point.y * scaleY),
-              size: fontSize * Math.min(scaleX, scaleY),
+              x: transformX + point.x * viewBoxScale,
+              y: pageHeight - (transformY + point.y * viewBoxScale),
+              size:
+                fontSize *
+                viewBoxScale *
+                Math.min(currentTransform.scaleX, currentTransform.scaleY),
               color: textColor,
               // Note: PDF-lib doesn't support text rotation directly in this method
               // For rotated text, you'd need to use more advanced techniques
@@ -475,8 +497,8 @@ const processSvgElements = async (
             const coords = parsePoints(points).map(([x, y]) => {
               const point = applyAllTransforms(x, y);
               return {
-                x: transformX + point.x * scaleX,
-                y: pageHeight - (transformY + point.y * scaleY),
+                x: transformX + point.x * viewBoxScale,
+                y: pageHeight - (transformY + point.y * viewBoxScale),
               };
             });
 
@@ -486,7 +508,7 @@ const processSvgElements = async (
                 page.drawLine({
                   start: coords[i],
                   end: coords[i + 1],
-                  thickness: strokeWidth * Math.min(scaleX, scaleY),
+                  thickness: strokeWidth * scale,
                   color: strokeColor,
                 });
               }
@@ -496,7 +518,7 @@ const processSvgElements = async (
                 page.drawLine({
                   start: coords[coords.length - 1],
                   end: coords[0],
-                  thickness: strokeWidth * Math.min(scaleX, scaleY),
+                  thickness: strokeWidth * scale,
                   color: strokeColor,
                 });
               }
@@ -517,8 +539,8 @@ const processSvgElements = async (
                 transformY,
                 pageHeight,
                 currentTransform,
-                scaleX,
-                scaleY,
+                scaleX: viewBoxScale,
+                scaleY: viewBoxScale,
                 applyRotation: applyAllTransforms,
               });
 
@@ -530,7 +552,7 @@ const processSvgElements = async (
                   page.drawLine({
                     start: operation.start,
                     end: operation.end,
-                    thickness: strokeWidth * Math.min(scaleX, scaleY),
+                    thickness: strokeWidth * scale,
                     color: strokeColor,
                   });
                 } else if (operation.type === "curve" && strokeColor) {
@@ -540,7 +562,7 @@ const processSvgElements = async (
                     page.drawLine({
                       start: segment.start,
                       end: segment.end,
-                      thickness: strokeWidth * Math.min(scaleX, scaleY),
+                      thickness: strokeWidth * scale,
                       color: strokeColor,
                     });
                   }
