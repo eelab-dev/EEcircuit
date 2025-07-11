@@ -22,3 +22,6 @@ playwright-report
 .DS_Store
 temp
 .next
+
+copilot-instructions.md
+tsconfig.tsbuildinfo
