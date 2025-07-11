@@ -205,16 +205,18 @@ const Properties: React.FC<PropertiesProps> = ({
                 <Field.Root>
                   <Field.Label>Component: {selectedItem.typeName}</Field.Label>
                 </Field.Root>
-
-                <Field.Root>
-                  <Field.Label>Name</Field.Label>
-                  <Input
-                    placeholder="Component name (e.g., R1, C1)"
-                    value={localValues.name}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                  />
-                </Field.Root>
+                {/* special case for ports to only show the net name*/}
+                {selectedItem.typeName !== "port" && (
+                  <Field.Root>
+                    <Field.Label>Name</Field.Label>
+                    <Input
+                      placeholder="Component name (e.g., R1, C1)"
+                      value={localValues.name}
+                      onChange={(e) => handleNameChange(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                    />
+                  </Field.Root>
+                )}
 
                 {renderPropertyFields()}
               </>

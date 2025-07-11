@@ -496,13 +496,6 @@ export const componentPropertyConfigs: Record<ComponentType, PropertyField[]> =
         placeholder: "e.g., clk, data, reset",
         required: true,
       },
-      {
-        key: "portType",
-        label: "Port Type",
-        type: "select",
-        required: false,
-        options: ["input", "output", "inout"],
-      },
     ],
   };
 
