@@ -127,6 +127,13 @@ const Properties: React.FC<PropertiesProps> = ({
     }
   };
 
+  // Determine if the current wire is a fixed net (VDD or GND) and should not be editable
+
+  // Determine if the current instance is a fixed net component (VDD or GND) and should not be editable
+  const isFixedInstance =
+    selectedItem.type === "instance" &&
+    ["VDD", "GND"].includes(selectedItem.typeName.toUpperCase());
+
   // Render property fields based on component type
   const renderPropertyFields = () => {
     if (selectedItem.type !== "instance") return null;
@@ -209,12 +216,17 @@ const Properties: React.FC<PropertiesProps> = ({
                 {selectedItem.typeName !== "port" && (
                   <Field.Root>
                     <Field.Label>Name</Field.Label>
-                    <Input
-                      placeholder="Component name (e.g., R1, C1)"
-                      value={localValues.name}
-                      onChange={(e) => handleNameChange(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                    />
+                    {isFixedInstance ? (
+                      // Display fixed instance net name (VDD/GND) as non-editable text
+                      <Span color="gray.500">{selectedItem.typeName}</Span>
+                    ) : (
+                      <Input
+                        placeholder="Component name (e.g., R1, C1)"
+                        value={localValues.name}
+                        onChange={(e) => handleNameChange(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                      />
+                    )}
                   </Field.Root>
                 )}
 
@@ -230,12 +242,14 @@ const Properties: React.FC<PropertiesProps> = ({
 
                 <Field.Root>
                   <Field.Label>Net Name</Field.Label>
-                  <Input
-                    placeholder="Network name (e.g., VDD, GND, net1)"
-                    value={localValues.name}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                  />
+                  {
+                    <Input
+                      placeholder="Network name (e.g., VDD, GND, net1)"
+                      value={localValues.name}
+                      onChange={(e) => handleNameChange(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                    />
+                  }
                 </Field.Root>
               </>
             )}
