@@ -14,7 +14,8 @@ import SimulationEditor from "./Simulate/simulate.tsx";
 import { TabsValueChangeDetails } from "node_modules/@chakra-ui/react/dist/types/components/tabs/tabs";
 import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
-import * as eeSch from "eecircuit-engine";
+import { ResultType } from "eecircuit-engine";
+import { sendCommand } from "eecircuit-schematic";
 
 type TabsValue = "schematic" | "simulate" | "plot";
 
@@ -31,11 +32,16 @@ const EEcircuit: React.FC = () => {
 
   //const colorMode = useColorModeValue("light", "dark");
 
-  const [results, setResults] = React.useState<eeSch.ResultType[]>([]);
+  const [results, setResults] = React.useState<ResultType[]>([]);
 
   // Tab enablement states
   const [isSimulateTabEnabled, setIsSimulateTabEnabled] = React.useState(false);
   const [isPlotTabEnabled, setIsPlotTabEnabled] = React.useState(false);
+
+  const [dragBox, setDragBox] = React.useState(false);
+
+  // Ref for the tabs container to handle drag and drop
+  const tabsContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Track window resize events
   React.useEffect(() => {
@@ -125,38 +131,130 @@ const EEcircuit: React.FC = () => {
     ]
   );
 
-  const handleNewResults = React.useCallback(
-    (newResults: eeSch.ResultType[]) => {
-      // Double-check that we have valid results before enabling plot tab
-      const hasValidResults =
-        newResults &&
-        newResults.length > 0 &&
-        newResults[0].data &&
-        newResults[0].data.length > 0 &&
-        newResults[0].variableNames &&
-        newResults[0].variableNames.length > 0;
+  // Add drag and drop support for schematic files
+  React.useEffect(() => {
+    const container = tabsContainerRef.current;
+    if (!container) return;
 
-      // Additional check for actual data points
-      let hasDataPoints = false;
-      if (hasValidResults) {
-        hasDataPoints = newResults[0].data.some(
-          (dataSet) => dataSet.values && dataSet.values.length > 0
-        );
+    const preventDefault = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    // Validate file type - accept common schematic file extensions
+    const isValidSchematicFile = (file: File): boolean => {
+      const validExtensions = [".sch", ".json", ".xml", ".cir", ".net"];
+      const fileName = file.name.toLowerCase();
+      return (
+        validExtensions.some((ext) => fileName.endsWith(ext)) ||
+        file.type === "application/json" ||
+        file.type === "text/plain" ||
+        file.type === "application/xml"
+      );
+    };
+
+    const handleDragOver = (e: DragEvent) => {
+      preventDefault(e);
+      // Only show visual feedback if we have files
+      if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+        setDragBox(true);
       }
+    };
 
-      if (hasValidResults && hasDataPoints) {
-        setResults(newResults);
-        setIsPlotTabEnabled(true); // Enable plot tab when valid results are obtained
-        setTabValue("plot");
-      } else {
-        // This should not happen if simulate.tsx is working correctly, but just in case
+    const handleDragLeave = (e: DragEvent) => {
+      preventDefault(e);
+      // Only hide dragBox if we're actually leaving the container
+      // Check if the related target is still within our container
+      const relatedTarget = e.relatedTarget as Node;
+      if (!relatedTarget || !container.contains(relatedTarget)) {
+        setDragBox(false);
+      }
+    };
+
+    const handleDrop = async (e: DragEvent) => {
+      preventDefault(e);
+      setDragBox(false);
+
+      const files = e.dataTransfer?.files;
+      if (!files?.length) return;
+
+      const file = files[0];
+
+      // Validate file type
+      if (!isValidSchematicFile(file)) {
         console.warn(
-          "handleNewResults called with invalid results, not enabling plot tab"
+          "Invalid file type. Please drop a schematic file (.sch, .json, .xml, .cir, .net)"
         );
+        return;
       }
-    },
-    []
-  );
+
+      try {
+        const content = await file.text();
+        // Ensure we're on the schematic tab when loading a file
+        setTabValue("schematic");
+
+        // Use setTimeout to ensure the command is sent after tab switch
+        setTimeout(async () => {
+          try {
+            // Use the imported sendCommand from eecircuit-schematic
+            await sendCommand({ command: "loadSchematic", schematic: content });
+            console.log(
+              "Schematic loaded successfully from dropped file:",
+              file.name
+            );
+          } catch (error) {
+            console.error("Error loading schematic:", error);
+          }
+        }, 100);
+      } catch (error) {
+        console.error("Error reading file:", error);
+      }
+    };
+
+    // Add event listeners
+    container.addEventListener("dragover", handleDragOver);
+    container.addEventListener("dragenter", preventDefault);
+    container.addEventListener("dragleave", handleDragLeave);
+    container.addEventListener("drop", handleDrop);
+
+    // Clean up
+    return () => {
+      container.removeEventListener("dragover", handleDragOver);
+      container.removeEventListener("dragenter", preventDefault);
+      container.removeEventListener("dragleave", handleDragLeave);
+      container.removeEventListener("drop", handleDrop);
+    };
+  }, []); // Remove dragBox dependency to prevent unnecessary re-registrations
+
+  const handleNewResults = React.useCallback((newResults: ResultType[]) => {
+    // Double-check that we have valid results before enabling plot tab
+    const hasValidResults =
+      newResults &&
+      newResults.length > 0 &&
+      newResults[0].data &&
+      newResults[0].data.length > 0 &&
+      newResults[0].variableNames &&
+      newResults[0].variableNames.length > 0;
+
+    // Additional check for actual data points
+    let hasDataPoints = false;
+    if (hasValidResults) {
+      hasDataPoints = newResults[0].data.some(
+        (dataSet) => dataSet.values && dataSet.values.length > 0
+      );
+    }
+
+    if (hasValidResults && hasDataPoints) {
+      setResults(newResults);
+      setIsPlotTabEnabled(true); // Enable plot tab when valid results are obtained
+      setTabValue("plot");
+    } else {
+      // This should not happen if simulate.tsx is working correctly, but just in case
+      console.warn(
+        "handleNewResults called with invalid results, not enabling plot tab"
+      );
+    }
+  }, []);
 
   return (
     <Box
@@ -171,7 +269,9 @@ const EEcircuit: React.FC = () => {
         <Logo />
         <Text>a SPICE based circuit simulator</Text>
       </Flex>
+
       <Tabs.Root
+        ref={tabsContainerRef}
         defaultValue="schematic"
         value={tabValue}
         onValueChange={handleTabValueChange}
@@ -180,7 +280,37 @@ const EEcircuit: React.FC = () => {
         flexDirection="column"
         flex={1}
         minHeight={0}
+        position="relative"
       >
+        {dragBox ? (
+          <Box
+            bg="blue.400/80"
+            width="100%"
+            height="100%"
+            position="absolute"
+            top={0}
+            left={0}
+            zIndex={1000}
+          >
+            <Flex
+              direction="column"
+              alignItems="center"
+              justifyContent="center"
+              width="100%"
+              height="100%"
+            >
+              <Box
+                p={4}
+                color="gray.100"
+                fontSize="5xl"
+                width="50%"
+                textAlign="center"
+              >
+                Drop schematic file here!
+              </Box>
+            </Flex>
+          </Box>
+        ) : null}
         <Tabs.List flexShrink={0}>
           <Tabs.Trigger value="schematic" marginRight="0.5em">
             Schematic

@@ -45,7 +45,7 @@ const Schematic: React.FC<SchematicProps> = ({
   >([]);
   const [fullscreen, setFullscreen] = useState(false);
   const [propertiesOpen, setPropertiesOpen] = useState(false);
-  const [dragBox, setDragBox] = useState(false);
+
   const [info, setInfo] = useState<string[]>([]);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
@@ -462,65 +462,6 @@ const Schematic: React.FC<SchematicProps> = ({
     }
   }, [selectedItem]);
 
-  // Add drag and drop support for schematic files
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const preventDefault = (e: DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
-
-    const handleDragOver = (e: DragEvent) => {
-      preventDefault(e);
-      // Provide visual feedback
-      setDragBox(true);
-    };
-
-    const handleDragLeave = (e: DragEvent) => {
-      preventDefault(e);
-      setDragBox(false);
-      // Restore original style
-    };
-
-    const handleDrop = async (e: DragEvent) => {
-      preventDefault(e);
-      setDragBox(false);
-      const files = e.dataTransfer?.files;
-      if (!files?.length) return;
-      const file = files[0];
-      const content = await file.text();
-      eeSch.sendCommand({ command: "loadSchematic", schematic: content });
-    };
-
-    // Add event listeners
-    container.addEventListener("dragover", (e) =>
-      handleDragOver(e as DragEvent)
-    );
-    container.addEventListener("dragenter", (e) =>
-      preventDefault(e as DragEvent)
-    );
-    container.addEventListener("dragleave", (e) =>
-      handleDragLeave(e as DragEvent)
-    );
-    container.addEventListener("drop", (e) => handleDrop(e as DragEvent));
-
-    // Clean up
-    return () => {
-      container.removeEventListener("dragover", (e) =>
-        handleDragOver(e as DragEvent)
-      );
-      container.removeEventListener("dragenter", (e) =>
-        preventDefault(e as DragEvent)
-      );
-      container.removeEventListener("dragleave", (e) =>
-        handleDragLeave(e as DragEvent)
-      );
-      container.removeEventListener("drop", (e) => handleDrop(e as DragEvent));
-    };
-  }, [dragBox]);
-
   const handleExportImage = () => {
     setLoadingSvg(true);
     setSvgContent(null);
@@ -537,28 +478,6 @@ const Schematic: React.FC<SchematicProps> = ({
         id="canvas-container"
       >
         {/* Canvas added dynamically */}
-
-        {dragBox ? (
-          <Box bg="blue.400/80" width="100%" height="100%" position="absolute">
-            <Flex
-              direction="column"
-              alignItems="center"
-              justifyContent="center"
-              width="100%"
-              height="100%"
-            >
-              <Box
-                p={4}
-                color="gray.100"
-                fontSize="5xl"
-                width="50%"
-                textAlign="center"
-              >
-                Drop schematic file here!
-              </Box>
-            </Flex>
-          </Box>
-        ) : null}
 
         <Float offset="10" placement="middle-start">
           {
