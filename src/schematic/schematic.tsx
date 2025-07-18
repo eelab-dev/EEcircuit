@@ -1,11 +1,5 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
-import {
-  AvailableComponent,
-  initCanvas,
-  MessageToApp,
-  SelectedItem,
-  sendCommand,
-} from "eecircuit-schematic";
+import * as eeSch from "eecircuit-schematic";
 import { Box, Flex, Float, IconButton, Button } from "@chakra-ui/react";
 import { ArrowBigRight, Expand, SquareX } from "lucide-react";
 import debounce from "lodash.debounce";
@@ -15,6 +9,7 @@ import Properties from "./properties";
 import Status from "./status";
 import { Tooltip } from "../components/ui/tooltip";
 import ExportImageDialog from "./ExportImageDialog";
+import { EEcircuitFile } from "src/types/commonTypes";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
@@ -41,12 +36,12 @@ const Schematic: React.FC<SchematicProps> = ({
 
   const [coord, setCoord] = useState({ x: 0, y: 0 });
   const [pointerInfo, setPointerInfo] = useState<string>("");
-  const [selectedItem, setSelectedItem] = useState<SelectedItem>({
+  const [selectedItem, setSelectedItem] = useState<eeSch.SelectedItem>({
     type: "none",
-  } as SelectedItem);
+  } as eeSch.SelectedItem);
 
   const [availableComponents, setAvailableComponents] = useState<
-    AvailableComponent[]
+    eeSch.AvailableComponent[]
   >([]);
   const [fullscreen, setFullscreen] = useState(false);
   const [propertiesOpen, setPropertiesOpen] = useState(false);
@@ -59,7 +54,7 @@ const Schematic: React.FC<SchematicProps> = ({
   const [loadingSvg, setLoadingSvg] = useState(false);
 
   const msgCallback = useCallback(
-    (msg: MessageToApp) => {
+    (msg: eeSch.MsgSchToApp) => {
       switch (msg.type) {
         case "pointerCoords":
           setCoord({ x: msg.pointerCoords.x, y: msg.pointerCoords.y });
@@ -85,6 +80,37 @@ const Schematic: React.FC<SchematicProps> = ({
           setSvgContent(msg.svg);
           setLoadingSvg(false);
           break;
+        case "savedSchematic": {
+          console.log("received schematic data", msg.schematic);
+          // Handle the saved schematic data here
+          const eeCirFile: EEcircuitFile = {
+            schema: "EEcircuitV1",
+            title: "EEcircuit",
+            description: "EEcircuit Schematic",
+            date: new Date().toISOString(),
+            schematic: msg.schematic,
+          };
+          // Add this code inside the 'savedSchematic' case in the msgCallback function
+
+          // Create blob from file data
+          const fileContent = JSON.stringify(eeCirFile, null, 2);
+          const blob = new Blob([fileContent], { type: "application/json" });
+
+          // Create download link
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "EEcircuit-" + new Date().toISOString() + ".json";
+
+          // Trigger download
+          document.body.appendChild(link);
+          link.click();
+
+          // Cleanup
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          break;
+        }
       }
     },
     [onNetlistExported]
@@ -137,7 +163,7 @@ const Schematic: React.FC<SchematicProps> = ({
       // Wait for canvas to be ready first
       await waitForCanvasReady(canvas);
 
-      initCanvas(canvas, msgCallback);
+      eeSch.initCanvas(canvas, msgCallback);
       initializedCanvasRef.current = canvas;
       setIsCanvasReady(true);
       return true; // Successfully initialized
@@ -151,7 +177,7 @@ const Schematic: React.FC<SchematicProps> = ({
       if (shouldFitToScreen && canvasRef.current && isCanvasReady) {
         // Wait for canvas to be properly ready before sending command
         await waitForCanvasReady(canvasRef.current);
-        sendCommand({ command: "view", viewType: "fit" });
+        eeSch.sendCommand({ command: "view", viewType: "fit" });
       } else if (shouldFitToScreen && canvasRef.current && !isCanvasReady) {
         // Canvas exists but not ready, initialize it first
         console.log("Initializing canvas for fit-to-screen...");
@@ -406,7 +432,7 @@ const Schematic: React.FC<SchematicProps> = ({
   const sendToNetListButtonHandler = useCallback(() => {
     if (!canvasRef.current) return;
     // Send command to export netlist
-    sendCommand({ command: "export", exportType: "netList" });
+    eeSch.sendCommand({ command: "export", exportType: "netList" });
   }, []);
 
   const fullscreenHandler = React.useCallback(() => {
@@ -465,7 +491,7 @@ const Schematic: React.FC<SchematicProps> = ({
       if (!files?.length) return;
       const file = files[0];
       const content = await file.text();
-      sendCommand({ command: "loadSchematic", schematic: content });
+      eeSch.sendCommand({ command: "loadSchematic", schematic: content });
     };
 
     // Add event listeners
@@ -499,7 +525,7 @@ const Schematic: React.FC<SchematicProps> = ({
     setLoadingSvg(true);
     setSvgContent(null);
     setShowExportImageDialog(true);
-    sendCommand({ command: "export", exportType: "svg" });
+    eeSch.sendCommand({ command: "export", exportType: "svg" });
   };
 
   return (
@@ -539,6 +565,12 @@ const Schematic: React.FC<SchematicProps> = ({
             <Actions
               availableComponents={availableComponents}
               onExportImage={handleExportImage}
+              onSaveSchematic={() => {
+                eeSch.sendCommand({
+                  command: "export",
+                  exportType: "schematic",
+                });
+              }}
             />
           }
         </Float>
@@ -556,7 +588,7 @@ const Schematic: React.FC<SchematicProps> = ({
             selectedItem={selectedItem}
             canvasHeight={canvasHeight}
             onApply={(name, value) => {
-              sendCommand({
+              eeSch.sendCommand({
                 command: "setSelectedItemNameValue",
                 name: name,
                 value: value,
