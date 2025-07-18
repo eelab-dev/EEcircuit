@@ -16,6 +16,7 @@ import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
 import { ResultType } from "eecircuit-engine";
 import { sendCommand } from "eecircuit-schematic";
+import { EEcircuitFile } from "./types/commonTypes.ts";
 
 type TabsValue = "schematic" | "simulate" | "plot";
 
@@ -143,10 +144,7 @@ const EEcircuit: React.FC = () => {
 
     // Validate file type - accept common schematic file extensions
     const isValidSchematicFile = (file: File): boolean => {
-      const validExtensions = [".sch", ".json", ".xml", ".cir", ".net"];
-      const fileName = file.name.toLowerCase();
       return (
-        validExtensions.some((ext) => fileName.endsWith(ext)) ||
         file.type === "application/json" ||
         file.type === "text/plain" ||
         file.type === "application/xml"
@@ -183,31 +181,37 @@ const EEcircuit: React.FC = () => {
       // Validate file type
       if (!isValidSchematicFile(file)) {
         console.warn(
-          "Invalid file type. Please drop a schematic file (.sch, .json, .xml, .cir, .net)"
+          "Invalid file type dropped. Please drop a valid schematic file."
         );
         return;
       }
 
       try {
         const content = await file.text();
-        // Ensure we're on the schematic tab when loading a file
-        setTabValue("schematic");
-
-        // Use setTimeout to ensure the command is sent after tab switch
-        setTimeout(async () => {
-          try {
-            // Use the imported sendCommand from eecircuit-schematic
-            await sendCommand({ command: "loadSchematic", schematic: content });
-            console.log(
-              "Schematic loaded successfully from dropped file:",
-              file.name
-            );
-          } catch (error) {
-            console.error("Error loading schematic:", error);
-          }
-        }, 100);
+        const parsedContent: EEcircuitFile = JSON.parse(content);
+        // check the schema version is correct
+        if (parsedContent.schema !== "EEcircuitV1") {
+          console.error(
+            "Invalid schema version. Please drop a valid EEcircuit file."
+          );
+          return;
+        }
+        if (parsedContent.schematic) {
+          // Use the imported sendCommand from eecircuit-schematic
+          await sendCommand({
+            command: "loadSchematic",
+            schematic: parsedContent.schematic,
+          });
+          console.log(
+            "Schematic loaded successfully from dropped file:",
+            file.name
+          );
+        }
       } catch (error) {
-        console.error("Error reading file:", error);
+        console.error("Failed to load schematic from dropped file:", error);
+        alert(
+          "Failed to load schematic from dropped file. Please ensure the file is valid."
+        );
       }
     };
 
