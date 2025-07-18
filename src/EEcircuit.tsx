@@ -14,7 +14,7 @@ import SimulationEditor from "./Simulate/simulate.tsx";
 import { TabsValueChangeDetails } from "node_modules/@chakra-ui/react/dist/types/components/tabs/tabs";
 import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
-import { ResultType } from "eecircuit-engine";
+import * as eeSch from "eecircuit-engine";
 
 type TabsValue = "schematic" | "simulate" | "plot";
 
@@ -31,7 +31,7 @@ const EEcircuit: React.FC = () => {
 
   //const colorMode = useColorModeValue("light", "dark");
 
-  const [results, setResults] = React.useState<ResultType[]>([]);
+  const [results, setResults] = React.useState<eeSch.ResultType[]>([]);
 
   // Tab enablement states
   const [isSimulateTabEnabled, setIsSimulateTabEnabled] = React.useState(false);
@@ -125,35 +125,38 @@ const EEcircuit: React.FC = () => {
     ]
   );
 
-  const handleNewResults = React.useCallback((newResults: ResultType[]) => {
-    // Double-check that we have valid results before enabling plot tab
-    const hasValidResults =
-      newResults &&
-      newResults.length > 0 &&
-      newResults[0].data &&
-      newResults[0].data.length > 0 &&
-      newResults[0].variableNames &&
-      newResults[0].variableNames.length > 0;
+  const handleNewResults = React.useCallback(
+    (newResults: eeSch.ResultType[]) => {
+      // Double-check that we have valid results before enabling plot tab
+      const hasValidResults =
+        newResults &&
+        newResults.length > 0 &&
+        newResults[0].data &&
+        newResults[0].data.length > 0 &&
+        newResults[0].variableNames &&
+        newResults[0].variableNames.length > 0;
 
-    // Additional check for actual data points
-    let hasDataPoints = false;
-    if (hasValidResults) {
-      hasDataPoints = newResults[0].data.some(
-        (dataSet) => dataSet.values && dataSet.values.length > 0
-      );
-    }
+      // Additional check for actual data points
+      let hasDataPoints = false;
+      if (hasValidResults) {
+        hasDataPoints = newResults[0].data.some(
+          (dataSet) => dataSet.values && dataSet.values.length > 0
+        );
+      }
 
-    if (hasValidResults && hasDataPoints) {
-      setResults(newResults);
-      setIsPlotTabEnabled(true); // Enable plot tab when valid results are obtained
-      setTabValue("plot");
-    } else {
-      // This should not happen if simulate.tsx is working correctly, but just in case
-      console.warn(
-        "handleNewResults called with invalid results, not enabling plot tab"
-      );
-    }
-  }, []);
+      if (hasValidResults && hasDataPoints) {
+        setResults(newResults);
+        setIsPlotTabEnabled(true); // Enable plot tab when valid results are obtained
+        setTabValue("plot");
+      } else {
+        // This should not happen if simulate.tsx is working correctly, but just in case
+        console.warn(
+          "handleNewResults called with invalid results, not enabling plot tab"
+        );
+      }
+    },
+    []
+  );
 
   return (
     <Box
