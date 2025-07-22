@@ -1,19 +1,28 @@
 import { Field, Fieldset, Input, Stack, Text } from "@chakra-ui/react";
 import React, { useState, useEffect } from "react";
+import { SimulationTransient } from "../../types/commonTypes";
 
 interface TransConfigProps {
   onConfigChange: (config: string) => void;
+  initialData?: SimulationTransient;
 }
 
-const TransConfig: React.FC<TransConfigProps> = ({ onConfigChange }) => {
-  const [formData, setFormData] = useState({ transStart: "", transStep: "" });
+const TransConfig: React.FC<TransConfigProps> = ({
+  onConfigChange,
+  initialData,
+}) => {
+  const [formData, setFormData] = useState({
+    stopTime: initialData?.stopTime?.toString() || "",
+    timeStep: initialData?.timeStep?.toString() || "",
+    initialConditions: initialData?.initialConditions || false,
+  });
 
-  const [dcSimConfig, setDcSimConfig] = useState("");
+  const [transSimConfig, setTransSimConfig] = useState(""); // Changed from dcSimConfig to transSimConfig
 
   // Update combined string whenever form data changes
   useEffect(() => {
-    const combined = `.trans ${formData.transStep} ${formData.transStart}`;
-    setDcSimConfig(combined);
+    const combined = `.trans ${formData.timeStep} ${formData.stopTime}`;
+    setTransSimConfig(combined);
 
     // Call the callback with the updated config
     if (onConfigChange) {
@@ -21,7 +30,7 @@ const TransConfig: React.FC<TransConfigProps> = ({ onConfigChange }) => {
     }
   }, [formData, onConfigChange]);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -29,7 +38,7 @@ const TransConfig: React.FC<TransConfigProps> = ({ onConfigChange }) => {
     <div>
       <Fieldset.Root size="lg" maxW="md">
         <Stack>
-          <Fieldset.Legend>DC Simulation Configuration</Fieldset.Legend>
+          <Fieldset.Legend>Transient Simulation Configuration</Fieldset.Legend>
           <Text
             fontSize="sm"
             color="gray.600"
@@ -37,26 +46,40 @@ const TransConfig: React.FC<TransConfigProps> = ({ onConfigChange }) => {
             bg="gray.50"
             borderRadius="md"
           >
-            Combined Config: {dcSimConfig}
+            Combined Config: {transSimConfig}
           </Text>
         </Stack>
 
         <Fieldset.Content>
           <Field.Root>
-            <Field.Label>Transient End Time (s)</Field.Label>
+            <Field.Label>Stop Time (s)</Field.Label>
             <Input
-              name="transStart"
-              value={formData.transStart}
-              onChange={(e) => handleInputChange("transStart", e.target.value)}
+              name="stopTime"
+              type="number"
+              value={formData.stopTime}
+              onChange={(e) => handleInputChange("stopTime", e.target.value)}
             />
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Suggsted timestep (s)</Field.Label>
+            <Field.Label>Time Step (s)</Field.Label>
             <Input
-              name="transStep"
-              value={formData.transStep}
-              onChange={(e) => handleInputChange("transStep", e.target.value)}
+              name="timeStep"
+              type="number"
+              value={formData.timeStep}
+              onChange={(e) => handleInputChange("timeStep", e.target.value)}
+            />
+          </Field.Root>
+
+          <Field.Root>
+            <Field.Label>Use Initial Conditions</Field.Label>
+            <Input
+              name="initialConditions"
+              type="checkbox"
+              checked={formData.initialConditions}
+              onChange={(e) =>
+                handleInputChange("initialConditions", e.target.checked)
+              }
             />
           </Field.Root>
         </Fieldset.Content>

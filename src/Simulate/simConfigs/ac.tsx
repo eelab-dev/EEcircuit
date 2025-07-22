@@ -1,23 +1,26 @@
 import { Field, Fieldset, Input, Stack, Text } from "@chakra-ui/react";
 import React, { useState, useEffect } from "react";
+import { SimulationAC } from "../../types/commonTypes";
 
 interface AcConfigProps {
   onConfigChange: (config: string) => void;
+  initialData?: SimulationAC;
 }
 
-const AcConfig: React.FC<AcConfigProps> = ({ onConfigChange }) => {
+const AcConfig: React.FC<AcConfigProps> = ({ onConfigChange, initialData }) => {
   const [formData, setFormData] = useState({
-    acSource: "",
-    acStart: "",
-    acEnd: "",
-    acStep: "",
+    source: initialData?.source || "",
+    frequencyStart: initialData?.frequencyStart?.toString() || "",
+    frequencyStop: initialData?.frequencyStop?.toString() || "",
+    frequencyStep: initialData?.frequencyStep?.toString() || "",
+    sweepType: initialData?.sweepType || ("lin" as "lin" | "log" | "dec"),
   });
 
   const [acSimConfig, setAcSimConfig] = useState("");
 
   // Update combined string whenever form data changes
   useEffect(() => {
-    const combined = `.ac ${formData.acSource} ${formData.acStart} ${formData.acEnd} ${formData.acStep}`;
+    const combined = `.ac ${formData.sweepType} ${formData.frequencyStart} ${formData.frequencyStop} ${formData.frequencyStep}`;
     setAcSimConfig(combined);
 
     // Call the callback with the updated config
@@ -48,38 +51,63 @@ const AcConfig: React.FC<AcConfigProps> = ({ onConfigChange }) => {
 
         <Fieldset.Content>
           <Field.Root>
-            <Field.Label>Sweep Source</Field.Label>
+            <Field.Label>Source</Field.Label>
             <Input
-              name="acSource"
-              value={formData.acSource}
-              onChange={(e) => handleInputChange("dcSource", e.target.value)}
+              name="source"
+              value={formData.source}
+              onChange={(e) => handleInputChange("source", e.target.value)}
+              placeholder="Source name (e.g., V1, I1)"
+            />
+          </Field.Root>
+
+          <Field.Root>
+            <Field.Label>Sweep Type</Field.Label>
+            <Input
+              name="sweepType"
+              value={formData.sweepType}
+              onChange={(e) =>
+                handleInputChange(
+                  "sweepType",
+                  e.target.value as "lin" | "log" | "dec"
+                )
+              }
+              placeholder="lin, log, or dec"
             />
           </Field.Root>
 
           <Field.Root>
             <Field.Label>Start Frequency (Hz)</Field.Label>
             <Input
-              name="acStart"
-              value={formData.acStart}
-              onChange={(e) => handleInputChange("dcStart", e.target.value)}
+              name="frequencyStart"
+              type="number"
+              value={formData.frequencyStart}
+              onChange={(e) =>
+                handleInputChange("frequencyStart", e.target.value)
+              }
             />
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>End Frequency (Hz)</Field.Label>
+            <Field.Label>Stop Frequency (Hz)</Field.Label>
             <Input
-              name="acEnd"
-              value={formData.acEnd}
-              onChange={(e) => handleInputChange("dcEnd", e.target.value)}
+              name="frequencyStop"
+              type="number"
+              value={formData.frequencyStop}
+              onChange={(e) =>
+                handleInputChange("frequencyStop", e.target.value)
+              }
             />
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Step size (Hz)</Field.Label>
+            <Field.Label>Frequency Step (Hz)</Field.Label>
             <Input
-              name="acStep"
-              value={formData.acStep}
-              onChange={(e) => handleInputChange("dcStep", e.target.value)}
+              name="frequencyStep"
+              type="number"
+              value={formData.frequencyStep}
+              onChange={(e) =>
+                handleInputChange("frequencyStep", e.target.value)
+              }
             />
           </Field.Root>
         </Fieldset.Content>
