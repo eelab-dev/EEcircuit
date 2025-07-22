@@ -4,11 +4,13 @@ import { SimulationTransient } from "../../types/commonTypes";
 
 interface TransConfigProps {
   onConfigChange: (config: string) => void;
+  onFullConfigChange?: (config: SimulationTransient) => void; // Add callback for full config
   initialData?: SimulationTransient;
 }
 
 const TransConfig: React.FC<TransConfigProps> = ({
   onConfigChange,
+  onFullConfigChange,
   initialData,
 }) => {
   const [formData, setFormData] = useState({
@@ -28,7 +30,18 @@ const TransConfig: React.FC<TransConfigProps> = ({
     if (onConfigChange) {
       onConfigChange(combined);
     }
-  }, [formData, onConfigChange]);
+
+    // Call the full config callback with complete Transient configuration
+    if (onFullConfigChange && formData.timeStep && formData.stopTime) {
+      const fullConfig: SimulationTransient = {
+        type: "Transient",
+        timeStep: parseFloat(formData.timeStep),
+        stopTime: parseFloat(formData.stopTime),
+        initialConditions: formData.initialConditions,
+      };
+      onFullConfigChange(fullConfig);
+    }
+  }, [formData, onConfigChange, onFullConfigChange]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

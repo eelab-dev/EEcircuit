@@ -16,7 +16,7 @@ import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
 import { ResultType } from "eecircuit-engine";
 import { sendCommand } from "eecircuit-schematic";
-import { EEcircuitFile } from "./types/commonTypes.ts";
+import { EEcircuitFile, SimulationType } from "./types/commonTypes.ts";
 
 type TabsValue = "schematic" | "simulate" | "plot";
 
@@ -34,6 +34,31 @@ const EEcircuit: React.FC = () => {
   //const colorMode = useColorModeValue("light", "dark");
 
   const [results, setResults] = React.useState<ResultType[]>([]);
+
+  // Simulation configuration state - uplifted from SimulationEditor
+  const [selectedSimType, setSelectedSimType] = React.useState("None");
+  const [simulationConfig, setSimulationConfig] = React.useState<
+    SimulationType | undefined
+  >(undefined);
+
+  // Handler for simulation configuration changes
+  const handleSimulationConfigChange = React.useCallback(
+    (simType: string, config?: SimulationType) => {
+      console.log("Simulation config change:", { simType, config });
+      setSelectedSimType(simType);
+      setSimulationConfig(config);
+    },
+    []
+  );
+
+  // Callback to get current simulation config for saving
+  const getCurrentSimulationConfig = React.useCallback(() => {
+    console.log(
+      "Getting current simulation config for saving:",
+      simulationConfig
+    );
+    return simulationConfig;
+  }, [simulationConfig]);
 
   // Tab enablement states
   const [isSimulateTabEnabled, setIsSimulateTabEnabled] = React.useState(false);
@@ -118,6 +143,14 @@ const EEcircuit: React.FC = () => {
             // Note: hasResizedSinceSchematicView will be reset by the onCanvasResized callback
             // when the canvas is actually resized, not immediately here
           }, 100);
+        } else {
+          // Even if we've viewed before, ensure canvas is visible after tab switch
+          // This helps with the canvas going blank issue
+          setTimeout(() => {
+            console.log("Ensuring canvas is visible after tab switch");
+            setShouldFitToScreen(true);
+            setTimeout(() => setShouldFitToScreen(false), 200);
+          }, 50);
         }
       } else {
         // Reset fit to screen flag when leaving schematic tab
@@ -206,6 +239,21 @@ const EEcircuit: React.FC = () => {
             "Schematic loaded successfully from dropped file:",
             file.name
           );
+        }
+
+        // Restore simulation configuration if it exists
+        if (parsedContent.simulation) {
+          const simConfig = parsedContent.simulation;
+          // Set the simulation type and configuration based on loaded data
+          setSelectedSimType(
+            simConfig.type === "Transient" ? "Trans" : simConfig.type
+          );
+          setSimulationConfig(simConfig);
+          console.log("Simulation configuration restored:", simConfig);
+        } else {
+          // Reset simulation config if no simulation data in file
+          setSimulationConfig(undefined);
+          setSelectedSimType("None");
         }
       } catch (error) {
         console.error("Failed to load schematic from dropped file:", error);
@@ -348,6 +396,7 @@ const EEcircuit: React.FC = () => {
             onNetlistExported={exportedNetlist}
             shouldFitToScreen={shouldFitToScreen}
             onCanvasResized={handleCanvasResized}
+            getSimulationConfig={getCurrentSimulationConfig}
           />
         </Tabs.Content>
 
@@ -355,6 +404,9 @@ const EEcircuit: React.FC = () => {
           <SimulationEditor
             netList={netList}
             onResultsObtained={handleNewResults}
+            selectedSimType={selectedSimType}
+            simulationConfig={simulationConfig}
+            onSimulationConfigChange={handleSimulationConfigChange}
           />
         </Tabs.Content>
 

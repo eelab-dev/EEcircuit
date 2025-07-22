@@ -4,10 +4,15 @@ import { SimulationAC } from "../../types/commonTypes";
 
 interface AcConfigProps {
   onConfigChange: (config: string) => void;
+  onFullConfigChange?: (config: SimulationAC) => void; // Add callback for full config
   initialData?: SimulationAC;
 }
 
-const AcConfig: React.FC<AcConfigProps> = ({ onConfigChange, initialData }) => {
+const AcConfig: React.FC<AcConfigProps> = ({
+  onConfigChange,
+  onFullConfigChange,
+  initialData,
+}) => {
   const [formData, setFormData] = useState({
     source: initialData?.source || "",
     frequencyStart: initialData?.frequencyStart?.toString() || "",
@@ -20,14 +25,34 @@ const AcConfig: React.FC<AcConfigProps> = ({ onConfigChange, initialData }) => {
 
   // Update combined string whenever form data changes
   useEffect(() => {
-    const combined = `.ac ${formData.sweepType} ${formData.frequencyStart} ${formData.frequencyStop} ${formData.frequencyStep}`;
+    const combined = `.ac ${formData.sweepType} ${formData.frequencyStep} ${formData.frequencyStart} ${formData.frequencyStop}`;
     setAcSimConfig(combined);
 
-    // Call the callback with the updated config
+    // Call the callback with the updated config string
     if (onConfigChange) {
       onConfigChange(combined);
     }
-  }, [formData, onConfigChange]);
+
+    // Call the full config callback with complete AC configuration
+    if (
+      onFullConfigChange &&
+      formData.source &&
+      formData.sweepType &&
+      formData.frequencyStart &&
+      formData.frequencyStop &&
+      formData.frequencyStep
+    ) {
+      const fullConfig: SimulationAC = {
+        type: "AC",
+        source: formData.source,
+        sweepType: formData.sweepType as "lin" | "log" | "dec",
+        frequencyStart: parseFloat(formData.frequencyStart),
+        frequencyStop: parseFloat(formData.frequencyStop),
+        frequencyStep: parseFloat(formData.frequencyStep),
+      };
+      onFullConfigChange(fullConfig);
+    }
+  }, [formData, onConfigChange, onFullConfigChange]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

@@ -4,10 +4,15 @@ import { SimulationDC } from "../../types/commonTypes";
 
 interface DcConfigProps {
   onConfigChange: (config: string) => void;
+  onFullConfigChange?: (config: SimulationDC) => void; // Add callback for full config
   initialData?: SimulationDC;
 }
 
-const DcConfig: React.FC<DcConfigProps> = ({ onConfigChange, initialData }) => {
+const DcConfig: React.FC<DcConfigProps> = ({
+  onConfigChange,
+  onFullConfigChange,
+  initialData,
+}) => {
   const [formData, setFormData] = useState({
     source: initialData?.source || "",
     start: initialData?.start?.toString() || "",
@@ -26,7 +31,25 @@ const DcConfig: React.FC<DcConfigProps> = ({ onConfigChange, initialData }) => {
     if (onConfigChange) {
       onConfigChange(combined);
     }
-  }, [formData, onConfigChange]);
+
+    // Call the full config callback with complete DC configuration
+    if (
+      onFullConfigChange &&
+      formData.source &&
+      formData.start &&
+      formData.stop &&
+      formData.step
+    ) {
+      const fullConfig: SimulationDC = {
+        type: "DC",
+        source: formData.source,
+        start: parseFloat(formData.start),
+        stop: parseFloat(formData.stop),
+        step: parseFloat(formData.step),
+      };
+      onFullConfigChange(fullConfig);
+    }
+  }, [formData, onConfigChange, onFullConfigChange]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

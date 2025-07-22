@@ -9,12 +9,13 @@ import Properties from "./properties";
 import Status from "./status";
 import { Tooltip } from "../components/ui/tooltip";
 import ExportImageDialog from "./ExportImageDialog";
-import { EEcircuitFile } from "src/types/commonTypes";
+import { EEcircuitFile, SimulationType } from "src/types/commonTypes";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
   shouldFitToScreen?: boolean;
   onCanvasResized?: () => void;
+  getSimulationConfig?: () => SimulationType | undefined;
 };
 
 const INITIAL_CANVAS_SIZE = 150; // Small fixed size for the first pass
@@ -23,6 +24,7 @@ const Schematic: React.FC<SchematicProps> = ({
   onNetlistExported,
   shouldFitToScreen,
   onCanvasResized,
+  getSimulationConfig,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -52,6 +54,7 @@ const Schematic: React.FC<SchematicProps> = ({
   const [showExportImageDialog, setShowExportImageDialog] = useState(false);
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [loadingSvg, setLoadingSvg] = useState(false);
+  const [isTabVisible, setIsTabVisible] = useState(true); // Track tab visibility
 
   const msgCallback = useCallback(
     (msg: eeSch.MsgSchToApp) => {
@@ -82,6 +85,16 @@ const Schematic: React.FC<SchematicProps> = ({
           break;
         case "savedSchematic": {
           console.log("received schematic data", msg.schematic);
+
+          // Get current simulation configuration
+          const currentSimConfig = getSimulationConfig
+            ? getSimulationConfig()
+            : undefined;
+          console.log(
+            "Current simulation config for saving:",
+            currentSimConfig
+          );
+
           // Handle the saved schematic data here
           const eeCirFile: EEcircuitFile = {
             schema: "EEcircuitV1",
@@ -89,11 +102,20 @@ const Schematic: React.FC<SchematicProps> = ({
             description: "EEcircuit Schematic",
             date: new Date().toISOString(),
             schematic: msg.schematic,
+            // Include simulation configuration if it exists
+            simulation: currentSimConfig,
           };
+
+          console.log("Complete EEcircuit file for saving:", eeCirFile);
           // Add this code inside the 'savedSchematic' case in the msgCallback function
 
           // Create blob from file data
           const fileContent = JSON.stringify(eeCirFile, null, 2);
+          console.log("JSON file content length:", fileContent.length);
+          console.log(
+            "JSON file content preview:",
+            fileContent.substring(0, 500) + "..."
+          );
           const blob = new Blob([fileContent], { type: "application/json" });
 
           // Create download link
@@ -113,7 +135,7 @@ const Schematic: React.FC<SchematicProps> = ({
         }
       }
     },
-    [onNetlistExported]
+    [onNetlistExported, getSimulationConfig]
   );
 
   // Helper function to wait for canvas to be ready for commands
@@ -189,6 +211,68 @@ const Schematic: React.FC<SchematicProps> = ({
     handleFitToScreen();
   }, [shouldFitToScreen, isCanvasReady, safeInitCanvas, waitForCanvasReady]);
 
+  // Effect to handle tab visibility changes and ensure canvas is properly initialized
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Create an intersection observer to detect when the component becomes visible
+    const visibilityObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        const isVisible = entry.isIntersecting && entry.intersectionRatio > 0;
+
+        console.log("Tab visibility changed:", isVisible);
+        setIsTabVisible(isVisible);
+
+        // When component becomes visible, ensure canvas is properly set up
+        if (isVisible) {
+          setTimeout(() => {
+            // Give time for the DOM to settle after tab change
+            if (canvasRef.current && containerRef.current) {
+              console.log("Tab became visible, checking canvas state...");
+
+              // Check if canvas is properly attached and sized
+              const rect = containerRef.current.getBoundingClientRect();
+              const canvasRect = canvasRef.current.getBoundingClientRect();
+
+              console.log("Container rect:", rect.width, "x", rect.height);
+              console.log(
+                "Canvas rect:",
+                canvasRect.width,
+                "x",
+                canvasRect.height
+              );
+              console.log("Canvas ready:", isCanvasReady);
+
+              // If canvas exists but isn't ready, or has zero size, reinitialize
+              if (
+                !isCanvasReady ||
+                canvasRect.width === 0 ||
+                canvasRect.height === 0
+              ) {
+                console.log("Canvas needs reinitialization after tab switch");
+
+                // Force a resize which will reinitialize the canvas
+                if (containerRef.current) {
+                  const resizeEvent = new Event("resize");
+                  window.dispatchEvent(resizeEvent);
+                }
+              }
+            }
+          }, 100); // Small delay to ensure DOM is ready
+        }
+      },
+      { threshold: [0, 0.1, 1] } // Multiple thresholds for better detection
+    );
+
+    visibilityObserver.observe(container);
+
+    return () => {
+      visibilityObserver.disconnect();
+    };
+  }, [isCanvasReady]);
+
   // Initialize the canvas and set up the message callback
   useEffect(() => {
     const container = containerRef.current;
@@ -246,7 +330,14 @@ const Schematic: React.FC<SchematicProps> = ({
       const widthDiff = Math.abs(currentWidth - lastSize.width);
       const heightDiff = Math.abs(currentHeight - lastSize.height);
 
-      if (canvasRef.current && widthDiff < 10 && heightDiff < 10) {
+      // More conservative threshold - only recreate canvas for significant size changes
+      const RESIZE_THRESHOLD = 50; // Increased from 10 to 50 pixels
+
+      if (
+        canvasRef.current &&
+        widthDiff < RESIZE_THRESHOLD &&
+        heightDiff < RESIZE_THRESHOLD
+      ) {
         console.log(
           `Skipping resize - dimensions haven't changed significantly (${widthDiff}x${heightDiff})`
         );
@@ -258,11 +349,47 @@ const Schematic: React.FC<SchematicProps> = ({
         return;
       }
 
+      // Additional check: If canvas is ready and the size change is moderate, just resize without recreating
+      if (
+        canvasRef.current &&
+        isCanvasReady &&
+        widthDiff < 100 &&
+        heightDiff < 100
+      ) {
+        console.log("Performing lightweight resize without canvas recreation");
+
+        // Update canvas size directly without recreating
+        canvasRef.current.width = currentWidth;
+        canvasRef.current.height = currentHeight;
+        canvasRef.current.style.width = `${currentWidth}px`;
+        canvasRef.current.style.height = `${currentHeight}px`;
+
+        // Update last known size
+        lastSizeRef.current = { width: currentWidth, height: currentHeight };
+
+        // Send view fit command to refresh the canvas after resize
+        try {
+          eeSch.sendCommand({ command: "view", viewType: "fit" });
+        } catch (error) {
+          console.warn("Failed to send view fit command:", error);
+        }
+
+        // Notify parent of canvas resize
+        if (onCanvasResized) {
+          onCanvasResized();
+        }
+
+        return;
+      }
+
       // Update last known size
       lastSizeRef.current = { width: currentWidth, height: currentHeight };
 
       console.log(
-        `Resizing canvas from (${lastSize.width}x${lastSize.height}) to (${currentWidth}x${currentHeight})`
+        `Resize triggered - Current: ${currentWidth}x${currentHeight}, Last: ${lastSize.width}x${lastSize.height}, Diff: ${widthDiff}x${heightDiff}`
+      );
+      console.log(
+        `Canvas state - exists: ${!!canvasRef.current}, ready: ${isCanvasReady}, parent attached: ${canvasRef.current?.parentNode === parent}`
       );
 
       // Reset canvas ready state
@@ -277,13 +404,20 @@ const Schematic: React.FC<SchematicProps> = ({
       }
 
       // 1. Remove previous canvas if it exists
-      if (canvasRef.current && canvasRef.current.parentNode === parent) {
-        console.log("Removing previous canvas");
-        // Reset the initialized canvas ref since we're removing the old canvas
-        if (initializedCanvasRef.current === canvasRef.current) {
-          initializedCanvasRef.current = null;
+      if (canvasRef.current) {
+        // Check if canvas is still attached to the expected parent
+        if (canvasRef.current.parentNode === parent) {
+          console.log("Removing previous canvas from parent");
+          // Reset the initialized canvas ref since we're removing the old canvas
+          if (initializedCanvasRef.current === canvasRef.current) {
+            initializedCanvasRef.current = null;
+          }
+          parent.removeChild(canvasRef.current);
+        } else {
+          console.log(
+            "Canvas exists but not attached to expected parent, skipping removal"
+          );
         }
-        parent.removeChild(canvasRef.current);
         canvasRef.current = null;
       }
 
@@ -362,34 +496,12 @@ const Schematic: React.FC<SchematicProps> = ({
     // Debounce the entire two-pass handler
     const debouncedResizeHandler = debounce(handleResize, 250); // Adjust delay
 
-    // Use IntersectionObserver to track visibility
-    let isVisible = false;
-    const intersectionObserver = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        const wasVisible = isVisible;
-        isVisible = entry.isIntersecting && entry.intersectionRatio > 0;
-
-        // If container just became visible and we have a canvas, ensure it's ready
-        if (isVisible && !wasVisible && canvasRef.current && !isCanvasReady) {
-          console.log("Container became visible, ensuring canvas is ready...");
-          setTimeout(() => {
-            if (canvasRef.current && !isCanvasReady) {
-              safeInitCanvas(canvasRef.current).catch(console.error);
-            }
-          }, 100);
-        }
-      },
-      { threshold: 0.1 }
-    );
-    intersectionObserver.observe(container);
-
     // Wrapper for resize handler that checks visibility
     const visibilityAwareResizeHandler = () => {
-      if (isVisible) {
+      if (isTabVisible) {
         debouncedResizeHandler();
       } else {
-        console.log("Skipping resize - container not visible");
+        console.log("Skipping resize - tab not visible");
       }
     };
 
@@ -408,7 +520,6 @@ const Schematic: React.FC<SchematicProps> = ({
       );
       window.removeEventListener("resize", visibilityAwareResizeHandler);
       resizeObserver.disconnect();
-      intersectionObserver.disconnect();
       debouncedResizeHandler.cancel();
 
       // Cancel pending animation frame on unmount
@@ -427,7 +538,7 @@ const Schematic: React.FC<SchematicProps> = ({
         canvasRef.current = null;
       }
     };
-  }, [safeInitCanvas]); // Include safeInitCanvas in dependencies
+  }, [safeInitCanvas, isTabVisible]); // Include safeInitCanvas and isTabVisible in dependencies
 
   const sendToNetListButtonHandler = useCallback(() => {
     if (!canvasRef.current) return;

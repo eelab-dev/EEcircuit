@@ -14,15 +14,22 @@ import AcConfig from "./simConfigs/ac";
 import TransConfig from "./simConfigs/trans";
 import { ResultType } from "eecircuit-engine";
 import { toaster } from "../components/ui/toaster";
+import { SimulationType } from "../types/commonTypes";
 
 type SimulationEditorProps = {
   netList: string;
   onResultsObtained: (results: ResultType[]) => void;
+  selectedSimType: string;
+  simulationConfig?: SimulationType;
+  onSimulationConfigChange: (simType: string, config?: SimulationType) => void;
 };
 
 const SimulationEditor: React.FC<SimulationEditorProps> = ({
   netList = "",
   onResultsObtained,
+  selectedSimType,
+  simulationConfig,
+  onSimulationConfigChange,
 }) => {
   const simType = ["None", "DC", "AC", "Trans"];
 
@@ -31,7 +38,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     height: globalThis.innerHeight,
   });
 
-  const [selectedSimType, setSelectedSimType] = useState(simType[0]);
   const [simConfig, setSimConfig] = useState("");
   const [netListToSim, setNetListToSim] = useState(netList);
 
@@ -65,11 +71,16 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     }
   }, [netList, simConfig, selectedSimType]);
 
-  const handleConfigChange = React.useCallback(
-    (config: string) => {
-      setSimConfig(config);
+  const handleConfigChange = React.useCallback((config: string) => {
+    setSimConfig(config);
+  }, []);
+
+  // Handler for receiving the full configuration object directly from config components
+  const handleFullConfigChange = React.useCallback(
+    (config: SimulationType) => {
+      onSimulationConfigChange(selectedSimType, config);
     },
-    [simConfig]
+    [selectedSimType, onSimulationConfigChange]
   );
 
   const handleSimRun = async () => {
@@ -200,7 +211,10 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
               gap="4"
               onValueChange={(value: RadioCardValueChangeDetails) => {
                 if (value.value) {
-                  setSelectedSimType(value.value);
+                  // Call parent handler to update simulation type
+                  onSimulationConfigChange(value.value, undefined);
+                  // Reset sim config when changing types
+                  setSimConfig("");
                 }
               }}
             >
@@ -233,11 +247,41 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                     </>
                   );
                 case "DC":
-                  return <DcConfig onConfigChange={handleConfigChange} />;
+                  return (
+                    <DcConfig
+                      onConfigChange={handleConfigChange}
+                      onFullConfigChange={handleFullConfigChange}
+                      initialData={
+                        simulationConfig?.type === "DC"
+                          ? simulationConfig
+                          : undefined
+                      }
+                    />
+                  );
                 case "AC":
-                  return <AcConfig onConfigChange={handleConfigChange} />;
+                  return (
+                    <AcConfig
+                      onConfigChange={handleConfigChange}
+                      onFullConfigChange={handleFullConfigChange}
+                      initialData={
+                        simulationConfig?.type === "AC"
+                          ? simulationConfig
+                          : undefined
+                      }
+                    />
+                  );
                 case "Trans":
-                  return <TransConfig onConfigChange={handleConfigChange} />;
+                  return (
+                    <TransConfig
+                      onConfigChange={handleConfigChange}
+                      onFullConfigChange={handleFullConfigChange}
+                      initialData={
+                        simulationConfig?.type === "Transient"
+                          ? simulationConfig
+                          : undefined
+                      }
+                    />
+                  );
               }
             })()}
           </Flex>
