@@ -23,7 +23,7 @@ export type SimulationAC = {
   frequencyStart: string;
   frequencyStop: string;
   stepNumber: string;
-  sweepType: "lin" | "log" | "dec";
+  sweepType: "dec" | "oct" | "lin";
 };
 
 export type SimulationTransient = {

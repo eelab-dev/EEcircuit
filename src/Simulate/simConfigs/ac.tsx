@@ -53,7 +53,7 @@ const AcConfig: React.FC<AcConfigProps> = ({
       const fullConfig: SimulationAC = {
         type: "AC",
         source: formData.source,
-        sweepType: formData.sweepType as "lin" | "log" | "dec",
+        sweepType: formData.sweepType as SimulationAC["sweepType"],
         frequencyStart: formData.frequencyStart, // Keep as string to support unit postfixes
         frequencyStop: formData.frequencyStop, // Keep as string to support unit postfixes
         stepNumber: formData.stepNumber, // Updated to match SimulationAC type
@@ -101,13 +101,13 @@ const AcConfig: React.FC<AcConfigProps> = ({
                 onChange={(e) => {
                   handleInputChange(
                     "sweepType",
-                    e.target.value as "lin" | "log" | "dec"
+                    e.target.value as SimulationAC["sweepType"]
                   );
                 }}
               >
-                <option value="lin">Linear (lin)</option>
-                <option value="log">Logarithmic (log)</option>
                 <option value="dec">Decade (dec)</option>
+                <option value="oct">Octave (oct)</option>
+                <option value="lin">Linear (lin)</option>
               </NativeSelectField>
             </NativeSelectRoot>
           </Field.Root>
