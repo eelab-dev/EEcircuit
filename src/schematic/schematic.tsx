@@ -34,6 +34,10 @@ const Schematic: React.FC<SchematicProps> = ({
     width: 0,
     height: 0,
   });
+  const accumulatedResizeRef = useRef<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  }); // Track accumulated resize differences
   const initializedCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [coord, setCoord] = useState({ x: 0, y: 0 });
@@ -331,18 +335,26 @@ const Schematic: React.FC<SchematicProps> = ({
       const widthDiff = Math.abs(currentWidth - lastSize.width);
       const heightDiff = Math.abs(currentHeight - lastSize.height);
 
+      // Accumulate the resize differences to handle multiple small resizes
+      accumulatedResizeRef.current.width += widthDiff;
+      accumulatedResizeRef.current.height += heightDiff;
+
+      const accumulatedWidthDiff = accumulatedResizeRef.current.width;
+      const accumulatedHeightDiff = accumulatedResizeRef.current.height;
+
       // Much more conservative threshold - avoid frequent canvas recreation
-      const RESIZE_THRESHOLD = 100; // Increased from 50 to 100 pixels
+      const RESIZE_THRESHOLD = 50; // Threshold for accumulated differences
+      const LIGHTWEIGHT_RESIZE_THRESHOLD = RESIZE_THRESHOLD * 2; // 200px - threshold for lightweight resize
 
       if (
         canvasRef.current &&
-        widthDiff < RESIZE_THRESHOLD &&
-        heightDiff < RESIZE_THRESHOLD
+        accumulatedWidthDiff < RESIZE_THRESHOLD &&
+        accumulatedHeightDiff < RESIZE_THRESHOLD
       ) {
         console.log(
-          `Skipping resize - dimensions haven't changed significantly (${widthDiff}x${heightDiff})`
+          `Skipping resize - accumulated differences not significant enough (${accumulatedWidthDiff}x${accumulatedHeightDiff})`
         );
-        // Update the last size even when skipping to prevent drift
+        // Update the last size to track the current change, but don't reset accumulated differences yet
         lastSizeRef.current = { width: currentWidth, height: currentHeight };
 
         // If canvas exists and size hasn't changed, just ensure it's properly initialized
@@ -353,16 +365,14 @@ const Schematic: React.FC<SchematicProps> = ({
         return;
       }
 
-      // Additional check: If canvas is ready and the size change is moderate, just resize without recreating
+      // Additional check: If canvas is ready and the accumulated change is moderate, just resize without recreating
       if (
         canvasRef.current &&
         isCanvasReady &&
-        widthDiff < 50 &&
-        heightDiff < 50
+        accumulatedWidthDiff < LIGHTWEIGHT_RESIZE_THRESHOLD &&
+        accumulatedHeightDiff < LIGHTWEIGHT_RESIZE_THRESHOLD
       ) {
-        console.log("Performing lightweight resize without canvas recreation");
-
-        // If we know the canvas is offscreen, skip direct resizing
+        console.log("Performing lightweight resize without canvas recreation"); // If we know the canvas is offscreen, skip direct resizing
         if (isCanvasOffscreen) {
           console.log("Canvas is offscreen, using library command for resize");
           try {
@@ -408,6 +418,9 @@ const Schematic: React.FC<SchematicProps> = ({
         // Update last known size
         lastSizeRef.current = { width: currentWidth, height: currentHeight };
 
+        // Reset accumulated differences since we performed a resize
+        accumulatedResizeRef.current = { width: 0, height: 0 };
+
         // Notify parent of canvas resize
         if (onCanvasResized) {
           onCanvasResized();
@@ -419,8 +432,11 @@ const Schematic: React.FC<SchematicProps> = ({
       // Update last known size
       lastSizeRef.current = { width: currentWidth, height: currentHeight };
 
+      // Reset accumulated differences since we're proceeding with a full resize
+      accumulatedResizeRef.current = { width: 0, height: 0 };
+
       console.log(
-        `Resize triggered - Current: ${currentWidth}x${currentHeight}, Last: ${lastSize.width}x${lastSize.height}, Diff: ${widthDiff}x${heightDiff}`
+        `Resize triggered - Current: ${currentWidth}x${currentHeight}, Last: ${lastSize.width}x${lastSize.height}, Accumulated: ${accumulatedWidthDiff}x${accumulatedHeightDiff}`
       );
       console.log(
         `Canvas state - exists: ${!!canvasRef.current}, ready: ${isCanvasReady}, parent attached: ${canvasRef.current?.parentNode === parent}`
