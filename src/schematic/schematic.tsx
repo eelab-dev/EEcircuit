@@ -55,6 +55,7 @@ const Schematic: React.FC<SchematicProps> = ({
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [loadingSvg, setLoadingSvg] = useState(false);
   const [isTabVisible, setIsTabVisible] = useState(true); // Track tab visibility
+  const [isCanvasOffscreen, setIsCanvasOffscreen] = useState(false); // Track if canvas control is transferred
 
   const msgCallback = useCallback(
     (msg: eeSch.MsgSchToApp) => {
@@ -358,21 +359,51 @@ const Schematic: React.FC<SchematicProps> = ({
       ) {
         console.log("Performing lightweight resize without canvas recreation");
 
-        // Update canvas size directly without recreating
-        canvasRef.current.width = currentWidth;
-        canvasRef.current.height = currentHeight;
-        canvasRef.current.style.width = `${currentWidth}px`;
-        canvasRef.current.style.height = `${currentHeight}px`;
+        // If we know the canvas is offscreen, skip direct resizing
+        if (isCanvasOffscreen) {
+          console.log("Canvas is offscreen, using library command for resize");
+          try {
+            eeSch.sendCommand({ command: "view", viewType: "fit" });
+          } catch (cmdError) {
+            console.warn("Failed to send view fit command:", cmdError);
+          }
+        } else {
+          // Try to resize directly, and catch if canvas has been transferred to offscreen
+          try {
+            // Check if canvas control has been transferred to offscreen
+            // If so, we cannot resize it directly from the main thread
+            const canvas = canvasRef.current;
+
+            // Try to access and update canvas properties to check if it's still under main thread control
+            canvas.width = currentWidth;
+            canvas.height = currentHeight;
+            canvas.style.width = `${currentWidth}px`;
+            canvas.style.height = `${currentHeight}px`;
+
+            console.log("Canvas resized successfully from main thread");
+          } catch (error) {
+            if (
+              error instanceof DOMException &&
+              error.name === "InvalidStateError"
+            ) {
+              console.log(
+                "Canvas control transferred to offscreen, marking as offscreen"
+              );
+              setIsCanvasOffscreen(true); // Remember this for future resize attempts
+              // Canvas has been transferred to offscreen, use library command instead
+              try {
+                eeSch.sendCommand({ command: "view", viewType: "fit" });
+              } catch (cmdError) {
+                console.warn("Failed to send view fit command:", cmdError);
+              }
+            } else {
+              console.error("Unexpected error during canvas resize:", error);
+            }
+          }
+        }
 
         // Update last known size
         lastSizeRef.current = { width: currentWidth, height: currentHeight };
-
-        // Send view fit command to refresh the canvas after resize
-        try {
-          eeSch.sendCommand({ command: "view", viewType: "fit" });
-        } catch (error) {
-          console.warn("Failed to send view fit command:", error);
-        }
 
         // Notify parent of canvas resize
         if (onCanvasResized) {
