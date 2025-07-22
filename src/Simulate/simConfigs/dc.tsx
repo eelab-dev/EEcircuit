@@ -15,9 +15,9 @@ const DcConfig: React.FC<DcConfigProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     source: initialData?.source || "",
-    start: initialData?.start?.toString() || "",
-    stop: initialData?.stop?.toString() || "",
-    step: initialData?.step?.toString() || "",
+    start: initialData?.start || "",
+    stop: initialData?.stop || "",
+    step: initialData?.step || "",
   });
 
   const [dcSimConfig, setDcSimConfig] = useState("");
@@ -43,9 +43,9 @@ const DcConfig: React.FC<DcConfigProps> = ({
       const fullConfig: SimulationDC = {
         type: "DC",
         source: formData.source,
-        start: parseFloat(formData.start),
-        stop: parseFloat(formData.stop),
-        step: parseFloat(formData.step),
+        start: formData.start, // Keep as string to support unit postfixes
+        stop: formData.stop, // Keep as string to support unit postfixes
+        step: formData.step, // Keep as string to support unit postfixes
       };
       onFullConfigChange(fullConfig);
     }
@@ -86,9 +86,9 @@ const DcConfig: React.FC<DcConfigProps> = ({
             <Field.Label>Start Value (V)</Field.Label>
             <Input
               name="start"
-              type="number"
               value={formData.start}
               onChange={(e) => handleInputChange("start", e.target.value)}
+              placeholder="e.g., 0, 1m, 5.2"
             />
           </Field.Root>
 
@@ -96,9 +96,9 @@ const DcConfig: React.FC<DcConfigProps> = ({
             <Field.Label>Stop Value (V)</Field.Label>
             <Input
               name="stop"
-              type="number"
               value={formData.stop}
               onChange={(e) => handleInputChange("stop", e.target.value)}
+              placeholder="e.g., 10, 1.5k, 2M"
             />
           </Field.Root>
 
@@ -106,9 +106,9 @@ const DcConfig: React.FC<DcConfigProps> = ({
             <Field.Label>Step size (V)</Field.Label>
             <Input
               name="step"
-              type="number"
               value={formData.step}
               onChange={(e) => handleInputChange("step", e.target.value)}
+              placeholder="e.g., 0.1, 10m, 1k"
             />
           </Field.Root>
         </Fieldset.Content>

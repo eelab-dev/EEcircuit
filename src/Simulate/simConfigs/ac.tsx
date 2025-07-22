@@ -15,9 +15,9 @@ const AcConfig: React.FC<AcConfigProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     source: initialData?.source || "",
-    frequencyStart: initialData?.frequencyStart?.toString() || "",
-    frequencyStop: initialData?.frequencyStop?.toString() || "",
-    frequencyStep: initialData?.frequencyStep?.toString() || "",
+    frequencyStart: initialData?.frequencyStart || "",
+    frequencyStop: initialData?.frequencyStop || "",
+    frequencyStep: initialData?.frequencyStep || "",
     sweepType: initialData?.sweepType || ("lin" as "lin" | "log" | "dec"),
   });
 
@@ -46,9 +46,9 @@ const AcConfig: React.FC<AcConfigProps> = ({
         type: "AC",
         source: formData.source,
         sweepType: formData.sweepType as "lin" | "log" | "dec",
-        frequencyStart: parseFloat(formData.frequencyStart),
-        frequencyStop: parseFloat(formData.frequencyStop),
-        frequencyStep: parseFloat(formData.frequencyStep),
+        frequencyStart: formData.frequencyStart, // Keep as string to support unit postfixes
+        frequencyStop: formData.frequencyStop, // Keep as string to support unit postfixes
+        frequencyStep: formData.frequencyStep, // Keep as string to support unit postfixes
       };
       onFullConfigChange(fullConfig);
     }
@@ -104,11 +104,11 @@ const AcConfig: React.FC<AcConfigProps> = ({
             <Field.Label>Start Frequency (Hz)</Field.Label>
             <Input
               name="frequencyStart"
-              type="number"
               value={formData.frequencyStart}
               onChange={(e) =>
                 handleInputChange("frequencyStart", e.target.value)
               }
+              placeholder="e.g., 1, 100m, 1k, 2.5M"
             />
           </Field.Root>
 
@@ -116,11 +116,11 @@ const AcConfig: React.FC<AcConfigProps> = ({
             <Field.Label>Stop Frequency (Hz)</Field.Label>
             <Input
               name="frequencyStop"
-              type="number"
               value={formData.frequencyStop}
               onChange={(e) =>
                 handleInputChange("frequencyStop", e.target.value)
               }
+              placeholder="e.g., 1000, 10k, 1M, 2.1G"
             />
           </Field.Root>
 
@@ -128,11 +128,11 @@ const AcConfig: React.FC<AcConfigProps> = ({
             <Field.Label>Frequency Step (Hz)</Field.Label>
             <Input
               name="frequencyStep"
-              type="number"
               value={formData.frequencyStep}
               onChange={(e) =>
                 handleInputChange("frequencyStep", e.target.value)
               }
+              placeholder="e.g., 10, 100, 1k"
             />
           </Field.Root>
         </Fieldset.Content>

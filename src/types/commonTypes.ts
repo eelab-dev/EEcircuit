@@ -12,24 +12,24 @@ export type EEcircuitFile = {
 export type SimulationDC = {
   type: "DC";
   source: string;
-  start: number;
-  stop: number;
-  step: number;
+  start: string;
+  stop: string;
+  step: string;
 };
 
 export type SimulationAC = {
   type: "AC";
   source: string;
-  frequencyStart: number;
-  frequencyStop: number;
-  frequencyStep: number;
+  frequencyStart: string;
+  frequencyStop: string;
+  frequencyStep: string;
   sweepType: "lin" | "log" | "dec";
 };
 
 export type SimulationTransient = {
   type: "Transient";
-  stopTime: number;
-  timeStep: number;
+  stopTime: string;
+  timeStep: string;
   initialConditions?: boolean;
 };
 

@@ -14,8 +14,8 @@ const TransConfig: React.FC<TransConfigProps> = ({
   initialData,
 }) => {
   const [formData, setFormData] = useState({
-    stopTime: initialData?.stopTime?.toString() || "",
-    timeStep: initialData?.timeStep?.toString() || "",
+    stopTime: initialData?.stopTime || "",
+    timeStep: initialData?.timeStep || "",
     initialConditions: initialData?.initialConditions || false,
   });
 
@@ -35,8 +35,8 @@ const TransConfig: React.FC<TransConfigProps> = ({
     if (onFullConfigChange && formData.timeStep && formData.stopTime) {
       const fullConfig: SimulationTransient = {
         type: "Transient",
-        timeStep: parseFloat(formData.timeStep),
-        stopTime: parseFloat(formData.stopTime),
+        timeStep: formData.timeStep, // Keep as string to support unit postfixes
+        stopTime: formData.stopTime, // Keep as string to support unit postfixes
         initialConditions: formData.initialConditions,
       };
       onFullConfigChange(fullConfig);
@@ -68,9 +68,9 @@ const TransConfig: React.FC<TransConfigProps> = ({
             <Field.Label>Stop Time (s)</Field.Label>
             <Input
               name="stopTime"
-              type="number"
               value={formData.stopTime}
               onChange={(e) => handleInputChange("stopTime", e.target.value)}
+              placeholder="e.g., 1, 100m, 1u, 10n"
             />
           </Field.Root>
 
@@ -78,9 +78,9 @@ const TransConfig: React.FC<TransConfigProps> = ({
             <Field.Label>Time Step (s)</Field.Label>
             <Input
               name="timeStep"
-              type="number"
               value={formData.timeStep}
               onChange={(e) => handleInputChange("timeStep", e.target.value)}
+              placeholder="e.g., 0.01, 1m, 100u, 1n"
             />
           </Field.Root>
 
