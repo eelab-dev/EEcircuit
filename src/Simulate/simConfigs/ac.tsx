@@ -1,4 +1,12 @@
-import { Field, Fieldset, Input, Stack, Text } from "@chakra-ui/react";
+import {
+  Field,
+  Fieldset,
+  Input,
+  Stack,
+  Text,
+  NativeSelectRoot,
+  NativeSelectField,
+} from "@chakra-ui/react";
 import React, { useState, useEffect } from "react";
 import { SimulationAC } from "../../types/commonTypes";
 
@@ -17,7 +25,7 @@ const AcConfig: React.FC<AcConfigProps> = ({
     source: initialData?.source || "",
     frequencyStart: initialData?.frequencyStart || "",
     frequencyStop: initialData?.frequencyStop || "",
-    frequencyStep: initialData?.frequencyStep || "",
+    stepNumber: initialData?.stepNumber || "", // Updated to match SimulationAC type
     sweepType: initialData?.sweepType || ("lin" as "lin" | "log" | "dec"),
   });
 
@@ -25,7 +33,7 @@ const AcConfig: React.FC<AcConfigProps> = ({
 
   // Update combined string whenever form data changes
   useEffect(() => {
-    const combined = `.ac ${formData.sweepType} ${formData.frequencyStep} ${formData.frequencyStart} ${formData.frequencyStop}`;
+    const combined = `.ac ${formData.sweepType} ${formData.stepNumber} ${formData.frequencyStart} ${formData.frequencyStop}`;
     setAcSimConfig(combined);
 
     // Call the callback with the updated config string
@@ -40,7 +48,7 @@ const AcConfig: React.FC<AcConfigProps> = ({
       formData.sweepType &&
       formData.frequencyStart &&
       formData.frequencyStop &&
-      formData.frequencyStep
+      formData.stepNumber // Updated to match property name
     ) {
       const fullConfig: SimulationAC = {
         type: "AC",
@@ -48,7 +56,7 @@ const AcConfig: React.FC<AcConfigProps> = ({
         sweepType: formData.sweepType as "lin" | "log" | "dec",
         frequencyStart: formData.frequencyStart, // Keep as string to support unit postfixes
         frequencyStop: formData.frequencyStop, // Keep as string to support unit postfixes
-        frequencyStep: formData.frequencyStep, // Keep as string to support unit postfixes
+        stepNumber: formData.stepNumber, // Updated to match SimulationAC type
       };
       onFullConfigChange(fullConfig);
     }
@@ -87,17 +95,21 @@ const AcConfig: React.FC<AcConfigProps> = ({
 
           <Field.Root>
             <Field.Label>Sweep Type</Field.Label>
-            <Input
-              name="sweepType"
-              value={formData.sweepType}
-              onChange={(e) =>
-                handleInputChange(
-                  "sweepType",
-                  e.target.value as "lin" | "log" | "dec"
-                )
-              }
-              placeholder="lin, log, or dec"
-            />
+            <NativeSelectRoot>
+              <NativeSelectField
+                value={formData.sweepType}
+                onChange={(e) => {
+                  handleInputChange(
+                    "sweepType",
+                    e.target.value as "lin" | "log" | "dec"
+                  );
+                }}
+              >
+                <option value="lin">Linear (lin)</option>
+                <option value="log">Logarithmic (log)</option>
+                <option value="dec">Decade (dec)</option>
+              </NativeSelectField>
+            </NativeSelectRoot>
           </Field.Root>
 
           <Field.Root>
@@ -125,13 +137,11 @@ const AcConfig: React.FC<AcConfigProps> = ({
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Frequency Step (Hz)</Field.Label>
+            <Field.Label>Number of Steps</Field.Label>
             <Input
-              name="frequencyStep"
-              value={formData.frequencyStep}
-              onChange={(e) =>
-                handleInputChange("frequencyStep", e.target.value)
-              }
+              name="stepNumber"
+              value={formData.stepNumber}
+              onChange={(e) => handleInputChange("stepNumber", e.target.value)}
               placeholder="e.g., 10, 100, 1k"
             />
           </Field.Root>

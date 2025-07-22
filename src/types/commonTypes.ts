@@ -22,7 +22,7 @@ export type SimulationAC = {
   source: string;
   frequencyStart: string;
   frequencyStop: string;
-  frequencyStep: string;
+  stepNumber: string;
   sweepType: "lin" | "log" | "dec";
 };
 
