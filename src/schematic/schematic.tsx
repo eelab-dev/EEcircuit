@@ -331,8 +331,8 @@ const Schematic: React.FC<SchematicProps> = ({
       const widthDiff = Math.abs(currentWidth - lastSize.width);
       const heightDiff = Math.abs(currentHeight - lastSize.height);
 
-      // More conservative threshold - only recreate canvas for significant size changes
-      const RESIZE_THRESHOLD = 50; // Increased from 10 to 50 pixels
+      // Much more conservative threshold - avoid frequent canvas recreation
+      const RESIZE_THRESHOLD = 100; // Increased from 50 to 100 pixels
 
       if (
         canvasRef.current &&
@@ -342,6 +342,9 @@ const Schematic: React.FC<SchematicProps> = ({
         console.log(
           `Skipping resize - dimensions haven't changed significantly (${widthDiff}x${heightDiff})`
         );
+        // Update the last size even when skipping to prevent drift
+        lastSizeRef.current = { width: currentWidth, height: currentHeight };
+
         // If canvas exists and size hasn't changed, just ensure it's properly initialized
         if (!isCanvasReady) {
           console.log("Canvas exists but not ready, initializing...");
@@ -354,8 +357,8 @@ const Schematic: React.FC<SchematicProps> = ({
       if (
         canvasRef.current &&
         isCanvasReady &&
-        widthDiff < 100 &&
-        heightDiff < 100
+        widthDiff < 50 &&
+        heightDiff < 50
       ) {
         console.log("Performing lightweight resize without canvas recreation");
 
@@ -422,6 +425,17 @@ const Schematic: React.FC<SchematicProps> = ({
       console.log(
         `Canvas state - exists: ${!!canvasRef.current}, ready: ${isCanvasReady}, parent attached: ${canvasRef.current?.parentNode === parent}`
       );
+
+      // Only proceed with full recreation if dimensions are valid
+      if (currentWidth <= 0 || currentHeight <= 0) {
+        console.log(
+          "Skipping resize - invalid dimensions:",
+          currentWidth,
+          "x",
+          currentHeight
+        );
+        return;
+      }
 
       // Reset canvas ready state
       setIsCanvasReady(false);
@@ -524,8 +538,8 @@ const Schematic: React.FC<SchematicProps> = ({
       });
     };
 
-    // Debounce the entire two-pass handler
-    const debouncedResizeHandler = debounce(handleResize, 250); // Adjust delay
+    // Debounce the entire two-pass handler with longer delay to reduce frequency
+    const debouncedResizeHandler = debounce(handleResize, 500); // Increased from 250ms to 500ms
 
     // Wrapper for resize handler that checks visibility
     const visibilityAwareResizeHandler = () => {

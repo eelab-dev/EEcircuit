@@ -3,6 +3,7 @@ import { IconButton, Separator } from "@chakra-ui/react";
 import { Tooltip } from "../components/ui/tooltip";
 import ClearSchematicDialog from "./ClearSchematicDialog";
 import AddComponentPopover from "./AddComponentPopover";
+import debounce from "lodash.debounce";
 
 import {
   Cable,
@@ -38,27 +39,32 @@ const Actions: React.FC<ActionsProps> = ({
   }, []);
 
   React.useEffect(() => {
-    const handleResize = () => {
+    // Debounce the resize handler to reduce excessive logging during resize operations
+    const handleResize = debounce(() => {
       // Use viewport height units - 45rem is approximately 720px
       const viewportHeight = window.innerHeight;
       const shouldBeCompact = viewportHeight < 40 * 16; // 40rem in pixels (640px)
 
-      console.log(
-        "Viewport height:",
-        viewportHeight,
-        "Should be compact:",
-        shouldBeCompact
-      );
+      // Only log when compact state actually changes to reduce console noise
+      if (shouldBeCompact !== isCompact) {
+        console.log(
+          "Viewport height:",
+          viewportHeight,
+          "Should be compact:",
+          shouldBeCompact
+        );
+      }
       setIsCompact(shouldBeCompact);
-    };
+    }, 100); // Debounce resize events by 100ms
 
     handleResize();
     window.addEventListener("resize", handleResize);
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      handleResize.cancel(); // Cancel any pending debounced calls
     };
-  }, []);
+  }, [isCompact]); // Add isCompact to dependencies to track state changes
 
   return (
     <div

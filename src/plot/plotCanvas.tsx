@@ -82,6 +82,16 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       const rect = canvas.getBoundingClientRect();
       const newWidth = rect.width;
       const newHeight = rect.height;
+
+      // Guard against zero dimensions to prevent NaN aspect ratios and unnecessary updates
+      if (newWidth === 0 || newHeight === 0) {
+        console.log("Canvas dimensions are zero, skipping update:", {
+          newWidth,
+          newHeight,
+        });
+        return;
+      }
+
       const aspectRatio = newWidth / newHeight;
 
       console.log("Canvas dimensions update:", {

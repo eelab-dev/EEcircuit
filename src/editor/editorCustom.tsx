@@ -64,7 +64,7 @@ const EditorCustom = ({
         operators: ["=", ">", "<"],
 
         // we include these common regular expressions
-        symbols: /[=><!~?:&|+\-*\/\^%]+/,
+        symbols: /[=><!~?:&|+\-*\\^%]+/,
 
         // C# style strings
         escapes:
@@ -92,7 +92,7 @@ const EditorCustom = ({
             [/^([.])\w+/, "type"],
 
             // delimiters and operators
-            [/[{}()\[\]]/, "@brackets"],
+            [/[{}()[\]]/, "@brackets"],
             [/[<>](?!@symbols)/, "@brackets"],
             [
               /@symbols/,
@@ -105,7 +105,7 @@ const EditorCustom = ({
             // As an example, we emit a debugging log message on these tokens.
             // Note: message are supressed during the first load -- change some lines to see them.
             [
-              /@\s*[a-zA-Z_\$][\w\$]*/,
+              /@\s*[a-zA-Z_$][\w$]*/,
               {
                 token: "annotation",
                 log: "annotation token: $0",
@@ -113,7 +113,7 @@ const EditorCustom = ({
             ],
 
             // numbers
-            [/\d*\.\d+([eE][\-+]?\d+)/, "number.float"],
+            [/\d*\.\d+([eE][-+]?\d+)/, "number.float"],
             [/\d*\.\d+([munpf])?/, "number"],
             [/\d+([munpf])/, "number"],
             [/\d+/, "number"],
@@ -400,7 +400,9 @@ const EditorCustom = ({
   }, []);
 
   useEffect(() => {
-    if (monacoRef.current && containerRef.current) {
+    if (monacoRef.current && containerRef.current && !editorCodeRef.current) {
+      // Only create editor if it doesn't already exist to prevent listener leaks
+      console.log("Creating Monaco editor instance");
       editorCodeRef.current = monacoRef.current.editor.create(
         containerRef.current,
         {
@@ -421,7 +423,23 @@ const EditorCustom = ({
 
       setIsEditorCodeMounted(true);
     }
-  }, [isMonacoReady, containerRef]);
+
+    // Cleanup function to dispose of the Monaco editor and prevent listener leaks
+    return () => {
+      if (editorCodeRef.current) {
+        console.log(
+          "Disposing Monaco editor instance to prevent listener leak"
+        );
+        try {
+          editorCodeRef.current.dispose();
+        } catch (error) {
+          console.warn("Error disposing Monaco editor:", error);
+        }
+        editorCodeRef.current = null;
+        setIsEditorCodeMounted(false);
+      }
+    };
+  }, [isMonacoReady]); // Removed theme from dependencies to prevent unnecessary recreation
 
   useEffect(() => {
     if (editorCodeRef.current && isEditorCodeMounted) {
@@ -442,7 +460,7 @@ const EditorCustom = ({
       editorCodeRef.current.setValue(value ? value : "hello!");
       editorCodeRef.current.onDidChangeModelContent(monacoEvent);
     }
-  }, [isEditorCodeMounted, theme, language]);
+  }, [isEditorCodeMounted, language]); // Removed theme to prevent unnecessary updates
 
   useEffect(() => {
     if (editorRef.current && editorCodeRef.current && isEditorCodeMounted) {

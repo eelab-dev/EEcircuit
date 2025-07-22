@@ -33,27 +33,9 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 }) => {
   const simType = ["None", "DC", "AC", "Trans"];
 
-  const [windowSize, setWindowSize] = useState({
-    width: globalThis.innerWidth,
-    height: globalThis.innerHeight,
-  });
-
   const [simConfig, setSimConfig] = useState("");
   const [netListToSim, setNetListToSim] = useState(netList);
 
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowSize({
-        width: globalThis.innerWidth,
-        height: globalThis.innerHeight,
-      });
-    };
-
-    globalThis.addEventListener("resize", handleResize);
-    return () => {
-      globalThis.removeEventListener("resize", handleResize);
-    };
-  }, []);
   const handleEditor = React.useCallback((value: string | undefined) => {
     if (value !== undefined) {
       setNetListToSim(value);
@@ -163,7 +145,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
             value={netListToSim}
             valueChanged={handleEditor}
             theme={useColorModeValue("light", "dark")}
-            key={windowSize.width}
           />
         </Suspense>
       </Flex>
