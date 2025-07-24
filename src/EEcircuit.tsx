@@ -5,9 +5,10 @@ import React from "react";
 //const PlotArray = React.lazy(() => import("./plotArray.tsx"));
 //const DisplayBox = React.lazy(() => import("./displayBox.tsx"));
 
-import { Box, Flex, Tabs, Text } from "@chakra-ui/react";
+import { Box, Flex, Tabs, Text, IconButton } from "@chakra-ui/react";
 
 import { Toaster } from "./components/ui/toaster.tsx";
+import { Tooltip } from "./components/ui/tooltip.tsx";
 
 import Schematic from "./schematic/schematic.tsx";
 import SimulationEditor from "./Simulate/simulate.tsx";
@@ -17,6 +18,7 @@ import Plot from "./plot/plot.tsx";
 import { ResultType } from "eecircuit-engine";
 import { sendCommand } from "eecircuit-schematic";
 import { EEcircuitFile, SimulationType } from "./types/commonTypes.ts";
+import { Mouse, Touchpad } from "lucide-react";
 
 type TabsValue = "schematic" | "simulate" | "plot";
 
@@ -63,6 +65,11 @@ const EEcircuit: React.FC = () => {
   // Tab enablement states
   const [isSimulateTabEnabled, setIsSimulateTabEnabled] = React.useState(false);
   const [isPlotTabEnabled, setIsPlotTabEnabled] = React.useState(false);
+
+  // Input profile state - defaults to trackpad
+  const [inputProfile, setInputProfile] = React.useState<"mouse" | "trackpad">(
+    "trackpad"
+  );
 
   const [dragBox, setDragBox] = React.useState(false);
 
@@ -308,6 +315,20 @@ const EEcircuit: React.FC = () => {
     }
   }, []);
 
+  // Handler for input profile toggle
+  const handleInputProfileToggle = React.useCallback(() => {
+    const newProfile = inputProfile === "mouse" ? "trackpad" : "mouse";
+    setInputProfile(newProfile);
+
+    // Send command to update input profile in schematic canvas
+    sendCommand({
+      command: "setInputProfile",
+      profile: newProfile,
+    });
+
+    console.log("Input profile changed to:", newProfile);
+  }, [inputProfile]);
+
   return (
     <Box
       border="solid 0px"
@@ -364,31 +385,55 @@ const EEcircuit: React.FC = () => {
           </Box>
         ) : null}
         <Tabs.List flexShrink={0}>
-          <Tabs.Trigger value="schematic" marginRight="0.5em">
-            Schematic
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="simulate"
-            marginRight="0.5em"
-            disabled={!isSimulateTabEnabled}
-            style={{
-              opacity: isSimulateTabEnabled ? 1 : 0.5,
-              cursor: isSimulateTabEnabled ? "pointer" : "not-allowed",
-            }}
-          >
-            Simulate
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="plot"
-            marginRight="0.5em"
-            disabled={!isPlotTabEnabled}
-            style={{
-              opacity: isPlotTabEnabled ? 1 : 0.5,
-              cursor: isPlotTabEnabled ? "pointer" : "not-allowed",
-            }}
-          >
-            Plot
-          </Tabs.Trigger>
+          <Flex width="100%" alignItems="center" justifyContent="space-between">
+            <Flex alignItems="center">
+              <Tabs.Trigger value="schematic" marginRight="0.5em">
+                Schematic
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                value="simulate"
+                marginRight="0.5em"
+                disabled={!isSimulateTabEnabled}
+                style={{
+                  opacity: isSimulateTabEnabled ? 1 : 0.5,
+                  cursor: isSimulateTabEnabled ? "pointer" : "not-allowed",
+                }}
+              >
+                Simulate
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                value="plot"
+                marginRight="0.5em"
+                disabled={!isPlotTabEnabled}
+                style={{
+                  opacity: isPlotTabEnabled ? 1 : 0.5,
+                  cursor: isPlotTabEnabled ? "pointer" : "not-allowed",
+                }}
+              >
+                Plot
+              </Tabs.Trigger>
+            </Flex>
+
+            {/* Input Profile Toggle Button */}
+            <Tooltip
+              showArrow
+              content={`Switch to ${inputProfile === "mouse" ? "trackpad" : "mouse"} input profile`}
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label={`Switch to ${inputProfile === "mouse" ? "trackpad" : "mouse"} input profile`}
+                size="sm"
+                variant="ghost"
+                onClick={handleInputProfileToggle}
+              >
+                {inputProfile === "mouse" ? (
+                  <Mouse size={16} />
+                ) : (
+                  <Touchpad size={16} />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Flex>
         </Tabs.List>
 
         <Tabs.Content value="schematic" flex={1} minHeight={0}>
