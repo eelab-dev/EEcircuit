@@ -3,15 +3,10 @@ import { Flex, IconButton, Box, Input, Text } from "@chakra-ui/react";
 import { createPortal } from "react-dom";
 import { Tooltip } from "../components/ui/tooltip";
 import { CopyPlus, X } from "lucide-react";
-import {
-  AvailableComponent,
-  ComponentCategory,
-  sendCommand,
-} from "eecircuit-schematic";
+import { AvailableComponent, sendCommand } from "eecircuit-schematic";
 
-// Type-safe category priority mapping that stays perfectly in sync with ComponentCategory
-// This will generate TypeScript errors if we try to use categories that don't exist
-// or if we miss any categories that do exist
+type ComponentCategory = AvailableComponent["category"];
+
 const createCategoryPriority = (): Record<ComponentCategory, number> => {
   const priorities: Record<ComponentCategory, number> = {
     passive: 1, // resistors, capacitors, inductors
