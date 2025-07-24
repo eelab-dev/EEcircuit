@@ -34,3 +34,8 @@ export type SimulationTransient = {
 };
 
 export type SimulationType = SimulationDC | SimulationAC | SimulationTransient;
+
+export type ToBePlotted = {
+  type: "voltage" | "current";
+  name: string;
+};

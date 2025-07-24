@@ -8,14 +8,22 @@ import Actions from "./actions";
 import Properties from "./properties";
 import Status from "./status";
 import { Tooltip } from "../components/ui/tooltip";
+import { useColorModeValue } from "../components/ui/color-mode";
 import ExportImageDialog from "./ExportImageDialog";
-import { EEcircuitFile, SimulationType } from "src/types/commonTypes";
+import {
+  EEcircuitFile,
+  SimulationType,
+  ToBePlotted,
+} from "src/types/commonTypes";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
   shouldFitToScreen?: boolean;
   onCanvasResized?: () => void;
   getSimulationConfig?: () => SimulationType | undefined;
+  isPlotSelectionMode?: boolean;
+  onPlotItemSelected?: (item: ToBePlotted) => void;
+  onExitPlotSelectionMode?: () => void;
 };
 
 const INITIAL_CANVAS_SIZE = 150; // Small fixed size for the first pass
@@ -25,6 +33,9 @@ const Schematic: React.FC<SchematicProps> = ({
   shouldFitToScreen,
   onCanvasResized,
   getSimulationConfig,
+  isPlotSelectionMode = false,
+  onPlotItemSelected,
+  onExitPlotSelectionMode,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -73,6 +84,30 @@ const Schematic: React.FC<SchematicProps> = ({
         case "selectedItem":
           if (msg.selectedItem !== undefined) {
             setSelectedItem(msg.selectedItem);
+
+            // Handle plot selection mode
+            if (isPlotSelectionMode && onPlotItemSelected) {
+              const item = msg.selectedItem;
+
+              // Only allow wire and instance selections
+              if (item.type === "wire" || item.type === "junction") {
+                // Wire/junction selection - voltage measurement
+                const netName = item.netName || "unknown";
+                const plotItem: ToBePlotted = {
+                  type: "voltage",
+                  name: netName,
+                };
+                onPlotItemSelected(plotItem);
+              } else if (item.type === "instance") {
+                // Instance selection - current measurement
+                const instanceName = item.name || item.typeName || "unknown";
+                const plotItem: ToBePlotted = {
+                  type: "current",
+                  name: instanceName,
+                };
+                onPlotItemSelected(plotItem);
+              }
+            }
           }
           break;
         case "netList":
@@ -140,7 +175,12 @@ const Schematic: React.FC<SchematicProps> = ({
         }
       }
     },
-    [onNetlistExported, getSimulationConfig]
+    [
+      onNetlistExported,
+      getSimulationConfig,
+      isPlotSelectionMode,
+      onPlotItemSelected,
+    ]
   );
 
   // Helper function to wait for canvas to be ready for commands
@@ -277,6 +317,26 @@ const Schematic: React.FC<SchematicProps> = ({
       visibilityObserver.disconnect();
     };
   }, [isCanvasReady]);
+
+  // Handle keyboard events for plot selection mode
+  useEffect(() => {
+    if (!isPlotSelectionMode) return;
+
+    // Ensure we're in select mode when plot selection is active
+    eeSch.sendCommand({ command: "mode", modeType: "select" });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onExitPlotSelectionMode?.();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isPlotSelectionMode, onExitPlotSelectionMode]);
 
   // Initialize the canvas and set up the message callback
   useEffect(() => {
@@ -629,10 +689,11 @@ const Schematic: React.FC<SchematicProps> = ({
   useEffect(() => {
     if (!selectedItem || selectedItem.type === "none") {
       setPropertiesOpen(false);
-    } else {
+    } else if (!isPlotSelectionMode) {
+      // Only open properties dialog when not in plot selection mode
       setPropertiesOpen(true);
     }
-  }, [selectedItem]);
+  }, [selectedItem, isPlotSelectionMode]);
 
   const handleExportImage = () => {
     setLoadingSvg(true);
@@ -687,6 +748,29 @@ const Schematic: React.FC<SchematicProps> = ({
             }}
             onCloseButtonClick={propertiesCallBack}
           />
+        )}
+
+        {/* Plot Selection Mode Indicator */}
+        {isPlotSelectionMode && (
+          <Box
+            position="fixed"
+            top="10px"
+            left="50%"
+            transform="translateX(-50%)"
+            zIndex={1000}
+            bg={useColorModeValue("blue.50", "blue.900")}
+            color={useColorModeValue("blue.800", "blue.100")}
+            px={4}
+            py={2}
+            borderRadius="md"
+            border="1px solid"
+            borderColor={useColorModeValue("blue.200", "blue.700")}
+            fontSize="sm"
+            boxShadow="sm"
+          >
+            Click on components (for current) or wires (for voltage) to add to
+            plot. Press ESC when done.
+          </Box>
         )}
       </Box>
       <Flex spaceX={2} direction="row" p={2}>

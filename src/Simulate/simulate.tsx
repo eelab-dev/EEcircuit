@@ -14,7 +14,7 @@ import AcConfig from "./simConfigs/ac";
 import TransConfig from "./simConfigs/trans";
 import { ResultType } from "eecircuit-engine";
 import { toaster } from "../components/ui/toaster";
-import { SimulationType } from "../types/commonTypes";
+import { SimulationType, ToBePlotted } from "../types/commonTypes";
 
 type SimulationEditorProps = {
   netList: string;
@@ -22,6 +22,8 @@ type SimulationEditorProps = {
   selectedSimType: string;
   simulationConfig?: SimulationType;
   onSimulationConfigChange: (simType: string, config?: SimulationType) => void;
+  onSwitchToSchematic?: () => void;
+  toBePlotted?: ToBePlotted[];
 };
 
 const SimulationEditor: React.FC<SimulationEditorProps> = ({
@@ -30,6 +32,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   selectedSimType,
   simulationConfig,
   onSimulationConfigChange,
+  onSwitchToSchematic,
+  toBePlotted = [],
 }) => {
   const simType = ["None", "DC", "AC", "Trans"];
 
@@ -42,16 +46,37 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     }
   }, []);
 
+  const saveCommandConfig = (toBePlotted: ToBePlotted[]) => {
+    if (toBePlotted.length === 0) {
+      return "";
+    }
+
+    const saveCommands = toBePlotted
+      .map((item) => {
+        if (item.type === "voltage") {
+          return `v(${item.name})`;
+        } else if (item.type === "current") {
+          return `i(${item.name})`;
+        }
+        return "";
+      })
+      .filter((cmd) => cmd !== "");
+
+    return `.save ${saveCommands.join(" ")}`;
+  };
+
   useEffect(() => {
     if (selectedSimType === "None") {
       setSimConfig("");
       setNetListToSim(netList);
       return;
     } else {
-      const newNetList = netList + "\n\n" + simConfig + "\n\n" + ".end";
+      const saveCommand = saveCommandConfig(toBePlotted);
+      const newNetList =
+        netList + "\n\n" + simConfig + "\n\n" + saveCommand + "\n\n" + ".end";
       setNetListToSim(newNetList);
     }
-  }, [netList, simConfig, selectedSimType]);
+  }, [netList, simConfig, selectedSimType, toBePlotted]);
 
   const handleConfigChange = React.useCallback((config: string) => {
     setSimConfig(config);
@@ -137,6 +162,32 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     >
       {/* Editor on the left */}
       <Flex flex="1" flexDirection="column" height="100%" overflow="hidden">
+        {/* To Be Plotted button */}
+        <Flex
+          padding="2"
+          borderBottom="1px solid"
+          borderColor={useColorModeValue("gray.200", "gray.600")}
+          justifyContent="flex-start"
+          alignItems="center"
+          gap="2"
+        >
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              onSwitchToSchematic?.();
+            }}
+          >
+            To Be Plotted
+          </Button>
+          {/* Display current selected items */}
+          {toBePlotted.length > 0 && (
+            <span style={{ fontSize: "0.8rem", color: "gray" }}>
+              ({toBePlotted.length} selected)
+            </span>
+          )}
+        </Flex>
+
         <Suspense fallback={<Skeleton height="100%" width="100%" />}>
           <EditorCustom
             height="100%"

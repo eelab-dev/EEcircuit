@@ -17,7 +17,11 @@ import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
 import { ResultType } from "eecircuit-engine";
 import { sendCommand } from "eecircuit-schematic";
-import { EEcircuitFile, SimulationType } from "./types/commonTypes.ts";
+import {
+  EEcircuitFile,
+  SimulationType,
+  ToBePlotted,
+} from "./types/commonTypes.ts";
 import { Mouse, Touchpad } from "lucide-react";
 
 type TabsValue = "schematic" | "simulate" | "plot";
@@ -70,6 +74,10 @@ const EEcircuit: React.FC = () => {
   const [inputProfile, setInputProfile] = React.useState<"mouse" | "trackpad">(
     "trackpad"
   );
+
+  // Plot selection mode state
+  const [isPlotSelectionMode, setIsPlotSelectionMode] = React.useState(false);
+  const [toBePlotted, setToBePlotted] = React.useState<ToBePlotted[]>([]);
 
   const [dragBox, setDragBox] = React.useState(false);
 
@@ -329,6 +337,34 @@ const EEcircuit: React.FC = () => {
     console.log("Input profile changed to:", newProfile);
   }, [inputProfile]);
 
+  // Handler for switching to schematic for plot selection
+  const handleSwitchToSchematicForPlotSelection = React.useCallback(() => {
+    setIsPlotSelectionMode(true);
+    setTabValue("schematic");
+  }, []);
+
+  // Handler for when a plot item is selected in schematic
+  const handlePlotItemSelected = React.useCallback((item: ToBePlotted) => {
+    setToBePlotted((prev) => {
+      // Check if item already exists
+      const exists = prev.some(
+        (existing) => existing.type === item.type && existing.name === item.name
+      );
+
+      if (!exists) {
+        return [...prev, item];
+      }
+
+      return prev;
+    });
+  }, []);
+
+  // Handler for exiting plot selection mode
+  const handleExitPlotSelectionMode = React.useCallback(() => {
+    setIsPlotSelectionMode(false);
+    setTabValue("simulate");
+  }, []);
+
   return (
     <Box
       border="solid 0px"
@@ -442,6 +478,9 @@ const EEcircuit: React.FC = () => {
             shouldFitToScreen={shouldFitToScreen}
             onCanvasResized={handleCanvasResized}
             getSimulationConfig={getCurrentSimulationConfig}
+            isPlotSelectionMode={isPlotSelectionMode}
+            onPlotItemSelected={handlePlotItemSelected}
+            onExitPlotSelectionMode={handleExitPlotSelectionMode}
           />
         </Tabs.Content>
 
@@ -452,6 +491,8 @@ const EEcircuit: React.FC = () => {
             selectedSimType={selectedSimType}
             simulationConfig={simulationConfig}
             onSimulationConfigChange={handleSimulationConfigChange}
+            onSwitchToSchematic={handleSwitchToSchematicForPlotSelection}
+            toBePlotted={toBePlotted}
           />
         </Tabs.Content>
 
