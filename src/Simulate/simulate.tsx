@@ -186,6 +186,19 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
               ({toBePlotted.length} selected)
             </span>
           )}
+          {/* Show detailed list of selected items */}
+          {toBePlotted.length > 0 && (
+            <div
+              style={{ fontSize: "0.75rem", color: "gray", marginLeft: "10px" }}
+            >
+              {toBePlotted.map((item, index) => (
+                <span key={index}>
+                  {item.type}({item.name})
+                  {index < toBePlotted.length - 1 ? ", " : ""}
+                </span>
+              ))}
+            </div>
+          )}
         </Flex>
 
         <Suspense fallback={<Skeleton height="100%" width="100%" />}>

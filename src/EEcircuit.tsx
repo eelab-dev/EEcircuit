@@ -483,6 +483,7 @@ const EEcircuit: React.FC = () => {
             isPlotSelectionMode={isPlotSelectionMode}
             onPlotItemSelected={handlePlotItemSelected}
             onExitPlotSelectionMode={handleExitPlotSelectionMode}
+            toBePlotted={toBePlotted}
           />
         </Tabs.Content>
 

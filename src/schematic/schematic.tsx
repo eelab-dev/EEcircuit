@@ -37,6 +37,7 @@ type SchematicProps = {
   isPlotSelectionMode?: boolean;
   onPlotItemSelected?: (item: ToBePlotted) => void;
   onExitPlotSelectionMode?: () => void;
+  toBePlotted?: ToBePlotted[];
 };
 
 const Schematic: React.FC<SchematicProps> = ({
@@ -47,6 +48,7 @@ const Schematic: React.FC<SchematicProps> = ({
   isPlotSelectionMode = false,
   onPlotItemSelected,
   onExitPlotSelectionMode,
+  toBePlotted = [],
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -83,6 +85,24 @@ const Schematic: React.FC<SchematicProps> = ({
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [loadingSvg, setLoadingSvg] = useState(false);
 
+  // Color mode values - must be called at top level to avoid hooks order issues
+  const plotSelectionBg = useColorModeValue("blue.50", "blue.900");
+  const plotSelectionColor = useColorModeValue("blue.800", "blue.100");
+  const plotSelectionBorderColor = useColorModeValue("blue.200", "blue.700");
+
+  // Use refs to access current values in msgCallback without causing re-renders
+  const isPlotSelectionModeRef = useRef(isPlotSelectionMode);
+  const onPlotItemSelectedRef = useRef(onPlotItemSelected);
+
+  // Update refs when props change
+  useEffect(() => {
+    isPlotSelectionModeRef.current = isPlotSelectionMode;
+  }, [isPlotSelectionMode]);
+
+  useEffect(() => {
+    onPlotItemSelectedRef.current = onPlotItemSelected;
+  }, [onPlotItemSelected]);
+
   const msgCallback = useCallback(
     (msg: eeSch.MsgSchToApp) => {
       switch (msg.type) {
@@ -96,8 +116,11 @@ const Schematic: React.FC<SchematicProps> = ({
           if (msg.selectedItem !== undefined) {
             setSelectedItem(msg.selectedItem);
 
-            // Handle plot selection mode
-            if (isPlotSelectionMode && onPlotItemSelected) {
+            // Handle plot selection mode - use refs to get current values
+            if (
+              isPlotSelectionModeRef.current &&
+              onPlotItemSelectedRef.current
+            ) {
               const item = msg.selectedItem;
 
               // Only allow wire and instance selections
@@ -108,7 +131,7 @@ const Schematic: React.FC<SchematicProps> = ({
                   type: "voltage",
                   name: netName,
                 };
-                onPlotItemSelected(plotItem);
+                onPlotItemSelectedRef.current(plotItem);
               } else if (item.type === "instance") {
                 // Instance selection - current measurement
                 const instanceName = item.name || item.typeName || "unknown";
@@ -116,7 +139,7 @@ const Schematic: React.FC<SchematicProps> = ({
                   type: "current",
                   name: instanceName,
                 };
-                onPlotItemSelected(plotItem);
+                onPlotItemSelectedRef.current(plotItem);
               }
             }
           }
@@ -228,8 +251,8 @@ const Schematic: React.FC<SchematicProps> = ({
     [
       onNetlistExported,
       getSimulationConfig,
-      isPlotSelectionMode,
-      onPlotItemSelected,
+      // Removed isPlotSelectionMode and onPlotItemSelected to prevent callback recreation
+      // These are now accessed via refs to maintain stable callback reference
     ]
   );
 
@@ -666,18 +689,53 @@ const Schematic: React.FC<SchematicProps> = ({
             left="50%"
             transform="translateX(-50%)"
             zIndex={1000}
-            bg={useColorModeValue("blue.50", "blue.900")}
-            color={useColorModeValue("blue.800", "blue.100")}
+            bg={plotSelectionBg}
+            color={plotSelectionColor}
             px={4}
             py={2}
             borderRadius="md"
             border="1px solid"
-            borderColor={useColorModeValue("blue.200", "blue.700")}
+            borderColor={plotSelectionBorderColor}
             fontSize="sm"
             boxShadow="sm"
+            textAlign="center"
           >
-            Click on components (for current) or wires (for voltage) to add to
-            plot. Press ESC when done.
+            <div>🎯 Plot Selection Mode Active</div>
+            <div style={{ fontSize: "0.8em", marginTop: "4px" }}>
+              Click on components (for current) or wires (for voltage) to add to
+              plot. Press ESC when done.
+            </div>
+            {/* Show selected items */}
+            {toBePlotted.length > 0 && (
+              <div
+                style={{
+                  fontSize: "0.75em",
+                  marginTop: "8px",
+                  padding: "4px",
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  borderRadius: "4px",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                }}
+              >
+                <div style={{ fontWeight: "bold", marginBottom: "2px" }}>
+                  Selected ({toBePlotted.length}):
+                </div>
+                <div
+                  style={{
+                    wordWrap: "break-word",
+                    lineHeight: "1.2",
+                    maxWidth: "400px", // Limit width to prevent blocking too much of the canvas
+                  }}
+                >
+                  {toBePlotted.map((item, index) => (
+                    <span key={index}>
+                      {item.type}({item.name})
+                      {index < toBePlotted.length - 1 ? ", " : ""}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </Box>
         )}
       </Box>
