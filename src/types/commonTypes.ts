@@ -6,10 +6,11 @@ export type EEcircuitFile = {
   description?: string;
   date?: string;
   schematic?: Schematic;
-  simulation?: SimulationType;
+  simulations?: SimulationType[];
 };
 
 export type SimulationDC = {
+  name?: string;
   type: "DC";
   source: string;
   start: string;
@@ -18,6 +19,7 @@ export type SimulationDC = {
 };
 
 export type SimulationAC = {
+  name?: string;
   type: "AC";
   source: string;
   frequencyStart: string;
@@ -27,6 +29,7 @@ export type SimulationAC = {
 };
 
 export type SimulationTransient = {
+  name?: string;
   type: "Transient";
   stopTime: string;
   timeStep: string;

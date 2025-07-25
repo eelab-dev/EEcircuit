@@ -1,5 +1,5 @@
 import { Field, Fieldset, Input, Stack, Text } from "@chakra-ui/react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { SimulationTransient } from "../../types/commonTypes";
 
 interface TransConfigProps {
@@ -21,10 +21,36 @@ const TransConfig: React.FC<TransConfigProps> = ({
 
   const [transSimConfig, setTransSimConfig] = useState(""); // Changed from dcSimConfig to transSimConfig
 
+  // Use a ref to track the name - this prevents re-renders from overwriting user edits
+  const nameRef = useRef(initialData?.name);
+
+  // Use a ref to track if we're updating from external data to prevent callback loops
+  const isUpdatingFromExternalDataRef = useRef(false);
+
+  // Update form data and name ref when initialData changes (when switching between configs)
+  useEffect(() => {
+    if (initialData) {
+      isUpdatingFromExternalDataRef.current = true; // Set flag before updating
+      setFormData({
+        stopTime: initialData.stopTime || "",
+        timeStep: initialData.timeStep || "",
+        initialConditions: initialData.initialConditions || false,
+      });
+      nameRef.current = initialData.name;
+      // Flag will be reset in the next useEffect
+    }
+  }, [initialData]);
+
   // Update combined string whenever form data changes
   useEffect(() => {
     const combined = `.tran ${formData.timeStep} ${formData.stopTime}`;
     setTransSimConfig(combined);
+
+    // Skip callbacks if we're updating from external data to prevent infinite loops
+    if (isUpdatingFromExternalDataRef.current) {
+      isUpdatingFromExternalDataRef.current = false; // Reset the flag
+      return;
+    }
 
     // Call the callback with the updated config
     if (onConfigChange) {
@@ -35,13 +61,14 @@ const TransConfig: React.FC<TransConfigProps> = ({
     if (onFullConfigChange && formData.timeStep && formData.stopTime) {
       const fullConfig: SimulationTransient = {
         type: "Transient",
+        name: nameRef.current, // Use the ref to preserve user-edited names
         timeStep: formData.timeStep, // Keep as string to support unit postfixes
         stopTime: formData.stopTime, // Keep as string to support unit postfixes
         initialConditions: formData.initialConditions,
       };
       onFullConfigChange(fullConfig);
     }
-  }, [formData, onConfigChange, onFullConfigChange]);
+  }, [formData, onConfigChange]); // Removed onFullConfigChange from dependencies to prevent infinite loops
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

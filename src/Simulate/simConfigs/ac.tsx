@@ -7,7 +7,7 @@ import {
   NativeSelectRoot,
   NativeSelectField,
 } from "@chakra-ui/react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { SimulationAC } from "../../types/commonTypes";
 
 interface AcConfigProps {
@@ -31,10 +31,38 @@ const AcConfig: React.FC<AcConfigProps> = ({
 
   const [acSimConfig, setAcSimConfig] = useState("");
 
+  // Use a ref to track the name - this prevents re-renders from overwriting user edits
+  const nameRef = useRef(initialData?.name);
+
+  // Use a ref to track if we're updating from external data to prevent callback loops
+  const isUpdatingFromExternalDataRef = useRef(false);
+
+  // Update form data and name ref when initialData changes (when switching between configs)
+  useEffect(() => {
+    if (initialData) {
+      isUpdatingFromExternalDataRef.current = true; // Set flag before updating
+      setFormData({
+        source: initialData.source || "",
+        frequencyStart: initialData.frequencyStart || "",
+        frequencyStop: initialData.frequencyStop || "",
+        stepNumber: initialData.stepNumber || "",
+        sweepType: initialData.sweepType || "lin",
+      });
+      nameRef.current = initialData.name;
+      // Flag will be reset in the next useEffect
+    }
+  }, [initialData]);
+
   // Update combined string whenever form data changes
   useEffect(() => {
     const combined = `.ac ${formData.sweepType} ${formData.stepNumber} ${formData.frequencyStart} ${formData.frequencyStop}`;
     setAcSimConfig(combined);
+
+    // Skip callbacks if we're updating from external data to prevent infinite loops
+    if (isUpdatingFromExternalDataRef.current) {
+      isUpdatingFromExternalDataRef.current = false; // Reset the flag
+      return;
+    }
 
     // Call the callback with the updated config string
     if (onConfigChange) {
@@ -52,6 +80,7 @@ const AcConfig: React.FC<AcConfigProps> = ({
     ) {
       const fullConfig: SimulationAC = {
         type: "AC",
+        name: nameRef.current, // Use the ref to preserve user-edited names
         source: formData.source,
         sweepType: formData.sweepType as SimulationAC["sweepType"],
         frequencyStart: formData.frequencyStart, // Keep as string to support unit postfixes
@@ -60,7 +89,7 @@ const AcConfig: React.FC<AcConfigProps> = ({
       };
       onFullConfigChange(fullConfig);
     }
-  }, [formData, onConfigChange, onFullConfigChange]);
+  }, [formData, onConfigChange]); // Removed onFullConfigChange from dependencies to prevent infinite loops
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

@@ -215,8 +215,11 @@ const Schematic: React.FC<SchematicProps> = ({
             description: "EEcircuit Schematic",
             date: new Date().toISOString(),
             schematic: msg.schematic as eeSch.Schematic,
-            // Include simulation configuration if it exists
-            simulation: currentSimConfig,
+            // Include simulation configurations if they exist
+            simulations:
+              currentSimConfig && currentSimConfig.type !== "None"
+                ? [currentSimConfig]
+                : undefined,
           };
 
           console.log("Complete EEcircuit file for saving:", eeCirFile);

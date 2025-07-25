@@ -259,13 +259,14 @@ const EEcircuit: React.FC = () => {
           );
         }
 
-        // Restore simulation configuration if it exists
-        if (parsedContent.simulation) {
-          const simConfig = parsedContent.simulation;
-          // Set the simulation type and configuration based on loaded data
-          setSelectedSimType(simConfig.type);
-          setSimulationConfig(simConfig);
-          console.log("Simulation configuration restored:", simConfig);
+        // Restore simulation configurations if they exist
+        if (parsedContent.simulations && parsedContent.simulations.length > 0) {
+          // For now, load the first simulation configuration as the active one
+          // In the future, this could be enhanced to load all configurations
+          const firstSimConfig = parsedContent.simulations[0];
+          setSelectedSimType(firstSimConfig.type);
+          setSimulationConfig(firstSimConfig);
+          console.log("Simulation configuration restored:", firstSimConfig);
         } else {
           // Reset simulation config if no simulation data in file
           setSimulationConfig(undefined);
