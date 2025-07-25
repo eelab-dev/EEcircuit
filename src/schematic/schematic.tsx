@@ -233,56 +233,21 @@ const Schematic: React.FC<SchematicProps> = ({
     ]
   );
 
-  // Helper function to wait for canvas to be ready for commands
-  const waitForCanvasReady = useCallback(
-    async (canvas: HTMLCanvasElement): Promise<boolean> => {
-      return new Promise((resolve) => {
-        const startTime = Date.now();
-        const TIMEOUT_MS = 5000; // 5 second timeout
-
-        // Check if canvas has valid dimensions and is attached to DOM
-        const checkReady = () => {
-          const isAttached = canvas.parentElement !== null;
-          const hasValidDimensions = canvas.width > 0 && canvas.height > 0;
-          const isVisible = canvas.offsetWidth > 0 && canvas.offsetHeight > 0;
-
-          if (isAttached && hasValidDimensions && isVisible) {
-            console.log("Canvas is ready for commands");
-            resolve(true);
-          } else if (Date.now() - startTime > TIMEOUT_MS) {
-            console.warn("Canvas ready check timed out, proceeding anyway");
-            resolve(false);
-          } else {
-            console.log(
-              `Canvas not ready yet - attached: ${isAttached}, dimensions: ${canvas.width}x${canvas.height}, visible: ${canvas.offsetWidth}x${canvas.offsetHeight}`
-            );
-            // Use requestAnimationFrame to wait for next render cycle
-            requestAnimationFrame(checkReady);
-          }
-        };
-
-        checkReady();
-      });
-    },
-    []
-  );
-
   // Helper function to safely initialize canvas only once
+  // The eecircuit library will send "canvasReady" message when truly ready
   const safeInitCanvas = useCallback(
-    async (canvas: HTMLCanvasElement) => {
+    (canvas: HTMLCanvasElement) => {
       if (initializedCanvasRef.current === canvas) {
         console.log("Canvas already initialized, skipping...");
         return false; // Already initialized
       }
 
-      console.log("Initializing canvas...");
+      console.log("Initializing canvas with eecircuit library...");
 
-      // Wait for canvas to be ready first
-      await waitForCanvasReady(canvas);
-
+      // Initialize canvas with eecircuit - it will send "canvasReady" message when truly ready
       eeSch.initCanvas(canvas, msgCallback);
       initializedCanvasRef.current = canvas;
-      setIsCanvasReady(true);
+      // Note: setIsCanvasReady(true) will be called when "canvasReady" message is received
 
       // Reset initialization flag when canvas is recreated to allow fit-to-screen for new canvas
       // But ONLY if this is a resize operation, not a tab change
@@ -307,7 +272,7 @@ const Schematic: React.FC<SchematicProps> = ({
 
       return true; // Successfully initialized
     },
-    [msgCallback, waitForCanvasReady]
+    [msgCallback]
   );
 
   // Handle fit to screen when requested - ONLY for initial app initialization
@@ -375,7 +340,7 @@ const Schematic: React.FC<SchematicProps> = ({
           initializedCanvasRef.current !== canvasRef.current
         ) {
           console.log("Tab became visible, ensuring canvas is ready");
-          safeInitCanvas(canvasRef.current).catch(console.error);
+          safeInitCanvas(canvasRef.current);
         }
       },
       { threshold: 0.1 }
@@ -552,13 +517,10 @@ const Schematic: React.FC<SchematicProps> = ({
       canvasRef.current = newCanvas;
 
       // Initialize the new canvas
-      safeInitCanvas(newCanvas)
-        .then(() => {
-          if (onCanvasResized) {
-            onCanvasResized();
-          }
-        })
-        .catch(console.error);
+      safeInitCanvas(newCanvas);
+      if (onCanvasResized) {
+        onCanvasResized();
+      }
     };
 
     // Debounce the resize handler to reduce frequency
@@ -590,7 +552,7 @@ const Schematic: React.FC<SchematicProps> = ({
       initializedCanvasRef.current !== canvasRef.current
     ) {
       console.log("Canvas exists but not ready, initializing");
-      safeInitCanvas(canvasRef.current).catch(console.error);
+      safeInitCanvas(canvasRef.current);
     }
 
     // Event listeners
