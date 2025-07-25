@@ -23,7 +23,7 @@ const TransConfig: React.FC<TransConfigProps> = ({
 
   // Update combined string whenever form data changes
   useEffect(() => {
-    const combined = `.trans ${formData.timeStep} ${formData.stopTime}`;
+    const combined = `.tran ${formData.timeStep} ${formData.stopTime}`;
     setTransSimConfig(combined);
 
     // Call the callback with the updated config

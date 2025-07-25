@@ -33,7 +33,15 @@ export type SimulationTransient = {
   initialConditions?: boolean;
 };
 
-export type SimulationType = SimulationDC | SimulationAC | SimulationTransient;
+export type SimulationNone = {
+  type: "None";
+};
+
+export type SimulationType =
+  | SimulationNone
+  | SimulationDC
+  | SimulationAC
+  | SimulationTransient;
 
 export type ToBePlotted = {
   type: "voltage" | "current";

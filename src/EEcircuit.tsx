@@ -42,16 +42,17 @@ const EEcircuit: React.FC = () => {
   const [results, setResults] = React.useState<ResultType[]>([]);
 
   // Simulation configuration state - uplifted from SimulationEditor
-  const [selectedSimType, setSelectedSimType] = React.useState("None");
+  const [selectedSimType, setSelectedSimType] =
+    React.useState<SimulationType["type"]>("None");
   const [simulationConfig, setSimulationConfig] = React.useState<
     SimulationType | undefined
   >(undefined);
 
   // Handler for simulation configuration changes
   const handleSimulationConfigChange = React.useCallback(
-    (simType: string, config?: SimulationType) => {
-      console.log("Simulation config change:", { simType, config });
-      setSelectedSimType(simType);
+    (config: SimulationType) => {
+      console.log("Simulation config change:", config);
+      setSelectedSimType(config.type);
       setSimulationConfig(config);
     },
     []
@@ -262,9 +263,7 @@ const EEcircuit: React.FC = () => {
         if (parsedContent.simulation) {
           const simConfig = parsedContent.simulation;
           // Set the simulation type and configuration based on loaded data
-          setSelectedSimType(
-            simConfig.type === "Transient" ? "Trans" : simConfig.type
-          );
+          setSelectedSimType(simConfig.type);
           setSimulationConfig(simConfig);
           console.log("Simulation configuration restored:", simConfig);
         } else {
