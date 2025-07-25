@@ -14,10 +14,23 @@ import AcConfig from "./simConfigs/ac";
 import TransConfig from "./simConfigs/tran";
 import { ResultType } from "eecircuit-engine";
 import { toaster } from "../components/ui/toaster";
-import { SimulationType, ToBePlotted } from "../types/commonTypes";
+import {
+  SimulationType,
+  ToBePlotted,
+  SimulationDC,
+  SimulationAC,
+  SimulationTransient,
+} from "../types/commonTypes";
 
 // Define the simulation type options
 const simType: SimulationType["type"][] = ["None", "DC", "AC", "Transient"];
+
+// Interface for storing all simulation configurations
+interface SimulationConfigs {
+  DC?: SimulationDC;
+  AC?: SimulationAC;
+  Transient?: SimulationTransient;
+}
 
 type SimulationEditorProps = {
   netList: string;
@@ -40,6 +53,24 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 }) => {
   const [netListToSim, setNetListToSim] = useState(netList);
   const [simCommandString, setSimCommandString] = useState("");
+
+  // State to preserve form values for each simulation type
+  // This ensures that when switching between simulation types,
+  // the previously entered values are maintained and restored
+  const [simulationConfigs, setSimulationConfigs] = useState<SimulationConfigs>(
+    {}
+  );
+
+  // Initialize the local state with the current simulation config when it changes
+  // This handles the case where the parent component passes an initial configuration
+  useEffect(() => {
+    if (simulationConfig && simulationConfig.type !== "None") {
+      setSimulationConfigs((prev) => ({
+        ...prev,
+        [simulationConfig.type]: simulationConfig,
+      }));
+    }
+  }, [simulationConfig]);
 
   const handleEditor = React.useCallback((value: string | undefined) => {
     if (value !== undefined) {
@@ -95,6 +126,20 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   // Handler for receiving the full configuration object from config components
   const handleFullConfigChange = React.useCallback(
     (config: SimulationType) => {
+      // Store the configuration in our local state to preserve it
+      // This allows us to restore form values when switching back to this simulation type
+      if (
+        config.type === "DC" ||
+        config.type === "AC" ||
+        config.type === "Transient"
+      ) {
+        setSimulationConfigs((prev) => ({
+          ...prev,
+          [config.type]: config,
+        }));
+      }
+
+      // Also call the original callback to maintain existing functionality
       onSimulationConfigChange(config);
     },
     [onSimulationConfigChange]
@@ -272,7 +317,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                     value.value === "AC" ||
                     value.value === "Transient")
                 ) {
-                  // Create basic simulation config based on type
+                  // Create simulation config based on type
+                  // For DC, AC, and Transient types, try to use preserved configurations first
                   let newConfig: SimulationType;
                   switch (value.value) {
                     case "None":
@@ -280,7 +326,9 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                       setSimCommandString(""); // Clear command for None type
                       break;
                     case "DC":
-                      newConfig = {
+                      // Use preserved config if available, otherwise create default
+                      // This preserves form values when switching back to DC simulation
+                      newConfig = simulationConfigs.DC || {
                         type: "DC",
                         source: "",
                         start: "",
@@ -289,7 +337,9 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                       };
                       break;
                     case "AC":
-                      newConfig = {
+                      // Use preserved config if available, otherwise create default
+                      // This preserves form values when switching back to AC simulation
+                      newConfig = simulationConfigs.AC || {
                         type: "AC",
                         source: "",
                         frequencyStart: "",
@@ -299,7 +349,9 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                       };
                       break;
                     case "Transient":
-                      newConfig = {
+                      // Use preserved config if available, otherwise create default
+                      // This preserves form values when switching back to Transient simulation
+                      newConfig = simulationConfigs.Transient || {
                         type: "Transient",
                         stopTime: "",
                         timeStep: "",
