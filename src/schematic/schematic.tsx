@@ -616,6 +616,7 @@ const Schematic: React.FC<SchematicProps> = ({
         flex="1"
         ref={containerRef}
         id="canvas-container"
+        minHeight={0} // Prevent flex item from growing beyond container
       >
         {/* Canvas added dynamically */}
 
@@ -680,16 +681,29 @@ const Schematic: React.FC<SchematicProps> = ({
           </Box>
         )}
       </Box>
-      <Flex spaceX={2} direction="row" p={2}>
-        {/* ... status bar buttons ... */}
+      <Flex
+        spaceX={2}
+        direction="row"
+        p={2}
+        align="center"
+        minHeight="60px"
+        flexShrink={0}
+      >
+        {/* Left-aligned status buttons */}
         <Button size="sm">{`X:${coord.x}, Y:${coord.y}`}</Button>
         <Button size="sm">{pointerInfo || "Info"}</Button>
         <Button size="sm">{"none"}</Button>
+
+        {/* Flexible spacer - grows to push content to edges */}
         <Box flex="1" />
 
+        {/* Center status component */}
         {<Status info={info} />}
 
+        {/* Flexible spacer - grows to push simulate button to far right */}
         <Box flex="1" />
+
+        {/* Right-aligned simulate button */}
         <Button size="sm" onClick={sendToNetListButtonHandler}>
           Simulate (Netlist) <ArrowBigRight size={16} />
         </Button>
