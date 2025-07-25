@@ -149,23 +149,25 @@ const EEcircuit: React.FC = () => {
 
       // Handle schematic tab activation
       if (newTabValue === "schematic") {
-        // Fit to screen if this is the first time viewing or if window was resized
+        // IMPORTANT: Only use fit-to-screen for initial app initialization or window resize
+        // NEVER use fit-to-screen for regular tab switches - view restoration handles that
         if (!hasViewedSchematic || hasResizedSinceSchematicView) {
           // Small delay to ensure tab content is visible and canvas is ready
           setTimeout(() => {
+            console.log(
+              "Setting fit-to-screen for initial app initialization or window resize"
+            );
             setShouldFitToScreen(true);
             setHasViewedSchematic(true);
             // Note: hasResizedSinceSchematicView will be reset by the onCanvasResized callback
             // when the canvas is actually resized, not immediately here
           }, 100);
         } else {
-          // Even if we've viewed before, ensure canvas is visible after tab switch
-          // This helps with the canvas going blank issue
-          setTimeout(() => {
-            console.log("Ensuring canvas is visible after tab switch");
-            setShouldFitToScreen(true);
-            setTimeout(() => setShouldFitToScreen(false), 200);
-          }, 50);
+          // For regular tab switches, do NOT use fit-to-screen
+          // The schematic component has its own view restoration logic that preserves user's zoom/pan
+          console.log(
+            "Regular tab switch to schematic - relying on schematic component's view restoration"
+          );
         }
       } else {
         // Reset fit to screen flag when leaving schematic tab

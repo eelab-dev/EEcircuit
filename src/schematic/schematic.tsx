@@ -1,7 +1,18 @@
+/**
+ * The fit-to-screen should happen only once at the app initialization
+ * before any user interaction. This should happen after canvas ready message is received.
+ *
+ * During resize, the canvas should be recreated. this is webgl offscreen
+ * canvas. otherwise the aspect ration will be wrong
+ *
+ * During the tab change the canvas should not recreated
+ *
+ * Be careful as there is cross contamination between these effect,
+ * for example tab change could wrongly trigger resize.
+ */
+
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import * as eeSch from "eecircuit-schematic";
-
-import { saveView, restoreView } from "eecircuit-schematic";
 import { Box, Flex, Float, IconButton, Button } from "@chakra-ui/react";
 import { ArrowBigRight, Expand, SquareX } from "lucide-react";
 import debounce from "lodash.debounce";
@@ -28,8 +39,6 @@ type SchematicProps = {
   onExitPlotSelectionMode?: () => void;
 };
 
-const INITIAL_CANVAS_SIZE = 150; // Small fixed size for the first pass
-
 const Schematic: React.FC<SchematicProps> = ({
   onNetlistExported,
   shouldFitToScreen,
@@ -41,21 +50,19 @@ const Schematic: React.FC<SchematicProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  // Ref to store the requestAnimationFrame ID for cancellation
-  const rafIdRef = useRef<number | null>(null);
-  const lastSizeRef = useRef<{ width: number; height: number }>({
+  const initializedCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastContainerSizeRef = useRef<{ width: number; height: number }>({
     width: 0,
     height: 0,
   });
-  const accumulatedResizeRef = useRef<{ width: number; height: number }>({
-    width: 0,
-    height: 0,
-  }); // Track accumulated resize differences
-  const initializedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isTabVisibleRef = useRef<boolean>(true); // Track tab visibility without causing effect re-runs
-  const shouldRestoreViewRef = useRef<boolean>(false); // Track if we need to restore view after canvas ready
-  const shouldFitToScreenRef = useRef<boolean>(false); // Track if we need to fit to screen after canvas ready
   const hasInitializedOnceRef = useRef<boolean>(false); // Track if app has been initialized for the first time
+  const hasFitToScreenExecutedRef = useRef<boolean>(false); // Track if fit-to-screen has ever been executed (prevents multiple executions)
+  const isProcessingFitToScreenRef = useRef<boolean>(false); // Track if fit-to-screen is currently being processed
+  const isTabChangeInProgressRef = useRef<boolean>(false); // Track if tab change is in progress to prevent resize interference
+
+  // Note: No localStorage needed - component doesn't actually unmount/remount on tab changes
+  // Tab visibility is handled via CSS display, same as simulate and plot tabs
 
   const [coord, setCoord] = useState({ x: 0, y: 0 });
   const [pointerInfo, setPointerInfo] = useState<string>("");
@@ -70,12 +77,11 @@ const Schematic: React.FC<SchematicProps> = ({
   const [propertiesOpen, setPropertiesOpen] = useState(false);
 
   const [info, setInfo] = useState<string[]>([]);
-  const [canvasHeight, setCanvasHeight] = useState(0);
+  const [canvasHeight] = useState(0);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
   const [showExportImageDialog, setShowExportImageDialog] = useState(false);
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [loadingSvg, setLoadingSvg] = useState(false);
-  const [isCanvasOffscreen, setIsCanvasOffscreen] = useState(false); // Track if canvas control is transferred
 
   const msgCallback = useCallback(
     (msg: eeSch.MsgSchToApp) => {
@@ -125,29 +131,38 @@ const Schematic: React.FC<SchematicProps> = ({
           console.log("Canvas ready message received from library");
           setIsCanvasReady(true);
 
-          // If we should restore view, do so now
-          if (shouldRestoreViewRef.current) {
-            console.log("Restoring saved view after canvas ready");
-            try {
-              restoreView();
-              shouldRestoreViewRef.current = false; // Clear the flag after restoring
-            } catch (error) {
-              console.warn("Failed to restore view:", error);
-            }
-          }
-          // If fit-to-screen was requested and this is the first initialization, do it now
-          else if (
-            shouldFitToScreenRef.current &&
-            !hasInitializedOnceRef.current
+          // IMPORTANT: Fit-to-screen should ONLY happen during initial app initialization, NEVER during tab changes
+          // Check that this is truly the first initialization and not a tab change or resize
+          if (
+            shouldFitToScreen &&
+            !hasFitToScreenExecutedRef.current &&
+            !isTabChangeInProgressRef.current &&
+            isTabVisibleRef.current
           ) {
-            console.log("Performing fit-to-screen after initial canvas ready");
+            console.log(
+              "Performing fit-to-screen after canvas ready for INITIAL APP INITIALIZATION ONLY"
+            );
             eeSch.sendCommand({ command: "view", viewType: "fit" });
-            shouldFitToScreenRef.current = false; // Clear the flag after fitting
-            hasInitializedOnceRef.current = true; // Mark as initialized
+            hasFitToScreenExecutedRef.current = true; // Mark fit-to-screen as executed
+            isProcessingFitToScreenRef.current = true; // Mark as processing to prevent resize interference
+            hasInitializedOnceRef.current = true; // Mark as initialized only after fit-to-screen
+            console.log(
+              "Fit-to-screen command sent successfully from canvasReady handler for INITIAL APP INITIALIZATION"
+            );
+
+            // Clear the processing flag on next frame to allow normal operation
+            requestAnimationFrame(() => {
+              console.log(
+                "Clearing fit-to-screen processing flag after command execution"
+              );
+              isProcessingFitToScreenRef.current = false;
+            });
           }
-          // Mark as initialized even if fit-to-screen wasn't requested
-          else if (!hasInitializedOnceRef.current) {
-            console.log("Canvas ready for first time, marking as initialized");
+          // Only mark as initialized if no special actions are pending and this is visible tab
+          else if (!hasInitializedOnceRef.current && isTabVisibleRef.current) {
+            console.log(
+              "Canvas ready for first time with no special actions, marking as initialized"
+            );
             hasInitializedOnceRef.current = true;
           }
           break;
@@ -268,151 +283,102 @@ const Schematic: React.FC<SchematicProps> = ({
       eeSch.initCanvas(canvas, msgCallback);
       initializedCanvasRef.current = canvas;
       setIsCanvasReady(true);
+
+      // Reset initialization flag when canvas is recreated to allow fit-to-screen for new canvas
+      // But ONLY if this is a resize operation, not a tab change
+      if (!isTabChangeInProgressRef.current) {
+        console.log(
+          "Canvas recreated due to resize - resetting initialization flags"
+        );
+        hasInitializedOnceRef.current = false;
+        // Don't reset fit-to-screen flag for existing sessions - only allow it for true app initialization
+        if (!hasFitToScreenExecutedRef.current) {
+          console.log("First time initialization - allowing fit-to-screen");
+        } else {
+          console.log(
+            "Subsequent canvas recreation - fit-to-screen already executed"
+          );
+        }
+      } else {
+        console.log(
+          "Canvas initialization during tab change - keeping existing flags"
+        );
+      }
+
       return true; // Successfully initialized
     },
     [msgCallback, waitForCanvasReady]
   );
 
-  // Handle fit to screen when requested - only for initial app initialization
+  // Handle fit to screen when requested - ONLY for initial app initialization
   useEffect(() => {
-    if (shouldFitToScreen && !hasInitializedOnceRef.current) {
+    if (
+      shouldFitToScreen &&
+      !hasFitToScreenExecutedRef.current &&
+      isCanvasReady &&
+      isTabVisibleRef.current &&
+      !isTabChangeInProgressRef.current
+    ) {
       console.log(
-        "Fit to screen requested for initial initialization, setting flag for when canvas is ready"
+        "Performing fit-to-screen for initial app initialization (from effect)"
       );
-      shouldFitToScreenRef.current = true;
+      eeSch.sendCommand({ command: "view", viewType: "fit" });
+      hasFitToScreenExecutedRef.current = true; // Mark fit-to-screen as executed
+      isProcessingFitToScreenRef.current = true; // Mark as processing to prevent resize interference
+      hasInitializedOnceRef.current = true; // Mark as initialized
+      console.log("Fit-to-screen command sent successfully");
 
-      // If canvas is already ready, send the command immediately (only for first time)
-      if (isCanvasReady) {
+      // Clear the processing flag on next frame to allow normal operation
+      requestAnimationFrame(() => {
         console.log(
-          "Canvas already ready, performing fit-to-screen immediately for initial initialization"
+          "Clearing fit-to-screen processing flag after command execution"
         );
-        eeSch.sendCommand({ command: "view", viewType: "fit" });
-        shouldFitToScreenRef.current = false; // Clear the flag after fitting
-        hasInitializedOnceRef.current = true; // Mark as initialized
-      }
-    } else if (shouldFitToScreen && hasInitializedOnceRef.current) {
-      console.log(
-        "Fit to screen requested but app already initialized, ignoring"
-      );
+        isProcessingFitToScreenRef.current = false;
+      });
     }
-  }, [shouldFitToScreen, isCanvasReady]);
+  }, [shouldFitToScreen, isCanvasReady]); // Keep dependencies minimal to prevent unnecessary triggers
 
-  // Effect to handle tab visibility changes and ensure canvas is properly initialized
+  // Effect to handle tab visibility changes - simplified approach like simulate/plot tabs
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Create an intersection observer to detect when the component becomes visible
+    // Simple visibility observer to detect when tab becomes visible
     const visibilityObserver = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         const isVisible = entry.isIntersecting && entry.intersectionRatio > 0;
+        const wasVisible = isTabVisibleRef.current;
 
-        console.log("Tab visibility changed:", isVisible);
+        console.log("Tab visibility changed:", isVisible, "was:", wasVisible);
 
-        // If tab is becoming hidden and we have an initialized canvas, save the view
-        if (!isVisible && isTabVisibleRef.current && isCanvasReady) {
-          console.log("Tab becoming hidden, saving view...");
-          try {
-            saveView(); // Simply call saveView() - it handles the storage internally
-            shouldRestoreViewRef.current = true; // Set flag to restore when canvas becomes ready again
-            console.log(
-              "View saved successfully, will restore when canvas ready"
-            );
-          } catch (error) {
-            console.warn("Failed to save view:", error);
-          }
+        // Mark tab change in progress to prevent resize interference
+        if (isVisible !== wasVisible) {
+          console.log("Tab change detected, marking in progress");
+          isTabChangeInProgressRef.current = true;
+
+          // Clear the tab change flag after a short delay to allow stabilization
+          setTimeout(() => {
+            console.log("Tab change completed, clearing flag");
+            isTabChangeInProgressRef.current = false;
+          }, 300); // 300ms delay to allow tab transition to complete
         }
 
-        isTabVisibleRef.current = isVisible; // Update ref to avoid effect dependencies
+        isTabVisibleRef.current = isVisible;
 
-        // When component becomes visible, ensure canvas is properly set up
-        if (isVisible) {
-          setTimeout(() => {
-            // Give time for the DOM to settle after tab change
-            if (canvasRef.current && containerRef.current) {
-              console.log("Tab became visible, checking canvas state...");
-
-              // Check if canvas is properly attached and sized
-              const rect = containerRef.current.getBoundingClientRect();
-              const canvasRect = canvasRef.current.getBoundingClientRect();
-
-              console.log("Container rect:", rect.width, "x", rect.height);
-              console.log(
-                "Canvas rect:",
-                canvasRect.width,
-                "x",
-                canvasRect.height
-              );
-              console.log("Canvas ready:", isCanvasReady);
-
-              // Check if canvas truly needs reinitialization
-              // Use both state and ref to determine if canvas is actually ready
-              const isCanvasActuallyInitialized =
-                initializedCanvasRef.current === canvasRef.current;
-              const hasValidSize =
-                canvasRect.width > 0 && canvasRect.height > 0;
-
-              console.log("Canvas initialization check:", {
-                isCanvasReady,
-                isCanvasActuallyInitialized,
-                hasValidSize,
-                canvasRefExists: !!canvasRef.current,
-                initializedCanvasRef: !!initializedCanvasRef.current,
-              });
-
-              // If canvas exists but isn't ready, or has zero size, reinitialize
-              if (
-                (!isCanvasReady && !isCanvasActuallyInitialized) ||
-                !hasValidSize
-              ) {
-                console.log("Canvas needs reinitialization after tab switch");
-
-                // Directly reinitialize canvas without triggering full recreation
-                if (canvasRef.current) {
-                  // If canvas has zero size, it might need proper sizing first
-                  if (!hasValidSize) {
-                    const parentWidth = rect.width;
-                    const parentHeight = rect.height;
-
-                    if (parentWidth > 0 && parentHeight > 0) {
-                      console.log(
-                        "Resizing canvas to match container:",
-                        parentWidth,
-                        "x",
-                        parentHeight
-                      );
-                      canvasRef.current.width = parentWidth;
-                      canvasRef.current.height = parentHeight;
-                      canvasRef.current.style.width = `${parentWidth}px`;
-                      canvasRef.current.style.height = `${parentHeight}px`;
-                    }
-                  }
-
-                  // Only reinitialize if canvas is truly not initialized
-                  if (!isCanvasActuallyInitialized) {
-                    console.log(
-                      "Canvas not actually initialized, reinitializing..."
-                    );
-                    safeInitCanvas(canvasRef.current).catch(console.error);
-                  } else {
-                    console.log(
-                      "Canvas is actually initialized, syncing state..."
-                    );
-                    // Sync the state to match reality
-                    setIsCanvasReady(true);
-                  }
-                }
-              } else {
-                console.log(
-                  "Canvas is ready and properly sized, no action needed"
-                );
-              }
-            }
-          }, 100); // Small delay to ensure DOM is ready
+        // When tab becomes visible, ensure canvas is ready (same logic as other tabs)
+        // Only initialize if canvas exists but hasn't been initialized for this canvas instance
+        if (
+          isVisible &&
+          canvasRef.current &&
+          !isCanvasReady &&
+          initializedCanvasRef.current !== canvasRef.current
+        ) {
+          console.log("Tab became visible, ensuring canvas is ready");
+          safeInitCanvas(canvasRef.current).catch(console.error);
         }
       },
-      { threshold: [0, 0.1, 1] } // Multiple thresholds for better detection
+      { threshold: 0.1 }
     );
 
     visibilityObserver.observe(container);
@@ -420,7 +386,7 @@ const Schematic: React.FC<SchematicProps> = ({
     return () => {
       visibilityObserver.disconnect();
     };
-  }, [safeInitCanvas]); // Only depend on safeInitCanvas, not isCanvasReady which changes frequently
+  }, [safeInitCanvas, isCanvasReady]); // Include isCanvasReady to ensure proper synchronization
 
   // Handle keyboard events for plot selection mode
   useEffect(() => {
@@ -452,8 +418,14 @@ const Schematic: React.FC<SchematicProps> = ({
       "schematic-canvas"
     ) as HTMLCanvasElement;
 
+    console.log(
+      "Canvas creation effect - checking for existing canvas:",
+      !!canvas
+    );
+
     if (!canvas) {
       // Create the canvas element only if it doesn't exist
+      console.log("Creating new canvas element");
       canvas = document.createElement("canvas");
       canvas.id = "schematic-canvas";
       canvas.style.width = "100%";
@@ -464,14 +436,16 @@ const Schematic: React.FC<SchematicProps> = ({
       // Don't initialize yet - let the resize handler do it
       canvasRef.current = canvas;
       container.appendChild(canvas);
+      console.log("New canvas appended to container");
     } else {
       // Canvas exists, just update the ref
+      console.log("Using existing canvas, updating ref");
       canvasRef.current = canvas;
     }
 
-    // Cleanup function to remove the canvas on unmount
+    // Cleanup function - don't remove canvas as it should persist across tab switches
     return () => {
-      // Don't remove canvas on cleanup - let it persist for tab switching
+      // Canvas should persist across tab switches, no cleanup needed
     };
   }, []);
 
@@ -481,262 +455,142 @@ const Schematic: React.FC<SchematicProps> = ({
 
     const handleResize = () => {
       if (!containerRef.current) return;
-      const parent = containerRef.current;
+
+      // Don't interfere with fit-to-screen operation - wait for it to complete
+      if (isProcessingFitToScreenRef.current) {
+        console.log(
+          "Skipping resize - fit-to-screen is currently being processed"
+        );
+        return;
+      }
+
+      // Don't trigger resize during tab changes to prevent cross-contamination
+      if (isTabChangeInProgressRef.current) {
+        console.log("Skipping resize - tab change is in progress");
+        return;
+      }
+
+      // Only process resize if tab is actually visible
+      if (!isTabVisibleRef.current) {
+        console.log("Skipping resize - tab not visible");
+        return;
+      }
 
       // Check if the container is actually visible (not hidden by tabs)
-      const rect = parent.getBoundingClientRect();
+      const rect = containerRef.current.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) {
-        console.log("Skipping resize - container not visible");
+        console.log("Skipping resize - container not visible (0 dimensions)");
         return;
       }
 
-      // Check current dimensions
-      const currentWidth = parent.clientWidth;
-      const currentHeight = parent.clientHeight;
+      // Check if size actually changed to avoid unnecessary recreation
+      const currentWidth = Math.round(rect.width);
+      const currentHeight = Math.round(rect.height);
+      const lastSize = lastContainerSizeRef.current;
 
-      // Skip if dimensions haven't changed significantly (allow for small variations)
-      const lastSize = lastSizeRef.current;
-      const widthDiff = Math.abs(currentWidth - lastSize.width);
-      const heightDiff = Math.abs(currentHeight - lastSize.height);
-
-      // Accumulate the resize differences to handle multiple small resizes
-      accumulatedResizeRef.current.width += widthDiff;
-      accumulatedResizeRef.current.height += heightDiff;
-
-      const accumulatedWidthDiff = accumulatedResizeRef.current.width;
-      const accumulatedHeightDiff = accumulatedResizeRef.current.height;
-
-      // Much more conservative threshold - avoid frequent canvas recreation
-      const RESIZE_THRESHOLD = 50; // Threshold for accumulated differences
-      const LIGHTWEIGHT_RESIZE_THRESHOLD = RESIZE_THRESHOLD * 2; // 200px - threshold for lightweight resize
-
-      if (
-        canvasRef.current &&
-        accumulatedWidthDiff < RESIZE_THRESHOLD &&
-        accumulatedHeightDiff < RESIZE_THRESHOLD
-      ) {
+      // Skip if this is the first measurement (initialization case)
+      if (lastSize.width === 0 && lastSize.height === 0) {
         console.log(
-          `Skipping resize - accumulated differences not significant enough (${accumulatedWidthDiff}x${accumulatedHeightDiff})`
-        );
-        // Update the last size to track the current change, but don't reset accumulated differences yet
-        lastSizeRef.current = { width: currentWidth, height: currentHeight };
-
-        // If canvas exists and size hasn't changed, just ensure it's properly initialized
-        if (!isCanvasReady) {
-          console.log("Canvas exists but not ready, initializing...");
-          safeInitCanvas(canvasRef.current).catch(console.error);
-        }
-        return;
-      }
-
-      // Additional check: If canvas is ready and the accumulated change is moderate, just resize without recreating
-      if (
-        canvasRef.current &&
-        isCanvasReady &&
-        accumulatedWidthDiff < LIGHTWEIGHT_RESIZE_THRESHOLD &&
-        accumulatedHeightDiff < LIGHTWEIGHT_RESIZE_THRESHOLD
-      ) {
-        console.log("Performing lightweight resize without canvas recreation");
-        // If we know the canvas is offscreen, we cannot resize directly from main thread
-        if (isCanvasOffscreen) {
-          console.log(
-            "Canvas is offscreen, cannot resize directly from main thread"
-          );
-          // Note: We don't use fit command here as per requirements - fit should only be used during initial app initialization
-        } else {
-          // Try to resize directly, and catch if canvas has been transferred to offscreen
-          try {
-            // Check if canvas control has been transferred to offscreen
-            // If so, we cannot resize it directly from the main thread
-            const canvas = canvasRef.current;
-
-            // Try to access and update canvas properties to check if it's still under main thread control
-            canvas.width = currentWidth;
-            canvas.height = currentHeight;
-            canvas.style.width = `${currentWidth}px`;
-            canvas.style.height = `${currentHeight}px`;
-
-            console.log("Canvas resized successfully from main thread");
-          } catch (error) {
-            if (
-              error instanceof DOMException &&
-              error.name === "InvalidStateError"
-            ) {
-              console.log(
-                "Canvas control transferred to offscreen, marking as offscreen"
-              );
-              setIsCanvasOffscreen(true); // Remember this for future resize attempts
-              // Canvas has been transferred to offscreen, cannot resize directly
-              console.log(
-                "Cannot resize offscreen canvas directly from main thread"
-              );
-            } else {
-              console.error("Unexpected error during canvas resize:", error);
-            }
-          }
-        }
-
-        // Update last known size
-        lastSizeRef.current = { width: currentWidth, height: currentHeight };
-
-        // Reset accumulated differences since we performed a resize
-        accumulatedResizeRef.current = { width: 0, height: 0 };
-
-        // Notify parent of canvas resize
-        if (onCanvasResized) {
-          onCanvasResized();
-        }
-
-        return;
-      }
-
-      // Update last known size
-      lastSizeRef.current = { width: currentWidth, height: currentHeight };
-
-      // Reset accumulated differences since we're proceeding with a full resize
-      accumulatedResizeRef.current = { width: 0, height: 0 };
-
-      console.log(
-        `Resize triggered - Current: ${currentWidth}x${currentHeight}, Last: ${lastSize.width}x${lastSize.height}, Accumulated: ${accumulatedWidthDiff}x${accumulatedHeightDiff}`
-      );
-      console.log(
-        `Canvas state - exists: ${!!canvasRef.current}, ready: ${isCanvasReady}, parent attached: ${canvasRef.current?.parentNode === parent}`
-      );
-
-      // Only proceed with full recreation if dimensions are valid
-      if (currentWidth <= 0 || currentHeight <= 0) {
-        console.log(
-          "Skipping resize - invalid dimensions:",
+          "First size measurement, storing initial size:",
           currentWidth,
           "x",
           currentHeight
         );
+        lastContainerSizeRef.current = {
+          width: currentWidth,
+          height: currentHeight,
+        };
         return;
       }
 
-      // Reset canvas ready state
-      setIsCanvasReady(false);
+      // Only recreate if there's a significant size change (more than 5px)
+      const widthDiff = Math.abs(currentWidth - lastSize.width);
+      const heightDiff = Math.abs(currentHeight - lastSize.height);
+      const RESIZE_THRESHOLD = 5; // Only recreate for changes larger than 5px
 
-      // --- Two-Pass Resize Logic ---
-
-      // 0. Cancel any pending animation frame from previous resize events
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
+      if (widthDiff < RESIZE_THRESHOLD && heightDiff < RESIZE_THRESHOLD) {
+        console.log(
+          `Skipping resize - size change too small (${widthDiff}x${heightDiff})`
+        );
+        return;
       }
 
-      // 1. Remove previous canvas if it exists
-      if (canvasRef.current) {
-        // Check if canvas is still attached to the expected parent
-        if (canvasRef.current.parentNode === parent) {
-          console.log("Removing previous canvas from parent");
-          // Reset the initialized canvas ref since we're removing the old canvas
-          if (initializedCanvasRef.current === canvasRef.current) {
-            initializedCanvasRef.current = null;
-          }
-          parent.removeChild(canvasRef.current);
-        } else {
-          console.log(
-            "Canvas exists but not attached to expected parent, skipping removal"
-          );
-        }
-        canvasRef.current = null;
-      }
+      // Update the last known size
+      lastContainerSizeRef.current = {
+        width: currentWidth,
+        height: currentHeight,
+      };
 
-      // --- Pass 1: Create and add small canvas ---
       console.log(
-        `Pass 1: Creating small canvas (${INITIAL_CANVAS_SIZE}x${INITIAL_CANVAS_SIZE})`
+        `Container resized significantly (${currentWidth}x${currentHeight}), recreating canvas for proper WebGL aspect ratio adaptation`
       );
+
+      // For actual resize, we need to recreate the canvas DOM element to get proper aspect ratio
+      const container = containerRef.current;
+
+      // Remove existing canvas
+      if (canvasRef.current && canvasRef.current.parentNode === container) {
+        console.log("Removing existing canvas for resize recreation");
+        container.removeChild(canvasRef.current);
+        // Reset refs
+        initializedCanvasRef.current = null;
+        canvasRef.current = null;
+        setIsCanvasReady(false);
+      }
+
+      // Create new canvas with current container dimensions
+      console.log("Creating new canvas for resize");
       const newCanvas = document.createElement("canvas");
-
-      // Set attributes and style to the *initial* small size
-      newCanvas.width = INITIAL_CANVAS_SIZE;
-      newCanvas.height = INITIAL_CANVAS_SIZE;
-      newCanvas.style.width = `${INITIAL_CANVAS_SIZE}px`;
-      newCanvas.style.height = `${INITIAL_CANVAS_SIZE}px`;
+      newCanvas.id = "schematic-canvas";
+      newCanvas.style.width = "100%";
+      newCanvas.style.height = "100%";
       newCanvas.style.display = "block";
-      newCanvas.style.border = "solid 1px orange"; // Indicate temporary size
+      newCanvas.style.border = "solid 1px gray";
 
-      // Append the small canvas
-      parent.appendChild(newCanvas);
-
-      // Update ref, but DO NOT initialize yet
+      // Add to container and update ref
+      container.appendChild(newCanvas);
       canvasRef.current = newCanvas;
 
-      // --- Pass 2: Defer final sizing and initialization ---
-      rafIdRef.current = requestAnimationFrame(() => {
-        // Check if component/container/canvas still exist before proceeding
-        if (
-          !containerRef.current ||
-          !canvasRef.current ||
-          canvasRef.current !== newCanvas
-        ) {
-          console.warn(
-            "Resize Pass 2 skipped: Component or elements changed/unmounted."
-          );
-          rafIdRef.current = null;
-          return;
-        }
-
-        const currentContainer = containerRef.current; // Use variable for clarity
-        const currentCanvas = canvasRef.current; // Use variable for clarity
-
-        // Read parent dimensions *after* layout calculation with small canvas
-        const finalWidth = currentContainer.clientWidth;
-        const finalHeight = currentContainer.clientHeight;
-
-        console.log(
-          `Pass 2: Resizing canvas to final size (${finalWidth}x${finalHeight}) and initializing.`
-        );
-
-        // Update canvas attributes (drawing buffer)
-        currentCanvas.width = finalWidth;
-        currentCanvas.height = finalHeight;
-
-        // Update canvas style (display size)
-        currentCanvas.style.width = `${finalWidth}px`;
-        currentCanvas.style.height = `${finalHeight}px`;
-        currentCanvas.style.border = "solid 1px green"; // Indicate final size (optional)
-
-        // Update canvas height state
-        setCanvasHeight(finalHeight);
-
-        // *** Initialize the library *now* with the final canvas size ***
-        safeInitCanvas(currentCanvas)
-          .then(() => {
-            // Notify parent that canvas has been resized after successful initialization
-            onCanvasResized?.();
-          })
-          .catch(console.error);
-
-        rafIdRef.current = null; // Clear the ref after execution
-
-        // --- End Two-Pass Resize Logic ---
-      });
+      // Initialize the new canvas
+      safeInitCanvas(newCanvas)
+        .then(() => {
+          if (onCanvasResized) {
+            onCanvasResized();
+          }
+        })
+        .catch(console.error);
     };
 
-    // Debounce the entire two-pass handler with longer delay to reduce frequency
-    const debouncedResizeHandler = debounce(handleResize, 500); // Increased from 250ms to 500ms
+    // Debounce the resize handler to reduce frequency
+    const debouncedResizeHandler = debounce(handleResize, 300); // Reduced debounce time for better responsiveness
 
-    // Wrapper for resize handler that checks visibility
+    // Wrapper for resize handler that performs final checks
     const visibilityAwareResizeHandler = () => {
-      if (isTabVisibleRef.current) {
-        // Use ref instead of state to avoid effect dependency
-        debouncedResizeHandler();
-      } else {
-        console.log("Skipping resize - tab not visible");
+      // Final check for tab visibility - this prevents resize triggers during tab switches
+      if (!isTabVisibleRef.current) {
+        console.log("Skipping resize - final tab visibility check failed");
+        return;
       }
+
+      // Final check for tab change in progress
+      if (isTabChangeInProgressRef.current) {
+        console.log(
+          "Skipping resize - final tab change check shows change in progress"
+        );
+        return;
+      }
+
+      debouncedResizeHandler();
     };
 
-    // Initial setup call - only run if canvas needs setup
-    // Avoid running if canvas is already properly initialized to prevent unnecessary resets
-    if (!canvasRef.current || !isCanvasReady) {
-      console.log("Initial handleResize call - canvas needs setup");
-      handleResize(); // Trigger the two-pass process for the first time
-    } else {
-      console.log(
-        "Skipping initial handleResize - canvas already ready and exists"
-      );
+    // Only initialize if canvas exists but is not ready
+    if (
+      canvasRef.current &&
+      !isCanvasReady &&
+      initializedCanvasRef.current !== canvasRef.current
+    ) {
+      console.log("Canvas exists but not ready, initializing");
+      safeInitCanvas(canvasRef.current).catch(console.error);
     }
 
     // Event listeners
@@ -744,32 +598,13 @@ const Schematic: React.FC<SchematicProps> = ({
     const resizeObserver = new ResizeObserver(visibilityAwareResizeHandler);
     resizeObserver.observe(container);
 
-    // Cleanup
     return () => {
-      console.log(
-        "Cleaning up schematic listeners, canvas, and animation frame"
-      );
+      console.log("Cleaning up schematic listeners");
       window.removeEventListener("resize", visibilityAwareResizeHandler);
       resizeObserver.disconnect();
       debouncedResizeHandler.cancel();
-
-      // Cancel pending animation frame on unmount
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
-      }
-
-      // Remove the last canvas
-      if (canvasRef.current && canvasRef.current.parentNode === container) {
-        // Reset the initialized canvas ref since we're removing the canvas
-        if (initializedCanvasRef.current === canvasRef.current) {
-          initializedCanvasRef.current = null;
-        }
-        container.removeChild(canvasRef.current);
-        canvasRef.current = null;
-      }
     };
-  }, [safeInitCanvas]); // Only depend on safeInitCanvas, remove isTabVisible dependency that causes re-runs
+  }, [safeInitCanvas, isCanvasReady, onCanvasResized]);
 
   const sendToNetListButtonHandler = useCallback(() => {
     if (!canvasRef.current) return;
