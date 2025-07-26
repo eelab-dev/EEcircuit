@@ -25,9 +25,11 @@ import { Tooltip } from "../components/ui/tooltip";
 import { useColorModeValue } from "../components/ui/color-mode";
 import ExportImageDialog from "./ExportImageDialog";
 import { ToBePlotted } from "src/types/commonTypes";
+import { useSchematicState, usePlotSelectionState } from "../store/appStore";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
+  // These props are now optional since we can get them from Zustand
   shouldFitToScreen?: boolean;
   onCanvasResized?: () => void;
   onSchematicDataChange?: (schematicData: SchematicType) => void;
@@ -39,14 +41,48 @@ type SchematicProps = {
 
 const Schematic: React.FC<SchematicProps> = ({
   onNetlistExported,
-  shouldFitToScreen,
+  // Get state from Zustand store with fallback to props for backward compatibility
+  shouldFitToScreen: propShouldFitToScreen,
   onCanvasResized,
   onSchematicDataChange,
-  isPlotSelectionMode = false,
+  isPlotSelectionMode: propIsPlotSelectionMode,
   onPlotItemSelected,
   onExitPlotSelectionMode,
-  toBePlotted = [],
+  toBePlotted: propToBePlotted,
 }) => {
+  // Use Zustand store with fallback to props
+  const {
+    shouldFitToScreen: storeShouldFitToScreen,
+    setShouldFitToScreen,
+    setCurrentSchematic,
+  } = useSchematicState();
+
+  const {
+    isPlotSelectionMode: storeIsPlotSelectionMode,
+    toBePlotted: storeToBePlotted,
+    addToBePlotted,
+    exitPlotSelectionMode,
+  } = usePlotSelectionState();
+
+  // Use store values with prop fallbacks
+  const shouldFitToScreen = propShouldFitToScreen ?? storeShouldFitToScreen;
+  const isPlotSelectionMode =
+    propIsPlotSelectionMode ?? storeIsPlotSelectionMode;
+  const toBePlotted = propToBePlotted ?? storeToBePlotted;
+
+  // Use store actions with prop fallbacks
+  const handlePlotItemSelected = onPlotItemSelected ?? addToBePlotted;
+  const handleExitPlotSelectionMode =
+    onExitPlotSelectionMode ?? exitPlotSelectionMode;
+
+  // Enhanced onSchematicDataChange to also update store
+  const handleSchematicDataChange = React.useCallback(
+    (schematicData: SchematicType) => {
+      setCurrentSchematic(schematicData);
+      onSchematicDataChange?.(schematicData);
+    },
+    [setCurrentSchematic, onSchematicDataChange]
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const initializedCanvasRef = useRef<HTMLCanvasElement | null>(null);

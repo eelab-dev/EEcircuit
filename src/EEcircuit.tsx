@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useRef } from "react";
 
 //const EditorCustom = React.lazy(() => import("./editor/editorCustom.tsx"));
 //const PlotArray = React.lazy(() => import("./plotArray.tsx"));
@@ -15,56 +15,53 @@ import SimulationEditor from "./Simulate/simulate.tsx";
 import { TabsValueChangeDetails } from "node_modules/@chakra-ui/react/dist/types/components/tabs/tabs";
 import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
-import { ResultType } from "eecircuit-engine";
 import { sendCommand, Schematic as SchematicType } from "eecircuit-schematic";
-import {
-  EEcircuitFile,
-  SimulationType,
-  ToBePlotted,
-} from "./types/commonTypes.ts";
+import { EEcircuitFile } from "./types/commonTypes.ts";
 import { Mouse, Touchpad, Download } from "lucide-react";
+import { useAppStore } from "./store/appStore";
+import { SimulationType } from "./types/commonTypes";
 
 type TabsValue = "schematic" | "simulate" | "plot";
 
 const EEcircuit: React.FC = () => {
-  // Create the count state.
+  // Use Zustand store instead of multiple useState calls
+  const {
+    tabValue,
+    isSimulateTabEnabled,
+    isPlotTabEnabled,
+    setTabValue,
+    shouldFitToScreen,
+    setShouldFitToScreen,
+    hasViewedSchematic,
+    setHasViewedSchematic,
+    hasResizedSinceSchematicView,
+    setHasResizedSinceSchematicView,
+    dragBox,
+    setDragBox,
+    inputProfile,
+    toggleInputProfile,
+    exportNetlist,
+    handleNewResults,
+    enterPlotSelectionMode,
+    exitPlotSelectionMode,
+    addToBePlotted,
+    currentSchematic,
+    setCurrentSchematic,
+    allSimulationConfigs,
+  } = useAppStore();
 
-  const [netList, setNetList] = React.useState("");
-  //const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
-  const [tabValue, setTabValue] = React.useState<TabsValue>("schematic");
-  const [shouldFitToScreen, setShouldFitToScreen] = React.useState(false);
-  const [hasResizedSinceSchematicView, setHasResizedSinceSchematicView] =
-    React.useState(false);
-  const [hasViewedSchematic, setHasViewedSchematic] = React.useState(false);
-
-  //const colorMode = useColorModeValue("light", "dark");
-
-  const [results, setResults] = React.useState<ResultType[]>([]);
-
-  // Simulation configuration state - uplifted from SimulationEditor
-  const [selectedSimType, setSelectedSimType] =
-    React.useState<SimulationType["type"]>("None");
-  const [simulationConfig, setSimulationConfig] = React.useState<
-    SimulationType | undefined
-  >(undefined);
-
-  // State to store all simulation configurations from SimulationEditor
-  // This allows saving all configs when user triggers save action
-  const [allSimulationConfigs, setAllSimulationConfigs] = useState<
-    SimulationType[]
-  >([]);
-
-  // Ref to store current schematic data for saving (using ref to avoid closure issues)
-  const currentSchematicRef = useRef<SchematicType | undefined>(undefined);
-  // Ref to store promise resolver for schematic save operations
+  // Ref to store promise resolver for schematic save operations (keep this as it's for async operations)
   const schematicSaveResolverRef = useRef<
     ((data: SchematicType) => void) | null
   >(null);
 
-  // Handler for schematic data changes
+  // Ref for the tabs container to handle drag and drop
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Handler for schematic data changes - updated to use Zustand store
   const handleSchematicDataChange = React.useCallback(
     (schematicData: SchematicType) => {
-      currentSchematicRef.current = schematicData; // Store in ref for immediate access
+      setCurrentSchematic(schematicData); // Store in Zustand store
 
       // If there's a pending save operation, resolve it with the new data
       if (schematicSaveResolverRef.current) {
@@ -72,53 +69,8 @@ const EEcircuit: React.FC = () => {
         schematicSaveResolverRef.current = null; // Clear the resolver
       }
     },
-    []
+    [setCurrentSchematic]
   );
-
-  // Handler for simulation configuration changes
-  const handleSimulationConfigChange = React.useCallback(
-    (config: SimulationType) => {
-      setSelectedSimType(config.type);
-      setSimulationConfig(config);
-    },
-    []
-  );
-
-  // Handler for all simulation configs changes from SimulationEditor
-  const handleAllSimulationConfigsChange = React.useCallback(
-    (configs: SimulationType[]) => {
-      setAllSimulationConfigs(configs);
-    },
-    []
-  );
-
-  // Tab enablement states
-  const [isSimulateTabEnabled, setIsSimulateTabEnabled] = React.useState(false);
-  const [isPlotTabEnabled, setIsPlotTabEnabled] = React.useState(false);
-
-  // Input profile state - defaults to trackpad
-  const [inputProfile, setInputProfile] = React.useState<"mouse" | "trackpad">(
-    "trackpad"
-  );
-
-  // Plot selection mode state
-  const [isPlotSelectionMode, setIsPlotSelectionMode] = React.useState(false);
-  const [toBePlotted, setToBePlotted] = React.useState<ToBePlotted[]>([]);
-
-  const [dragBox, setDragBox] = React.useState(false);
-
-  // Ref for the tabs container to handle drag and drop
-  const tabsContainerRef = React.useRef<HTMLDivElement>(null);
-
-  // Track window resize events
-  React.useEffect(() => {
-    const handleResize = () => {
-      setHasResizedSinceSchematicView(true);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   // Handle initial schematic view (when component mounts and schematic is the default tab)
   React.useEffect(() => {
@@ -140,24 +92,19 @@ const EEcircuit: React.FC = () => {
       }, 100); // Small delay to ensure the command is processed
       return () => clearTimeout(timer);
     }
-  }, [shouldFitToScreen]);
+  }, [shouldFitToScreen, setShouldFitToScreen]);
 
   // Callback when canvas is resized
   const handleCanvasResized = React.useCallback(() => {
     setHasResizedSinceSchematicView(false);
-  }, []);
+  }, [setHasResizedSinceSchematicView]);
 
-  const exportedNetlist = React.useCallback((netlist: string) => {
-    const netListPreamble = `
-* Netlist generated by EEcircuit
-.include modelcard.CMOS90
-`;
-
-    const netlistWithPreamble = netListPreamble + netlist;
-    setNetList(netlistWithPreamble);
-    setIsSimulateTabEnabled(true); // Enable simulate tab when netlist is exported
-    setTabValue("simulate");
-  }, []);
+  const exportedNetlist = React.useCallback(
+    (netlist: string) => {
+      exportNetlist(netlist);
+    },
+    [exportNetlist]
+  );
 
   const handleTabValueChange = React.useCallback(
     (details: TabsValueChangeDetails) => {
@@ -196,6 +143,9 @@ const EEcircuit: React.FC = () => {
       hasResizedSinceSchematicView,
       isSimulateTabEnabled,
       isPlotTabEnabled,
+      setTabValue,
+      setShouldFitToScreen,
+      setHasViewedSchematic,
     ]
   );
 
@@ -276,10 +226,19 @@ const EEcircuit: React.FC = () => {
           // For now, load the first simulation configuration as the active one
           // In the future, this could be enhanced to load all configurations
           const firstSimConfig = parsedContent.simulations[0];
+          // Use the store actions to update simulation state
+          const {
+            setSelectedSimType,
+            setSimulationConfig,
+            setAllSimulationConfigs,
+          } = useAppStore.getState();
           setSelectedSimType(firstSimConfig.type);
           setSimulationConfig(firstSimConfig);
+          setAllSimulationConfigs(parsedContent.simulations);
         } else {
           // Reset simulation config if no simulation data in file
+          const { setSelectedSimType, setSimulationConfig } =
+            useAppStore.getState();
           setSimulationConfig(undefined);
           setSelectedSimType("None");
         }
@@ -304,77 +263,7 @@ const EEcircuit: React.FC = () => {
       container.removeEventListener("dragleave", handleDragLeave);
       container.removeEventListener("drop", handleDrop);
     };
-  }, []); // Remove dragBox dependency to prevent unnecessary re-registrations
-
-  const handleNewResults = React.useCallback((newResults: ResultType[]) => {
-    // Double-check that we have valid results before enabling plot tab
-    const hasValidResults =
-      newResults &&
-      newResults.length > 0 &&
-      newResults[0].data &&
-      newResults[0].data.length > 0 &&
-      newResults[0].variableNames &&
-      newResults[0].variableNames.length > 0;
-
-    // Additional check for actual data points
-    let hasDataPoints = false;
-    if (hasValidResults) {
-      hasDataPoints = newResults[0].data.some(
-        (dataSet) => dataSet.values && dataSet.values.length > 0
-      );
-    }
-
-    if (hasValidResults && hasDataPoints) {
-      setResults(newResults);
-      setIsPlotTabEnabled(true); // Enable plot tab when valid results are obtained
-      setTabValue("plot");
-    } else {
-      // This should not happen if simulate.tsx is working correctly, but just in case
-      console.warn(
-        "handleNewResults called with invalid results, not enabling plot tab"
-      );
-    }
-  }, []);
-
-  // Handler for input profile toggle
-  const handleInputProfileToggle = React.useCallback(() => {
-    const newProfile = inputProfile === "mouse" ? "trackpad" : "mouse";
-    setInputProfile(newProfile);
-
-    // Send command to update input profile in schematic canvas
-    sendCommand({
-      command: "setInputProfile",
-      profile: newProfile,
-    });
-  }, [inputProfile]);
-
-  // Handler for switching to schematic for plot selection
-  const handleSwitchToSchematicForPlotSelection = React.useCallback(() => {
-    setIsPlotSelectionMode(true);
-    setTabValue("schematic");
-  }, []);
-
-  // Handler for when a plot item is selected in schematic
-  const handlePlotItemSelected = React.useCallback((item: ToBePlotted) => {
-    setToBePlotted((prev) => {
-      // Check if item already exists
-      const exists = prev.some(
-        (existing) => existing.type === item.type && existing.name === item.name
-      );
-
-      if (!exists) {
-        return [...prev, item];
-      }
-
-      return prev;
-    });
-  }, []);
-
-  // Handler for exiting plot selection mode
-  const handleExitPlotSelectionMode = React.useCallback(() => {
-    setIsPlotSelectionMode(false);
-    setTabValue("simulate");
-  }, []);
+  }, [setDragBox]); // Only depend on setDragBox to prevent unnecessary re-registrations
 
   // Helper function to wait for schematic export completion
   const waitForSchematicExport =
@@ -414,7 +303,7 @@ const EEcircuit: React.FC = () => {
       const latestSchematicData = await waitForSchematicExport();
 
       const validSimConfigs = allSimulationConfigs.filter(
-        (config) => config.type !== "None"
+        (config: SimulationType) => config.type !== "None"
       );
 
       const eeCirFile: EEcircuitFile = {
@@ -454,7 +343,7 @@ const EEcircuit: React.FC = () => {
       console.error("Failed to save file:", error);
       alert("Failed to save file. Please try again.");
     }
-  }, [allSimulationConfigs, tabValue, waitForSchematicExport]); // Added waitForSchematicExport
+  }, [allSimulationConfigs, tabValue, waitForSchematicExport, setTabValue]); // Added setTabValue
 
   return (
     <Box
@@ -569,7 +458,7 @@ const EEcircuit: React.FC = () => {
                   aria-label={`Switch to ${inputProfile === "mouse" ? "trackpad" : "mouse"} input profile`}
                   size="sm"
                   variant="ghost"
-                  onClick={handleInputProfileToggle}
+                  onClick={toggleInputProfile}
                 >
                   {inputProfile === "mouse" ? (
                     <Mouse size={16} />
@@ -588,29 +477,29 @@ const EEcircuit: React.FC = () => {
             shouldFitToScreen={shouldFitToScreen}
             onCanvasResized={handleCanvasResized}
             onSchematicDataChange={handleSchematicDataChange}
-            isPlotSelectionMode={isPlotSelectionMode}
-            onPlotItemSelected={handlePlotItemSelected}
-            onExitPlotSelectionMode={handleExitPlotSelectionMode}
-            toBePlotted={toBePlotted}
+            isPlotSelectionMode={useAppStore.getState().isPlotSelectionMode}
+            onPlotItemSelected={addToBePlotted}
+            onExitPlotSelectionMode={exitPlotSelectionMode}
+            toBePlotted={useAppStore.getState().toBePlotted}
           />
         </Tabs.Content>
 
         <Tabs.Content value="simulate" flex={1} minHeight={0}>
           <SimulationEditor
-            netList={netList}
+            netList={useAppStore.getState().netList}
             onResultsObtained={handleNewResults}
-            selectedSimType={selectedSimType}
-            simulationConfig={simulationConfig}
-            onSimulationConfigChange={handleSimulationConfigChange}
-            onSwitchToSchematic={handleSwitchToSchematicForPlotSelection}
-            toBePlotted={toBePlotted}
-            onAllSimulationConfigsChange={handleAllSimulationConfigsChange}
-            initialConfigs={allSimulationConfigs}
+            selectedSimType={useAppStore.getState().selectedSimType}
+            simulationConfig={useAppStore.getState().simulationConfig}
+            onSimulationConfigChange={
+              useAppStore.getState().setSimulationConfig
+            }
+            onSwitchToSchematic={enterPlotSelectionMode}
+            toBePlotted={useAppStore.getState().toBePlotted}
           />
         </Tabs.Content>
 
         <Tabs.Content value="plot" flex={1} minHeight={0}>
-          <Plot results={results} />
+          <Plot results={useAppStore.getState().results} />
           {/* <PlotArray
               resultArray={resultArray}
               displayData={displayData}

@@ -26,6 +26,7 @@ import {
   SimulationAC,
   SimulationTransient,
 } from "../types/commonTypes";
+import { useSimulationState, usePlotSelectionState } from "../store/appStore";
 
 // Define the simulation type options
 const simType: SimulationType["type"][] = ["None", "DC", "AC", "Transient"];
@@ -38,78 +39,44 @@ type SimulationEditorProps = {
   onSimulationConfigChange: (config: SimulationType) => void;
   onSwitchToSchematic?: () => void;
   toBePlotted?: ToBePlotted[];
-  onAllSimulationConfigsChange?: (configs: SimulationType[]) => void; // New prop to expose all configs
-  initialConfigs?: SimulationType[]; // New prop to restore saved configs
 };
 
 const SimulationEditor: React.FC<SimulationEditorProps> = ({
   netList = "",
   onResultsObtained,
-  selectedSimType,
-  simulationConfig,
+  selectedSimType: propSelectedSimType,
+  simulationConfig: propSimulationConfig,
   onSimulationConfigChange,
   onSwitchToSchematic,
-  toBePlotted = [],
-  onAllSimulationConfigsChange, // New prop to expose all configs
-  initialConfigs = [], // New prop to restore saved configs
+  toBePlotted: propToBePlotted,
 }) => {
+  // Get state and actions from Zustand store
+  const {
+    selectedSimType: storeSelectedSimType,
+    simulationConfig: storeSimulationConfig,
+    allSimulationConfigs,
+    setSelectedSimType,
+    setSimulationConfig,
+    setAllSimulationConfigs,
+  } = useSimulationState();
+
+  const { toBePlotted: storeToBePlotted } = usePlotSelectionState();
+
+  // Use store values with prop fallbacks for backward compatibility
+  const selectedSimType = propSelectedSimType ?? storeSelectedSimType;
+  const simulationConfig = propSimulationConfig ?? storeSimulationConfig;
+  const toBePlotted = propToBePlotted ?? storeToBePlotted;
+
+  // Local state for UI management
   const [netListToSim, setNetListToSim] = useState(netList);
   const [simCommandString, setSimCommandString] = useState("");
-
-  // State to preserve all simulation configurations as an array
-  // This allows users to manage multiple named simulation configurations
-  const [simulationConfigs, setSimulationConfigs] = useState<SimulationType[]>(
-    initialConfigs // Initialize with saved configs from parent
-  );
-
-  // Effect to restore configs from parent when initialConfigs changes
-  // This handles the case where configs are loaded from a saved file
-  useEffect(() => {
-    if (initialConfigs.length > 0) {
-      setSimulationConfigs(initialConfigs);
-    }
-  }, [initialConfigs]);
-
-  // State to track the currently selected configuration index
-  const [selectedConfigIndex, setSelectedConfigIndex] = useState<number>(-1);
-
-  // State for managing config naming when adding new configs
+  // Use store's allSimulationConfigs instead of local state
+  const simulationConfigs = allSimulationConfigs;
+  const [selectedConfigIndex, setSelectedConfigIndex] = useState(-1);
   const [isAddingConfig, setIsAddingConfig] = useState(false);
   const [newConfigName, setNewConfigName] = useState("");
-
-  // State for editing existing config names
-  const [editingConfigIndex, setEditingConfigIndex] = useState<number>(-1);
+  const [editingConfigIndex, setEditingConfigIndex] = useState(-1);
   const [editingConfigName, setEditingConfigName] = useState("");
-
-  // State for tracking when we need to update parent after config name edit
-  const [pendingConfigUpdate, setPendingConfigUpdate] =
-    useState<SimulationType | null>(null);
-
-  // Effect to handle deferred config updates to parent
-  useEffect(() => {
-    if (pendingConfigUpdate) {
-      onSimulationConfigChange(pendingConfigUpdate);
-      setPendingConfigUpdate(null);
-    }
-  }, [pendingConfigUpdate, onSimulationConfigChange]);
-
-  // Effect to notify parent component of all simulation configs changes
-  // This allows the parent to save all configs when user triggers save action
-  // IMPORTANT: Always send current configs on mount to ensure parent has latest state
-  useEffect(() => {
-    if (onAllSimulationConfigsChange) {
-      onAllSimulationConfigsChange(simulationConfigs);
-    }
-  }, [simulationConfigs, onAllSimulationConfigsChange]);
-
-  // Additional effect to ensure parent gets configs immediately on mount
-  // This handles the case where the parent state was reset but SimulationEditor has configs
-  useEffect(() => {
-    if (onAllSimulationConfigsChange) {
-      // Always send configs, even if empty, to ensure parent state is synchronized
-      onAllSimulationConfigsChange(simulationConfigs);
-    }
-  }, [onAllSimulationConfigsChange]); // Only run when callback changes (mount/unmount)
 
   // Use a ref to track the last config we sent to parent to prevent circular updates
   const lastSentConfigRef = useRef<SimulationType | null>(null);
@@ -180,7 +147,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   const handleConfigSelection = (configIndex: number) => {
     if (configIndex >= 0 && configIndex < simulationConfigs.length) {
       setSelectedConfigIndex(configIndex);
-      onSimulationConfigChange(simulationConfigs[configIndex]);
+      onSimulationConfigChange?.(simulationConfigs[configIndex]);
     }
   };
 
@@ -194,50 +161,48 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     }
 
     // Create a new config based on the currently selected simulation type
-    setSimulationConfigs((prev) => {
-      const defaultName = generateDefaultConfigName(selectedSimType, prev);
-      let newConfig: SimulationType;
+    const prev = simulationConfigs;
+    const defaultName = generateDefaultConfigName(selectedSimType, prev);
+    let newConfig: SimulationType;
 
-      switch (selectedSimType) {
-        case "DC":
-          newConfig = {
-            type: "DC",
-            name: newConfigName.trim() || defaultName,
-            source: "",
-            start: "",
-            stop: "",
-            step: "",
-          };
-          break;
-        case "AC":
-          newConfig = {
-            type: "AC",
-            name: newConfigName.trim() || defaultName,
-            source: "",
-            frequencyStart: "",
-            frequencyStop: "",
-            stepNumber: "",
-            sweepType: "dec",
-          };
-          break;
-        case "Transient":
-          newConfig = {
-            type: "Transient",
-            name: newConfigName.trim() || defaultName,
-            stopTime: "",
-            timeStep: "",
-          };
-          break;
-        default:
-          // For unsupported types, don't create a config
-          return prev;
-      }
+    switch (selectedSimType) {
+      case "DC":
+        newConfig = {
+          type: "DC",
+          name: newConfigName.trim() || defaultName,
+          source: "",
+          start: "",
+          stop: "",
+          step: "",
+        };
+        break;
+      case "AC":
+        newConfig = {
+          type: "AC",
+          name: newConfigName.trim() || defaultName,
+          source: "",
+          frequencyStart: "",
+          frequencyStop: "",
+          stepNumber: "",
+          sweepType: "dec",
+        };
+        break;
+      case "Transient":
+        newConfig = {
+          type: "Transient",
+          name: newConfigName.trim() || defaultName,
+          stopTime: "",
+          timeStep: "",
+        };
+        break;
+      default:
+        // For unsupported types, don't create a config
+        return;
+    }
 
-      setSelectedConfigIndex(prev.length); // Will be the index of the new config
-      setPendingConfigUpdate(newConfig); // Schedule update to parent component
-      const newConfigs = [...prev, newConfig];
-      return newConfigs;
-    });
+    setSelectedConfigIndex(prev.length); // Will be the index of the new config
+    const newConfigs = [...prev, newConfig];
+    setAllSimulationConfigs(newConfigs); // Update store
 
     setIsAddingConfig(false);
     setNewConfigName("");
@@ -245,12 +210,14 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
   // Function to delete a config
   const deleteConfig = (configIndex: number) => {
-    setSimulationConfigs((prev) =>
-      prev.filter((_, index) => index !== configIndex)
+    const newConfigs = simulationConfigs.filter(
+      (_, index) => index !== configIndex
     );
+    setAllSimulationConfigs(newConfigs);
+
     if (selectedConfigIndex === configIndex) {
       setSelectedConfigIndex(-1);
-      onSimulationConfigChange({ type: "None" });
+      onSimulationConfigChange?.({ type: "None" });
     } else if (selectedConfigIndex > configIndex) {
       // Adjust selected index if we deleted a config before the selected one
       setSelectedConfigIndex(selectedConfigIndex - 1);
@@ -269,21 +236,20 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   // Function to save edited config name
   const saveEditedConfigName = () => {
     if (editingConfigIndex >= 0 && editingConfigName.trim()) {
-      setSimulationConfigs((prev) => {
-        const updatedConfigs = prev.map((config, index) => {
-          if (index === editingConfigIndex && config.type !== "None") {
-            const newConfig = { ...config, name: editingConfigName.trim() };
-            // If this is the currently selected config, schedule an update to parent
-            if (editingConfigIndex === selectedConfigIndex) {
-              setPendingConfigUpdate(newConfig);
-            }
-            return newConfig;
+      const updatedConfigs = simulationConfigs.map((config, index) => {
+        if (index === editingConfigIndex && config.type !== "None") {
+          const newConfig = { ...config, name: editingConfigName.trim() };
+          // If this is the currently selected config, update the current simulation config too
+          if (editingConfigIndex === selectedConfigIndex) {
+            setSimulationConfig(newConfig);
+            onSimulationConfigChange?.(newConfig);
           }
-          return config;
-        });
-
-        return updatedConfigs;
+          return newConfig;
+        }
+        return config;
       });
+
+      setAllSimulationConfigs(updatedConfigs);
     }
     setEditingConfigIndex(-1);
     setEditingConfigName("");
@@ -311,32 +277,38 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       // Only process valid configurations
       if (isConfigValid(simulationConfig)) {
         // Check if this config already exists in our array
-        setSimulationConfigs((prev) => {
-          const existingConfigIndex = prev.findIndex(
-            (config) =>
-              JSON.stringify(config) === JSON.stringify(simulationConfig)
-          );
+        const existingConfigIndex = simulationConfigs.findIndex(
+          (config) =>
+            JSON.stringify(config) === JSON.stringify(simulationConfig)
+        );
 
-          if (existingConfigIndex === -1) {
-            // Add new config if it doesn't exist and is valid
-            const configWithName = {
-              ...simulationConfig,
-              name:
-                simulationConfig.name ||
-                generateDefaultConfigName(simulationConfig.type, prev),
-            };
-            setSelectedConfigIndex(prev.length);
-            const newConfigs = [...prev, configWithName];
-            return newConfigs;
-          } else {
-            // Select existing config
-            setSelectedConfigIndex(existingConfigIndex);
-            return prev; // No change to configs
-          }
-        });
+        if (existingConfigIndex === -1) {
+          // Add new config if it doesn't exist and is valid
+          const configWithName = {
+            ...simulationConfig,
+            name:
+              simulationConfig.name ||
+              generateDefaultConfigName(
+                simulationConfig.type,
+                simulationConfigs
+              ),
+          };
+          setSelectedConfigIndex(simulationConfigs.length);
+          const newConfigs = [...simulationConfigs, configWithName];
+          setAllSimulationConfigs(newConfigs);
+        } else {
+          // Select existing config
+          setSelectedConfigIndex(existingConfigIndex);
+        }
       }
     }
-  }, [simulationConfig]); // Simplified dependencies to prevent other circular issues
+  }, [
+    simulationConfig,
+    simulationConfigs,
+    isConfigValid,
+    generateDefaultConfigName,
+    setAllSimulationConfigs,
+  ]); // Simplified dependencies to prevent other circular issues
 
   const handleEditor = React.useCallback((value: string | undefined) => {
     if (value !== undefined) {
@@ -394,7 +366,10 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       // Always update the parent callback to maintain existing functionality
       // This ensures the simulation engine gets the latest config
       lastSentConfigRef.current = config;
-      onSimulationConfigChange(config);
+      onSimulationConfigChange?.(config);
+
+      // Also update the store's current simulation config
+      setSimulationConfig(config);
 
       // Only save valid configurations to our local array (non-empty forms)
       const configIsValid = isConfigValid(config);
@@ -406,12 +381,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       // Update the current configuration in the array
       if (selectedConfigIndex >= 0) {
         // Update existing config at the selected index
-        setSimulationConfigs((prev) => {
-          if (selectedConfigIndex >= prev.length) {
-            return prev;
-          }
-
-          const updated = prev.map((item, index) => {
+        if (selectedConfigIndex < simulationConfigs.length) {
+          const updated = simulationConfigs.map((item, index) => {
             if (index === selectedConfigIndex) {
               if (config.type !== "None" && "name" in config) {
                 const updatedConfig = {
@@ -426,24 +397,30 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
             }
             return item;
           });
-          return updated;
-        });
+          setAllSimulationConfigs(updated);
+        }
       } else if (config.type !== "None") {
         // Create new config if none is selected and config is valid
-        setSimulationConfigs((prev) => {
-          const configWithName = {
-            ...config,
-            name:
-              ("name" in config && config.name) ||
-              generateDefaultConfigName(config.type, prev),
-          };
-          const newConfigs = [...prev, configWithName];
-          setSelectedConfigIndex(newConfigs.length - 1);
-          return newConfigs;
-        });
+        const configWithName = {
+          ...config,
+          name:
+            ("name" in config && config.name) ||
+            generateDefaultConfigName(config.type, simulationConfigs),
+        };
+        const newConfigs = [...simulationConfigs, configWithName];
+        setSelectedConfigIndex(newConfigs.length - 1);
+        setAllSimulationConfigs(newConfigs);
       }
     },
-    [selectedConfigIndex, onSimulationConfigChange] // Removed extra dependencies to prevent infinite loops
+    [
+      selectedConfigIndex,
+      onSimulationConfigChange,
+      setSimulationConfig,
+      simulationConfigs,
+      isConfigValid,
+      generateDefaultConfigName,
+      setAllSimulationConfigs,
+    ] // Include all dependencies
   );
 
   const handleSimRun = async () => {
@@ -751,6 +728,9 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                     value.value === "AC" ||
                     value.value === "Transient")
                 ) {
+                  // Update store with selected simulation type
+                  setSelectedSimType(value.value);
+
                   // Create simulation config based on type
                   let newConfig: SimulationType;
 
@@ -829,7 +809,9 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                     }
                   }
 
-                  onSimulationConfigChange(newConfig);
+                  // Update both store and parent component
+                  setSimulationConfig(newConfig);
+                  onSimulationConfigChange?.(newConfig);
                 }
               }}
             >

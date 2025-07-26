@@ -1,17 +1,28 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { ResultType } from "eecircuit-engine";
 import { Flex } from "@chakra-ui/react";
 import { useColorMode } from "../components/ui/color-mode";
 import PlotCanvas from "./plotCanvas";
 import PlotSidebar from "./plotSidebar";
+import { usePlotState } from "../store/appStore";
 
 interface PlotProps {
-  results: ResultType[];
+  results?: ResultType[]; // Make optional since we can get it from store
 }
 
-const Plot: React.FC<PlotProps> = ({ results }) => {
-  const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
-  const [hoveredVariable, setHoveredVariable] = useState<string | null>(null);
+const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
+  // Use Zustand store for plot state
+  const {
+    results: storeResults,
+    selectedVariables,
+    hoveredVariable,
+    setSelectedVariables,
+    setHoveredVariable,
+  } = usePlotState();
+
+  // Use results from props if provided, otherwise from store
+  const results = propsResults || storeResults;
+
   const { colorMode } = useColorMode();
 
   // Initialize with all variables selected by default
@@ -20,7 +31,7 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
       // Skip the first variable (usually time) and select all others by default
       setSelectedVariables(results[0].variableNames.slice(1));
     }
-  }, [results]);
+  }, [results, setSelectedVariables]);
 
   return (
     <Flex direction="row" w="100%" h="100%" gap={4} p={4} overflow="hidden">
@@ -34,10 +45,12 @@ const Plot: React.FC<PlotProps> = ({ results }) => {
       </Flex>
       {results.length > 0 && results[0].variableNames && (
         <PlotSidebar
-          variableNames={results[0].variableNames}
+          variableNames={
+            results.length > 0 ? results[0].variableNames || [] : []
+          }
           selectedVariables={selectedVariables}
-          hoveredVariable={hoveredVariable}
           onSelectedVariablesChange={setSelectedVariables}
+          hoveredVariable={hoveredVariable}
           onVariableHover={setHoveredVariable}
         />
       )}
