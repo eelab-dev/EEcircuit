@@ -38,6 +38,8 @@ type SimulationEditorProps = {
   onSimulationConfigChange: (config: SimulationType) => void;
   onSwitchToSchematic?: () => void;
   toBePlotted?: ToBePlotted[];
+  onAllSimulationConfigsChange?: (configs: SimulationType[]) => void; // New prop to expose all configs
+  initialConfigs?: SimulationType[]; // New prop to restore saved configs
 };
 
 const SimulationEditor: React.FC<SimulationEditorProps> = ({
@@ -48,6 +50,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   onSimulationConfigChange,
   onSwitchToSchematic,
   toBePlotted = [],
+  onAllSimulationConfigsChange, // New prop to expose all configs
+  initialConfigs = [], // New prop to restore saved configs
 }) => {
   const [netListToSim, setNetListToSim] = useState(netList);
   const [simCommandString, setSimCommandString] = useState("");
@@ -55,8 +59,16 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   // State to preserve all simulation configurations as an array
   // This allows users to manage multiple named simulation configurations
   const [simulationConfigs, setSimulationConfigs] = useState<SimulationType[]>(
-    []
+    initialConfigs // Initialize with saved configs from parent
   );
+
+  // Effect to restore configs from parent when initialConfigs changes
+  // This handles the case where configs are loaded from a saved file
+  useEffect(() => {
+    if (initialConfigs.length > 0) {
+      setSimulationConfigs(initialConfigs);
+    }
+  }, [initialConfigs]);
 
   // State to track the currently selected configuration index
   const [selectedConfigIndex, setSelectedConfigIndex] = useState<number>(-1);
@@ -80,6 +92,24 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       setPendingConfigUpdate(null);
     }
   }, [pendingConfigUpdate, onSimulationConfigChange]);
+
+  // Effect to notify parent component of all simulation configs changes
+  // This allows the parent to save all configs when user triggers save action
+  // IMPORTANT: Always send current configs on mount to ensure parent has latest state
+  useEffect(() => {
+    if (onAllSimulationConfigsChange) {
+      onAllSimulationConfigsChange(simulationConfigs);
+    }
+  }, [simulationConfigs, onAllSimulationConfigsChange]);
+
+  // Additional effect to ensure parent gets configs immediately on mount
+  // This handles the case where the parent state was reset but SimulationEditor has configs
+  useEffect(() => {
+    if (onAllSimulationConfigsChange) {
+      // Always send configs, even if empty, to ensure parent state is synchronized
+      onAllSimulationConfigsChange(simulationConfigs);
+    }
+  }, [onAllSimulationConfigsChange]); // Only run when callback changes (mount/unmount)
 
   // Use a ref to track the last config we sent to parent to prevent circular updates
   const lastSentConfigRef = useRef<SimulationType | null>(null);
@@ -205,7 +235,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
       setSelectedConfigIndex(prev.length); // Will be the index of the new config
       setPendingConfigUpdate(newConfig); // Schedule update to parent component
-      return [...prev, newConfig];
+      const newConfigs = [...prev, newConfig];
+      return newConfigs;
     });
 
     setIsAddingConfig(false);
@@ -295,7 +326,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                 generateDefaultConfigName(simulationConfig.type, prev),
             };
             setSelectedConfigIndex(prev.length);
-            return [...prev, configWithName];
+            const newConfigs = [...prev, configWithName];
+            return newConfigs;
           } else {
             // Select existing config
             setSelectedConfigIndex(existingConfigIndex);
@@ -354,7 +386,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   const handleStringConfigChange = React.useCallback((configString: string) => {
     // Store the generated SPICE command from config components
     setSimCommandString(configString);
-    console.log("SPICE command generated:", configString);
   }, []);
 
   // Handler for receiving the full configuration object from config components
@@ -367,6 +398,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
       // Only save valid configurations to our local array (non-empty forms)
       const configIsValid = isConfigValid(config);
+
       if (!configIsValid) {
         return; // Don't save invalid configs to the array
       }
@@ -375,22 +407,26 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       if (selectedConfigIndex >= 0) {
         // Update existing config at the selected index
         setSimulationConfigs((prev) => {
-          if (selectedConfigIndex >= prev.length) return prev;
+          if (selectedConfigIndex >= prev.length) {
+            return prev;
+          }
 
-          return prev.map((item, index) => {
+          const updated = prev.map((item, index) => {
             if (index === selectedConfigIndex) {
               if (config.type !== "None" && "name" in config) {
-                return {
+                const updatedConfig = {
                   ...config,
                   name:
                     config.name ||
                     (item.type !== "None" && "name" in item ? item.name : ""),
                 };
+                return updatedConfig;
               }
               return config;
             }
             return item;
           });
+          return updated;
         });
       } else if (config.type !== "None") {
         // Create new config if none is selected and config is valid
@@ -419,9 +455,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     sim.setNetList(netListToSim);
 
     const result = await sim.runSim();
-
-    console.log(sim.getInfo());
-    console.log("Simulation Result:", result);
 
     if (result) {
       // Check if the result has valid data and variables

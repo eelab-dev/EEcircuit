@@ -13,6 +13,7 @@
 
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import * as eeSch from "eecircuit-schematic";
+import { Schematic as SchematicType } from "eecircuit-schematic";
 import { Box, Flex, Float, IconButton, Button } from "@chakra-ui/react";
 import { ArrowBigRight, Expand, SquareX } from "lucide-react";
 import debounce from "lodash.debounce";
@@ -23,17 +24,13 @@ import Status from "./status";
 import { Tooltip } from "../components/ui/tooltip";
 import { useColorModeValue } from "../components/ui/color-mode";
 import ExportImageDialog from "./ExportImageDialog";
-import {
-  EEcircuitFile,
-  SimulationType,
-  ToBePlotted,
-} from "src/types/commonTypes";
+import { ToBePlotted } from "src/types/commonTypes";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
   shouldFitToScreen?: boolean;
   onCanvasResized?: () => void;
-  getSimulationConfig?: () => SimulationType | undefined;
+  onSchematicDataChange?: (schematicData: SchematicType) => void;
   isPlotSelectionMode?: boolean;
   onPlotItemSelected?: (item: ToBePlotted) => void;
   onExitPlotSelectionMode?: () => void;
@@ -44,7 +41,7 @@ const Schematic: React.FC<SchematicProps> = ({
   onNetlistExported,
   shouldFitToScreen,
   onCanvasResized,
-  getSimulationConfig,
+  onSchematicDataChange,
   isPlotSelectionMode = false,
   onPlotItemSelected,
   onExitPlotSelectionMode,
@@ -93,11 +90,20 @@ const Schematic: React.FC<SchematicProps> = ({
   // Use refs to access current values in msgCallback without causing re-renders
   const isPlotSelectionModeRef = useRef(isPlotSelectionMode);
   const onPlotItemSelectedRef = useRef(onPlotItemSelected);
+  const onSchematicDataChangeRef = useRef(onSchematicDataChange);
 
   // Update refs when props change
   useEffect(() => {
     isPlotSelectionModeRef.current = isPlotSelectionMode;
   }, [isPlotSelectionMode]);
+
+  useEffect(() => {
+    onPlotItemSelectedRef.current = onPlotItemSelected;
+  }, [onPlotItemSelected]);
+
+  useEffect(() => {
+    onSchematicDataChangeRef.current = onSchematicDataChange;
+  }, [onSchematicDataChange]);
 
   useEffect(() => {
     onPlotItemSelectedRef.current = onPlotItemSelected;
@@ -196,66 +202,20 @@ const Schematic: React.FC<SchematicProps> = ({
           setSvgContent(msg.svg);
           setLoadingSvg(false);
           break;
-        case "savedSchematic": {
-          console.log("received schematic data", msg.schematic);
-
-          // Get current simulation configuration
-          const currentSimConfig = getSimulationConfig
-            ? getSimulationConfig()
-            : undefined;
-          console.log(
-            "Current simulation config for saving:",
-            currentSimConfig
-          );
-
-          // Handle the saved schematic data here
-          const eeCirFile: EEcircuitFile = {
-            schema: "EEcircuitV1",
-            title: "EEcircuit",
-            description: "EEcircuit Schematic",
-            date: new Date().toISOString(),
-            schematic: msg.schematic as eeSch.Schematic,
-            // Include simulation configurations if they exist
-            simulations:
-              currentSimConfig && currentSimConfig.type !== "None"
-                ? [currentSimConfig]
-                : undefined,
-          };
-
-          console.log("Complete EEcircuit file for saving:", eeCirFile);
-          // Add this code inside the 'savedSchematic' case in the msgCallback function
-
-          // Create blob from file data
-          const fileContent = JSON.stringify(eeCirFile, null, 2);
-          console.log("JSON file content length:", fileContent.length);
-          console.log(
-            "JSON file content preview:",
-            fileContent.substring(0, 500) + "..."
-          );
-          const blob = new Blob([fileContent], { type: "application/json" });
-
-          // Create download link
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = "EEcircuit-" + new Date().toISOString() + ".json";
-
-          // Trigger download
-          document.body.appendChild(link);
-          link.click();
-
-          // Cleanup
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
+        case "savedSchematic":
+          // Call the callback to uplift schematic data to parent
+          if (onSchematicDataChangeRef.current) {
+            onSchematicDataChangeRef.current(msg.schematic);
+          }
           break;
-        }
       }
     },
     [
       onNetlistExported,
-      getSimulationConfig,
+      // Note: Save functionality moved to EEcircuit component - no simulation config dependencies needed
       // Removed isPlotSelectionMode and onPlotItemSelected to prevent callback recreation
       // These are now accessed via refs to maintain stable callback reference
+      // Also removed onSchematicDataChange to use ref for stability
     ]
   );
 

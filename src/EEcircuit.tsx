@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useRef } from "react";
 
 //const EditorCustom = React.lazy(() => import("./editor/editorCustom.tsx"));
 //const PlotArray = React.lazy(() => import("./plotArray.tsx"));
@@ -16,13 +16,13 @@ import { TabsValueChangeDetails } from "node_modules/@chakra-ui/react/dist/types
 import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
 import { ResultType } from "eecircuit-engine";
-import { sendCommand } from "eecircuit-schematic";
+import { sendCommand, Schematic as SchematicType } from "eecircuit-schematic";
 import {
   EEcircuitFile,
   SimulationType,
   ToBePlotted,
 } from "./types/commonTypes.ts";
-import { Mouse, Touchpad } from "lucide-react";
+import { Mouse, Touchpad, Download } from "lucide-react";
 
 type TabsValue = "schematic" | "simulate" | "plot";
 
@@ -48,24 +48,49 @@ const EEcircuit: React.FC = () => {
     SimulationType | undefined
   >(undefined);
 
+  // State to store all simulation configurations from SimulationEditor
+  // This allows saving all configs when user triggers save action
+  const [allSimulationConfigs, setAllSimulationConfigs] = useState<
+    SimulationType[]
+  >([]);
+
+  // Ref to store current schematic data for saving (using ref to avoid closure issues)
+  const currentSchematicRef = useRef<SchematicType | undefined>(undefined);
+  // Ref to store promise resolver for schematic save operations
+  const schematicSaveResolverRef = useRef<
+    ((data: SchematicType) => void) | null
+  >(null);
+
+  // Handler for schematic data changes
+  const handleSchematicDataChange = React.useCallback(
+    (schematicData: SchematicType) => {
+      currentSchematicRef.current = schematicData; // Store in ref for immediate access
+
+      // If there's a pending save operation, resolve it with the new data
+      if (schematicSaveResolverRef.current) {
+        schematicSaveResolverRef.current(schematicData);
+        schematicSaveResolverRef.current = null; // Clear the resolver
+      }
+    },
+    []
+  );
+
   // Handler for simulation configuration changes
   const handleSimulationConfigChange = React.useCallback(
     (config: SimulationType) => {
-      console.log("Simulation config change:", config);
       setSelectedSimType(config.type);
       setSimulationConfig(config);
     },
     []
   );
 
-  // Callback to get current simulation config for saving
-  const getCurrentSimulationConfig = React.useCallback(() => {
-    console.log(
-      "Getting current simulation config for saving:",
-      simulationConfig
-    );
-    return simulationConfig;
-  }, [simulationConfig]);
+  // Handler for all simulation configs changes from SimulationEditor
+  const handleAllSimulationConfigsChange = React.useCallback(
+    (configs: SimulationType[]) => {
+      setAllSimulationConfigs(configs);
+    },
+    []
+  );
 
   // Tab enablement states
   const [isSimulateTabEnabled, setIsSimulateTabEnabled] = React.useState(false);
@@ -155,20 +180,11 @@ const EEcircuit: React.FC = () => {
         if (!hasViewedSchematic || hasResizedSinceSchematicView) {
           // Small delay to ensure tab content is visible and canvas is ready
           setTimeout(() => {
-            console.log(
-              "Setting fit-to-screen for initial app initialization or window resize"
-            );
             setShouldFitToScreen(true);
             setHasViewedSchematic(true);
             // Note: hasResizedSinceSchematicView will be reset by the onCanvasResized callback
             // when the canvas is actually resized, not immediately here
           }, 100);
-        } else {
-          // For regular tab switches, do NOT use fit-to-screen
-          // The schematic component has its own view restoration logic that preserves user's zoom/pan
-          console.log(
-            "Regular tab switch to schematic - relying on schematic component's view restoration"
-          );
         }
       } else {
         // Reset fit to screen flag when leaving schematic tab
@@ -253,10 +269,6 @@ const EEcircuit: React.FC = () => {
             command: "loadSchematic",
             schematic: parsedContent.schematic,
           });
-          console.log(
-            "Schematic loaded successfully from dropped file:",
-            file.name
-          );
         }
 
         // Restore simulation configurations if they exist
@@ -266,7 +278,6 @@ const EEcircuit: React.FC = () => {
           const firstSimConfig = parsedContent.simulations[0];
           setSelectedSimType(firstSimConfig.type);
           setSimulationConfig(firstSimConfig);
-          console.log("Simulation configuration restored:", firstSimConfig);
         } else {
           // Reset simulation config if no simulation data in file
           setSimulationConfig(undefined);
@@ -335,8 +346,6 @@ const EEcircuit: React.FC = () => {
       command: "setInputProfile",
       profile: newProfile,
     });
-
-    console.log("Input profile changed to:", newProfile);
   }, [inputProfile]);
 
   // Handler for switching to schematic for plot selection
@@ -366,6 +375,86 @@ const EEcircuit: React.FC = () => {
     setIsPlotSelectionMode(false);
     setTabValue("simulate");
   }, []);
+
+  // Helper function to wait for schematic export completion
+  const waitForSchematicExport =
+    React.useCallback((): Promise<SchematicType> => {
+      return new Promise((resolve, reject) => {
+        // Set up a timeout as a fallback (much shorter than before)
+        const timeout = setTimeout(() => {
+          schematicSaveResolverRef.current = null;
+          reject(new Error("Schematic export timeout - no response received"));
+        }, 5000); // 5 second fallback timeout
+
+        // Store the resolver to be called when schematic data is received
+        schematicSaveResolverRef.current = (data: SchematicType) => {
+          clearTimeout(timeout);
+          resolve(data);
+        };
+      });
+    }, []);
+
+  // Handler for saving the EEcircuit file
+  const handleSaveFile = React.useCallback(async () => {
+    try {
+      // Switch to schematic tab if not already there to ensure canvas is active
+      if (tabValue !== "schematic") {
+        setTabValue("schematic");
+        // Wait for tab switch to complete
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      // Trigger schematic export and wait for the response
+      sendCommand({
+        command: "export",
+        exportType: "schematic",
+      });
+
+      // Wait for schematic data using promise-based approach (no fixed timeout!)
+      const latestSchematicData = await waitForSchematicExport();
+
+      const validSimConfigs = allSimulationConfigs.filter(
+        (config) => config.type !== "None"
+      );
+
+      const eeCirFile: EEcircuitFile = {
+        schema: "EEcircuitV1",
+        title: "EEcircuit",
+        description: "EEcircuit Schematic",
+        date: new Date().toISOString(),
+        schematic: latestSchematicData,
+        simulations: validSimConfigs.length > 0 ? validSimConfigs : undefined,
+      };
+
+      const fileContent = JSON.stringify(eeCirFile, null, 2);
+      const blob = new Blob([fileContent], { type: "application/json" });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "EEcircuit-" + new Date().toISOString() + ".json";
+
+      document.body.appendChild(link);
+      link.click();
+
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      const schematicInfo = latestSchematicData ? "schematic and " : "";
+      if (validSimConfigs.length > 0 || latestSchematicData) {
+        alert(
+          `Successfully saved ${schematicInfo}${validSimConfigs.length} simulation configuration(s)!`
+        );
+      } else {
+        alert(
+          "No schematic or simulation configurations to save. Create a schematic or configs first."
+        );
+      }
+    } catch (error) {
+      console.error("Failed to save file:", error);
+      alert("Failed to save file. Please try again.");
+    }
+  }, [allSimulationConfigs, tabValue, waitForSchematicExport]); // Added waitForSchematicExport
 
   return (
     <Box
@@ -452,25 +541,44 @@ const EEcircuit: React.FC = () => {
               </Tabs.Trigger>
             </Flex>
 
-            {/* Input Profile Toggle Button */}
-            <Tooltip
-              showArrow
-              content={`Switch to ${inputProfile === "mouse" ? "trackpad" : "mouse"} input profile`}
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label={`Switch to ${inputProfile === "mouse" ? "trackpad" : "mouse"} input profile`}
-                size="sm"
-                variant="ghost"
-                onClick={handleInputProfileToggle}
+            {/* Save button and Input Profile Toggle Button */}
+            <Flex alignItems="center" gap={2}>
+              {/* Save File Button */}
+              <Tooltip
+                showArrow
+                content="Save complete EEcircuit file with schematic and simulation configurations"
+                positioning={{ placement: "bottom" }}
               >
-                {inputProfile === "mouse" ? (
-                  <Mouse size={16} />
-                ) : (
-                  <Touchpad size={16} />
-                )}
-              </IconButton>
-            </Tooltip>
+                <IconButton
+                  aria-label="Save EEcircuit file"
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleSaveFile}
+                >
+                  <Download size={16} />
+                </IconButton>
+              </Tooltip>
+
+              {/* Input Profile Toggle Button */}
+              <Tooltip
+                showArrow
+                content={`Switch to ${inputProfile === "mouse" ? "trackpad" : "mouse"} input profile`}
+                positioning={{ placement: "bottom" }}
+              >
+                <IconButton
+                  aria-label={`Switch to ${inputProfile === "mouse" ? "trackpad" : "mouse"} input profile`}
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleInputProfileToggle}
+                >
+                  {inputProfile === "mouse" ? (
+                    <Mouse size={16} />
+                  ) : (
+                    <Touchpad size={16} />
+                  )}
+                </IconButton>
+              </Tooltip>
+            </Flex>
           </Flex>
         </Tabs.List>
 
@@ -479,7 +587,7 @@ const EEcircuit: React.FC = () => {
             onNetlistExported={exportedNetlist}
             shouldFitToScreen={shouldFitToScreen}
             onCanvasResized={handleCanvasResized}
-            getSimulationConfig={getCurrentSimulationConfig}
+            onSchematicDataChange={handleSchematicDataChange}
             isPlotSelectionMode={isPlotSelectionMode}
             onPlotItemSelected={handlePlotItemSelected}
             onExitPlotSelectionMode={handleExitPlotSelectionMode}
@@ -496,6 +604,8 @@ const EEcircuit: React.FC = () => {
             onSimulationConfigChange={handleSimulationConfigChange}
             onSwitchToSchematic={handleSwitchToSchematicForPlotSelection}
             toBePlotted={toBePlotted}
+            onAllSimulationConfigsChange={handleAllSimulationConfigsChange}
+            initialConfigs={allSimulationConfigs}
           />
         </Tabs.Content>
 
