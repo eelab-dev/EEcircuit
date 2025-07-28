@@ -9,6 +9,7 @@ import {
   IconButton,
   HStack,
   Input,
+  Menu,
 } from "@chakra-ui/react";
 import React, { Suspense, useEffect, useState, useRef } from "react";
 import EditorCustom from "../editor/editorCustom";
@@ -18,6 +19,7 @@ import DcConfig from "./simConfigs/dc";
 import AcConfig from "./simConfigs/ac";
 import TransConfig from "./simConfigs/tran";
 import { toaster } from "../components/ui/toaster";
+import { X } from "lucide-react";
 import {
   SimulationType,
   ToBePlotted,
@@ -53,7 +55,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     setAllSimulationConfigs,
   } = useSimulationState();
 
-  const { toBePlotted } = usePlotSelectionState();
+  const { toBePlotted, removeToBePlotted } = usePlotSelectionState();
 
   // Import handleNewResults from the main app store for handling simulation results
   const { handleNewResults } = useAppStore();
@@ -479,7 +481,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     >
       {/* Editor on the left */}
       <Flex flex="1" flexDirection="column" height="100%" overflow="hidden">
-        {/* To Be Plotted button */}
         <Flex
           padding="2"
           borderBottom="1px solid"
@@ -488,33 +489,65 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
           alignItems="center"
           gap="2"
         >
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              onSwitchToSchematic?.();
-            }}
-          >
-            To Be Plotted
-          </Button>
-          {/* Display current selected items */}
-          {toBePlotted.length > 0 && (
-            <span style={{ fontSize: "0.8rem", color: "gray" }}>
-              ({toBePlotted.length} selected)
-            </span>
-          )}
-          {/* Show detailed list of selected items */}
-          {toBePlotted.length > 0 && (
-            <div
-              style={{ fontSize: "0.75rem", color: "gray", marginLeft: "10px" }}
+          {/* "To Be Plotted" button with dropdown if items exist */}
+          {toBePlotted.length > 0 ? (
+            <Menu.Root>
+              <Menu.Trigger asChild>
+                <Button size="sm" variant="outline">
+                  To Be Plotted ({toBePlotted.length})
+                </Button>
+              </Menu.Trigger>
+              <Menu.Positioner>
+                <Menu.Content>
+                  {toBePlotted.map((item, index) => (
+                    <Menu.Item key={index} value={`${item.type}-${item.name}`}>
+                      <Flex
+                        justifyContent="space-between"
+                        alignItems="center"
+                        width="100%"
+                      >
+                        <span>
+                          {item.type}({item.name})
+                        </span>
+                        <IconButton
+                          size="xs"
+                          variant="ghost"
+                          colorScheme="red"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Remove the item from the toBePlotted list
+                            removeToBePlotted(item);
+                          }}
+                          aria-label={`Remove ${item.type}(${item.name})`}
+                        >
+                          <X size={12} />
+                        </IconButton>
+                      </Flex>
+                    </Menu.Item>
+                  ))}
+                  <Menu.Separator />
+                  <Menu.Item
+                    value="add-more"
+                    onClick={() => {
+                      onSwitchToSchematic?.();
+                    }}
+                  >
+                    Add More...
+                  </Menu.Item>
+                </Menu.Content>
+              </Menu.Positioner>
+            </Menu.Root>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                onSwitchToSchematic?.();
+              }}
             >
-              {toBePlotted.map((item, index) => (
-                <span key={index}>
-                  {item.type}({item.name})
-                  {index < toBePlotted.length - 1 ? ", " : ""}
-                </span>
-              ))}
-            </div>
+              To Be Plotted
+            </Button>
           )}
         </Flex>
 
