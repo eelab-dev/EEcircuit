@@ -9,7 +9,6 @@ import {
   Cable,
   CircleDot,
   Eraser,
-  FileDown,
   Fullscreen,
   Hand,
   ImageDown,
@@ -22,13 +21,11 @@ import { AvailableComponent, sendCommand } from "eecircuit-schematic";
 type ActionsProps = {
   availableComponents: AvailableComponent[];
   onExportImage: () => void;
-  onSaveSchematic: () => void;
 };
 
 const Actions: React.FC<ActionsProps> = ({
   availableComponents,
   onExportImage,
-  onSaveSchematic,
 }) => {
   const [isCompact, setIsCompact] = React.useState(false);
   const [showClearDialog, setShowClearDialog] = React.useState(false);
@@ -131,15 +128,6 @@ const Actions: React.FC<ActionsProps> = ({
       <Tooltip content="Export Image" showArrow openDelay={300}>
         <IconButton onClick={onExportImage}>
           <ImageDown />
-        </IconButton>
-      </Tooltip>
-      <Tooltip content="Export File" showArrow openDelay={300}>
-        <IconButton
-          onClick={() => {
-            onSaveSchematic();
-          }}
-        >
-          <FileDown />
         </IconButton>
       </Tooltip>
 

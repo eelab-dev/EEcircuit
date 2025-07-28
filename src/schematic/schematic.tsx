@@ -622,12 +622,6 @@ const Schematic: React.FC<SchematicProps> = ({
             <Actions
               availableComponents={availableComponents}
               onExportImage={handleExportImage}
-              onSaveSchematic={() => {
-                eeSch.sendCommand({
-                  command: "export",
-                  exportType: "schematic",
-                });
-              }}
             />
           }
         </Float>
