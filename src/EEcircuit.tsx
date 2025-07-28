@@ -498,7 +498,7 @@ const EEcircuit: React.FC = () => {
               useAppStore.getState().setSimulationConfig
             }
             onSwitchToSchematic={enterPlotSelectionMode}
-            toBePlotted={useAppStore.getState().toBePlotted}
+            // toBePlotted is now managed via Zustand store inside SimulationEditor
           />
         </Tabs.Content>
 

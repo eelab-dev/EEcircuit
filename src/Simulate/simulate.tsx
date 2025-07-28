@@ -38,7 +38,6 @@ type SimulationEditorProps = {
   simulationConfig?: SimulationType;
   onSimulationConfigChange: (config: SimulationType) => void;
   onSwitchToSchematic?: () => void;
-  toBePlotted?: ToBePlotted[];
 };
 
 const SimulationEditor: React.FC<SimulationEditorProps> = ({
@@ -48,7 +47,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   simulationConfig: propSimulationConfig,
   onSimulationConfigChange,
   onSwitchToSchematic,
-  toBePlotted: propToBePlotted,
 }) => {
   // Get state and actions from Zustand store
   const {
@@ -60,12 +58,12 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     setAllSimulationConfigs,
   } = useSimulationState();
 
-  const { toBePlotted: storeToBePlotted } = usePlotSelectionState();
+  const { toBePlotted } = usePlotSelectionState(); // Using store value directly
 
   // Use store values with prop fallbacks for backward compatibility
   const selectedSimType = propSelectedSimType ?? storeSelectedSimType;
   const simulationConfig = propSimulationConfig ?? storeSimulationConfig;
-  const toBePlotted = propToBePlotted ?? storeToBePlotted;
+  // toBePlotted is now directly from store, no fallback needed
 
   // Local state for UI management
   const [netListToSim, setNetListToSim] = useState(netList);
