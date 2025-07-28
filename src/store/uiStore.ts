@@ -1,0 +1,42 @@
+import { StateCreator } from "zustand";
+
+// UI state and actions
+export interface UiState {
+  inputProfile: "mouse" | "trackpad";
+  dragBox: boolean;
+}
+
+export interface UiActions {
+  setInputProfile: (profile: "mouse" | "trackpad") => void;
+  setDragBox: (show: boolean) => void;
+  toggleInputProfile: () => void;
+}
+
+export type UiSlice = UiState & UiActions;
+
+export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
+  set,
+  get
+) => ({
+  // Initial state
+  inputProfile: "trackpad",
+  dragBox: false,
+
+  // Actions
+  setInputProfile: (profile) => set({ inputProfile: profile }),
+  setDragBox: (show) => set({ dragBox: show }),
+
+  toggleInputProfile: () => {
+    const currentProfile = get().inputProfile;
+    const newProfile = currentProfile === "mouse" ? "trackpad" : "mouse";
+    set({ inputProfile: newProfile });
+
+    // Send command to update input profile in schematic canvas
+    import("eecircuit-schematic").then(({ sendCommand }) => {
+      sendCommand({
+        command: "setInputProfile",
+        profile: newProfile,
+      });
+    });
+  },
+});

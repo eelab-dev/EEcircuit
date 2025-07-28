@@ -25,7 +25,7 @@ import { Tooltip } from "../components/ui/tooltip";
 import { useColorModeValue } from "../components/ui/color-mode";
 import ExportImageDialog from "./ExportImageDialog";
 import { ToBePlotted } from "src/types/commonTypes";
-import { useSchematicState, usePlotSelectionState } from "../store/appStore";
+import { useAppStore } from "../store/appStore";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
@@ -51,18 +51,22 @@ const Schematic: React.FC<SchematicProps> = ({
   toBePlotted: propToBePlotted,
 }) => {
   // Use Zustand store with fallback to props
-  const {
-    shouldFitToScreen: storeShouldFitToScreen,
-    setShouldFitToScreen,
-    setCurrentSchematic,
-  } = useSchematicState();
+  const storeShouldFitToScreen = useAppStore(
+    (state) => state.shouldFitToScreen
+  );
+  const setShouldFitToScreen = useAppStore(
+    (state) => state.setShouldFitToScreen
+  );
+  const setCurrentSchematic = useAppStore((state) => state.setCurrentSchematic);
 
-  const {
-    isPlotSelectionMode: storeIsPlotSelectionMode,
-    toBePlotted: storeToBePlotted,
-    addToBePlotted,
-    exitPlotSelectionMode,
-  } = usePlotSelectionState();
+  const storeIsPlotSelectionMode = useAppStore(
+    (state) => state.isPlotSelectionMode
+  );
+  const storeToBePlotted = useAppStore((state) => state.toBePlotted);
+  const addToBePlotted = useAppStore((state) => state.addToBePlotted);
+  const exitPlotSelectionMode = useAppStore(
+    (state) => state.exitPlotSelectionMode
+  );
 
   // Use store values with prop fallbacks
   const shouldFitToScreen = propShouldFitToScreen ?? storeShouldFitToScreen;

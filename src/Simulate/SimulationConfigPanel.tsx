@@ -21,7 +21,7 @@ import {
   SimulationAC,
   SimulationTransient,
 } from "../types/commonTypes";
-import { useSimulationState } from "../store/appStore";
+import { useAppStore } from "../store/appStore";
 
 // Define the simulation type options
 const simType: SimulationType["type"][] = ["None", "DC", "AC", "Transient"];
@@ -36,14 +36,16 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
   onFullConfigChange,
 }) => {
   // Get state and actions from Zustand store
-  const {
-    selectedSimType,
-    simulationConfig,
-    allSimulationConfigs,
-    setSelectedSimType,
-    setSimulationConfig,
-    setAllSimulationConfigs,
-  } = useSimulationState();
+  const selectedSimType = useAppStore((state) => state.selectedSimType);
+  const simulationConfig = useAppStore((state) => state.simulationConfig);
+  const allSimulationConfigs = useAppStore(
+    (state) => state.allSimulationConfigs
+  );
+  const setSelectedSimType = useAppStore((state) => state.setSelectedSimType);
+  const setSimulationConfig = useAppStore((state) => state.setSimulationConfig);
+  const setAllSimulationConfigs = useAppStore(
+    (state) => state.setAllSimulationConfigs
+  );
 
   // Local state for UI management
   const simulationConfigs = allSimulationConfigs;

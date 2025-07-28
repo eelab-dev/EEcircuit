@@ -4,7 +4,7 @@ import { Flex } from "@chakra-ui/react";
 import { useColorMode } from "../components/ui/color-mode";
 import PlotCanvas from "./plotCanvas";
 import PlotSidebar from "./plotSidebar";
-import { usePlotState } from "../store/appStore";
+import { useAppStore } from "../store/appStore";
 
 interface PlotProps {
   results?: ResultType[]; // Make optional since we can get it from store
@@ -12,13 +12,13 @@ interface PlotProps {
 
 const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   // Use Zustand store for plot state
-  const {
-    results: storeResults,
-    selectedVariables,
-    hoveredVariable,
-    setSelectedVariables,
-    setHoveredVariable,
-  } = usePlotState();
+  const storeResults = useAppStore((state) => state.results);
+  const selectedVariables = useAppStore((state) => state.selectedVariables);
+  const hoveredVariable = useAppStore((state) => state.hoveredVariable);
+  const setSelectedVariables = useAppStore(
+    (state) => state.setSelectedVariables
+  );
+  const setHoveredVariable = useAppStore((state) => state.setHoveredVariable);
 
   // Use results from props if provided, otherwise from store
   const results = propsResults || storeResults;

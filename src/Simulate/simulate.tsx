@@ -6,11 +6,7 @@ import { Skeleton } from "@chakra-ui/react";
 import { toaster } from "../components/ui/toaster";
 import { X } from "lucide-react";
 import { SimulationType, ToBePlotted } from "../types/commonTypes";
-import {
-  useSimulationState,
-  usePlotSelectionState,
-  useAppStore,
-} from "../store/appStore";
+import { useAppStore } from "../store/appStore";
 import SimulationConfigPanel from "./SimulationConfigPanel";
 
 type SimulationEditorProps = {
@@ -23,12 +19,12 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   onSwitchToSchematic,
 }) => {
   // Get state and actions from Zustand store
-  const { selectedSimType } = useSimulationState();
-
-  const { toBePlotted, removeToBePlotted } = usePlotSelectionState();
+  const selectedSimType = useAppStore((state) => state.selectedSimType);
+  const toBePlotted = useAppStore((state) => state.toBePlotted);
+  const removeToBePlotted = useAppStore((state) => state.removeToBePlotted);
 
   // Import handleNewResults from the main app store for handling simulation results
-  const { handleNewResults } = useAppStore();
+  const handleNewResults = useAppStore((state) => state.handleNewResults);
 
   // Local state for UI management
   const [netListToSim, setNetListToSim] = useState(netList);
