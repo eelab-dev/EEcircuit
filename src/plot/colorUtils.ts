@@ -55,6 +55,11 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
  * Generate a deterministic hash from a string
  */
 function stringToHash(str: string): number {
+  // Add defensive check for undefined/null strings
+  if (!str || typeof str !== "string") {
+    return 0; // Return default hash for invalid input
+  }
+
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -121,6 +126,12 @@ export function generatePlotColor(
   colorMode: ColorMode,
   colorCache: Map<string, PlotColor>
 ): PlotColor {
+  // Add defensive check for invalid variable names
+  if (!variableName || typeof variableName !== "string") {
+    // Return a default gray color as fallback [R, G, B, A]
+    return [128, 128, 128, 1.0];
+  }
+
   // Check if color is already cached
   const cacheKey = `${variableName}-${colorMode}`;
   if (colorCache.has(cacheKey)) {

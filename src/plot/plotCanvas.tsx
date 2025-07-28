@@ -198,7 +198,14 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       const variableNames = results[0].variableNames.slice(1); // Exclude X-axis
 
       lineDataRef.current.forEach((lineData, index) => {
+        // Add bounds checking to prevent accessing undefined variable names
         const variableName = variableNames[index];
+
+        // Skip processing if variableName is undefined (out of bounds)
+        if (!variableName) {
+          return; // Skip this iteration
+        }
+
         const isSelected = selectedVariables.includes(variableName);
 
         if (!isSelected || !lineData.enabled) return;
@@ -337,7 +344,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     // Calculate X-axis bounds once (same for all lines)
     const firstVisibleLineIndex = lineDataRef.current.findIndex((_, index) => {
       const variableName = variableNames[index];
-      return selectedVariables.includes(variableName);
+      // Add bounds check before checking selectedVariables
+      return variableName && selectedVariables.includes(variableName);
     });
 
     if (firstVisibleLineIndex !== -1) {
@@ -352,6 +360,12 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     // Calculate Y-axis bounds for all visible lines
     lineDataRef.current.forEach((lineData, index) => {
       const variableName = variableNames[index];
+
+      // Add bounds check before checking selectedVariables
+      if (!variableName) {
+        return; // Skip this iteration
+      }
+
       const isSelected = selectedVariables.includes(variableName);
 
       if (isSelected) {
@@ -427,7 +441,14 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     const variableNames = results[0].variableNames.slice(1); // Exclude X-axis
 
     lineDataRef.current.forEach((lineData, index) => {
+      // Add bounds checking to prevent accessing undefined variable names
       const variableName = variableNames[index];
+
+      // Skip processing if variableName is undefined (out of bounds)
+      if (!variableName) {
+        return; // Skip this iteration
+      }
+
       const isSelected = selectedVariables.includes(variableName);
       const isHovered = hoveredVariable === variableName;
 
@@ -533,6 +554,11 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
       for (let lineIndex = 1; lineIndex < numVariables; lineIndex++) {
         const variableName = results[0].variableNames[lineIndex];
+
+        // Add bounds check for variableName
+        if (!variableName) {
+          continue; // Skip this line
+        }
 
         // Fill array with x,y data
         for (let i = 0; i < numX; i++) {
