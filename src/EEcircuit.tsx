@@ -42,8 +42,6 @@ const EEcircuit: React.FC = () => {
     toggleInputProfile,
     exportNetlist,
     enterPlotSelectionMode,
-    exitPlotSelectionMode,
-    addToBePlotted,
     setCurrentSchematic,
     allSimulationConfigs,
   } = useAppStore();
@@ -477,13 +475,8 @@ const EEcircuit: React.FC = () => {
         <Tabs.Content value="schematic" flex={1} minHeight={0}>
           <Schematic
             onNetlistExported={exportedNetlist}
-            shouldFitToScreen={shouldFitToScreen}
             onCanvasResized={handleCanvasResized}
             onSchematicDataChange={handleSchematicDataChange}
-            isPlotSelectionMode={useAppStore.getState().isPlotSelectionMode}
-            onPlotItemSelected={addToBePlotted}
-            onExitPlotSelectionMode={exitPlotSelectionMode}
-            toBePlotted={useAppStore.getState().toBePlotted}
           />
         </Tabs.Content>
 

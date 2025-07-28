@@ -29,55 +29,30 @@ import { useAppStore } from "../store/appStore";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
-  // These props are now optional since we can get them from Zustand
-  shouldFitToScreen?: boolean;
+  // Only props that are NOT available in the store
   onCanvasResized?: () => void;
   onSchematicDataChange?: (schematicData: SchematicType) => void;
-  isPlotSelectionMode?: boolean;
-  onPlotItemSelected?: (item: ToBePlotted) => void;
-  onExitPlotSelectionMode?: () => void;
-  toBePlotted?: ToBePlotted[];
 };
 
 const Schematic: React.FC<SchematicProps> = ({
   onNetlistExported,
-  // Get state from Zustand store with fallback to props for backward compatibility
-  shouldFitToScreen: propShouldFitToScreen,
   onCanvasResized,
   onSchematicDataChange,
-  isPlotSelectionMode: propIsPlotSelectionMode,
-  onPlotItemSelected,
-  onExitPlotSelectionMode,
-  toBePlotted: propToBePlotted,
 }) => {
-  // Use Zustand store with fallback to props
-  const storeShouldFitToScreen = useAppStore(
-    (state) => state.shouldFitToScreen
-  );
-  const setShouldFitToScreen = useAppStore(
-    (state) => state.setShouldFitToScreen
-  );
+  // Get state and actions directly from Zustand store - no prop fallbacks needed
+  const shouldFitToScreen = useAppStore((state) => state.shouldFitToScreen);
   const setCurrentSchematic = useAppStore((state) => state.setCurrentSchematic);
 
-  const storeIsPlotSelectionMode = useAppStore(
-    (state) => state.isPlotSelectionMode
-  );
-  const storeToBePlotted = useAppStore((state) => state.toBePlotted);
+  const isPlotSelectionMode = useAppStore((state) => state.isPlotSelectionMode);
+  const toBePlotted = useAppStore((state) => state.toBePlotted);
   const addToBePlotted = useAppStore((state) => state.addToBePlotted);
   const exitPlotSelectionMode = useAppStore(
     (state) => state.exitPlotSelectionMode
   );
 
-  // Use store values with prop fallbacks
-  const shouldFitToScreen = propShouldFitToScreen ?? storeShouldFitToScreen;
-  const isPlotSelectionMode =
-    propIsPlotSelectionMode ?? storeIsPlotSelectionMode;
-  const toBePlotted = propToBePlotted ?? storeToBePlotted;
-
-  // Use store actions with prop fallbacks
-  const handlePlotItemSelected = onPlotItemSelected ?? addToBePlotted;
-  const handleExitPlotSelectionMode =
-    onExitPlotSelectionMode ?? exitPlotSelectionMode;
+  // Use store actions directly
+  const handlePlotItemSelected = addToBePlotted;
+  const handleExitPlotSelectionMode = exitPlotSelectionMode;
 
   // Enhanced onSchematicDataChange to also update store
   const handleSchematicDataChange = React.useCallback(
@@ -129,25 +104,21 @@ const Schematic: React.FC<SchematicProps> = ({
 
   // Use refs to access current values in msgCallback without causing re-renders
   const isPlotSelectionModeRef = useRef(isPlotSelectionMode);
-  const onPlotItemSelectedRef = useRef(onPlotItemSelected);
-  const onSchematicDataChangeRef = useRef(onSchematicDataChange);
+  const handlePlotItemSelectedRef = useRef(handlePlotItemSelected);
+  const handleSchematicDataChangeRef = useRef(handleSchematicDataChange);
 
-  // Update refs when props change
+  // Update refs when values change
   useEffect(() => {
     isPlotSelectionModeRef.current = isPlotSelectionMode;
   }, [isPlotSelectionMode]);
 
   useEffect(() => {
-    onPlotItemSelectedRef.current = onPlotItemSelected;
-  }, [onPlotItemSelected]);
+    handlePlotItemSelectedRef.current = handlePlotItemSelected;
+  }, [handlePlotItemSelected]);
 
   useEffect(() => {
-    onSchematicDataChangeRef.current = onSchematicDataChange;
-  }, [onSchematicDataChange]);
-
-  useEffect(() => {
-    onPlotItemSelectedRef.current = onPlotItemSelected;
-  }, [onPlotItemSelected]);
+    handleSchematicDataChangeRef.current = handleSchematicDataChange;
+  }, [handleSchematicDataChange]);
 
   const msgCallback = useCallback(
     (msg: eeSch.MsgSchToApp) => {
@@ -165,7 +136,7 @@ const Schematic: React.FC<SchematicProps> = ({
             // Handle plot selection mode - use refs to get current values
             if (
               isPlotSelectionModeRef.current &&
-              onPlotItemSelectedRef.current
+              handlePlotItemSelectedRef.current
             ) {
               const item = msg.selectedItem;
 
@@ -177,7 +148,7 @@ const Schematic: React.FC<SchematicProps> = ({
                   type: "voltage",
                   name: netName,
                 };
-                onPlotItemSelectedRef.current(plotItem);
+                handlePlotItemSelectedRef.current(plotItem);
               } else if (item.type === "instance") {
                 // Instance selection - current measurement
                 const instanceName = item.name || item.typeName || "unknown";
@@ -185,7 +156,7 @@ const Schematic: React.FC<SchematicProps> = ({
                   type: "current",
                   name: instanceName,
                 };
-                onPlotItemSelectedRef.current(plotItem);
+                handlePlotItemSelectedRef.current(plotItem);
               }
             }
           }
@@ -244,8 +215,8 @@ const Schematic: React.FC<SchematicProps> = ({
           break;
         case "savedSchematic":
           // Call the callback to uplift schematic data to parent
-          if (onSchematicDataChangeRef.current) {
-            onSchematicDataChangeRef.current(msg.schematic);
+          if (handleSchematicDataChangeRef.current) {
+            handleSchematicDataChangeRef.current(msg.schematic);
           }
           break;
       }
@@ -253,8 +224,8 @@ const Schematic: React.FC<SchematicProps> = ({
     [
       onNetlistExported,
       // Note: Save functionality moved to EEcircuit component - no simulation config dependencies needed
-      // Removed isPlotSelectionMode and onPlotItemSelected to prevent callback recreation
-      // These are now accessed via refs to maintain stable callback reference
+      // Removed direct prop dependencies to prevent callback recreation
+      // Store-prioritized values are now accessed via refs for stability
       // Also removed onSchematicDataChange to use ref for stability
     ]
   );
@@ -389,7 +360,7 @@ const Schematic: React.FC<SchematicProps> = ({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onExitPlotSelectionMode?.();
+        handleExitPlotSelectionMode?.();
       }
     };
 
@@ -397,7 +368,7 @@ const Schematic: React.FC<SchematicProps> = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isPlotSelectionMode, onExitPlotSelectionMode]);
+  }, [isPlotSelectionMode, handleExitPlotSelectionMode]);
 
   // Initialize the canvas and set up the message callback
   useEffect(() => {
