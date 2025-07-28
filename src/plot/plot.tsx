@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { ResultType } from "eecircuit-engine";
 import { Flex } from "@chakra-ui/react";
 import { useColorMode } from "../components/ui/color-mode";
@@ -25,13 +25,8 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
 
   const { colorMode } = useColorMode();
 
-  // Initialize with all variables selected by default
-  useEffect(() => {
-    if (results.length > 0 && results[0].variableNames) {
-      // Skip the first variable (usually time) and select all others by default
-      setSelectedVariables(results[0].variableNames.slice(1));
-    }
-  }, [results, setSelectedVariables]);
+  // Variable selection is now handled in the store's handleNewResults function
+  // This ensures persistence across simulation runs while handling removed variables
 
   return (
     <Flex direction="row" w="100%" h="100%" gap={4} p={4} overflow="hidden">

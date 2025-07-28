@@ -220,12 +220,53 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
     }
 
     if (hasValidResults && hasDataPoints) {
+      const currentState = get();
+      const newVariableNames = newResults[0].variableNames.slice(1); // Skip first variable (usually time/x-axis)
+
+      // Determine which variables to select based on previous user selections
+      let variablesToSelect: string[];
+
+      if (currentState.selectedVariables.length === 0) {
+        // No previous selection - select all variables by default
+        variablesToSelect = newVariableNames;
+        console.log("No previous selection found, selecting all variables");
+      } else {
+        // Preserve previously selected variables that still exist in new results
+        variablesToSelect = currentState.selectedVariables.filter((variable) =>
+          newVariableNames.includes(variable)
+        );
+
+        // Log which variables were preserved vs removed
+        const removedVariables = currentState.selectedVariables.filter(
+          (variable) => !newVariableNames.includes(variable)
+        );
+
+        if (removedVariables.length > 0) {
+          console.log(
+            "Variables removed from selection (no longer in results):",
+            removedVariables
+          );
+        }
+
+        if (variablesToSelect.length > 0) {
+          console.log(
+            "Variables preserved from previous selection:",
+            variablesToSelect
+          );
+        } else {
+          // All previously selected variables are gone, select all new ones
+          variablesToSelect = newVariableNames;
+          console.log(
+            "All previous variables removed, selecting all new variables"
+          );
+        }
+      }
+
       set({
         results: newResults,
         isPlotTabEnabled: true,
         mainTabValue: "plot",
-        // Initialize with all variables selected by default (skip first variable which is usually time)
-        selectedVariables: newResults[0].variableNames.slice(1),
+        selectedVariables: variablesToSelect,
       });
     } else {
       console.warn(
