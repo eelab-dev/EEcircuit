@@ -121,8 +121,23 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
   // Function to handle config selection from dropdown
   const handleConfigSelection = (configIndex: number) => {
     if (configIndex >= 0 && configIndex < simulationConfigs.length) {
+      const selectedConfig = simulationConfigs[configIndex];
+
+      console.log(`Switching to config ${configIndex}:`, selectedConfig); // Debug logging
+
+      // Update local state first
       setSelectedConfigIndex(configIndex);
-      setSimulationConfig(simulationConfigs[configIndex]); // Use store action directly
+
+      // Update simulation type if it differs from current selection
+      if (selectedConfig.type !== selectedSimType) {
+        setSelectedSimType(selectedConfig.type);
+      }
+
+      // Update the current simulation config in store
+      setSimulationConfig(selectedConfig);
+
+      // Notify parent of the configuration change
+      onFullConfigChange(selectedConfig);
     }
   };
 
@@ -185,18 +200,62 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
 
   // Function to delete a config
   const deleteConfig = (configIndex: number) => {
+    console.log(`Deleting config at index ${configIndex}`); // Debug logging
+
     const newConfigs = simulationConfigs.filter(
       (_, index) => index !== configIndex
     );
     setAllSimulationConfigs(newConfigs);
 
-    if (selectedConfigIndex === configIndex) {
+    // Handle selection after deletion
+    if (newConfigs.length === 0) {
+      // No configs left - reset to None state
+      console.log("No configs remaining, resetting to None");
       setSelectedConfigIndex(-1);
-      setSimulationConfig({ type: "None" }); // Use store action directly
+      setSelectedSimType("None");
+      setSimulationConfig({ type: "None" });
+      onStringConfigChange(""); // Clear the simulation string
+      onFullConfigChange({ type: "None" });
+    } else if (selectedConfigIndex === configIndex) {
+      // We deleted the currently selected config - auto-select another
+      let newSelectedIndex: number;
+
+      if (configIndex > 0) {
+        // Select the previous config if available
+        newSelectedIndex = configIndex - 1;
+      } else {
+        // We deleted the first config, select what is now the first config
+        newSelectedIndex = 0;
+      }
+
+      const newSelectedConfig = newConfigs[newSelectedIndex];
+      console.log(
+        `Auto-selecting config at index ${newSelectedIndex}:`,
+        newSelectedConfig
+      );
+
+      // Update all related state
+      setSelectedConfigIndex(newSelectedIndex);
+      setSelectedSimType(newSelectedConfig.type);
+      setSimulationConfig(newSelectedConfig);
+      onFullConfigChange(newSelectedConfig);
     } else if (selectedConfigIndex > configIndex) {
       // Adjust selected index if we deleted a config before the selected one
-      setSelectedConfigIndex(selectedConfigIndex - 1);
+      const newSelectedIndex = selectedConfigIndex - 1;
+      console.log(
+        `Adjusting selected index from ${selectedConfigIndex} to ${newSelectedIndex}`
+      );
+      setSelectedConfigIndex(newSelectedIndex);
+
+      // The config itself hasn't changed, just the index, so we keep the same config
+      // But we should ensure the state is consistent
+      const currentSelectedConfig = newConfigs[newSelectedIndex];
+      if (currentSelectedConfig) {
+        setSimulationConfig(currentSelectedConfig);
+        onFullConfigChange(currentSelectedConfig);
+      }
     }
+    // If selectedConfigIndex < configIndex, no changes needed to selection
   };
 
   // Function to start editing a config name
@@ -445,6 +504,55 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
                           setIsAddingConfig(true);
                         } else if (value) {
                           handleConfigSelection(parseInt(value));
+                        } else {
+                          // User selected "Select Configuration" (empty value)
+                          // Clear current selection but keep the simulation type
+                          console.log("User deselected configuration");
+                          setSelectedConfigIndex(-1);
+
+                          // Create empty config for current sim type without saving it
+                          const defaultName = generateDefaultConfigName(
+                            selectedSimType,
+                            simulationConfigs
+                          );
+                          let emptyConfig: SimulationType;
+
+                          switch (selectedSimType) {
+                            case "DC":
+                              emptyConfig = {
+                                type: "DC",
+                                name: defaultName,
+                                source: "",
+                                start: "",
+                                stop: "",
+                                step: "",
+                              };
+                              break;
+                            case "AC":
+                              emptyConfig = {
+                                type: "AC",
+                                name: defaultName,
+                                source: "",
+                                frequencyStart: "",
+                                frequencyStop: "",
+                                stepNumber: "",
+                                sweepType: "dec",
+                              };
+                              break;
+                            case "Transient":
+                              emptyConfig = {
+                                type: "Transient",
+                                name: defaultName,
+                                stopTime: "",
+                                timeStep: "",
+                              };
+                              break;
+                            default:
+                              emptyConfig = { type: "None" };
+                          }
+
+                          setSimulationConfig(emptyConfig);
+                          onFullConfigChange(emptyConfig);
                         }
                       }}
                     >
@@ -638,6 +746,9 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
             </Group>
           </RadioCard.Root>
           {(() => {
+            const currentConfig = getCurrentConfig();
+            const configKey = `${selectedSimType}-${selectedConfigIndex}-${JSON.stringify(currentConfig)}`;
+
             switch (selectedSimType) {
               case "None":
                 return (
@@ -648,14 +759,12 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
               case "DC":
                 return (
                   <DcConfig
-                    key={`dc-${selectedConfigIndex}`} // Force re-render when config changes
+                    key={configKey} // Comprehensive key for proper re-rendering
                     onConfigChange={onStringConfigChange}
                     onFullConfigChange={handleFullConfigChange}
                     initialData={
-                      // Use currently selected config instead of simulationConfig
-                      // This ensures config switching between same type works properly
-                      getCurrentConfig()?.type === "DC"
-                        ? (getCurrentConfig() as SimulationDC)
+                      currentConfig?.type === "DC"
+                        ? (currentConfig as SimulationDC)
                         : undefined
                     }
                   />
@@ -663,14 +772,12 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
               case "AC":
                 return (
                   <AcConfig
-                    key={`ac-${selectedConfigIndex}`} // Force re-render when config changes
+                    key={configKey} // Comprehensive key for proper re-rendering
                     onConfigChange={onStringConfigChange}
                     onFullConfigChange={handleFullConfigChange}
                     initialData={
-                      // Use currently selected config instead of simulationConfig
-                      // This ensures config switching between same type works properly
-                      getCurrentConfig()?.type === "AC"
-                        ? (getCurrentConfig() as SimulationAC)
+                      currentConfig?.type === "AC"
+                        ? (currentConfig as SimulationAC)
                         : undefined
                     }
                   />
@@ -678,14 +785,12 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
               case "Transient":
                 return (
                   <TransConfig
-                    key={`transient-${selectedConfigIndex}`} // Force re-render when config changes
+                    key={configKey} // Comprehensive key for proper re-rendering
                     onConfigChange={onStringConfigChange}
                     onFullConfigChange={handleFullConfigChange}
                     initialData={
-                      // Use currently selected config instead of simulationConfig
-                      // This ensures config switching between same type works properly
-                      getCurrentConfig()?.type === "Transient"
-                        ? (getCurrentConfig() as SimulationTransient)
+                      currentConfig?.type === "Transient"
+                        ? (currentConfig as SimulationTransient)
                         : undefined
                     }
                   />

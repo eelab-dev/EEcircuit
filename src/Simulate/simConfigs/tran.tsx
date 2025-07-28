@@ -29,16 +29,27 @@ const TransConfig: React.FC<TransConfigProps> = ({
 
   // Update form data and name ref when initialData changes (when switching between configs)
   useEffect(() => {
+    console.log("Transient Config: initialData changed:", initialData); // Debug logging
+
+    isUpdatingFromExternalDataRef.current = true; // Set flag before updating
+
     if (initialData) {
-      isUpdatingFromExternalDataRef.current = true; // Set flag before updating
       setFormData({
         stopTime: initialData.stopTime || "",
         timeStep: initialData.timeStep || "",
         initialConditions: initialData.initialConditions || false,
       });
       nameRef.current = initialData.name;
-      // Flag will be reset in the next useEffect
+    } else {
+      // Clear form when no initial data (e.g., when switching from another config type)
+      setFormData({
+        stopTime: "",
+        timeStep: "",
+        initialConditions: false,
+      });
+      nameRef.current = undefined;
     }
+    // Flag will be reset in the next useEffect
   }, [initialData]);
 
   // Update combined string whenever form data changes

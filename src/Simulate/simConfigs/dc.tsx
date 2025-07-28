@@ -30,8 +30,11 @@ const DcConfig: React.FC<DcConfigProps> = ({
 
   // Update form data and name ref when initialData changes (when switching between configs)
   useEffect(() => {
+    console.log("DC Config: initialData changed:", initialData); // Debug logging
+
+    isUpdatingFromExternalDataRef.current = true; // Set flag before updating
+
     if (initialData) {
-      isUpdatingFromExternalDataRef.current = true; // Set flag before updating
       setFormData({
         source: initialData.source || "",
         start: initialData.start || "",
@@ -39,8 +42,17 @@ const DcConfig: React.FC<DcConfigProps> = ({
         step: initialData.step || "",
       });
       nameRef.current = initialData.name;
-      // Flag will be reset in the next useEffect
+    } else {
+      // Clear form when no initial data (e.g., when switching from another config type)
+      setFormData({
+        source: "",
+        start: "",
+        stop: "",
+        step: "",
+      });
+      nameRef.current = undefined;
     }
+    // Flag will be reset in the next useEffect
   }, [initialData]);
 
   // Update combined string whenever form data changes

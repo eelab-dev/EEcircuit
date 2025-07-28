@@ -39,8 +39,11 @@ const AcConfig: React.FC<AcConfigProps> = ({
 
   // Update form data and name ref when initialData changes (when switching between configs)
   useEffect(() => {
+    console.log("AC Config: initialData changed:", initialData); // Debug logging
+
+    isUpdatingFromExternalDataRef.current = true; // Set flag before updating
+
     if (initialData) {
-      isUpdatingFromExternalDataRef.current = true; // Set flag before updating
       setFormData({
         source: initialData.source || "",
         frequencyStart: initialData.frequencyStart || "",
@@ -49,8 +52,18 @@ const AcConfig: React.FC<AcConfigProps> = ({
         sweepType: initialData.sweepType || "lin",
       });
       nameRef.current = initialData.name;
-      // Flag will be reset in the next useEffect
+    } else {
+      // Clear form when no initial data (e.g., when switching from another config type)
+      setFormData({
+        source: "",
+        frequencyStart: "",
+        frequencyStop: "",
+        stepNumber: "",
+        sweepType: "lin",
+      });
+      nameRef.current = undefined;
     }
+    // Flag will be reset in the next useEffect
   }, [initialData]);
 
   // Update combined string whenever form data changes
