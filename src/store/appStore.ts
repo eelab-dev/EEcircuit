@@ -6,7 +6,7 @@ import { SimulationType, ToBePlotted } from "../types/commonTypes";
 // Define the state interface
 interface AppState {
   // Tab management
-  tabValue: "schematic" | "simulate" | "plot";
+  mainTabValue: "schematic" | "simulate" | "plot";
   isSimulateTabEnabled: boolean;
   isPlotTabEnabled: boolean;
 
@@ -41,7 +41,7 @@ interface AppState {
 // Define the actions interface
 interface AppActions {
   // Tab actions
-  setTabValue: (tab: AppState["tabValue"]) => void;
+  setMainTabValue: (tab: AppState["mainTabValue"]) => void;
   setIsSimulateTabEnabled: (enabled: boolean) => void;
   setIsPlotTabEnabled: (enabled: boolean) => void;
 
@@ -88,7 +88,7 @@ interface AppActions {
 // Create the store with initial state and actions
 export const useAppStore = create<AppState & AppActions>((set, get) => ({
   // Initial state
-  tabValue: "schematic",
+  mainTabValue: "schematic",
   isSimulateTabEnabled: false,
   isPlotTabEnabled: false,
 
@@ -114,7 +114,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   hoveredVariable: null,
 
   // Tab actions
-  setTabValue: (tab) => set({ tabValue: tab }),
+  setMainTabValue: (tab) => set({ mainTabValue: tab }),
   setIsSimulateTabEnabled: (enabled) => set({ isSimulateTabEnabled: enabled }),
   setIsPlotTabEnabled: (enabled) => set({ isPlotTabEnabled: enabled }),
 
@@ -197,7 +197,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
     set({
       netList: netlistWithPreamble,
       isSimulateTabEnabled: true,
-      tabValue: "simulate",
+      mainTabValue: "simulate",
     });
   },
 
@@ -223,7 +223,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       set({
         results: newResults,
         isPlotTabEnabled: true,
-        tabValue: "plot",
+        mainTabValue: "plot",
         // Initialize with all variables selected by default (skip first variable which is usually time)
         selectedVariables: newResults[0].variableNames.slice(1),
       });
@@ -251,32 +251,32 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   enterPlotSelectionMode: () => {
     set({
       isPlotSelectionMode: true,
-      tabValue: "schematic",
+      mainTabValue: "schematic",
     });
   },
 
   exitPlotSelectionMode: () => {
     set({
       isPlotSelectionMode: false,
-      tabValue: "simulate",
+      mainTabValue: "simulate",
     });
   },
 }));
 
 // Selector hooks for common state combinations
 export const useTabState = () => {
-  const tabValue = useAppStore((state) => state.tabValue);
+  const mainTabValue = useAppStore((state) => state.mainTabValue);
   const isSimulateTabEnabled = useAppStore(
     (state) => state.isSimulateTabEnabled
   );
   const isPlotTabEnabled = useAppStore((state) => state.isPlotTabEnabled);
-  const setTabValue = useAppStore((state) => state.setTabValue);
+  const setMainTabValue = useAppStore((state) => state.setMainTabValue);
 
   return {
-    tabValue,
+    mainTabValue,
     isSimulateTabEnabled,
     isPlotTabEnabled,
-    setTabValue,
+    setMainTabValue,
   };
 };
 

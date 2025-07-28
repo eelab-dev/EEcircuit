@@ -21,15 +21,15 @@ import { Mouse, Touchpad, Download } from "lucide-react";
 import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
 
-type TabsValue = "schematic" | "simulate" | "plot";
+type MainTabsValue = "schematic" | "simulate" | "plot";
 
 const EEcircuit: React.FC = () => {
   // Use Zustand store instead of multiple useState calls
   const {
-    tabValue,
+    mainTabValue,
     isSimulateTabEnabled,
     isPlotTabEnabled,
-    setTabValue,
+    setMainTabValue,
     shouldFitToScreen,
     setShouldFitToScreen,
     hasViewedSchematic,
@@ -45,7 +45,6 @@ const EEcircuit: React.FC = () => {
     enterPlotSelectionMode,
     exitPlotSelectionMode,
     addToBePlotted,
-    currentSchematic,
     setCurrentSchematic,
     allSimulationConfigs,
   } = useAppStore();
@@ -74,7 +73,7 @@ const EEcircuit: React.FC = () => {
 
   // Handle initial schematic view (when component mounts and schematic is the default tab)
   React.useEffect(() => {
-    if (tabValue === "schematic" && !hasViewedSchematic) {
+    if (mainTabValue === "schematic" && !hasViewedSchematic) {
       // Delay the fit command to ensure canvas is ready
       const timer = setTimeout(() => {
         setShouldFitToScreen(true);
@@ -82,7 +81,7 @@ const EEcircuit: React.FC = () => {
       }, 200); // Longer delay for initial load
       return () => clearTimeout(timer);
     }
-  }, [tabValue, hasViewedSchematic]);
+  }, [mainTabValue, hasViewedSchematic]);
 
   // Reset shouldFitToScreen flag after it's been processed
   React.useEffect(() => {
@@ -106,9 +105,9 @@ const EEcircuit: React.FC = () => {
     [exportNetlist]
   );
 
-  const handleTabValueChange = React.useCallback(
+  const handleMainTabValueChange = React.useCallback(
     (details: TabsValueChangeDetails) => {
-      const newTabValue = details.value as TabsValue;
+      const newTabValue = details.value as MainTabsValue;
 
       // Prevent switching to disabled tabs
       if (newTabValue === "simulate" && !isSimulateTabEnabled) {
@@ -118,7 +117,7 @@ const EEcircuit: React.FC = () => {
         return;
       }
 
-      setTabValue(newTabValue);
+      setMainTabValue(newTabValue);
 
       // Handle schematic tab activation
       if (newTabValue === "schematic") {
@@ -143,7 +142,7 @@ const EEcircuit: React.FC = () => {
       hasResizedSinceSchematicView,
       isSimulateTabEnabled,
       isPlotTabEnabled,
-      setTabValue,
+      setMainTabValue,
       setShouldFitToScreen,
       setHasViewedSchematic,
     ]
@@ -287,8 +286,8 @@ const EEcircuit: React.FC = () => {
   const handleSaveFile = React.useCallback(async () => {
     try {
       // Switch to schematic tab if not already there to ensure canvas is active
-      if (tabValue !== "schematic") {
-        setTabValue("schematic");
+      if (mainTabValue !== "schematic") {
+        setMainTabValue("schematic");
         // Wait for tab switch to complete
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
@@ -343,7 +342,12 @@ const EEcircuit: React.FC = () => {
       console.error("Failed to save file:", error);
       alert("Failed to save file. Please try again.");
     }
-  }, [allSimulationConfigs, tabValue, waitForSchematicExport, setTabValue]); // Added setTabValue
+  }, [
+    allSimulationConfigs,
+    mainTabValue,
+    waitForSchematicExport,
+    setMainTabValue,
+  ]); // Added setMainTabValue
 
   return (
     <Box
@@ -362,8 +366,8 @@ const EEcircuit: React.FC = () => {
       <Tabs.Root
         ref={tabsContainerRef}
         defaultValue="schematic"
-        value={tabValue}
-        onValueChange={handleTabValueChange}
+        value={mainTabValue}
+        onValueChange={handleMainTabValueChange}
         variant="subtle"
         display={"flex"}
         flexDirection="column"
