@@ -17,7 +17,6 @@ import { Skeleton } from "@chakra-ui/react";
 import DcConfig from "./simConfigs/dc";
 import AcConfig from "./simConfigs/ac";
 import TransConfig from "./simConfigs/tran";
-import { ResultType } from "eecircuit-engine";
 import { toaster } from "../components/ui/toaster";
 import {
   SimulationType,
@@ -26,44 +25,40 @@ import {
   SimulationAC,
   SimulationTransient,
 } from "../types/commonTypes";
-import { useSimulationState, usePlotSelectionState } from "../store/appStore";
+import {
+  useSimulationState,
+  usePlotSelectionState,
+  useAppStore,
+} from "../store/appStore";
 
 // Define the simulation type options
 const simType: SimulationType["type"][] = ["None", "DC", "AC", "Transient"];
 
 type SimulationEditorProps = {
   netList: string;
-  onResultsObtained: (results: ResultType[]) => void;
-  selectedSimType: SimulationType["type"];
-  simulationConfig?: SimulationType;
-  onSimulationConfigChange: (config: SimulationType) => void;
   onSwitchToSchematic?: () => void;
 };
 
 const SimulationEditor: React.FC<SimulationEditorProps> = ({
   netList = "",
-  onResultsObtained,
-  selectedSimType: propSelectedSimType,
-  simulationConfig: propSimulationConfig,
-  onSimulationConfigChange,
   onSwitchToSchematic,
 }) => {
   // Get state and actions from Zustand store
   const {
-    selectedSimType: storeSelectedSimType,
-    simulationConfig: storeSimulationConfig,
+    selectedSimType,
+    simulationConfig,
     allSimulationConfigs,
     setSelectedSimType,
     setSimulationConfig,
     setAllSimulationConfigs,
   } = useSimulationState();
 
-  const { toBePlotted } = usePlotSelectionState(); // Using store value directly
+  const { toBePlotted } = usePlotSelectionState();
 
-  // Use store values with prop fallbacks for backward compatibility
-  const selectedSimType = propSelectedSimType ?? storeSelectedSimType;
-  const simulationConfig = propSimulationConfig ?? storeSimulationConfig;
-  // toBePlotted is now directly from store, no fallback needed
+  // Import handleNewResults from the main app store for handling simulation results
+  const { handleNewResults } = useAppStore();
+
+  // All values now come directly from store, no prop fallbacks needed
 
   // Local state for UI management
   const [netListToSim, setNetListToSim] = useState(netList);
@@ -145,7 +140,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   const handleConfigSelection = (configIndex: number) => {
     if (configIndex >= 0 && configIndex < simulationConfigs.length) {
       setSelectedConfigIndex(configIndex);
-      onSimulationConfigChange?.(simulationConfigs[configIndex]);
+      setSimulationConfig(simulationConfigs[configIndex]); // Use store action directly
     }
   };
 
@@ -215,7 +210,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
     if (selectedConfigIndex === configIndex) {
       setSelectedConfigIndex(-1);
-      onSimulationConfigChange?.({ type: "None" });
+      setSimulationConfig({ type: "None" }); // Use store action directly
     } else if (selectedConfigIndex > configIndex) {
       // Adjust selected index if we deleted a config before the selected one
       setSelectedConfigIndex(selectedConfigIndex - 1);
@@ -239,8 +234,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
           const newConfig = { ...config, name: editingConfigName.trim() };
           // If this is the currently selected config, update the current simulation config too
           if (editingConfigIndex === selectedConfigIndex) {
-            setSimulationConfig(newConfig);
-            onSimulationConfigChange?.(newConfig);
+            setSimulationConfig(newConfig); // Store action already called above, remove redundant call
           }
           return newConfig;
         }
@@ -361,13 +355,9 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   // Handler for receiving the full configuration object from config components
   const handleFullConfigChange = React.useCallback(
     (config: SimulationType) => {
-      // Always update the parent callback to maintain existing functionality
-      // This ensures the simulation engine gets the latest config
+      // Update the store's current simulation config
       lastSentConfigRef.current = config;
-      onSimulationConfigChange?.(config);
-
-      // Also update the store's current simulation config
-      setSimulationConfig(config);
+      setSimulationConfig(config); // Use store action directly
 
       // Only save valid configurations to our local array (non-empty forms)
       const configIsValid = isConfigValid(config);
@@ -412,8 +402,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     },
     [
       selectedConfigIndex,
-      onSimulationConfigChange,
-      setSimulationConfig,
+      setSimulationConfig, // Removed onSimulationConfigChange as it's no longer used
       simulationConfigs,
       isConfigValid,
       generateDefaultConfigName,
@@ -455,11 +444,11 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
           duration: 5000,
         });
         console.error("Simulation completed but returned empty results.");
-        return; // Don't call onResultsObtained, preventing tab switch
+        return; // Don't call handleNewResults, preventing tab switch
       }
 
       // Valid results, proceed normally
-      onResultsObtained([result]);
+      handleNewResults([result]);
     } else {
       // Show error toast for failed simulation
       toaster.create({
@@ -807,9 +796,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                     }
                   }
 
-                  // Update both store and parent component
-                  setSimulationConfig(newConfig);
-                  onSimulationConfigChange?.(newConfig);
+                  // Update store directly
+                  setSimulationConfig(newConfig); // Use store action directly
                 }
               }}
             >

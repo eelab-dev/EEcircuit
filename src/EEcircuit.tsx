@@ -41,7 +41,6 @@ const EEcircuit: React.FC = () => {
     inputProfile,
     toggleInputProfile,
     exportNetlist,
-    handleNewResults,
     enterPlotSelectionMode,
     exitPlotSelectionMode,
     addToBePlotted,
@@ -491,14 +490,7 @@ const EEcircuit: React.FC = () => {
         <Tabs.Content value="simulate" flex={1} minHeight={0}>
           <SimulationEditor
             netList={useAppStore.getState().netList}
-            onResultsObtained={handleNewResults}
-            selectedSimType={useAppStore.getState().selectedSimType}
-            simulationConfig={useAppStore.getState().simulationConfig}
-            onSimulationConfigChange={
-              useAppStore.getState().setSimulationConfig
-            }
             onSwitchToSchematic={enterPlotSelectionMode}
-            // toBePlotted is now managed via Zustand store inside SimulationEditor
           />
         </Tabs.Content>
 
