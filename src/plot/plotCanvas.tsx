@@ -41,6 +41,9 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   const plotLineRef = useRef<WebglLineThick | null>(null);
   const crosshairRef = useRef<WebglLinePlot | null>(null);
   const snapCircleRef = useRef<WebglPolygonPlot | null>(null);
+  // Zoom feature refs
+  const zoomLinesRef = useRef<WebglLinePlot | null>(null);
+  const zoomRegionRef = useRef<WebglPolygonPlot | null>(null);
   const lineDataRef = useRef<LineConfig[]>([]);
   const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
@@ -50,6 +53,14 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     x: number;
     y: number;
   }>({ x: 0, y: 0 });
+  // Zoom state variables
+  const [isZooming, setIsZooming] = useState(false);
+  const [zoomStartX, setZoomStartX] = useState<number | null>(null);
+  const [zoomEndX, setZoomEndX] = useState<number | null>(null);
+  const [customXBounds, setCustomXBounds] = useState<{
+    min: number;
+    max: number;
+  } | null>(null);
   const [axisScales, setAxisScales] = useState<AxisScales>({
     scaleX: 1,
     scaleY: 1,
@@ -325,6 +336,184 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     snapCircleRef.current.initPolygons([snapCircle]);
   };
 
+  // Zoom functions
+  const startZoom = (mouseX: number) => {
+    if (!canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    // Convert mouse X to normalized device coordinates [-1, 1]
+    const mouseNdcX = (mouseX / rect.width) * 2 - 1;
+    // Convert NDC to data coordinates using current axis scales
+    const dataX = (mouseNdcX - axisScales.offsetX) / axisScales.scaleX;
+
+    setIsZooming(true);
+    setZoomStartX(dataX);
+    setZoomEndX(dataX);
+
+    console.log("Started zoom at data X:", dataX, "NDC X:", mouseNdcX);
+
+    // Immediately show zoom visuals at start position with current values
+    // since state updates are asynchronous, we pass values directly to avoid delays
+    if (zoomLinesRef.current && zoomRegionRef.current) {
+      zoomLinesRef.current.setLineEnabled(0, true);
+      zoomLinesRef.current.setLineEnabled(1, true);
+      zoomRegionRef.current.setPolygonEnabled(0, true);
+
+      const ndcX = dataX * axisScales.scaleX + axisScales.offsetX;
+      const linePoints = new Float32Array([ndcX, -1, ndcX, 1]);
+
+      // Set both lines to the same position initially
+      zoomLinesRef.current.updateLinePoints(0, linePoints);
+      zoomLinesRef.current.updateLinePoints(1, linePoints);
+
+      // Create a thin initial region (will expand as user drags) - 6 points for two triangles
+      const regionPoints = new Float32Array([
+        ndcX,
+        -1, // bottom-left (triangle 1)
+        ndcX,
+        1, // top-left (triangle 1)
+        ndcX,
+        1, // top-right (triangle 1)
+        ndcX,
+        -1, // bottom-left (triangle 2)
+        ndcX,
+        1, // top-right (triangle 2)
+        ndcX,
+        -1, // bottom-right (triangle 2)
+      ]);
+      console.log(
+        "Initializing zoom visuals with",
+        regionPoints.length,
+        "points at NDC X:",
+        ndcX
+      );
+      zoomRegionRef.current.updatePolygonPoints(0, regionPoints);
+    }
+  };
+
+  const updateZoomSelection = (mouseX: number) => {
+    if (!isZooming || !canvasRef.current || zoomStartX === null) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    // Convert mouse X to normalized device coordinates [-1, 1]
+    const mouseNdcX = (mouseX / rect.width) * 2 - 1;
+    // Convert NDC to data coordinates using current axis scales
+    const dataX = (mouseNdcX - axisScales.offsetX) / axisScales.scaleX;
+
+    setZoomEndX(dataX);
+
+    // Update zoom visual feedback
+    updateZoomVisuals();
+  };
+
+  const updateZoomVisuals = () => {
+    if (
+      !zoomLinesRef.current ||
+      !zoomRegionRef.current ||
+      zoomStartX === null ||
+      zoomEndX === null
+    )
+      return;
+
+    // Enable zoom visuals when zooming
+    zoomLinesRef.current.setLineEnabled(0, true);
+    zoomLinesRef.current.setLineEnabled(1, true);
+    zoomRegionRef.current.setPolygonEnabled(0, true);
+
+    // Convert data coordinates back to NDC for rendering
+    const startNdcX = zoomStartX * axisScales.scaleX + axisScales.offsetX;
+    const endNdcX = zoomEndX * axisScales.scaleX + axisScales.offsetX;
+
+    // Create vertical lines at start and end positions (full height)
+    const startLinePoints = new Float32Array([startNdcX, -1, startNdcX, 1]);
+    const endLinePoints = new Float32Array([endNdcX, -1, endNdcX, 1]);
+
+    // Update vertical lines
+    zoomLinesRef.current.updateLinePoints(0, startLinePoints);
+    zoomLinesRef.current.updateLinePoints(1, endLinePoints);
+
+    // Create yellow semi-transparent region between the lines
+    const leftX = Math.min(startNdcX, endNdcX);
+    const rightX = Math.max(startNdcX, endNdcX);
+
+    // Create rectangle using two triangles to form a solid box
+    // IMPORTANT: Must use exactly 6 points to match initialization (WebGL requirement)
+    // Triangle 1: bottom-left, top-left, top-right
+    // Triangle 2: bottom-left, top-right, bottom-right
+    const regionPoints = new Float32Array([
+      leftX,
+      -1, // bottom-left (triangle 1)
+      leftX,
+      1, // top-left (triangle 1)
+      rightX,
+      1, // top-right (triangle 1)
+      leftX,
+      -1, // bottom-left (triangle 2)
+      rightX,
+      1, // top-right (triangle 2)
+      rightX,
+      -1, // bottom-right (triangle 2)
+    ]);
+
+    console.log(
+      "Updating zoom region with",
+      regionPoints.length,
+      "points from",
+      leftX,
+      "to",
+      rightX
+    );
+
+    // Update zoom region polygon
+    zoomRegionRef.current.updatePolygonPoints(0, regionPoints);
+  };
+
+  const completeZoom = () => {
+    if (!isZooming || zoomStartX === null || zoomEndX === null) return;
+
+    const minX = Math.min(zoomStartX, zoomEndX);
+    const maxX = Math.max(zoomStartX, zoomEndX);
+
+    // Only apply zoom if there's a meaningful selection (avoid tiny selections)
+    if (Math.abs(maxX - minX) > 1e-10) {
+      setCustomXBounds({ min: minX, max: maxX });
+      console.log("Applied zoom bounds:", { min: minX, max: maxX });
+    }
+
+    // Clear zoom state
+    setIsZooming(false);
+    setZoomStartX(null);
+    setZoomEndX(null);
+
+    // Hide zoom visuals
+    if (zoomLinesRef.current) {
+      zoomLinesRef.current.setLineEnabled(0, false);
+      zoomLinesRef.current.setLineEnabled(1, false);
+    }
+    if (zoomRegionRef.current) {
+      zoomRegionRef.current.setPolygonEnabled(0, false);
+    }
+
+    // Recalculate and apply new scaling
+    calculateAndApplyScaling();
+
+    // Force immediate redraw to apply zoom without waiting for mouse movement
+    if (isCanvasInitialized) {
+      updatePlot();
+    }
+  };
+
+  const resetZoom = () => {
+    setCustomXBounds(null);
+    console.log("Reset zoom to original view");
+
+    // Immediately recalculate and redraw without delay
+    calculateAndApplyScaling();
+    if (isCanvasInitialized) {
+      updatePlot();
+    }
+  };
+
   // Calculate and apply auto-scaling transform for visible lines
   const calculateAndApplyScaling = () => {
     if (!plotLineRef.current || selectedVariables.length === 0) {
@@ -342,22 +531,31 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       yMax = -Infinity;
 
     // Calculate X-axis bounds once (same for all lines)
-    const firstVisibleLineIndex = lineDataRef.current.findIndex((_, index) => {
-      const variableName = variableNames[index];
-      // Add bounds check before checking selectedVariables
-      return variableName && selectedVariables.includes(variableName);
-    });
+    // Use custom bounds if zoom is active, otherwise calculate from data
+    if (customXBounds) {
+      xMin = customXBounds.min;
+      xMax = customXBounds.max;
+    } else {
+      const firstVisibleLineIndex = lineDataRef.current.findIndex(
+        (_, index) => {
+          const variableName = variableNames[index];
+          // Add bounds check before checking selectedVariables
+          return variableName && selectedVariables.includes(variableName);
+        }
+      );
 
-    if (firstVisibleLineIndex !== -1) {
-      const points = lineDataRef.current[firstVisibleLineIndex].points;
-      for (let i = 0; i < points.length; i += 2) {
-        const x = points[i];
-        xMin = Math.min(xMin, x);
-        xMax = Math.max(xMax, x);
+      if (firstVisibleLineIndex !== -1) {
+        const points = lineDataRef.current[firstVisibleLineIndex].points;
+        for (let i = 0; i < points.length; i += 2) {
+          const x = points[i];
+          xMin = Math.min(xMin, x);
+          xMax = Math.max(xMax, x);
+        }
       }
     }
 
     // Calculate Y-axis bounds for all visible lines
+    // If zoom is active, only consider Y values within the zoomed X range
     lineDataRef.current.forEach((lineData, index) => {
       const variableName = variableNames[index];
 
@@ -371,9 +569,19 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       if (isSelected) {
         const points = lineData.points;
         for (let i = 1; i < points.length; i += 2) {
-          const y = points[i];
-          yMin = Math.min(yMin, y);
-          yMax = Math.max(yMax, y);
+          const x = points[i - 1]; // X coordinate
+          const y = points[i]; // Y coordinate
+
+          // If zoom is active, only include Y values within X bounds
+          if (customXBounds) {
+            if (x >= customXBounds.min && x <= customXBounds.max) {
+              yMin = Math.min(yMin, y);
+              yMax = Math.max(yMax, y);
+            }
+          } else {
+            yMin = Math.min(yMin, y);
+            yMax = Math.max(yMax, y);
+          }
         }
       }
     });
@@ -487,6 +695,12 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     if (showCrosshair && crosshairSnapToLines && snapCircleRef.current) {
       snapCircleRef.current.draw();
     }
+
+    // Draw zoom components if zooming
+    if (isZooming && zoomLinesRef.current && zoomRegionRef.current) {
+      zoomLinesRef.current.draw();
+      zoomRegionRef.current.draw();
+    }
   };
 
   // Initialize canvas and WebGL plot only once when results change
@@ -538,6 +752,42 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
       // Create the initial circle
       createSnapCircle();
+
+      // Initialize zoom components
+      zoomLinesRef.current = wglpRef.current.newThinLinePlotter(2);
+      zoomRegionRef.current = new WebglPolygonPlot(wglpRef.current);
+
+      // Create zoom lines data (2 vertical lines for zoom selection)
+      const zoomLines: LineConfig[] = [
+        {
+          points: new Float32Array([0, -1, 0, 1]), // First vertical line
+          color: [1, 0.9, 0.1, 0.9], // Yellow with high opacity
+          thickness: 2,
+          enabled: false, // Initially disabled
+        },
+        {
+          points: new Float32Array([0, -1, 0, 1]), // Second vertical line
+          color: [1, 0.9, 0.1, 0.9], // Yellow with high opacity
+          thickness: 2,
+          enabled: false, // Initially disabled
+        },
+      ];
+
+      zoomLinesRef.current.initLines(zoomLines);
+
+      // Create zoom region polygon (initially empty rectangle using 6 points for two triangles)
+      const zoomRegion = {
+        fillColor: [1, 1, 0, 0.3] as [number, number, number, number], // Semi-transparent yellow
+        strokeColor: [1, 1, 0, 0] as [number, number, number, number], // No stroke
+        strokeWeight: 0,
+        isFilled: true,
+        isStroked: false,
+        // Initialize with 6 points (two triangles) - same format as updates
+        points: new Float32Array([0, -1, 0, 1, 0, 1, 0, -1, 0, 1, 0, -1]), // Empty rectangle initially
+        enabled: false, // Initially disabled
+      };
+
+      zoomRegionRef.current.initPolygons([zoomRegion]);
 
       const numX = results[0].numPoints;
       const numVariables = results[0].numVariables;
@@ -679,6 +929,73 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
             {crosshairSnapToLines ? "📍 Snap" : "🎯 Free"}
           </Button>
 
+          {/* Reset zoom button - only visible when zoom is active */}
+          {customXBounds && (
+            <Button
+              position="absolute"
+              top="10px"
+              right="120px"
+              size="md"
+              variant="solid"
+              colorScheme="yellow"
+              onClick={resetZoom}
+              fontSize="xs"
+              px={2}
+              py={1}
+              height="auto"
+              minW="auto"
+              zIndex={10}
+              title="Reset zoom to original view"
+              boxShadow="sm"
+              bg={
+                colorMode === "dark"
+                  ? "rgba(255, 193, 7, 0.8)"
+                  : "rgba(255, 193, 7, 0.9)"
+              }
+              color={colorMode === "dark" ? "black" : "white"}
+              backdropFilter="blur(4px)"
+              _hover={{
+                bg:
+                  colorMode === "dark"
+                    ? "rgba(255, 193, 7, 1)"
+                    : "rgba(255, 193, 7, 1)",
+              }}
+            >
+              🔍 Reset Zoom
+            </Button>
+          )}
+
+          {/* Zoom instructions - only when not currently zooming */}
+          {!isZooming && !showCrosshair && (
+            <Box
+              position="absolute"
+              bottom="10px"
+              left="10px"
+              bg={
+                colorMode === "dark"
+                  ? "rgba(26, 32, 44, 0.7)"
+                  : "rgba(255, 255, 255, 0.7)"
+              }
+              backdropFilter="blur(4px)"
+              color={colorMode === "dark" ? "white" : "black"}
+              px="8px"
+              py="4px"
+              borderRadius="md"
+              border="1px solid"
+              borderColor={
+                colorMode === "dark"
+                  ? "rgba(113, 128, 150, 0.5)"
+                  : "rgba(203, 213, 224, 0.5)"
+              }
+              fontSize="xs"
+              fontFamily="monospace"
+              zIndex={10}
+              boxShadow="sm"
+            >
+              💡 Click & drag to zoom X-axis • Double-click to reset
+            </Box>
+          )}
+
           {/* Crosshair coordinates display - only when crosshair is active */}
           {showCrosshair && (
             <Box
@@ -717,24 +1034,61 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               height: "100%",
               display: "block",
               backgroundColor: "transparent",
-              cursor: showCrosshair ? "crosshair" : "default",
+              cursor: isZooming
+                ? "col-resize"
+                : showCrosshair
+                  ? "crosshair"
+                  : "default",
+            }}
+            onMouseDown={(e) => {
+              // Only start zoom on left mouse button
+              if (e.button === 0) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                startZoom(mouseX);
+              }
             }}
             onMouseMove={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
               const mouseX = e.clientX - rect.left;
               const mouseY = e.clientY - rect.top;
-              updateCrosshair(mouseX, mouseY);
+
+              if (isZooming) {
+                // Update zoom selection
+                updateZoomSelection(mouseX);
+              } else {
+                // Normal crosshair behavior
+                updateCrosshair(mouseX, mouseY);
+              }
+
+              if (isCanvasInitialized) {
+                updatePlot();
+              }
+            }}
+            onMouseUp={(e) => {
+              // Complete zoom on left mouse button release
+              if (e.button === 0 && isZooming) {
+                completeZoom();
+              }
+            }}
+            onDoubleClick={() => {
+              // Reset zoom on double click
+              resetZoom();
               if (isCanvasInitialized) {
                 updatePlot();
               }
             }}
             onMouseEnter={() => {
-              setShowCrosshair(true);
+              if (!isZooming) {
+                setShowCrosshair(true);
+              }
             }}
             onMouseLeave={() => {
-              setShowCrosshair(false);
-              if (isCanvasInitialized) {
-                updatePlot();
+              if (!isZooming) {
+                setShowCrosshair(false);
+                if (isCanvasInitialized) {
+                  updatePlot();
+                }
               }
             }}
           ></canvas>
