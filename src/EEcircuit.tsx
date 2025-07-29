@@ -5,14 +5,20 @@ import React, { useRef } from "react";
 //const PlotArray = React.lazy(() => import("./plotArray.tsx"));
 //const DisplayBox = React.lazy(() => import("./displayBox.tsx"));
 
-import { Box, Flex, Tabs, Text, IconButton } from "@chakra-ui/react";
+import {
+  Box,
+  Flex,
+  Tabs,
+  Text,
+  IconButton,
+  TabsValueChangeDetails,
+} from "@chakra-ui/react";
 
 import { Toaster } from "./components/ui/toaster.tsx";
 import { Tooltip } from "./components/ui/tooltip.tsx";
 
 import Schematic from "./schematic/schematic.tsx";
 import SimulationEditor from "./Simulate/simulate.tsx";
-import { TabsValueChangeDetails } from "node_modules/@chakra-ui/react/dist/types/components/tabs/tabs";
 import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
 import { sendCommand, Schematic as SchematicType } from "eecircuit-schematic";
