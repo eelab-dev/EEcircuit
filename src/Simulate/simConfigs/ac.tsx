@@ -37,6 +37,16 @@ const AcConfig: React.FC<AcConfigProps> = ({
   // Use a ref to track if we're updating from external data to prevent callback loops
   const isUpdatingFromExternalDataRef = useRef(false);
 
+  // Use refs to store the latest callback functions to prevent focus loss issues
+  const onConfigChangeRef = useRef(onConfigChange);
+  const onFullConfigChangeRef = useRef(onFullConfigChange);
+
+  // Update callback refs when they change
+  useEffect(() => {
+    onConfigChangeRef.current = onConfigChange;
+    onFullConfigChangeRef.current = onFullConfigChange;
+  }, [onConfigChange, onFullConfigChange]);
+
   // Update form data and name ref when initialData changes (when switching between configs)
   useEffect(() => {
     console.log("AC Config: initialData changed:", initialData); // Debug logging
@@ -77,14 +87,14 @@ const AcConfig: React.FC<AcConfigProps> = ({
       return;
     }
 
-    // Call the callback with the updated config string
-    if (onConfigChange) {
-      onConfigChange(combined);
+    // Call the callback with the updated config string using ref to prevent focus loss
+    if (onConfigChangeRef.current) {
+      onConfigChangeRef.current(combined);
     }
 
-    // Call the full config callback with complete AC configuration
+    // Call the full config callback with complete AC configuration using ref to prevent focus loss
     if (
-      onFullConfigChange &&
+      onFullConfigChangeRef.current &&
       formData.source &&
       formData.sweepType &&
       formData.frequencyStart &&
@@ -100,9 +110,9 @@ const AcConfig: React.FC<AcConfigProps> = ({
         frequencyStop: formData.frequencyStop, // Keep as string to support unit postfixes
         stepNumber: formData.stepNumber, // Updated to match SimulationAC type
       };
-      onFullConfigChange(fullConfig);
+      onFullConfigChangeRef.current(fullConfig);
     }
-  }, [formData, onConfigChange]); // Removed onFullConfigChange from dependencies to prevent infinite loops
+  }, [formData]); // Removed onConfigChange from dependencies to prevent focus loss issues
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

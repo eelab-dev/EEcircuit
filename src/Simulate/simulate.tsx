@@ -36,6 +36,25 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     }
   }, []);
 
+  /**
+   * Corrects instance values for ngspice compatibility.
+   * ngspice has a bug where it doesn't accept "M" as a unit multiplier,
+   * but accepts "Meg" instead. This function converts values like "1M" to "1Meg".
+   * Handles both integer and fractional numbers (e.g., "2.01M" becomes "2.01Meg").
+   */
+  const correctUnitValueForNgspice = (value: string): string => {
+    // Replace "M" with "Meg" only when it's at the end of the string or followed by non-letter characters
+    // This regex matches numbers (including decimals) followed by "M" at word boundaries
+    const correctedValue = value.replace(/(\d+(?:\.\d+)?)\s*M\b/g, "$1Meg");
+
+    // Debug logging to track corrections being made
+    if (correctedValue !== value) {
+      console.log(`[ngspice correction] "${value}" → "${correctedValue}"`);
+    }
+
+    return correctedValue;
+  };
+
   const saveCommandConfig = (toBePlotted: ToBePlotted[]) => {
     if (toBePlotted.length === 0) {
       return "";
@@ -77,8 +96,10 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
   // Handler for string-based config changes from config components
   const handleStringConfigChange = React.useCallback((configString: string) => {
-    // Store the generated SPICE command from config components
-    setSimCommandString(configString);
+    // Apply ngspice compatibility corrections to the config string
+    const correctedConfigString = correctUnitValueForNgspice(configString);
+    // Store the corrected SPICE command from config components
+    setSimCommandString(correctedConfigString);
   }, []);
 
   // Handler for receiving the full configuration object from config components

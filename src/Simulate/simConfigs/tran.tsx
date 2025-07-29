@@ -27,6 +27,16 @@ const TransConfig: React.FC<TransConfigProps> = ({
   // Use a ref to track if we're updating from external data to prevent callback loops
   const isUpdatingFromExternalDataRef = useRef(false);
 
+  // Use refs to store the latest callback functions to prevent focus loss issues
+  const onConfigChangeRef = useRef(onConfigChange);
+  const onFullConfigChangeRef = useRef(onFullConfigChange);
+
+  // Update callback refs when they change
+  useEffect(() => {
+    onConfigChangeRef.current = onConfigChange;
+    onFullConfigChangeRef.current = onFullConfigChange;
+  }, [onConfigChange, onFullConfigChange]);
+
   // Update form data and name ref when initialData changes (when switching between configs)
   useEffect(() => {
     console.log("Transient Config: initialData changed:", initialData); // Debug logging
@@ -63,13 +73,17 @@ const TransConfig: React.FC<TransConfigProps> = ({
       return;
     }
 
-    // Call the callback with the updated config
-    if (onConfigChange) {
-      onConfigChange(combined);
+    // Call the callback with the updated config using ref to prevent focus loss
+    if (onConfigChangeRef.current) {
+      onConfigChangeRef.current(combined);
     }
 
-    // Call the full config callback with complete Transient configuration
-    if (onFullConfigChange && formData.timeStep && formData.stopTime) {
+    // Call the full config callback with complete Transient configuration using ref to prevent focus loss
+    if (
+      onFullConfigChangeRef.current &&
+      formData.timeStep &&
+      formData.stopTime
+    ) {
       const fullConfig: SimulationTransient = {
         type: "Transient",
         name: nameRef.current, // Use the ref to preserve user-edited names
@@ -77,9 +91,9 @@ const TransConfig: React.FC<TransConfigProps> = ({
         stopTime: formData.stopTime, // Keep as string to support unit postfixes
         initialConditions: formData.initialConditions,
       };
-      onFullConfigChange(fullConfig);
+      onFullConfigChangeRef.current(fullConfig);
     }
-  }, [formData, onConfigChange]); // Removed onFullConfigChange from dependencies to prevent infinite loops
+  }, [formData]); // Removed onConfigChange from dependencies to prevent focus loss issues
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
