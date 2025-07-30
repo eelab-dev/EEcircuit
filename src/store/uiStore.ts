@@ -1,3 +1,4 @@
+import { sendCommand } from "eecircuit-schematic";
 import { StateCreator } from "zustand";
 
 // UI state and actions
@@ -31,12 +32,9 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
     const newProfile = currentProfile === "mouse" ? "trackpad" : "mouse";
     set({ inputProfile: newProfile });
 
-    // Send command to update input profile in schematic canvas
-    import("eecircuit-schematic").then(({ sendCommand }) => {
-      sendCommand({
-        command: "setInputProfile",
-        profile: newProfile,
-      });
+    sendCommand({
+      command: "setInputProfile",
+      profile: newProfile,
     });
   },
 });

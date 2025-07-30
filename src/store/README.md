@@ -84,12 +84,12 @@ The store is now split into the following modules:
 **Responsibility:** General UI state and preferences
 
 - `inputProfile`: Mouse or trackpad input mode
-- `dragBox`: Whether drag box is shown
+- `dragBox`: Whether drag & drop box is shown
 
 **Actions:**
 
 - `setInputProfile(profile)`: Set input profile
-- `setDragBox(show)`: Show/hide drag box
+- `setDragBox(show)`: Show/hide drag & drop box
 - `toggleInputProfile()`: Switch between mouse/trackpad modes
 
 ## Main Store (`appStore.ts`)
