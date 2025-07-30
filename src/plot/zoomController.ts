@@ -10,6 +10,11 @@ export class ZoomController {
   private zoomEndX: number | null = null;
   private customXBounds: { min: number; max: number } | null = null;
 
+  // Panning state for horizontal movement when zoomed
+  private isPanning = false;
+  private panStartX: number | null = null;
+  private panOffsetX = 0; // Current accumulated pan offset in data coordinates
+
   // WebGL references - can be thin or thick lines
   private zoomLinesRef: WebglLinePlot | null = null;
   private zoomRegionRef: WebglPolygonPlot | null = null;
@@ -59,9 +64,16 @@ export class ZoomController {
 
   /**
    * Get current zoom bounds (null if no zoom applied)
+   * Returns bounds with pan offset applied
    */
   getZoomBounds(): { min: number; max: number } | null {
-    return this.customXBounds ? { ...this.customXBounds } : null;
+    if (!this.customXBounds) return null;
+
+    // Apply pan offset to the zoom bounds
+    return {
+      min: this.customXBounds.min + this.panOffsetX,
+      max: this.customXBounds.max + this.panOffsetX,
+    };
   }
 
   /**
@@ -69,6 +81,20 @@ export class ZoomController {
    */
   getIsZooming(): boolean {
     return this.isZooming;
+  }
+
+  /**
+   * Check if currently in panning mode
+   */
+  getIsPanning(): boolean {
+    return this.isPanning;
+  }
+
+  /**
+   * Check if plot is currently zoomed in (has custom bounds)
+   */
+  isZoomedIn(): boolean {
+    return this.customXBounds !== null;
   }
 
   /**
@@ -172,8 +198,79 @@ export class ZoomController {
     }
 
     this.customXBounds = null;
-    console.log("ZoomController: Reset zoom to original view");
+    this.panOffsetX = 0; // Reset pan offset when zoom is reset
     return true;
+  }
+
+  /**
+   * Start horizontal panning operation
+   * Only works when zoomed in
+   * @param mouseX Mouse X coordinate relative to canvas
+   */
+  startPan(mouseX: number): void {
+    if (!this.canvasElement || !this.customXBounds) {
+      return; // Silently ignore if not ready for panning
+    }
+
+    const rect = this.canvasElement.getBoundingClientRect();
+    // Convert mouse X to normalized device coordinates [-1, 1]
+    const mouseNdcX = (mouseX / rect.width) * 2 - 1;
+    // Convert NDC to data coordinates using current axis scales
+    const dataX =
+      (mouseNdcX - this.axisScales.offsetX) / this.axisScales.scaleX;
+
+    this.isPanning = true;
+    this.panStartX = dataX;
+  }
+
+  /**
+   * Update pan position as mouse moves
+   * @param mouseX Current mouse X coordinate relative to canvas
+   */
+  updatePan(mouseX: number): void {
+    if (!this.isPanning || !this.canvasElement || this.panStartX === null) {
+      return;
+    }
+
+    const rect = this.canvasElement.getBoundingClientRect();
+    // Convert mouse X to normalized device coordinates [-1, 1]
+    const mouseNdcX = (mouseX / rect.width) * 2 - 1;
+    // Convert NDC to data coordinates using current axis scales
+    const currentDataX =
+      (mouseNdcX - this.axisScales.offsetX) / this.axisScales.scaleX;
+
+    // Calculate pan delta (negative because dragging right should move view left)
+    const panDelta = -(currentDataX - this.panStartX);
+    this.panOffsetX = panDelta;
+  }
+
+  /**
+   * End panning operation
+   */
+  endPan(): void {
+    if (!this.isPanning) return;
+
+    this.isPanning = false;
+    this.panStartX = null;
+  }
+
+  /**
+   * Handle horizontal scroll wheel for panning
+   * @param deltaX Horizontal scroll delta from wheel event
+   */
+  handleHorizontalScroll(deltaX: number): void {
+    if (!this.customXBounds) {
+      return; // Silently ignore scroll when not zoomed in
+    }
+
+    // Calculate zoom range to determine appropriate scroll sensitivity
+    const zoomRange = this.customXBounds.max - this.customXBounds.min;
+    // Very slow scroll sensitivity - 0.1% of current view range per scroll unit
+    const scrollSensitivity = zoomRange * 0.01; // Further reduced from 0.005 to 0.001 (5x slower)
+
+    // Apply scroll delta to pan offset
+    // Positive deltaX should pan right (positive offset)
+    this.panOffsetX += deltaX * scrollSensitivity;
   }
 
   /**
@@ -183,6 +280,7 @@ export class ZoomController {
   cleanup(): void {
     this.clearZoomState();
     this.customXBounds = null;
+    this.panOffsetX = 0; // Reset pan offset on cleanup
 
     // Don't null the refs as they might be reused
     console.log("ZoomController: Cleaned up");
@@ -314,6 +412,10 @@ export class ZoomController {
     this.isZooming = false;
     this.zoomStartX = null;
     this.zoomEndX = null;
+
+    // End panning if active
+    this.isPanning = false;
+    this.panStartX = null;
 
     // Hide zoom visuals
     try {

@@ -64,6 +64,9 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   });
   const [isAxis] = useState(true);
 
+  // Pan state for right mouse button dragging
+  const [isPanningWithMouse, setIsPanningWithMouse] = useState(false);
+
   // Debug: Log axisScales changes (can be removed when debugging is complete)
   // useEffect(() => {
   //   console.log("axisScales state updated:", axisScales);
@@ -365,6 +368,37 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       if (isCanvasInitialized) {
         updatePlot();
       }
+    }
+  };
+
+  // Panning functions for horizontal movement when zoomed
+  const startPan = (mouseX: number) => {
+    // Update zoom controller with current axis scales before starting pan
+    zoomController.current.updateAxisScales(axisScales);
+    zoomController.current.startPan(mouseX);
+  };
+
+  const updatePan = (mouseX: number) => {
+    zoomController.current.updatePan(mouseX);
+  };
+
+  const endPan = () => {
+    zoomController.current.endPan();
+  };
+
+  // Handle horizontal scroll wheel for panning when zoomed in
+  // Supports both dedicated horizontal scroll wheels and Shift+vertical scroll
+  const handleHorizontalScroll = (deltaX: number) => {
+    if (!zoomController.current.isZoomedIn()) {
+      return; // Only allow scrolling when zoomed in
+    }
+
+    zoomController.current.handleHorizontalScroll(deltaX);
+
+    // Immediately recalculate and redraw to show pan effect
+    calculateAndApplyScaling();
+    if (isCanvasInitialized) {
+      updatePlot();
     }
   };
 
@@ -734,6 +768,43 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     }
   }, [hoveredVariable, isCanvasInitialized]);
 
+  // Add native wheel event listener to properly handle preventDefault
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Only handle wheel events when zoomed in to avoid interfering with page scroll
+      if (zoomController.current.isZoomedIn()) {
+        e.preventDefault(); // This works with native events
+
+        // Detect horizontal scroll (most mice send this as shiftKey + wheel)
+        // Some mice have dedicated horizontal scroll that sends deltaX
+        let deltaX = e.deltaX;
+
+        // For mice without horizontal scroll, use Shift + vertical scroll
+        if (Math.abs(deltaX) < Math.abs(e.deltaY) && e.shiftKey) {
+          deltaX = e.deltaY;
+        }
+
+        // Only handle if there's horizontal movement
+        if (Math.abs(deltaX) > 0) {
+          // Normalize scroll delta and apply panning
+          const normalizedDelta = deltaX > 0 ? 1 : -1;
+          handleHorizontalScroll(normalizedDelta);
+        }
+      }
+    };
+
+    // Add the wheel event listener with passive: false to allow preventDefault
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      canvas.removeEventListener("wheel", handleWheel);
+    };
+  }, [isCanvasInitialized]); // Re-add listener when canvas is re-initialized
+
   return (
     <Grid
       templateRows={`minmax(0, 1fr) ${isAxis ? 1.5 : 0}em`}
@@ -908,16 +979,28 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               backgroundColor: "transparent",
               cursor: zoomController.current.getIsZooming()
                 ? "col-resize"
-                : showCrosshair
-                  ? "crosshair"
-                  : "default",
+                : isPanningWithMouse
+                  ? "grabbing"
+                  : zoomController.current.isZoomedIn()
+                    ? "grab" // Show grab cursor when zoomed and can pan
+                    : showCrosshair
+                      ? "crosshair"
+                      : "default",
             }}
             onMouseDown={(e) => {
-              // Only start zoom on left mouse button
+              const rect = e.currentTarget.getBoundingClientRect();
+              const mouseX = e.clientX - rect.left;
+
               if (e.button === 0) {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
+                // Left mouse button - start zoom
                 startZoom(mouseX);
+              } else if (e.button === 2) {
+                // Right mouse button - start pan (only when zoomed in)
+                if (zoomController.current.isZoomedIn()) {
+                  e.preventDefault(); // Prevent context menu
+                  setIsPanningWithMouse(true);
+                  startPan(mouseX);
+                }
               }
             }}
             onMouseMove={(e) => {
@@ -928,19 +1011,34 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               if (zoomController.current.getIsZooming()) {
                 // Update zoom selection
                 updateZoomSelection(mouseX);
+              } else if (
+                isPanningWithMouse &&
+                zoomController.current.getIsPanning()
+              ) {
+                // Update pan position
+                updatePan(mouseX);
+                // Immediately apply pan changes
+                calculateAndApplyScaling();
+                if (isCanvasInitialized) {
+                  updatePlot();
+                }
               } else {
                 // Normal crosshair behavior
                 updateCrosshair(mouseX, mouseY);
               }
 
-              if (isCanvasInitialized) {
+              if (isCanvasInitialized && !isPanningWithMouse) {
                 updatePlot();
               }
             }}
             onMouseUp={(e) => {
-              // Complete zoom on left mouse button release
               if (e.button === 0 && zoomController.current.getIsZooming()) {
+                // Complete zoom on left mouse button release
                 completeZoom();
+              } else if (e.button === 2 && isPanningWithMouse) {
+                // End pan on right mouse button release
+                setIsPanningWithMouse(false);
+                endPan();
               }
             }}
             onDoubleClick={() => {
@@ -956,11 +1054,23 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               }
             }}
             onMouseLeave={() => {
+              // End panning if mouse leaves canvas while panning
+              if (isPanningWithMouse) {
+                setIsPanningWithMouse(false);
+                endPan();
+              }
+
               if (!zoomController.current.getIsZooming()) {
                 setShowCrosshair(false);
                 if (isCanvasInitialized) {
                   updatePlot();
                 }
+              }
+            }}
+            onContextMenu={(e) => {
+              // Prevent context menu when right-clicking for panning
+              if (zoomController.current.isZoomedIn()) {
+                e.preventDefault();
               }
             }}
           ></canvas>
