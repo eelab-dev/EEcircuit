@@ -64,9 +64,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   });
   const [isAxis] = useState(true);
 
-  // Pan state for right mouse button dragging
-  const [isPanningWithMouse, setIsPanningWithMouse] = useState(false);
-
   // Debug: Log axisScales changes (can be removed when debugging is complete)
   // useEffect(() => {
   //   console.log("axisScales state updated:", axisScales);
@@ -371,21 +368,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     }
   };
 
-  // Panning functions for horizontal movement when zoomed
-  const startPan = (mouseX: number) => {
-    // Update zoom controller with current axis scales before starting pan
-    zoomController.current.updateAxisScales(axisScales);
-    zoomController.current.startPan(mouseX);
-  };
-
-  const updatePan = (mouseX: number) => {
-    zoomController.current.updatePan(mouseX);
-  };
-
-  const endPan = () => {
-    zoomController.current.endPan();
-  };
-
   // Handle horizontal scroll wheel for panning when zoomed in
   // Supports both dedicated horizontal scroll wheels and Shift+vertical scroll
   const handleHorizontalScroll = (deltaX: number) => {
@@ -395,9 +377,10 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
     zoomController.current.handleHorizontalScroll(deltaX);
 
-    // Immediately recalculate and redraw to show pan effect
+    // Immediately recalculate and redraw to show pan effect, respecting current selection
     calculateAndApplyScaling();
     if (isCanvasInitialized) {
+      // Full update to apply visibility, colors, and transforms
       updatePlot();
     }
   };
@@ -547,6 +530,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
       // Skip processing if variableName is undefined (out of bounds)
       if (!variableName) {
+        // Ensure line is disabled if variable name is undefined
+        plotLineRef.current!.setLineEnabled(index, false);
         return; // Skip this iteration
       }
 
@@ -562,6 +547,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
       // Update line properties using the new API methods
       plotLineRef.current!.updateLineColor(index, currentColor);
+
+      // Explicitly set line enabled/disabled state - this is critical for proper line visibility
       plotLineRef.current!.setLineEnabled(index, isSelected);
 
       // Increase thickness for hovered lines if they are selected
@@ -757,6 +744,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   // Update plot visibility when selected variables change
   useEffect(() => {
     if (isCanvasInitialized) {
+      console.log("Selected variables changed:", selectedVariables);
       updatePlot();
     }
   }, [selectedVariables, isCanvasInitialized]);
@@ -803,7 +791,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     return () => {
       canvas.removeEventListener("wheel", handleWheel);
     };
-  }, [isCanvasInitialized]); // Re-add listener when canvas is re-initialized
+  }, [isCanvasInitialized, selectedVariables]); // Re-add listener when canvas is re-initialized and when selectedVariables change
 
   return (
     <Grid
@@ -977,16 +965,16 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               height: "100%",
               display: "block",
               backgroundColor: "transparent",
+              outline: "none", // Prevent focus outline on iPad and other touch devices
               cursor: zoomController.current.getIsZooming()
                 ? "col-resize"
-                : isPanningWithMouse
-                  ? "grabbing"
-                  : zoomController.current.isZoomedIn()
-                    ? "grab" // Show grab cursor when zoomed and can pan
-                    : showCrosshair
-                      ? "crosshair"
-                      : "default",
+                : zoomController.current.isZoomedIn()
+                  ? "grab" // Show grab cursor when zoomed and can pan
+                  : showCrosshair
+                    ? "crosshair"
+                    : "default",
             }}
+            tabIndex={-1} // Prevent canvas from being focusable via keyboard
             onMouseDown={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
               const mouseX = e.clientX - rect.left;
@@ -995,11 +983,9 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
                 // Left mouse button - start zoom
                 startZoom(mouseX);
               } else if (e.button === 2) {
-                // Right mouse button - start pan (only when zoomed in)
+                // Prevent context menu on right-click when zoomed in
                 if (zoomController.current.isZoomedIn()) {
-                  e.preventDefault(); // Prevent context menu
-                  setIsPanningWithMouse(true);
-                  startPan(mouseX);
+                  e.preventDefault();
                 }
               }
             }}
@@ -1011,23 +997,12 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               if (zoomController.current.getIsZooming()) {
                 // Update zoom selection
                 updateZoomSelection(mouseX);
-              } else if (
-                isPanningWithMouse &&
-                zoomController.current.getIsPanning()
-              ) {
-                // Update pan position
-                updatePan(mouseX);
-                // Immediately apply pan changes
-                calculateAndApplyScaling();
-                if (isCanvasInitialized) {
-                  updatePlot();
-                }
               } else {
-                // Normal crosshair behavior
+                // Crosshair behavior when not zooming
                 updateCrosshair(mouseX, mouseY);
               }
-
-              if (isCanvasInitialized && !isPanningWithMouse) {
+              // Always redraw after mouse move
+              if (isCanvasInitialized) {
                 updatePlot();
               }
             }}
@@ -1035,10 +1010,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               if (e.button === 0 && zoomController.current.getIsZooming()) {
                 // Complete zoom on left mouse button release
                 completeZoom();
-              } else if (e.button === 2 && isPanningWithMouse) {
-                // End pan on right mouse button release
-                setIsPanningWithMouse(false);
-                endPan();
               }
             }}
             onDoubleClick={() => {
@@ -1054,11 +1025,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               }
             }}
             onMouseLeave={() => {
-              // End panning if mouse leaves canvas while panning
-              if (isPanningWithMouse) {
-                setIsPanningWithMouse(false);
-                endPan();
-              }
+              // No drag-based panning; just hide crosshair
 
               if (!zoomController.current.getIsZooming()) {
                 setShowCrosshair(false);
