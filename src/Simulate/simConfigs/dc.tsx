@@ -20,7 +20,8 @@ const DcConfig: React.FC<DcConfigProps> = ({
     step: initialData?.step || "",
   });
 
-  const [dcSimConfig, setDcSimConfig] = useState("");
+  // Derived combined config string (no state to avoid extra renders causing focus loss)
+  const combinedConfig = `.dc ${formData.source} ${formData.start} ${formData.stop} ${formData.step}`;
 
   // Use a ref to track the name - this prevents re-renders from overwriting user edits
   const nameRef = useRef(initialData?.name);
@@ -40,11 +41,16 @@ const DcConfig: React.FC<DcConfigProps> = ({
 
   // Update form data and name ref when initialData changes (when switching between configs)
   useEffect(() => {
-    console.log("DC Config: initialData changed:", initialData); // Debug logging
-
-    isUpdatingFromExternalDataRef.current = true; // Set flag before updating
-
+    // Sync formData only when initialData truly differs to avoid resetting during typing
     if (initialData) {
+      const same =
+        formData.source === initialData.source &&
+        formData.start === initialData.start &&
+        formData.stop === initialData.stop &&
+        formData.step === initialData.step;
+      if (same) return;
+      console.log("DC Config: external initialData sync:", initialData); // Debug logging
+      isUpdatingFromExternalDataRef.current = true;
       setFormData({
         source: initialData.source || "",
         start: initialData.start || "",
@@ -53,35 +59,28 @@ const DcConfig: React.FC<DcConfigProps> = ({
       });
       nameRef.current = initialData.name;
     } else {
-      // Clear form when no initial data (e.g., when switching from another config type)
-      setFormData({
-        source: "",
-        start: "",
-        stop: "",
-        step: "",
-      });
+      const isEmpty =
+        formData.source === "" &&
+        formData.start === "" &&
+        formData.stop === "" &&
+        formData.step === "";
+      if (isEmpty) return;
+      console.log("DC Config: clearing formData"); // Debug logging
+      isUpdatingFromExternalDataRef.current = true;
+      setFormData({ source: "", start: "", stop: "", step: "" });
       nameRef.current = undefined;
     }
-    // Flag will be reset in the next useEffect
+    // Flag will be reset in the next effect
   }, [initialData]);
 
-  // Update combined string whenever form data changes
-  useEffect(() => {
-    const combined = `.dc ${formData.source} ${formData.start} ${formData.stop} ${formData.step}`;
-    setDcSimConfig(combined);
-
-    // Skip callbacks if we're updating from external data to prevent infinite loops
-    if (isUpdatingFromExternalDataRef.current) {
-      isUpdatingFromExternalDataRef.current = false; // Reset the flag
-      return;
-    }
-
-    // Call the callback with the updated config using ref to prevent focus loss
-    if (onConfigChangeRef.current) {
-      onConfigChangeRef.current(combined);
-    }
-
-    // Call the full config callback with complete DC configuration using ref to prevent focus loss
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+  // Notify parent callbacks after user finishes editing (on blur) to avoid focus loss
+  const handleBlur = () => {
+    // Notify parent of combined config string
+    onConfigChangeRef.current?.(combinedConfig);
+    // Notify parent of full config if all fields are set
     if (
       onFullConfigChangeRef.current &&
       formData.source &&
@@ -91,18 +90,14 @@ const DcConfig: React.FC<DcConfigProps> = ({
     ) {
       const fullConfig: SimulationDC = {
         type: "DC",
-        name: nameRef.current, // Use the ref to preserve user-edited names
+        name: nameRef.current,
         source: formData.source,
-        start: formData.start, // Keep as string to support unit postfixes
-        stop: formData.stop, // Keep as string to support unit postfixes
-        step: formData.step, // Keep as string to support unit postfixes
+        start: formData.start,
+        stop: formData.stop,
+        step: formData.step,
       };
       onFullConfigChangeRef.current(fullConfig);
     }
-  }, [formData]); // Removed onConfigChange from dependencies to prevent focus loss issues
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -117,7 +112,7 @@ const DcConfig: React.FC<DcConfigProps> = ({
             bg="gray.50"
             borderRadius="md"
           >
-            Combined Config: {dcSimConfig}
+            Combined Config: {combinedConfig}
           </Text>
         </Stack>
 
@@ -128,6 +123,7 @@ const DcConfig: React.FC<DcConfigProps> = ({
               name="source"
               value={formData.source}
               onChange={(e) => handleInputChange("source", e.target.value)}
+              onBlur={handleBlur}
               placeholder="Source name (e.g., V1, I1)"
             />
           </Field.Root>
@@ -138,6 +134,7 @@ const DcConfig: React.FC<DcConfigProps> = ({
               name="start"
               value={formData.start}
               onChange={(e) => handleInputChange("start", e.target.value)}
+              onBlur={handleBlur}
               placeholder="e.g., 0, 1m, 5.2"
             />
           </Field.Root>
@@ -148,6 +145,7 @@ const DcConfig: React.FC<DcConfigProps> = ({
               name="stop"
               value={formData.stop}
               onChange={(e) => handleInputChange("stop", e.target.value)}
+              onBlur={handleBlur}
               placeholder="e.g., 10, 1.5k, 2M"
             />
           </Field.Root>
@@ -158,6 +156,7 @@ const DcConfig: React.FC<DcConfigProps> = ({
               name="step"
               value={formData.step}
               onChange={(e) => handleInputChange("step", e.target.value)}
+              onBlur={handleBlur}
               placeholder="e.g., 0.1, 10m, 1k"
             />
           </Field.Root>

@@ -18,8 +18,12 @@ const TransConfig: React.FC<TransConfigProps> = ({
     timeStep: initialData?.timeStep || "",
     initialConditions: initialData?.initialConditions || false,
   });
+  // Refs for uncontrolled inputs to prevent re-renders on typing
+  const stopTimeRef = useRef<HTMLInputElement>(null);
+  const timeStepRef = useRef<HTMLInputElement>(null);
 
-  const [transSimConfig, setTransSimConfig] = useState(""); // Changed from dcSimConfig to transSimConfig
+  // Derived combined config string (no state to avoid extra renders causing focus loss)
+  const combinedConfig = `.tran ${formData.timeStep} ${formData.stopTime}`;
 
   // Use a ref to track the name - this prevents re-renders from overwriting user edits
   const nameRef = useRef(initialData?.name);
@@ -39,11 +43,16 @@ const TransConfig: React.FC<TransConfigProps> = ({
 
   // Update form data and name ref when initialData changes (when switching between configs)
   useEffect(() => {
-    console.log("Transient Config: initialData changed:", initialData); // Debug logging
-
-    isUpdatingFromExternalDataRef.current = true; // Set flag before updating
-
+    // Sync formData only when initialData truly differs to avoid resetting during typing
     if (initialData) {
+      const same =
+        formData.stopTime === initialData.stopTime &&
+        formData.timeStep === initialData.timeStep &&
+        formData.initialConditions === initialData.initialConditions;
+      if (same) return; // No real change, skip resetting
+      // External update: sync formData and nameRef
+      console.log("Transient Config: external initialData sync:", initialData); // Debug logging
+      isUpdatingFromExternalDataRef.current = true;
       setFormData({
         stopTime: initialData.stopTime || "",
         timeStep: initialData.timeStep || "",
@@ -51,49 +60,20 @@ const TransConfig: React.FC<TransConfigProps> = ({
       });
       nameRef.current = initialData.name;
     } else {
-      // Clear form when no initial data (e.g., when switching from another config type)
-      setFormData({
-        stopTime: "",
-        timeStep: "",
-        initialConditions: false,
-      });
-      nameRef.current = undefined;
+      // If clearing when switching off this config type, only clear if fields not already empty
+      if (
+        formData.stopTime !== "" ||
+        formData.timeStep !== "" ||
+        formData.initialConditions !== false
+      ) {
+        console.log("Transient Config: clearing formData"); // Debug logging
+        isUpdatingFromExternalDataRef.current = true;
+        setFormData({ stopTime: "", timeStep: "", initialConditions: false });
+        nameRef.current = undefined;
+      }
     }
-    // Flag will be reset in the next useEffect
+    // Flag will be reset in the next effect
   }, [initialData]);
-
-  // Update combined string whenever form data changes
-  useEffect(() => {
-    const combined = `.tran ${formData.timeStep} ${formData.stopTime}`;
-    setTransSimConfig(combined);
-
-    // Skip callbacks if we're updating from external data to prevent infinite loops
-    if (isUpdatingFromExternalDataRef.current) {
-      isUpdatingFromExternalDataRef.current = false; // Reset the flag
-      return;
-    }
-
-    // Call the callback with the updated config using ref to prevent focus loss
-    if (onConfigChangeRef.current) {
-      onConfigChangeRef.current(combined);
-    }
-
-    // Call the full config callback with complete Transient configuration using ref to prevent focus loss
-    if (
-      onFullConfigChangeRef.current &&
-      formData.timeStep &&
-      formData.stopTime
-    ) {
-      const fullConfig: SimulationTransient = {
-        type: "Transient",
-        name: nameRef.current, // Use the ref to preserve user-edited names
-        timeStep: formData.timeStep, // Keep as string to support unit postfixes
-        stopTime: formData.stopTime, // Keep as string to support unit postfixes
-        initialConditions: formData.initialConditions,
-      };
-      onFullConfigChangeRef.current(fullConfig);
-    }
-  }, [formData]); // Removed onConfigChange from dependencies to prevent focus loss issues
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -111,7 +91,7 @@ const TransConfig: React.FC<TransConfigProps> = ({
             bg="gray.50"
             borderRadius="md"
           >
-            Combined Config: {transSimConfig}
+            Combined Config: {combinedConfig}
           </Text>
         </Stack>
 
@@ -120,8 +100,30 @@ const TransConfig: React.FC<TransConfigProps> = ({
             <Field.Label>Stop Time (s)</Field.Label>
             <Input
               name="stopTime"
-              value={formData.stopTime}
-              onChange={(e) => handleInputChange("stopTime", e.target.value)}
+              defaultValue={formData.stopTime}
+              ref={stopTimeRef}
+              onBlur={() => {
+                const value = stopTimeRef.current?.value || "";
+                // Update state once on blur to avoid re-render during typing
+                setFormData((prev) => ({ ...prev, stopTime: value }));
+                onConfigChangeRef.current?.(
+                  `.tran ${formData.timeStep} ${value}`
+                );
+                if (
+                  onFullConfigChangeRef.current &&
+                  formData.timeStep &&
+                  value
+                ) {
+                  const fullConfig: SimulationTransient = {
+                    type: "Transient",
+                    name: nameRef.current,
+                    timeStep: formData.timeStep,
+                    stopTime: value,
+                    initialConditions: formData.initialConditions,
+                  };
+                  onFullConfigChangeRef.current(fullConfig);
+                }
+              }}
               placeholder="e.g., 1, 100m, 1u, 10n"
             />
           </Field.Root>
@@ -130,8 +132,29 @@ const TransConfig: React.FC<TransConfigProps> = ({
             <Field.Label>Time Step (s)</Field.Label>
             <Input
               name="timeStep"
-              value={formData.timeStep}
-              onChange={(e) => handleInputChange("timeStep", e.target.value)}
+              defaultValue={formData.timeStep}
+              ref={timeStepRef}
+              onBlur={() => {
+                const value = timeStepRef.current?.value || "";
+                setFormData((prev) => ({ ...prev, timeStep: value }));
+                onConfigChangeRef.current?.(
+                  `.tran ${value} ${formData.stopTime}`
+                );
+                if (
+                  onFullConfigChangeRef.current &&
+                  value &&
+                  formData.stopTime
+                ) {
+                  const fullConfig: SimulationTransient = {
+                    type: "Transient",
+                    name: nameRef.current,
+                    timeStep: value,
+                    stopTime: formData.stopTime,
+                    initialConditions: formData.initialConditions,
+                  };
+                  onFullConfigChangeRef.current(fullConfig);
+                }
+              }}
               placeholder="e.g., 0.01, 1m, 100u, 1n"
             />
           </Field.Root>

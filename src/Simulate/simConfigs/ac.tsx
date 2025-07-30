@@ -87,31 +87,37 @@ const AcConfig: React.FC<AcConfigProps> = ({
       return;
     }
 
-    // Call the callback with the updated config string using ref to prevent focus loss
-    if (onConfigChangeRef.current) {
-      onConfigChangeRef.current(combined);
-    }
+    // Use setTimeout to debounce callback execution and prevent focus loss during rapid typing
+    const timeoutId = setTimeout(() => {
+      // Call the callback with the updated config string using ref to prevent focus loss
+      if (onConfigChangeRef.current) {
+        onConfigChangeRef.current(combined);
+      }
 
-    // Call the full config callback with complete AC configuration using ref to prevent focus loss
-    if (
-      onFullConfigChangeRef.current &&
-      formData.source &&
-      formData.sweepType &&
-      formData.frequencyStart &&
-      formData.frequencyStop &&
-      formData.stepNumber // Updated to match property name
-    ) {
-      const fullConfig: SimulationAC = {
-        type: "AC",
-        name: nameRef.current, // Use the ref to preserve user-edited names
-        source: formData.source,
-        sweepType: formData.sweepType as SimulationAC["sweepType"],
-        frequencyStart: formData.frequencyStart, // Keep as string to support unit postfixes
-        frequencyStop: formData.frequencyStop, // Keep as string to support unit postfixes
-        stepNumber: formData.stepNumber, // Updated to match SimulationAC type
-      };
-      onFullConfigChangeRef.current(fullConfig);
-    }
+      // Call the full config callback with complete AC configuration using ref to prevent focus loss
+      if (
+        onFullConfigChangeRef.current &&
+        formData.source &&
+        formData.sweepType &&
+        formData.frequencyStart &&
+        formData.frequencyStop &&
+        formData.stepNumber // Updated to match property name
+      ) {
+        const fullConfig: SimulationAC = {
+          type: "AC",
+          name: nameRef.current, // Use the ref to preserve user-edited names
+          source: formData.source,
+          sweepType: formData.sweepType as SimulationAC["sweepType"],
+          frequencyStart: formData.frequencyStart, // Keep as string to support unit postfixes
+          frequencyStop: formData.frequencyStop, // Keep as string to support unit postfixes
+          stepNumber: formData.stepNumber, // Updated to match SimulationAC type
+        };
+        onFullConfigChangeRef.current(fullConfig);
+      }
+    }, 100); // 100ms debounce to prevent focus loss during typing
+
+    // Cleanup timeout on dependency change to prevent stale callbacks
+    return () => clearTimeout(timeoutId);
   }, [formData]); // Removed onConfigChange from dependencies to prevent focus loss issues
 
   const handleInputChange = (field: string, value: string) => {
