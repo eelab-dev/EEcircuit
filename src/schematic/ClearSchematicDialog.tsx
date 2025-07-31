@@ -1,7 +1,7 @@
 import React from "react";
 import { Dialog, Button, Flex, IconButton, Portal } from "@chakra-ui/react";
 import { X } from "lucide-react";
-import { sendCommand } from "eecircuit-schematic";
+import { sendCommand, loadDemoSchematic } from "eecircuit-schematic";
 
 type ClearSchematicDialogProps = {
   isOpen: boolean;
@@ -14,6 +14,11 @@ const ClearSchematicDialog: React.FC<ClearSchematicDialogProps> = ({
 }) => {
   const handleClearSchematic = React.useCallback(() => {
     sendCommand({ command: "clearSchematic" });
+    onClose();
+  }, [onClose]);
+
+  const handleLoadDemo = React.useCallback(() => {
+    loadDemoSchematic();
     onClose();
   }, [onClose]);
 
@@ -62,15 +67,23 @@ const ClearSchematicDialog: React.FC<ClearSchematicDialogProps> = ({
                 Are you sure you want to clear the schematic? This action will
                 delete all your current work and cannot be undone.
               </p>
+              <p style={{ marginTop: "16px", fontSize: "14px", color: "#666" }}>
+                You can either clear to start fresh or load the demo schematic.
+              </p>
             </Dialog.Body>
             <Dialog.Footer>
               <Flex justify="space-between" width="100%">
                 <Button variant="outline" onClick={handleCancel}>
-                  No, Cancel
+                  Cancel
                 </Button>
-                <Button colorPalette="red" onClick={handleClearSchematic}>
-                  Yes, Clear All
-                </Button>
+                <Flex gap={2}>
+                  <Button colorPalette="blue" onClick={handleLoadDemo}>
+                    Load Demo
+                  </Button>
+                  <Button colorPalette="red" onClick={handleClearSchematic}>
+                    Clear All
+                  </Button>
+                </Flex>
               </Flex>
             </Dialog.Footer>
           </Dialog.Content>
