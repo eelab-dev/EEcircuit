@@ -5,11 +5,13 @@ import { StateCreator } from "zustand";
 export interface UiState {
   inputProfile: "mouse" | "trackpad";
   dragBox: boolean;
+  showDevMessages: boolean;
 }
 
 export interface UiActions {
   setInputProfile: (profile: "mouse" | "trackpad") => void;
   setDragBox: (show: boolean) => void;
+  setShowDevMessages: (show: boolean) => void;
   toggleInputProfile: () => void;
 }
 
@@ -22,10 +24,12 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
   // Initial state
   inputProfile: "trackpad",
   dragBox: false,
+  showDevMessages: false,
 
   // Actions
   setInputProfile: (profile) => set({ inputProfile: profile }),
   setDragBox: (show) => set({ dragBox: show }),
+  setShowDevMessages: (show) => set({ showDevMessages: show }),
 
   toggleInputProfile: () => {
     const currentProfile = get().inputProfile;

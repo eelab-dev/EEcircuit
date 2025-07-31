@@ -9,16 +9,22 @@ import {
   Clipboard,
   Float,
   Circle,
+  Checkbox,
 } from "@chakra-ui/react";
 import React from "react";
 import { Tooltip } from "src/components/ui/tooltip";
+import { useAppStore } from "../store/appStore";
 
 type StatusProps = {
-  info: string[];
+  info: {message: string, mLevel: "user" | "dev"}[];
 };
 
 const Status: React.FC<StatusProps> = ({ info }) => {
-  const errors = info.filter((line) => line.startsWith("error:"));
+  const showDevMessages = useAppStore((state) => state.showDevMessages);
+  const setShowDevMessages = useAppStore((state) => state.setShowDevMessages);
+  
+  const filteredInfo = showDevMessages ? info : info.filter((item) => item.mLevel === "user");
+  const errors = filteredInfo.filter((item) => item.message.startsWith("error:"));
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
@@ -43,13 +49,23 @@ const Status: React.FC<StatusProps> = ({ info }) => {
               <Dialog.Title>Status Messages</Dialog.Title>
             </Dialog.Header>
             <Dialog.Body>
-              <Box p={2} textWrap="nowrap" fontSize="sm" overflowX="auto">
-                {info.map((line, index) => (
-                  <Tooltip key={index} content={line} openDelay={200}>
-                    <Box key={index}>{line}</Box>
-                  </Tooltip>
-                ))}
-              </Box>
+              <Flex direction="column" gap={3}>
+                <Checkbox.Root
+                  checked={showDevMessages}
+                  onCheckedChange={(e) => setShowDevMessages(e.checked === true)}
+                >
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control />
+                  <Checkbox.Label>Show dev messages</Checkbox.Label>
+                </Checkbox.Root>
+                <Box p={2} textWrap="nowrap" fontSize="sm" overflowX="auto">
+                  {filteredInfo.map((item, index) => (
+                    <Tooltip key={index} content={item.message} openDelay={200}>
+                      <Box key={index}>{item.message}</Box>
+                    </Tooltip>
+                  ))}
+                </Box>
+              </Flex>
             </Dialog.Body>
             <Dialog.Footer>
               <Dialog.ActionTrigger asChild>
@@ -58,7 +74,7 @@ const Status: React.FC<StatusProps> = ({ info }) => {
             </Dialog.Footer>
             <Dialog.CloseTrigger asChild>
               <Flex gap={2} align="center">
-                <Clipboard.Root value={info.join("\n")}>
+                <Clipboard.Root value={filteredInfo.map(item => item.message).join("\n")}>
                   <Clipboard.Trigger asChild>
                     <IconButton variant="surface" size="xs">
                       <Clipboard.Indicator />

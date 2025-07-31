@@ -90,7 +90,7 @@ const Schematic: React.FC<SchematicProps> = ({
   const [fullscreen, setFullscreen] = useState(false);
   const [propertiesOpen, setPropertiesOpen] = useState(false);
 
-  const [info, setInfo] = useState<string[]>([]);
+  const [info, setInfo] = useState<{message: string, mLevel: "user" | "dev"}[]>([]);
   const [canvasHeight] = useState(0);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
   const [showExportImageDialog, setShowExportImageDialog] = useState(false);
@@ -207,7 +207,7 @@ const Schematic: React.FC<SchematicProps> = ({
           }
           break;
         case "info":
-          setInfo((prevInfo) => [...prevInfo, `${msg.mType}: ${msg.info}`]);
+          setInfo((prevInfo) => [...prevInfo, {message: `${msg.mType}: ${msg.msg}`, mLevel: msg.mLevel}]);
           break;
         case "svg":
           setSvgContent(msg.svg);
