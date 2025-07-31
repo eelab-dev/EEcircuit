@@ -40,7 +40,8 @@ const Schematic: React.FC<SchematicProps> = ({
   onSchematicDataChange,
 }) => {
   // Get state and actions directly from Zustand store - no prop fallbacks needed
-  const shouldFitToScreen = useAppStore((state) => state.shouldFitToScreen);
+  const hasViewedSchematic = useAppStore((state) => state.hasViewedSchematic);
+  const setHasViewedSchematic = useAppStore((state) => state.setHasViewedSchematic);
   const setCurrentSchematic = useAppStore((state) => state.setCurrentSchematic);
 
   const isPlotSelectionMode = useAppStore((state) => state.isPlotSelectionMode);
@@ -65,6 +66,7 @@ const Schematic: React.FC<SchematicProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const initializedCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const initializingCanvasRef = useRef<HTMLCanvasElement | null>(null); // Track canvas currently being initialized
   const lastContainerSizeRef = useRef<{ width: number; height: number }>({
     width: 0,
     height: 0,
@@ -92,7 +94,6 @@ const Schematic: React.FC<SchematicProps> = ({
 
   const [info, setInfo] = useState<{message: string, mLevel: "user" | "dev"}[]>([]);
   const [canvasHeight] = useState(0);
-  const [isCanvasReady, setIsCanvasReady] = useState(false);
   const [showExportImageDialog, setShowExportImageDialog] = useState(false);
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [loadingSvg, setLoadingSvg] = useState(false);
@@ -167,45 +168,6 @@ const Schematic: React.FC<SchematicProps> = ({
         case "availableComponents":
           setAvailableComponents(msg.availableComponents);
           break;
-        case "canvasReady":
-          console.log("Canvas ready message received from library");
-          setIsCanvasReady(true);
-
-          // IMPORTANT: Fit-to-screen should ONLY happen during initial app initialization, NEVER during tab changes
-          // Check that this is truly the first initialization and not a tab change or resize
-          if (
-            shouldFitToScreen &&
-            !hasFitToScreenExecutedRef.current &&
-            !isTabChangeInProgressRef.current &&
-            isTabVisibleRef.current
-          ) {
-            console.log(
-              "Performing fit-to-screen after canvas ready for INITIAL APP INITIALIZATION ONLY"
-            );
-            eeSch.sendCommand({ command: "view", viewType: "fit" });
-            hasFitToScreenExecutedRef.current = true; // Mark fit-to-screen as executed
-            isProcessingFitToScreenRef.current = true; // Mark as processing to prevent resize interference
-            hasInitializedOnceRef.current = true; // Mark as initialized only after fit-to-screen
-            console.log(
-              "Fit-to-screen command sent successfully from canvasReady handler for INITIAL APP INITIALIZATION"
-            );
-
-            // Clear the processing flag on next frame to allow normal operation
-            requestAnimationFrame(() => {
-              console.log(
-                "Clearing fit-to-screen processing flag after command execution"
-              );
-              isProcessingFitToScreenRef.current = false;
-            });
-          }
-          // Only mark as initialized if no special actions are pending and this is visible tab
-          else if (!hasInitializedOnceRef.current && isTabVisibleRef.current) {
-            console.log(
-              "Canvas ready for first time with no special actions, marking as initialized"
-            );
-            hasInitializedOnceRef.current = true;
-          }
-          break;
         case "info":
           setInfo((prevInfo) => [...prevInfo, {message: `${msg.mType}: ${msg.msg}`, mLevel: msg.mLevel}]);
           break;
@@ -231,37 +193,96 @@ const Schematic: React.FC<SchematicProps> = ({
   );
 
   // Helper function to safely initialize canvas only once
-  // The eecircuit library will send "canvasReady" message when truly ready
   const safeInitCanvas = useCallback(
-    (canvas: HTMLCanvasElement) => {
+    async (canvas: HTMLCanvasElement) => {
       if (initializedCanvasRef.current === canvas) {
         console.log("Canvas already initialized, skipping...");
         return false; // Already initialized
       }
 
-      console.log("Initializing canvas with eecircuit library...");
+      if (initializingCanvasRef.current === canvas) {
+        console.log("Canvas initialization already in progress, skipping...");
+        return false; // Already initializing
+      }
 
-      // Initialize canvas with eecircuit - it will send "canvasReady" message when truly ready
-      eeSch.initCanvas(canvas, msgCallback);
-      initializedCanvasRef.current = canvas;
-      // Note: setIsCanvasReady(true) will be called when "canvasReady" message is received
+      // Check canvas dimensions before initialization
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        console.log("Canvas dimensions are zero, skipping initialization:", {
+          width: rect.width,
+          height: rect.height
+        });
+        return false;
+      }
 
-      // Reset initialization flag when canvas is recreated to allow fit-to-screen for new canvas
-      // But ONLY if this is a resize operation, not a tab change
-      if (!isTabChangeInProgressRef.current) {
+      console.log("Initializing canvas with eecircuit library...", {
+        width: rect.width,
+        height: rect.height
+      });
+
+      // Mark canvas as being initialized
+      initializingCanvasRef.current = canvas;
+
+      try {
+        // Initialize canvas with eecircuit - resolves when canvas is ready
+        await eeSch.initCanvas(canvas, msgCallback);
+        initializedCanvasRef.current = canvas;
+        initializingCanvasRef.current = null; // Clear initializing flag
+        console.log("Canvas initialization completed and ready");
+      } catch (error) {
+        console.error("Canvas initialization failed:", error);
+        initializingCanvasRef.current = null; // Clear initializing flag on error
+        return false;
+      }
+
+      // Handle fit-to-screen for initial app initialization ONLY
+      // Use hasViewedSchematic instead of shouldFitToScreen to avoid timing issues
+      if (
+        !hasViewedSchematic &&
+        !hasFitToScreenExecutedRef.current &&
+        !isTabChangeInProgressRef.current &&
+        isTabVisibleRef.current
+      ) {
         console.log(
-          "Canvas recreated due to resize - resetting initialization flags"
+          "Performing fit-to-screen after canvas ready for INITIAL APP INITIALIZATION ONLY"
+        );
+        eeSch.sendCommand({ command: "view", viewType: "fit" });
+        hasFitToScreenExecutedRef.current = true; // Mark fit-to-screen as executed
+        isProcessingFitToScreenRef.current = true; // Mark as processing to prevent resize interference
+        hasInitializedOnceRef.current = true; // Mark as initialized only after fit-to-screen
+        setHasViewedSchematic(true); // Mark as viewed so fit-to-screen won't happen again
+        console.log(
+          "Fit-to-screen command sent successfully for INITIAL APP INITIALIZATION"
+        );
+
+        // Clear the processing flag on next frame to allow normal operation
+        requestAnimationFrame(() => {
+          console.log(
+            "Clearing fit-to-screen processing flag after command execution"
+          );
+          isProcessingFitToScreenRef.current = false;
+        });
+      }
+      // Only mark as initialized if no special actions are pending and this is visible tab
+      else if (!hasInitializedOnceRef.current && isTabVisibleRef.current) {
+        console.log(
+          "Canvas ready for first time with no special actions, marking as initialized"
+        );
+        hasInitializedOnceRef.current = true;
+      }
+
+      // Reset initialization flag when canvas is recreated 
+      // But ONLY if this is a resize operation, not a tab change
+      if (!isTabChangeInProgressRef.current && hasFitToScreenExecutedRef.current) {
+        console.log(
+          "Canvas recreated due to resize - resetting hasInitializedOnceRef but keeping fit-to-screen flag"
         );
         hasInitializedOnceRef.current = false;
-        // Don't reset fit-to-screen flag for existing sessions - only allow it for true app initialization
-        if (!hasFitToScreenExecutedRef.current) {
-          console.log("First time initialization - allowing fit-to-screen");
-        } else {
-          console.log(
-            "Subsequent canvas recreation - fit-to-screen already executed"
-          );
-        }
-      } else {
+        // NEVER reset hasFitToScreenExecutedRef during resize - it should only happen once at app startup
+        console.log(
+          "Canvas recreation during resize - fit-to-screen will NOT be triggered again"
+        );
+      } else if (isTabChangeInProgressRef.current) {
         console.log(
           "Canvas initialization during tab change - keeping existing flags"
         );
@@ -269,36 +290,9 @@ const Schematic: React.FC<SchematicProps> = ({
 
       return true; // Successfully initialized
     },
-    [msgCallback]
+    [msgCallback, hasViewedSchematic, setHasViewedSchematic]
   );
 
-  // Handle fit to screen when requested - ONLY for initial app initialization
-  useEffect(() => {
-    if (
-      shouldFitToScreen &&
-      !hasFitToScreenExecutedRef.current &&
-      isCanvasReady &&
-      isTabVisibleRef.current &&
-      !isTabChangeInProgressRef.current
-    ) {
-      console.log(
-        "Performing fit-to-screen for initial app initialization (from effect)"
-      );
-      eeSch.sendCommand({ command: "view", viewType: "fit" });
-      hasFitToScreenExecutedRef.current = true; // Mark fit-to-screen as executed
-      isProcessingFitToScreenRef.current = true; // Mark as processing to prevent resize interference
-      hasInitializedOnceRef.current = true; // Mark as initialized
-      console.log("Fit-to-screen command sent successfully");
-
-      // Clear the processing flag on next frame to allow normal operation
-      requestAnimationFrame(() => {
-        console.log(
-          "Clearing fit-to-screen processing flag after command execution"
-        );
-        isProcessingFitToScreenRef.current = false;
-      });
-    }
-  }, [shouldFitToScreen, isCanvasReady]); // Keep dependencies minimal to prevent unnecessary triggers
 
   // Effect to handle tab visibility changes - simplified approach like simulate/plot tabs
   useEffect(() => {
@@ -333,7 +327,6 @@ const Schematic: React.FC<SchematicProps> = ({
         if (
           isVisible &&
           canvasRef.current &&
-          !isCanvasReady &&
           initializedCanvasRef.current !== canvasRef.current
         ) {
           console.log("Tab became visible, ensuring canvas is ready");
@@ -348,7 +341,7 @@ const Schematic: React.FC<SchematicProps> = ({
     return () => {
       visibilityObserver.disconnect();
     };
-  }, [safeInitCanvas, isCanvasReady]); // Include isCanvasReady to ensure proper synchronization
+  }, [safeInitCanvas]); // Canvas initialization handled internally by safeInitCanvas
 
   // Handle keyboard events for plot selection mode
   useEffect(() => {
@@ -496,8 +489,8 @@ const Schematic: React.FC<SchematicProps> = ({
         container.removeChild(canvasRef.current);
         // Reset refs
         initializedCanvasRef.current = null;
+        initializingCanvasRef.current = null;
         canvasRef.current = null;
-        setIsCanvasReady(false);
       }
 
       // Create new canvas with current container dimensions
@@ -542,13 +535,12 @@ const Schematic: React.FC<SchematicProps> = ({
       debouncedResizeHandler();
     };
 
-    // Only initialize if canvas exists but is not ready
+    // Only initialize if canvas exists but hasn't been initialized for this canvas instance
     if (
       canvasRef.current &&
-      !isCanvasReady &&
       initializedCanvasRef.current !== canvasRef.current
     ) {
-      console.log("Canvas exists but not ready, initializing");
+      console.log("Canvas exists but not initialized, initializing");
       safeInitCanvas(canvasRef.current);
     }
 
@@ -563,7 +555,7 @@ const Schematic: React.FC<SchematicProps> = ({
       resizeObserver.disconnect();
       debouncedResizeHandler.cancel();
     };
-  }, [safeInitCanvas, isCanvasReady, onCanvasResized]);
+  }, [safeInitCanvas, onCanvasResized]);
 
   const sendToNetListButtonHandler = useCallback(() => {
     if (!canvasRef.current) return;
