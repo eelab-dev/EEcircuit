@@ -3,13 +3,13 @@ import { StateCreator } from "zustand";
 
 // UI state and actions
 export interface UiState {
-  inputProfile: "mouse" | "trackpad";
+  inputProfile: "mouse" | "trackpad" | "touchscreen";
   dragBox: boolean;
   showDevMessages: boolean;
 }
 
 export interface UiActions {
-  setInputProfile: (profile: "mouse" | "trackpad") => void;
+  setInputProfile: (profile: "mouse" | "trackpad" | "touchscreen") => void;
   setDragBox: (show: boolean) => void;
   setShowDevMessages: (show: boolean) => void;
   toggleInputProfile: () => void;
@@ -33,7 +33,16 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
 
   toggleInputProfile: () => {
     const currentProfile = get().inputProfile;
-    const newProfile = currentProfile === "mouse" ? "trackpad" : "mouse";
+    let newProfile: "mouse" | "trackpad" | "touchscreen";
+    
+    if (currentProfile === "mouse") {
+      newProfile = "trackpad";
+    } else if (currentProfile === "trackpad") {
+      newProfile = "touchscreen";
+    } else {
+      newProfile = "mouse";
+    }
+    
     set({ inputProfile: newProfile });
 
     sendCommand({

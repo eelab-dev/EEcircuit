@@ -23,7 +23,7 @@ import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
 import { sendCommand, Schematic as SchematicType } from "eecircuit-schematic";
 import { EEcircuitFile } from "./types/commonTypes.ts";
-import { Mouse, Touchpad, Download } from "lucide-react";
+import { Mouse, Touchpad, Download, Smartphone } from "lucide-react";
 import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
 
@@ -458,19 +458,21 @@ const EEcircuit: React.FC = () => {
               {/* Input Profile Toggle Button */}
               <Tooltip
                 showArrow
-                content={`Switch to ${inputProfile === "mouse" ? "trackpad" : "mouse"} input profile`}
+                content={`Current: ${inputProfile} - Click to cycle input profiles`}
                 positioning={{ placement: "bottom" }}
               >
                 <IconButton
-                  aria-label={`Switch to ${inputProfile === "mouse" ? "trackpad" : "mouse"} input profile`}
+                  aria-label={`Current input profile: ${inputProfile} - Click to cycle`}
                   size="sm"
                   variant="ghost"
                   onClick={toggleInputProfile}
                 >
                   {inputProfile === "mouse" ? (
                     <Mouse size={16} />
-                  ) : (
+                  ) : inputProfile === "trackpad" ? (
                     <Touchpad size={16} />
+                  ) : (
+                    <Smartphone size={16} />
                   )}
                 </IconButton>
               </Tooltip>
