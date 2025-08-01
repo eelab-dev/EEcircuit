@@ -1,5 +1,6 @@
 import { sendCommand } from "eecircuit-schematic";
 import { StateCreator } from "zustand";
+import { getRecommendedInputProfile } from "../utils/deviceDetection";
 
 // UI state and actions
 export interface UiState {
@@ -21,14 +22,14 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
   set,
   get
 ) => ({
-  // Initial state
-  inputProfile: "trackpad",
+  // Initial state - automatically detect device type
+  inputProfile: getRecommendedInputProfile(),
   dragBox: false,
   showDevMessages: false,
 
-  // Actions
-  setInputProfile: (profile) => set({ inputProfile: profile }),
-  setDragBox: (show) => set({ dragBox: show }),
+    // Actions
+    setInputProfile: (profile) => set({ inputProfile: profile }),
+    setDragBox: (show) => set({ dragBox: show }),
   setShowDevMessages: (show) => set({ showDevMessages: show }),
 
   toggleInputProfile: () => {

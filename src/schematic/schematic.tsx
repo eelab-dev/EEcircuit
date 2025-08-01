@@ -26,6 +26,7 @@ import { useColorModeValue } from "../components/ui/color-mode";
 import ExportImageDialog from "./ExportImageDialog";
 import { ToBePlotted } from "src/types/commonTypes";
 import { useAppStore } from "../store/appStore";
+import { getRecommendedInputProfile } from "../utils/deviceDetection";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
@@ -229,6 +230,14 @@ const Schematic: React.FC<SchematicProps> = ({
         initializedCanvasRef.current = canvas;
         initializingCanvasRef.current = null; // Clear initializing flag
         console.log("Canvas initialization completed and ready");
+        
+        // Send input profile command now that canvas is ready
+        const inputProfile = getRecommendedInputProfile();
+        console.log("Sending input profile to canvas:", inputProfile);
+        eeSch.sendCommand({
+          command: "setInputProfile",
+          profile: inputProfile,
+        });
       } catch (error) {
         console.error("Canvas initialization failed:", error);
         initializingCanvasRef.current = null; // Clear initializing flag on error
