@@ -42,7 +42,9 @@ const Schematic: React.FC<SchematicProps> = ({
 }) => {
   // Get state and actions directly from Zustand store - no prop fallbacks needed
   const hasViewedSchematic = useAppStore((state) => state.hasViewedSchematic);
-  const setHasViewedSchematic = useAppStore((state) => state.setHasViewedSchematic);
+  const setHasViewedSchematic = useAppStore(
+    (state) => state.setHasViewedSchematic
+  );
   const setCurrentSchematic = useAppStore((state) => state.setCurrentSchematic);
 
   const isPlotSelectionMode = useAppStore((state) => state.isPlotSelectionMode);
@@ -93,7 +95,9 @@ const Schematic: React.FC<SchematicProps> = ({
   const [fullscreen, setFullscreen] = useState(false);
   const [propertiesOpen, setPropertiesOpen] = useState(false);
 
-  const [info, setInfo] = useState<{message: string, mLevel: "user" | "dev"}[]>([]);
+  const [info, setInfo] = useState<
+    { message: string; mLevel: "user" | "dev" }[]
+  >([]);
   const [canvasHeight] = useState(0);
   const [showExportImageDialog, setShowExportImageDialog] = useState(false);
   const [svgContent, setSvgContent] = useState<string | null>(null);
@@ -170,7 +174,10 @@ const Schematic: React.FC<SchematicProps> = ({
           setAvailableComponents(msg.availableComponents);
           break;
         case "info":
-          setInfo((prevInfo) => [...prevInfo, {message: `${msg.mType}: ${msg.msg}`, mLevel: msg.mLevel}]);
+          setInfo((prevInfo) => [
+            ...prevInfo,
+            { message: `${msg.mType}: ${msg.msg}`, mLevel: msg.mLevel },
+          ]);
           break;
         case "svg":
           setSvgContent(msg.svg);
@@ -211,14 +218,14 @@ const Schematic: React.FC<SchematicProps> = ({
       if (rect.width === 0 || rect.height === 0) {
         console.log("Canvas dimensions are zero, skipping initialization:", {
           width: rect.width,
-          height: rect.height
+          height: rect.height,
         });
         return false;
       }
 
       console.log("Initializing canvas with eecircuit library...", {
         width: rect.width,
-        height: rect.height
+        height: rect.height,
       });
 
       // Mark canvas as being initialized
@@ -230,7 +237,7 @@ const Schematic: React.FC<SchematicProps> = ({
         initializedCanvasRef.current = canvas;
         initializingCanvasRef.current = null; // Clear initializing flag
         console.log("Canvas initialization completed and ready");
-        
+
         // Send input profile command now that canvas is ready
         const inputProfile = getRecommendedInputProfile();
         console.log("Sending input profile to canvas:", inputProfile);
@@ -280,9 +287,12 @@ const Schematic: React.FC<SchematicProps> = ({
         hasInitializedOnceRef.current = true;
       }
 
-      // Reset initialization flag when canvas is recreated 
+      // Reset initialization flag when canvas is recreated
       // But ONLY if this is a resize operation, not a tab change
-      if (!isTabChangeInProgressRef.current && hasFitToScreenExecutedRef.current) {
+      if (
+        !isTabChangeInProgressRef.current &&
+        hasFitToScreenExecutedRef.current
+      ) {
         console.log(
           "Canvas recreated due to resize - resetting hasInitializedOnceRef but keeping fit-to-screen flag"
         );
@@ -301,7 +311,6 @@ const Schematic: React.FC<SchematicProps> = ({
     },
     [msgCallback, hasViewedSchematic, setHasViewedSchematic]
   );
-
 
   // Effect to handle tab visibility changes - simplified approach like simulate/plot tabs
   useEffect(() => {
@@ -371,6 +380,39 @@ const Schematic: React.FC<SchematicProps> = ({
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isPlotSelectionMode, handleExitPlotSelectionMode]);
+
+  // Handle keyboard shortcuts for undo/redo when canvas is focused
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle shortcuts when canvas container is focused or contains focus
+      const canvasContainer = containerRef.current;
+      if (!canvasContainer || !document.activeElement) return;
+
+      // Check if focus is within the canvas container or on the canvas itself
+      const isFocusInCanvas =
+        canvasContainer.contains(document.activeElement) ||
+        document.activeElement === canvasRef.current;
+
+      if (!isFocusInCanvas) return;
+
+      // Handle Shift+Z for undo
+      if (event.shiftKey && event.key === "Z") {
+        event.preventDefault();
+        eeSch.undoSch();
+      }
+
+      // Handle Shift+R for redo
+      if (event.shiftKey && event.key === "R") {
+        event.preventDefault();
+        eeSch.redoSch();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   // Initialize the canvas and set up the message callback
   useEffect(() => {
@@ -615,6 +657,8 @@ const Schematic: React.FC<SchematicProps> = ({
         ref={containerRef}
         id="canvas-container"
         minHeight={0} // Prevent flex item from growing beyond container
+        tabIndex={0} // Make container focusable for keyboard shortcuts
+        outline="none" // Remove default focus outline
       >
         {/* Canvas added dynamically */}
 
