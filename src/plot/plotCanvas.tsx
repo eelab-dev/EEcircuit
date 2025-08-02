@@ -31,7 +31,12 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   // We need to use refs to avoid circular dependencies between hooks
   const updatePlotRef = useRef<(() => void) | null>(null);
   const calculateAndApplyScalingRef = useRef<(() => void) | null>(null);
-  const axisScalesRef = useRef({ scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 });
+  const axisScalesRef = useRef({
+    scaleX: 1,
+    scaleY: 1,
+    offsetX: 0,
+    offsetY: 0,
+  });
 
   // Initialize canvas first
   const {
@@ -71,27 +76,24 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   });
 
   // Initialize plot calculations
-  const {
-    axisScales,
-    calculateAndApplyScaling,
-    updatePlot,
-  } = usePlotCalculations({
-    plotLineRef,
-    wglpRef,
-    crosshairRef,
-    snapCircleRef,
-    zoomLinesRef,
-    zoomRegionRef,
-    zoomController,
-    lineDataRef,
-    colorMapRef,
-    results,
-    selectedVariables,
-    hoveredVariable,
-    colorMode,
-    showCrosshair,
-    crosshairSnapToLines,
-  });
+  const { axisScales, calculateAndApplyScaling, updatePlot } =
+    usePlotCalculations({
+      plotLineRef,
+      wglpRef,
+      crosshairRef,
+      snapCircleRef,
+      zoomLinesRef,
+      zoomRegionRef,
+      zoomController,
+      lineDataRef,
+      colorMapRef,
+      results,
+      selectedVariables,
+      hoveredVariable,
+      colorMode,
+      showCrosshair,
+      crosshairSnapToLines,
+    });
 
   // Update refs when functions change
   useEffect(() => {
@@ -153,7 +155,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   // Update plot visibility when selected variables change
   useEffect(() => {
     if (isCanvasInitialized) {
-      console.log("Selected variables changed:", selectedVariables);
       updatePlot();
     }
   }, [selectedVariables, isCanvasInitialized]);
@@ -425,11 +426,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
         borderTop="solid 2px"
         borderRight="solid 2px"
       />
-      <GridItem
-        rowStart={2}
-        colStart={2}
-        borderTop={isAxis ? "solid 2px" : ""}
-      >
+      <GridItem rowStart={2} colStart={2} borderTop={isAxis ? "solid 2px" : ""}>
         {isAxis ? (
           <Axis
             scale={axisScales.scaleX}
