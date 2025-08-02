@@ -44,7 +44,7 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
     const checkMobile = () => {
       const mobile = window.innerWidth < 768; // md breakpoint
       setIsMobile(mobile);
-      
+
       // Set defaults based on screen size
       if (mobile) {
         // Mobile: closed and unpinned by default
@@ -60,10 +60,9 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
     };
 
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, [onPinnedChange]);
-
 
   if (variableNames.length === 0) {
     return null;
@@ -85,10 +84,10 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
   const handleTogglePin = () => {
     const newPinned = !isPinned;
     setIsPinned(newPinned);
-    
+
     // Notify parent of pin state change
     onPinnedChange?.(newPinned);
-    
+
     // If unpinning and on desktop, close the drawer
     if (!newPinned && !isMobile) {
       setIsDrawerOpen(false);
@@ -105,7 +104,7 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
       name="variables"
     >
       {/* Top section with legend and action buttons */}
-      <Text fontSize="sm" mb="2" fontWeight="medium">
+      <Text fontSize="sm" mb="2" fontWeight="medium" color="gray.300/90">
         X-axis: {variableNames[0]}
       </Text>
 
@@ -145,9 +144,7 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             <Checkbox.HiddenInput />
             <Checkbox.Control />
             <Checkbox.Label
-              fontWeight={
-                hoveredVariable === value ? "semibold" : "normal"
-              }
+              fontWeight={hoveredVariable === value ? "semibold" : "normal"}
               transition="font-weight 0.1s ease"
             >
               {value}
@@ -168,7 +165,9 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
         transform="translateY(-50%)"
         zIndex={1001}
         size="sm"
-        aria-label={isDrawerOpen ? "Close plot variables" : "Open plot variables"}
+        aria-label={
+          isDrawerOpen ? "Close plot variables" : "Open plot variables"
+        }
         onClick={handleToggleDrawer}
         bg="gray.100/90"
         backdropFilter="blur(8px)"
@@ -185,25 +184,20 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
           right={0}
           width="12rem"
           height="100%"
-          bg="white"
+          bg="gray.800/60"
+          backdropFilter="blur(12px)"
           borderLeft="1px solid"
-          borderColor="gray.200"
-          shadow="lg"
+          borderColor="gray.900/50"
+          borderRadius="md"
+          shadow="sm"
           zIndex={1000}
-          _dark={{
-            bg: "gray.800",
-            borderColor: "gray.600"
-          }}
         >
           {/* Header */}
-          <Box
-            p={4}
-            borderBottom="1px solid"
-            borderColor="gray.200"
-            _dark={{ borderColor: "gray.600" }}
-          >
+          <Box p={4} borderBottom="1px solid" borderColor="gray.900/50">
             <HStack justify="space-between" align="center">
-              <Text fontSize="sm" fontWeight="semibold">Plot Variables</Text>
+              <Text fontSize="sm" fontWeight="semibold" color="gray.300/90">
+                Plot Variables
+              </Text>
               <HStack gap={1}>
                 <IconButton
                   variant="ghost"
@@ -214,8 +208,8 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
                   {isPinned ? <Pin size={16} /> : <PinOff size={16} />}
                 </IconButton>
                 {!isPinned && (
-                  <IconButton 
-                    variant="ghost" 
+                  <IconButton
+                    variant="ghost"
                     size="sm"
                     onClick={() => setIsDrawerOpen(false)}
                     aria-label="Close sidebar"
@@ -226,23 +220,19 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
               </HStack>
             </HStack>
           </Box>
-          
+
           {/* Body with fixed bottom button */}
-          <Box 
-            position="relative" 
-            height="calc(100% - 64px)" 
-            overflow="hidden"
-          >
+          <Box position="relative" height="calc(100% - 64px)" overflow="hidden">
             {/* Scrollable content area */}
-            <Box 
-              p={4} 
-              height={onExportCSV ? "calc(100% - 60px)" : "100%"} 
+            <Box
+              p={4}
+              height={onExportCSV ? "calc(100% - 60px)" : "100%"}
               overflowY="auto"
               overflowX="hidden"
             >
               <SidebarContent />
             </Box>
-            
+
             {/* Fixed bottom button */}
             {onExportCSV && (
               <Box
@@ -252,13 +242,10 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
                 right={0}
                 p={4}
                 pt={2}
-                bg="white"
+                bg="gray.800/60"
+                backdropFilter="blur(12px)"
                 borderTop="1px solid"
-                borderColor="gray.200"
-                _dark={{ 
-                  bg: "gray.800",
-                  borderColor: "gray.600" 
-                }}
+                borderColor="gray.900/50"
               >
                 <Button
                   size="xs"
@@ -297,7 +284,7 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             bg="blackAlpha.600"
             onClick={() => setIsDrawerOpen(false)}
           />
-          
+
           {/* Mobile drawer content */}
           <Box
             position="absolute"
@@ -306,21 +293,18 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             width="20rem"
             maxWidth="80vw"
             height="100vh"
-            bg="white"
+            bg="gray.800/60"
+            backdropFilter="blur(12px)"
             shadow="2xl"
-            _dark={{ bg: "gray.800" }}
           >
             {/* Header */}
-            <Box
-              p={4}
-              borderBottom="1px solid"
-              borderColor="gray.200"
-              _dark={{ borderColor: "gray.600" }}
-            >
+            <Box p={4} borderBottom="1px solid" borderColor="gray.900/50">
               <HStack justify="space-between" align="center">
-                <Text fontSize="sm" fontWeight="semibold">Plot Variables</Text>
-                <IconButton 
-                  variant="ghost" 
+                <Text fontSize="sm" fontWeight="semibold" color="gray.300/90">
+                  Plot Variables
+                </Text>
+                <IconButton
+                  variant="ghost"
                   size="sm"
                   onClick={() => setIsDrawerOpen(false)}
                   aria-label="Close sidebar"
@@ -329,23 +313,23 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
                 </IconButton>
               </HStack>
             </Box>
-            
+
             {/* Body with fixed bottom button */}
-            <Box 
-              position="relative" 
-              height="calc(100% - 64px)" 
+            <Box
+              position="relative"
+              height="calc(100% - 64px)"
               overflow="hidden"
             >
               {/* Scrollable content area */}
-              <Box 
-                p={4} 
-                height={onExportCSV ? "calc(100% - 60px)" : "100%"} 
+              <Box
+                p={4}
+                height={onExportCSV ? "calc(100% - 60px)" : "100%"}
                 overflowY="auto"
                 overflowX="hidden"
               >
                 <SidebarContent />
               </Box>
-              
+
               {/* Fixed bottom button */}
               {onExportCSV && (
                 <Box
@@ -355,13 +339,10 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
                   right={0}
                   p={4}
                   pt={2}
-                  bg="white"
+                  bg="gray.800/60"
+                  backdropFilter="blur(12px)"
                   borderTop="1px solid"
-                  borderColor="gray.200"
-                  _dark={{ 
-                    bg: "gray.800",
-                    borderColor: "gray.600" 
-                  }}
+                  borderColor="gray.900/50"
                 >
                   <Button
                     size="xs"
