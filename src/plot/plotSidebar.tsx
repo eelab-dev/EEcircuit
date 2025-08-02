@@ -2,14 +2,14 @@ import React, { useState, useEffect } from "react";
 import {
   Checkbox,
   CheckboxGroup,
-  Fieldset,
   For,
   Button,
   HStack,
   IconButton,
-  Drawer,
+  Box,
+  Text,
 } from "@chakra-ui/react";
-import { ChevronRight, Settings, Pin, PinOff } from "lucide-react";
+import { ChevronRight, Settings, Pin, PinOff, Download } from "lucide-react";
 
 interface PlotSidebarProps {
   variableNames: string[];
@@ -18,6 +18,7 @@ interface PlotSidebarProps {
   onSelectedVariablesChange: (variables: string[]) => void;
   onVariableHover: (variable: string | null) => void;
   onPinnedChange?: (isPinned: boolean) => void;
+  onExportCSV?: () => void;
 }
 
 // PlotSidebar implements a responsive drawer system for plot variable selection.
@@ -32,6 +33,7 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
   onSelectedVariablesChange,
   onVariableHover,
   onPinnedChange,
+  onExportCSV,
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
@@ -93,77 +95,74 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
     }
   };
 
-  // SidebarContent component encapsulates the variable selection form.
-  // Uses Chakra UI's CheckboxGroup in controlled mode with local state.
-  // This approach ensures reliable checkbox state updates.
+  // SidebarContent component - linear layout since scrolling is handled by parent
   const SidebarContent = () => (
-    <Fieldset.Root w="100%" h="100%">
-      <CheckboxGroup
-        value={selectedVariables}
-        onValueChange={(newValues) => {
-          onSelectedVariablesChange(newValues);
-        }}
-        name="variables"
-      >
-        <Fieldset.Legend fontSize="sm" mb="2">
-          X-axis: {variableNames[0]}
-        </Fieldset.Legend>
+    <CheckboxGroup
+      value={selectedVariables}
+      onValueChange={(newValues) => {
+        onSelectedVariablesChange(newValues);
+      }}
+      name="variables"
+    >
+      {/* Top section with legend and action buttons */}
+      <Text fontSize="sm" mb="2" fontWeight="medium">
+        X-axis: {variableNames[0]}
+      </Text>
 
-        <HStack mb="3" gap="1" w="100%">
-          <Button
-            size="xs"
-            variant="outline"
-            onClick={handleSelectAll}
-            fontSize="xs"
-            flex="1"
-            minW="0"
-          >
-            All
-          </Button>
-          <Button
-            size="xs"
-            variant="outline"
-            onClick={handleDeselectAll}
-            fontSize="xs"
-            flex="1"
-            minW="0"
-          >
-            None
-          </Button>
-        </HStack>
+      <HStack gap="1" w="100%" mb="3">
+        <Button
+          size="xs"
+          variant="outline"
+          onClick={handleSelectAll}
+          fontSize="xs"
+          flex="1"
+          minW="0"
+        >
+          All
+        </Button>
+        <Button
+          size="xs"
+          variant="outline"
+          onClick={handleDeselectAll}
+          fontSize="xs"
+          flex="1"
+          minW="0"
+        >
+          None
+        </Button>
+      </HStack>
 
-        <Fieldset.Content overflowY="auto" maxHeight="100%">
-          <For each={variableNames.slice(1)}>
-            {(value) => (
-              <Checkbox.Root
-                key={value}
-                value={value}
-                onMouseEnter={() => onVariableHover(value)}
-                onMouseLeave={() => onVariableHover(null)}
-              >
-                <Checkbox.HiddenInput />
-                <Checkbox.Control />
-                <Checkbox.Label
-                  fontWeight={
-                    hoveredVariable === value ? "semibold" : "normal"
-                  }
-                  transition="font-weight 0.1s ease"
-                >
-                  {value}
-                </Checkbox.Label>
-              </Checkbox.Root>
-            )}
-          </For>
-        </Fieldset.Content>
-      </CheckboxGroup>
-    </Fieldset.Root>
+      {/* Checkbox list */}
+      <For each={variableNames.slice(1)}>
+        {(value) => (
+          <Checkbox.Root
+            key={value}
+            value={value}
+            onMouseEnter={() => onVariableHover(value)}
+            onMouseLeave={() => onVariableHover(null)}
+            mb="2"
+          >
+            <Checkbox.HiddenInput />
+            <Checkbox.Control />
+            <Checkbox.Label
+              fontWeight={
+                hoveredVariable === value ? "semibold" : "normal"
+              }
+              transition="font-weight 0.1s ease"
+            >
+              {value}
+            </Checkbox.Label>
+          </Checkbox.Root>
+        )}
+      </For>
+    </CheckboxGroup>
   );
 
   return (
     <>
       {/* Toggle button - always visible */}
       <IconButton
-        position="fixed"
+        position="absolute"
         top="50%"
         right={isDrawerOpen && !isMobile ? "13rem" : "1rem"}
         transform="translateY(-50%)"
@@ -178,82 +177,207 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
         {isDrawerOpen ? <ChevronRight size={16} /> : <Settings size={16} />}
       </IconButton>
 
-      {/* Desktop drawer - positioned sidebar */}
-      {!isMobile && (
-        <Drawer.Root 
-          open={isDrawerOpen} 
-          onOpenChange={(e) => {
-            // Only allow closing if not pinned
-            if (!isPinned || !e.open) {
-              setIsDrawerOpen(e.open);
-            }
+      {/* Desktop custom sidebar - constrained to tab height */}
+      {!isMobile && isDrawerOpen && (
+        <Box
+          position="absolute"
+          top={0}
+          right={0}
+          width="12rem"
+          height="100%"
+          bg="white"
+          borderLeft="1px solid"
+          borderColor="gray.200"
+          shadow="lg"
+          zIndex={1000}
+          _dark={{
+            bg: "gray.800",
+            borderColor: "gray.600"
           }}
-          placement="end"
-          size="xs"
-          modal={false}
         >
-          <Drawer.Positioner>
-            <Drawer.Content 
-              position="fixed"
-              top="0"
-              right="0"
-              height="100vh"
-              width="12rem"
-              zIndex={1000}
-            >
-              <Drawer.Header>
-                <Drawer.Title>Plot Variables</Drawer.Title>
-                <HStack gap={1}>
-                  <IconButton
-                    variant="ghost"
+          {/* Header */}
+          <Box
+            p={4}
+            borderBottom="1px solid"
+            borderColor="gray.200"
+            _dark={{ borderColor: "gray.600" }}
+          >
+            <HStack justify="space-between" align="center">
+              <Text fontSize="sm" fontWeight="semibold">Plot Variables</Text>
+              <HStack gap={1}>
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleTogglePin}
+                  aria-label={isPinned ? "Unpin drawer" : "Pin drawer"}
+                >
+                  {isPinned ? <Pin size={16} /> : <PinOff size={16} />}
+                </IconButton>
+                {!isPinned && (
+                  <IconButton 
+                    variant="ghost" 
                     size="sm"
-                    onClick={handleTogglePin}
-                    aria-label={isPinned ? "Unpin drawer" : "Pin drawer"}
+                    onClick={() => setIsDrawerOpen(false)}
+                    aria-label="Close sidebar"
                   >
-                    {isPinned ? <Pin size={16} /> : <PinOff size={16} />}
-                  </IconButton>
-                  {!isPinned && (
-                    <Drawer.CloseTrigger asChild>
-                      <IconButton variant="ghost" size="sm">
-                        <ChevronRight size={16} />
-                      </IconButton>
-                    </Drawer.CloseTrigger>
-                  )}
-                </HStack>
-              </Drawer.Header>
-              <Drawer.Body p={4}>
-                <SidebarContent />
-              </Drawer.Body>
-            </Drawer.Content>
-          </Drawer.Positioner>
-        </Drawer.Root>
-      )}
-
-      {/* Mobile drawer - modal style */}
-      {isMobile && (
-        <Drawer.Root 
-          open={isDrawerOpen} 
-          onOpenChange={(e) => setIsDrawerOpen(e.open)}
-          placement="end"
-          size="xs"
-        >
-          <Drawer.Backdrop />
-          <Drawer.Positioner>
-            <Drawer.Content>
-              <Drawer.Header>
-                <Drawer.Title>Plot Variables</Drawer.Title>
-                <Drawer.CloseTrigger asChild>
-                  <IconButton variant="ghost" size="sm">
                     <ChevronRight size={16} />
                   </IconButton>
-                </Drawer.CloseTrigger>
-              </Drawer.Header>
-              <Drawer.Body p={4}>
+                )}
+              </HStack>
+            </HStack>
+          </Box>
+          
+          {/* Body with fixed bottom button */}
+          <Box 
+            position="relative" 
+            height="calc(100% - 64px)" 
+            overflow="hidden"
+          >
+            {/* Scrollable content area */}
+            <Box 
+              p={4} 
+              height={onExportCSV ? "calc(100% - 60px)" : "100%"} 
+              overflowY="auto"
+              overflowX="hidden"
+            >
+              <SidebarContent />
+            </Box>
+            
+            {/* Fixed bottom button */}
+            {onExportCSV && (
+              <Box
+                position="absolute"
+                bottom={0}
+                left={0}
+                right={0}
+                p={4}
+                pt={2}
+                bg="white"
+                borderTop="1px solid"
+                borderColor="gray.200"
+                _dark={{ 
+                  bg: "gray.800",
+                  borderColor: "gray.600" 
+                }}
+              >
+                <Button
+                  size="xs"
+                  variant="solid"
+                  onClick={onExportCSV}
+                  fontSize="xs"
+                  w="100%"
+                >
+                  <Download size={14} />
+                  Download CSV
+                </Button>
+              </Box>
+            )}
+          </Box>
+        </Box>
+      )}
+
+      {/* Mobile overlay - still use modal style for mobile */}
+      {isMobile && (
+        <Box
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          zIndex={1500}
+          display={isDrawerOpen ? "block" : "none"}
+        >
+          {/* Backdrop */}
+          <Box
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            bg="blackAlpha.600"
+            onClick={() => setIsDrawerOpen(false)}
+          />
+          
+          {/* Mobile drawer content */}
+          <Box
+            position="absolute"
+            top={0}
+            right={0}
+            width="20rem"
+            maxWidth="80vw"
+            height="100vh"
+            bg="white"
+            shadow="2xl"
+            _dark={{ bg: "gray.800" }}
+          >
+            {/* Header */}
+            <Box
+              p={4}
+              borderBottom="1px solid"
+              borderColor="gray.200"
+              _dark={{ borderColor: "gray.600" }}
+            >
+              <HStack justify="space-between" align="center">
+                <Text fontSize="sm" fontWeight="semibold">Plot Variables</Text>
+                <IconButton 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setIsDrawerOpen(false)}
+                  aria-label="Close sidebar"
+                >
+                  <ChevronRight size={16} />
+                </IconButton>
+              </HStack>
+            </Box>
+            
+            {/* Body with fixed bottom button */}
+            <Box 
+              position="relative" 
+              height="calc(100% - 64px)" 
+              overflow="hidden"
+            >
+              {/* Scrollable content area */}
+              <Box 
+                p={4} 
+                height={onExportCSV ? "calc(100% - 60px)" : "100%"} 
+                overflowY="auto"
+                overflowX="hidden"
+              >
                 <SidebarContent />
-              </Drawer.Body>
-            </Drawer.Content>
-          </Drawer.Positioner>
-        </Drawer.Root>
+              </Box>
+              
+              {/* Fixed bottom button */}
+              {onExportCSV && (
+                <Box
+                  position="absolute"
+                  bottom={0}
+                  left={0}
+                  right={0}
+                  p={4}
+                  pt={2}
+                  bg="white"
+                  borderTop="1px solid"
+                  borderColor="gray.200"
+                  _dark={{ 
+                    bg: "gray.800",
+                    borderColor: "gray.600" 
+                  }}
+                >
+                  <Button
+                    size="xs"
+                    variant="solid"
+                    onClick={onExportCSV}
+                    fontSize="xs"
+                    w="100%"
+                  >
+                    <Download size={14} />
+                    Download CSV
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </Box>
       )}
     </>
   );

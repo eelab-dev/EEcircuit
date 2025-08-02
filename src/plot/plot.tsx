@@ -1,11 +1,10 @@
 import React from "react";
 import { ResultType } from "eecircuit-engine";
-import { Flex, Button } from "@chakra-ui/react";
+import { Flex } from "@chakra-ui/react";
 import { useColorMode } from "../components/ui/color-mode";
 import PlotCanvas from "./plotCanvas";
 import PlotSidebar from "./plotSidebar";
 import { useAppStore } from "../store/appStore";
-import { Download } from "lucide-react";
 import { exportResultsToCSV } from "../utils/csvExport";
 
 interface PlotProps {
@@ -75,22 +74,8 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
           hoveredVariable={hoveredVariable}
           onVariableHover={setHoveredVariable}
           onPinnedChange={setIsDrawerPinned}
+          onExportCSV={handleExportCSV}
         />
-      )}
-      {results.length > 0 && (
-        <Button
-          position="absolute"
-          bottom={4}
-          right={isDrawerPinned ? "13rem" : "1rem"}
-          onClick={handleExportCSV}
-          size="sm"
-          variant="outline"
-          zIndex={1000}
-          transition="right 0.3s ease"
-        >
-          <Download size={16} />
-          Download CSV
-        </Button>
       )}
     </Flex>
   );
