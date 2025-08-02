@@ -30,6 +30,7 @@ const Actions: React.FC<ActionsProps> = ({
   onExportImage,
   onShowShortcuts,
 }) => {
+  const buttonBg = "gray.100/90";
   const [isCompact, setIsCompact] = React.useState(false);
   const [showClearDialog, setShowClearDialog] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -73,7 +74,7 @@ const Actions: React.FC<ActionsProps> = ({
         display: "grid",
         gridTemplateColumns: isCompact ? "1fr 1fr" : "1fr",
         gap: isCompact ? "0.25rem" : "0.5rem",
-        backgroundColor: "var(--chakra-colors-gray-800)",
+        backgroundColor: "gray.800/60",
         padding: "0.375rem",
         borderRadius: "0.375rem",
         width: "fit-content",
@@ -81,41 +82,42 @@ const Actions: React.FC<ActionsProps> = ({
       }}
     >
       <Tooltip content="Select/Move" showArrow openDelay={300}>
-        <IconButton>
+        <IconButton bg={buttonBg}>
           <MousePointer />
         </IconButton>
       </Tooltip>
       <Tooltip content="Pan View" showArrow openDelay={300}>
-        <IconButton>
+        <IconButton bg={buttonBg}>
           <Move />
         </IconButton>
       </Tooltip>
       <Separator display={isCompact ? "none" : "block"} />
       <Tooltip content="Add Wire" showArrow openDelay={300}>
-        <IconButton>
+        <IconButton bg={buttonBg}>
           <Cable />
         </IconButton>
       </Tooltip>
       <AddComponentPopover availableComponents={availableComponents} />
       <Separator display={isCompact ? "none" : "block"} />
       <Tooltip content="Remove Selected" showArrow openDelay={300}>
-        <IconButton>
+        <IconButton bg={buttonBg}>
           <Eraser />
         </IconButton>
       </Tooltip>
       <Tooltip content="Clear Schematic" showArrow openDelay={300}>
-        <IconButton onClick={() => setShowClearDialog(true)}>
+        <IconButton bg={buttonBg} onClick={() => setShowClearDialog(true)}>
           <Trash2 />
         </IconButton>
       </Tooltip>
       <Separator display={isCompact ? "none" : "block"} />
       <Tooltip content="Hand Tool" showArrow openDelay={300}>
-        <IconButton>
+        <IconButton bg={buttonBg}>
           <Hand />
         </IconButton>
       </Tooltip>
       <Tooltip content="Fit to Screen" showArrow openDelay={300}>
         <IconButton
+          bg={buttonBg}
           onClick={() => {
             sendCommand({ command: "view", viewType: "fit" });
           }}
@@ -124,17 +126,21 @@ const Actions: React.FC<ActionsProps> = ({
         </IconButton>
       </Tooltip>
       <Tooltip content="Return to Origin" showArrow openDelay={300}>
-        <IconButton>
+        <IconButton bg={buttonBg}>
           <CircleDot />
         </IconButton>
       </Tooltip>
       <Tooltip content="Export Image" showArrow openDelay={300}>
-        <IconButton onClick={onExportImage}>
+        <IconButton bg={buttonBg} onClick={onExportImage}>
           <ImageDown />
         </IconButton>
       </Tooltip>
-      <Tooltip content="Keyboard Shortcuts (Shift+H or Ctrl+H)" showArrow openDelay={300}>
-        <IconButton onClick={onShowShortcuts}>
+      <Tooltip
+        content="Keyboard Shortcuts (Shift+H or Ctrl+H)"
+        showArrow
+        openDelay={300}
+      >
+        <IconButton bg={buttonBg} onClick={onShowShortcuts}>
           <Keyboard />
         </IconButton>
       </Tooltip>

@@ -398,7 +398,10 @@ const Schematic: React.FC<SchematicProps> = ({
       if (!isFocusInCanvas) return;
 
       // Handle Shift+H or Ctrl+H for shortcuts dialog (override eecircuit-schematic's Ctrl+H)
-      if ((event.shiftKey && event.key === "H") || (event.ctrlKey && (event.key === "h" || event.key === "H"))) {
+      if (
+        (event.shiftKey && event.key === "H") ||
+        (event.ctrlKey && (event.key === "h" || event.key === "H"))
+      ) {
         event.preventDefault();
         event.stopPropagation();
         setShowShortcutsDialog(true);
@@ -690,7 +693,11 @@ const Schematic: React.FC<SchematicProps> = ({
           <Tooltip
             content={fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
           >
-            <IconButton aria-label="Fullscreen" onClick={fullscreenHandler}>
+            <IconButton
+              aria-label="Fullscreen"
+              onClick={fullscreenHandler}
+              bg="gray.100/90"
+            >
               {!fullscreen ? <Expand /> : <SquareX />}
             </IconButton>
           </Tooltip>

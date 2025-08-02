@@ -332,7 +332,7 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   return (
     <>
       <Tooltip content="Add Component" showArrow openDelay={300}>
-        <IconButton ref={buttonRef} onClick={openPopover}>
+        <IconButton ref={buttonRef} onClick={openPopover} bg="gray.100/90">
           <CopyPlus />
         </IconButton>
       </Tooltip>
