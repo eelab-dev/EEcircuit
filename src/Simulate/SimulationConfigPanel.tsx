@@ -1,5 +1,6 @@
 import {
   Button,
+  Box,
   Flex,
   Group,
   RadioCard,
@@ -410,37 +411,32 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
   return (
     <Flex
       flexDirection="column"
-      minWidth="300px"
-      maxWidth="400px"
-      height="100%"
-      overflow="hidden"
-      borderLeft="1px solid"
+      minWidth={{ base: "100%", md: "300px" }}
+      maxWidth={{ base: "100%", md: "400px" }}
+      height={{ base: "auto", md: "100%" }}
+      overflow={{ base: "visible", md: "hidden" }}
+      borderLeft={{ base: "none", md: "1px solid" }}
+      borderTop={{ base: "1px solid", md: "none" }}
       borderColor={useColorModeValue("gray.200", "gray.600")}
       position="relative"
     >
-      {/* Scrollable config area - now takes full height since button is handled by parent */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: "80px", // Reserve space for the run button handled by parent
-          overflowY: "auto",
-          overflowX: "hidden",
-          padding: "16px",
+      {/* Config area - no scrolling on mobile, scrollable on desktop */}
+      <Box
+        position={{ base: "static", md: "absolute" }}
+        top={{ base: "auto", md: 0 }}
+        left={{ base: "auto", md: 0 }}
+        right={{ base: "auto", md: 0 }}
+        bottom={{ base: "auto", md: 0 }}
+        overflowY={{ base: "visible", md: "auto" }}
+        overflowX="hidden"
+        p={4}
+        css={{
           overscrollBehavior: "contain",
           scrollbarWidth: "thin",
           scrollbarColor: useColorModeValue(
             "rgb(203, 213, 225) transparent",
             "rgb(75, 85, 99) transparent"
           ),
-        }}
-        onWheel={(e) => {
-          e.stopPropagation();
-        }}
-        onTouchMove={(e) => {
-          e.stopPropagation();
         }}
       >
         <Flex flexDirection="column" gap={4}>
@@ -800,7 +796,7 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
             }
           })()}
         </Flex>
-      </div>
+      </Box>
     </Flex>
   );
 };

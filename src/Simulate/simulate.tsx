@@ -163,9 +163,9 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   return (
     <Flex
       width="100%"
-      flexDirection={"row"}
+      flexDirection={{ base: "column", md: "row" }}
       height="100%"
-      overflow="hidden"
+      overflow={{ base: "auto", md: "hidden" }}
       position="relative"
       css={{
         "& *": {
@@ -176,8 +176,49 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         },
       }}
     >
-      {/* Editor on the left */}
-      <Flex flex="1" flexDirection="column" height="100%" overflow="hidden">
+      {/* Simulation configuration panel on the right/top */}
+      <Flex
+        flexDirection="column"
+        height={{ base: "auto", md: "100%" }}
+        minHeight="auto"
+        position="relative"
+        order={{ base: 1, md: 2 }}
+        flexShrink={{ base: 1, md: 0 }}
+        flexGrow={0}
+      >
+        <Flex flex={{ base: "none", md: "1" }} overflow={{ base: "visible", md: "hidden" }}>
+          <SimulationConfigPanel
+            onStringConfigChange={handleStringConfigChange}
+            onFullConfigChange={handleFullConfigChange}
+          />
+        </Flex>
+        
+        {/* Simulation button at bottom */}
+        <Flex
+          height="80px"
+          padding="4"
+          backgroundColor={useColorModeValue("white", "gray.800")}
+          borderTop="1px solid"
+          borderColor={useColorModeValue("gray.200", "gray.600")}
+          alignItems="center"
+          flexShrink={0}
+        >
+          <Button onClick={handleSimRun} width="100%">
+            Run Simulation
+          </Button>
+        </Flex>
+      </Flex>
+
+      {/* Editor on the left/bottom */}
+      <Flex 
+        flex={{ base: "0 0 auto", md: "1" }}
+        flexDirection="column" 
+        height={{ base: "400px", md: "100%" }}
+        minHeight={{ base: "400px", md: "auto" }}
+        overflow="hidden"
+        order={{ base: 2, md: 1 }}
+        flexShrink={0}
+      >
         <Flex
           padding="2"
           borderBottom="1px solid"
@@ -254,31 +295,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
             theme={useColorModeValue("light", "dark")}
           />
         </Suspense>
-      </Flex>
-
-      {/* Simulation configuration panel on the right */}
-      <SimulationConfigPanel
-        onStringConfigChange={handleStringConfigChange}
-        onFullConfigChange={handleFullConfigChange}
-      />
-
-      {/* Fixed simulation button at bottom right of config panel */}
-      <Flex
-        position="absolute"
-        bottom="0"
-        right="0"
-        width="300px"
-        maxWidth="400px"
-        height="80px"
-        padding="4"
-        backgroundColor={useColorModeValue("white", "gray.800")}
-        borderTop="1px solid"
-        borderColor={useColorModeValue("gray.200", "gray.600")}
-        alignItems="center"
-      >
-        <Button onClick={handleSimRun} width="100%">
-          Run Simulation
-        </Button>
       </Flex>
     </Flex>
   );

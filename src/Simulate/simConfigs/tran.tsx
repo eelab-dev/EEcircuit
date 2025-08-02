@@ -81,24 +81,25 @@ const TransConfig: React.FC<TransConfigProps> = ({
 
   return (
     <div>
-      <Fieldset.Root size="lg" maxW="md">
-        <Stack>
-          <Fieldset.Legend>Transient Simulation Configuration</Fieldset.Legend>
+      <Fieldset.Root size="sm" maxW="md">
+        <Stack gap={2}>
+          <Fieldset.Legend fontSize="sm">Transient Simulation</Fieldset.Legend>
           <Text
-            fontSize="sm"
+            fontSize="xs"
             color="gray.600"
-            p={2}
+            p={1}
             bg="gray.50"
             borderRadius="md"
           >
-            Combined Config: {combinedConfig}
+            {combinedConfig}
           </Text>
         </Stack>
 
-        <Fieldset.Content>
+        <Fieldset.Content gap={2}>
           <Field.Root>
-            <Field.Label>Stop Time (s)</Field.Label>
+            <Field.Label fontSize="sm">Stop Time</Field.Label>
             <Input
+              size="sm"
               name="stopTime"
               defaultValue={formData.stopTime}
               ref={stopTimeRef}
@@ -124,13 +125,14 @@ const TransConfig: React.FC<TransConfigProps> = ({
                   onFullConfigChangeRef.current(fullConfig);
                 }
               }}
-              placeholder="e.g., 1, 100m, 1u, 10n"
+              placeholder="e.g., 1, 100m"
             />
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Time Step (s)</Field.Label>
+            <Field.Label fontSize="sm">Time Step</Field.Label>
             <Input
+              size="sm"
               name="timeStep"
               defaultValue={formData.timeStep}
               ref={timeStepRef}
@@ -155,7 +157,7 @@ const TransConfig: React.FC<TransConfigProps> = ({
                   onFullConfigChangeRef.current(fullConfig);
                 }
               }}
-              placeholder="e.g., 0.01, 1m, 100u, 1n"
+              placeholder="e.g., 10m, 1u"
             />
           </Field.Root>
 

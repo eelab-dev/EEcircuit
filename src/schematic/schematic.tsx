@@ -774,30 +774,56 @@ const Schematic: React.FC<SchematicProps> = ({
       </Box>
       <Flex
         spaceX={2}
-        direction="row"
+        direction={{ base: "column", md: "row" }}
         p={2}
         align="center"
-        minHeight="60px"
+        minHeight={{ base: "auto", md: "60px" }}
         flexShrink={0}
+        gap={2}
       >
-        {/* Left-aligned status buttons */}
-        <Button size="sm">{`X:${coord.x}, Y:${coord.y}`}</Button>
-        <Button size="sm">{pointerInfo || "Info"}</Button>
-        <Button size="sm">{"none"}</Button>
+        {/* Top row on mobile, left section on desktop */}
+        <Flex
+          direction="row"
+          gap={2}
+          align="center"
+          flexWrap="wrap"
+          justifyContent={{ base: "center", md: "flex-start" }}
+        >
+          <Button size="sm">{`X:${coord.x}, Y:${coord.y}`}</Button>
+          <Button size="sm">{pointerInfo || "Info"}</Button>
+          <Button size="sm">{"none"}</Button>
+        </Flex>
 
-        {/* Flexible spacer - grows to push content to edges */}
-        <Box flex="1" />
+        {/* Center section - only on desktop */}
+        <Box flex="1" display={{ base: "none", md: "block" }} />
+        <Box display={{ base: "none", md: "block" }}>
+          <Status info={info} />
+        </Box>
+        <Box flex="1" display={{ base: "none", md: "block" }} />
 
-        {/* Center status component */}
-        {<Status info={info} />}
-
-        {/* Flexible spacer - grows to push simulate button to far right */}
-        <Box flex="1" />
-
-        {/* Right-aligned simulate button */}
-        <Button size="sm" onClick={sendToNetListButtonHandler}>
-          Simulate (Netlist) <ArrowBigRight size={16} />
-        </Button>
+        {/* Bottom row on mobile, right section on desktop */}
+        <Flex
+          direction="row"
+          gap={2}
+          align="center"
+          justifyContent="center"
+          width={{ base: "100%", md: "auto" }}
+        >
+          {/* Status on mobile */}
+          <Box display={{ base: "block", md: "none" }}>
+            <Status info={info} />
+          </Box>
+          
+          {/* Simulate button - always visible */}
+          <Button 
+            size="sm" 
+            onClick={sendToNetListButtonHandler}
+            flexShrink={0}
+            minWidth="fit-content"
+          >
+            Simulate (Netlist) <ArrowBigRight size={16} />
+          </Button>
+        </Flex>
       </Flex>
       <ExportImageDialog
         isOpen={showExportImageDialog}

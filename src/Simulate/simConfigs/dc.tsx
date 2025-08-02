@@ -102,62 +102,66 @@ const DcConfig: React.FC<DcConfigProps> = ({
 
   return (
     <div>
-      <Fieldset.Root size="lg" maxW="md">
-        <Stack>
-          <Fieldset.Legend>DC Simulation Configuration</Fieldset.Legend>
+      <Fieldset.Root size="sm" maxW="md">
+        <Stack gap={2}>
+          <Fieldset.Legend fontSize="sm">DC Simulation</Fieldset.Legend>
           <Text
-            fontSize="sm"
+            fontSize="xs"
             color="gray.600"
-            p={2}
+            p={1}
             bg="gray.50"
             borderRadius="md"
           >
-            Combined Config: {combinedConfig}
+            {combinedConfig}
           </Text>
         </Stack>
 
-        <Fieldset.Content>
+        <Fieldset.Content gap={2}>
           <Field.Root>
-            <Field.Label>Sweep Source</Field.Label>
+            <Field.Label fontSize="sm">Sweep Source</Field.Label>
             <Input
+              size="sm"
               name="source"
               value={formData.source}
               onChange={(e) => handleInputChange("source", e.target.value)}
               onBlur={handleBlur}
-              placeholder="Source name (e.g., V1, I1)"
+              placeholder="e.g., V1, I1"
             />
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Start Value (V)</Field.Label>
+            <Field.Label fontSize="sm">Start Value</Field.Label>
             <Input
+              size="sm"
               name="start"
               value={formData.start}
               onChange={(e) => handleInputChange("start", e.target.value)}
               onBlur={handleBlur}
-              placeholder="e.g., 0, 1m, 5.2"
+              placeholder="e.g., 0, 1m"
             />
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Stop Value (V)</Field.Label>
+            <Field.Label fontSize="sm">Stop Value</Field.Label>
             <Input
+              size="sm"
               name="stop"
               value={formData.stop}
               onChange={(e) => handleInputChange("stop", e.target.value)}
               onBlur={handleBlur}
-              placeholder="e.g., 10, 1.5k, 2M"
+              placeholder="e.g., 10, 1.5k"
             />
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Step size (V)</Field.Label>
+            <Field.Label fontSize="sm">Step Size</Field.Label>
             <Input
+              size="sm"
               name="step"
               value={formData.step}
               onChange={(e) => handleInputChange("step", e.target.value)}
               onBlur={handleBlur}
-              placeholder="e.g., 0.1, 10m, 1k"
+              placeholder="e.g., 0.1, 10m"
             />
           </Field.Root>
         </Fieldset.Content>

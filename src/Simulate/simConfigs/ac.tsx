@@ -126,34 +126,35 @@ const AcConfig: React.FC<AcConfigProps> = ({
 
   return (
     <div>
-      <Fieldset.Root size="lg" maxW="md">
-        <Stack>
-          <Fieldset.Legend>AC Simulation Configuration</Fieldset.Legend>
+      <Fieldset.Root size="sm" maxW="md">
+        <Stack gap={2}>
+          <Fieldset.Legend fontSize="sm">AC Simulation</Fieldset.Legend>
           <Text
-            fontSize="sm"
+            fontSize="xs"
             color="gray.600"
-            p={2}
+            p={1}
             bg="gray.50"
             borderRadius="md"
           >
-            Combined Config: {acSimConfig}
+            {acSimConfig}
           </Text>
         </Stack>
 
-        <Fieldset.Content>
+        <Fieldset.Content gap={2}>
           <Field.Root>
-            <Field.Label>Source</Field.Label>
+            <Field.Label fontSize="sm">Source</Field.Label>
             <Input
+              size="sm"
               name="source"
               value={formData.source}
               onChange={(e) => handleInputChange("source", e.target.value)}
-              placeholder="Source name (e.g., V1, I1)"
+              placeholder="e.g., V1, I1"
             />
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Sweep Type</Field.Label>
-            <NativeSelectRoot>
+            <Field.Label fontSize="sm">Sweep Type</Field.Label>
+            <NativeSelectRoot size="sm">
               <NativeSelectField
                 value={formData.sweepType}
                 onChange={(e) => {
@@ -163,40 +164,43 @@ const AcConfig: React.FC<AcConfigProps> = ({
                   );
                 }}
               >
-                <option value="dec">Decade (dec)</option>
-                <option value="oct">Octave (oct)</option>
-                <option value="lin">Linear (lin)</option>
+                <option value="dec">Decade</option>
+                <option value="oct">Octave</option>
+                <option value="lin">Linear</option>
               </NativeSelectField>
             </NativeSelectRoot>
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Start Frequency (Hz)</Field.Label>
+            <Field.Label fontSize="sm">Start Frequency</Field.Label>
             <Input
+              size="sm"
               name="frequencyStart"
               value={formData.frequencyStart}
               onChange={(e) =>
                 handleInputChange("frequencyStart", e.target.value)
               }
-              placeholder="e.g., 1, 100m, 1k, 2.5M"
+              placeholder="e.g., 1, 10k"
             />
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Stop Frequency (Hz)</Field.Label>
+            <Field.Label fontSize="sm">Stop Frequency</Field.Label>
             <Input
+              size="sm"
               name="frequencyStop"
               value={formData.frequencyStop}
               onChange={(e) =>
                 handleInputChange("frequencyStop", e.target.value)
               }
-              placeholder="e.g., 1000, 10k, 1M, 2.1G"
+              placeholder="e.g., 1M, 2G"
             />
           </Field.Root>
 
           <Field.Root>
-            <Field.Label>Number of Steps</Field.Label>
+            <Field.Label fontSize="sm">Steps Number</Field.Label>
             <Input
+              size="sm"
               name="stepNumber"
               value={formData.stepNumber}
               onChange={(e) => handleInputChange("stepNumber", e.target.value)}
