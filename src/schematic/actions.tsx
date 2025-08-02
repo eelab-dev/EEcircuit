@@ -15,17 +15,20 @@ import {
   MousePointer,
   Move,
   Trash2,
+  Keyboard,
 } from "lucide-react";
 import { AvailableComponent, sendCommand } from "eecircuit-schematic";
 
 type ActionsProps = {
   availableComponents: AvailableComponent[];
   onExportImage: () => void;
+  onShowShortcuts: () => void;
 };
 
 const Actions: React.FC<ActionsProps> = ({
   availableComponents,
   onExportImage,
+  onShowShortcuts,
 }) => {
   const [isCompact, setIsCompact] = React.useState(false);
   const [showClearDialog, setShowClearDialog] = React.useState(false);
@@ -128,6 +131,11 @@ const Actions: React.FC<ActionsProps> = ({
       <Tooltip content="Export Image" showArrow openDelay={300}>
         <IconButton onClick={onExportImage}>
           <ImageDown />
+        </IconButton>
+      </Tooltip>
+      <Tooltip content="Keyboard Shortcuts (Shift+H or Ctrl+H)" showArrow openDelay={300}>
+        <IconButton onClick={onShowShortcuts}>
+          <Keyboard />
         </IconButton>
       </Tooltip>
 

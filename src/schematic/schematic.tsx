@@ -24,6 +24,7 @@ import Status from "./status";
 import { Tooltip } from "../components/ui/tooltip";
 import { useColorModeValue } from "../components/ui/color-mode";
 import ExportImageDialog from "./ExportImageDialog";
+import ShortcutsDialog from "./ShortcutsDialog";
 import { ToBePlotted } from "src/types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import { getRecommendedInputProfile } from "../utils/deviceDetection";
@@ -102,6 +103,7 @@ const Schematic: React.FC<SchematicProps> = ({
   const [showExportImageDialog, setShowExportImageDialog] = useState(false);
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [loadingSvg, setLoadingSvg] = useState(false);
+  const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
 
   // Color mode values - must be called at top level to avoid hooks order issues
   const plotSelectionBg = useColorModeValue("blue.50", "blue.900");
@@ -381,7 +383,7 @@ const Schematic: React.FC<SchematicProps> = ({
     };
   }, [isPlotSelectionMode, handleExitPlotSelectionMode]);
 
-  // Handle keyboard shortcuts for undo/redo when canvas is focused
+  // Handle keyboard shortcuts for undo/redo and shortcuts dialog when canvas is focused
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Only handle shortcuts when canvas container is focused or contains focus
@@ -394,6 +396,14 @@ const Schematic: React.FC<SchematicProps> = ({
         document.activeElement === canvasRef.current;
 
       if (!isFocusInCanvas) return;
+
+      // Handle Shift+H or Ctrl+H for shortcuts dialog (override eecircuit-schematic's Ctrl+H)
+      if ((event.shiftKey && event.key === "H") || (event.ctrlKey && (event.key === "h" || event.key === "H"))) {
+        event.preventDefault();
+        event.stopPropagation();
+        setShowShortcutsDialog(true);
+        return;
+      }
 
       // Handle Shift+Z for undo
       if (event.shiftKey && event.key === "Z") {
@@ -408,9 +418,10 @@ const Schematic: React.FC<SchematicProps> = ({
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
+    // Use capture phase to intercept events before eecircuit-schematic can handle them
+    document.addEventListener("keydown", handleKeyDown, true);
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown, true);
     };
   }, []);
 
@@ -649,6 +660,10 @@ const Schematic: React.FC<SchematicProps> = ({
     eeSch.sendCommand({ command: "export", exportType: "svg" });
   };
 
+  const handleShowShortcuts = () => {
+    setShowShortcutsDialog(true);
+  };
+
   return (
     <Flex direction="column" height={"100%"}>
       <Box
@@ -667,6 +682,7 @@ const Schematic: React.FC<SchematicProps> = ({
             <Actions
               availableComponents={availableComponents}
               onExportImage={handleExportImage}
+              onShowShortcuts={handleShowShortcuts}
             />
           }
         </Float>
@@ -784,6 +800,10 @@ const Schematic: React.FC<SchematicProps> = ({
         onClose={() => setShowExportImageDialog(false)}
         svgContent={svgContent}
         loading={loadingSvg}
+      />
+      <ShortcutsDialog
+        isOpen={showShortcutsDialog}
+        onClose={() => setShowShortcutsDialog(false)}
       />
     </Flex>
   );

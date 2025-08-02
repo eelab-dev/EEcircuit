@@ -1,0 +1,240 @@
+import React from "react";
+import {
+  Dialog,
+  Button,
+  IconButton,
+  Portal,
+  Box,
+  Text,
+  VStack,
+  Heading,
+} from "@chakra-ui/react";
+import { X, Keyboard } from "lucide-react";
+
+type ShortcutsDialogProps = {
+  isOpen: boolean;
+  onClose: () => void;
+};
+
+const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
+  isOpen,
+  onClose,
+}) => {
+  const handleClose = React.useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  const shortcutSections = [
+    {
+      title: "Navigation",
+      shortcuts: [
+        { keys: "F", description: "Fit and center the canvas" },
+        { keys: "O", description: "Return to the origin" },
+      ],
+    },
+    {
+      title: "Mode Controls",
+      shortcuts: [
+        { keys: "M", description: "Move component" },
+        { keys: "W", description: "Enter wire mode" },
+        { keys: "Shift + D", description: "Activate delete mode" },
+        { keys: "Esc", description: "Cancel any mode" },
+      ],
+    },
+    {
+      title: "While Moving",
+      shortcuts: [
+        { keys: "R", description: "Rotate component" },
+        { keys: "H", description: "Horizontal flip" },
+        { keys: "V", description: "Vertical flip" },
+      ],
+    },
+    {
+      title: "Actions",
+      shortcuts: [
+        { keys: "Shift + Z", description: "Undo" },
+        { keys: "Shift + R", description: "Redo" },
+        { keys: "Shift + E", description: "Export netlist" },
+        { keys: "Shift + G", description: "Export SVG" },
+        { keys: "Shift + S", description: "Save schematic" },
+        { keys: "Shift + H", description: "This shortcuts dialog" },
+        { keys: "Ctrl + H", description: "This shortcuts dialog" },
+      ],
+    },
+  ];
+
+  return (
+    <Portal>
+      <Dialog.Root
+        open={isOpen}
+        onOpenChange={(details) => {
+          if (!details.open) {
+            onClose();
+          }
+        }}
+      >
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content
+            maxW="650px"
+            maxH="85vh"
+            position="fixed"
+            top="50%"
+            left="50%"
+            transform="translate(-50%, -50%)"
+            zIndex="modal"
+            overflowY="auto"
+          >
+            <Dialog.Header position="relative" pb="4">
+              <Dialog.Title>
+                <Box display="flex" alignItems="center" gap={2}>
+                  <Keyboard size={20} />
+                  Keyboard Shortcuts
+                </Box>
+              </Dialog.Title>
+              <Dialog.CloseTrigger asChild>
+                <IconButton
+                  position="absolute"
+                  top="0"
+                  right="0"
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleClose}
+                >
+                  <X />
+                </IconButton>
+              </Dialog.CloseTrigger>
+            </Dialog.Header>
+            <Dialog.Body pb="4">
+              <Box
+                display="flex"
+                flexDirection={{ base: "column", lg: "row" }}
+                gap="0rem"
+              >
+                <Box flex="0 0 48%" pr="1rem">
+                  {shortcutSections.slice(0, 2).map((section, sectionIndex) => (
+                    <Box key={sectionIndex} mb={4}>
+                      <Heading
+                        size="sm"
+                        mb={2}
+                        color="gray.600"
+                        _dark={{ color: "gray.400" }}
+                      >
+                        {section.title}
+                      </Heading>
+                      <VStack gap={1.5} align="stretch">
+                        {section.shortcuts.map((shortcut, index) => (
+                          <Box
+                            key={index}
+                            display="flex"
+                            alignItems="flex-start"
+                            gap={2}
+                          >
+                            <Box
+                              bg="gray.100"
+                              _dark={{
+                                bg: "gray.700",
+                                borderColor: "gray.600",
+                              }}
+                              px={1.5}
+                              py={0.5}
+                              borderRadius="sm"
+                              fontFamily="mono"
+                              fontSize="xs"
+                              textAlign="center"
+                              border="1px solid"
+                              borderColor="gray.300"
+                              minW="fit-content"
+                              whiteSpace="nowrap"
+                              fontWeight="medium"
+                              flexShrink={0}
+                            >
+                              {shortcut.keys}
+                            </Box>
+                            <Text
+                              fontSize="sm"
+                              color="gray.700"
+                              _dark={{ color: "gray.300" }}
+                              flex={1}
+                              lineHeight="1.3"
+                              wordBreak="break-word"
+                            >
+                              {shortcut.description}
+                            </Text>
+                          </Box>
+                        ))}
+                      </VStack>
+                    </Box>
+                  ))}
+                </Box>
+                <Box flex="0 0 48%" pl="1rem">
+                  {shortcutSections.slice(2).map((section, sectionIndex) => (
+                    <Box key={sectionIndex + 2} mb={4}>
+                      <Heading
+                        size="sm"
+                        mb={2}
+                        color="gray.600"
+                        _dark={{ color: "gray.400" }}
+                      >
+                        {section.title}
+                      </Heading>
+                      <VStack gap={1.5} align="stretch">
+                        {section.shortcuts.map((shortcut, index) => (
+                          <Box
+                            key={index}
+                            display="flex"
+                            alignItems="flex-start"
+                            gap={2}
+                          >
+                            <Box
+                              bg="gray.100"
+                              _dark={{
+                                bg: "gray.700",
+                                borderColor: "gray.600",
+                              }}
+                              px={1.5}
+                              py={0.5}
+                              borderRadius="sm"
+                              fontFamily="mono"
+                              fontSize="xs"
+                              textAlign="center"
+                              border="1px solid"
+                              borderColor="gray.300"
+                              minW="fit-content"
+                              whiteSpace="nowrap"
+                              fontWeight="medium"
+                              flexShrink={0}
+                            >
+                              {shortcut.keys}
+                            </Box>
+                            <Text
+                              fontSize="sm"
+                              color="gray.700"
+                              _dark={{ color: "gray.300" }}
+                              flex={1}
+                              lineHeight="1.3"
+                              wordBreak="break-word"
+                            >
+                              {shortcut.description}
+                            </Text>
+                          </Box>
+                        ))}
+                      </VStack>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button onClick={handleClose} width="100%">
+                Close
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+    </Portal>
+  );
+};
+
+export default ShortcutsDialog;
