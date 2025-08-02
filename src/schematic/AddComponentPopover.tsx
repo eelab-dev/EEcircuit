@@ -64,11 +64,17 @@ type ComponentListProps = {
   availableComponents: AvailableComponent[];
   clickCallback: () => void;
   focusedIndex: number;
+  styles: {
+    categoryText: { color: string };
+    categoryDivider: { bg: string };
+    componentItem: { borderColor: string; hoverBg: string; focusBg: string };
+    componentText: { color: string };
+  };
 };
 
 // Component list to render available components grouped by category
 const ComponentList = React.forwardRef<HTMLDivElement, ComponentListProps>(
-  ({ availableComponents, clickCallback, focusedIndex }, ref) => {
+  ({ availableComponents, clickCallback, focusedIndex, styles }, ref) => {
     const groupedComponents = groupComponentsByCategory(availableComponents);
 
     // Create a flattened list for focus management
@@ -96,12 +102,12 @@ const ComponentList = React.forwardRef<HTMLDivElement, ComponentListProps>(
             return (
               <Box key={category}>
                 {categoryIndex > 0 && (
-                  <Box height="1px" bg="gray.600" width="100%" mb="3" />
+                  <Box height="1px" bg={styles.categoryDivider.bg} width="100%" mb="3" />
                 )}
                 <Text
                   fontSize="xs"
                   fontWeight="medium"
-                  color="gray.500"
+                  color={styles.categoryText.color}
                   mb="2"
                   textTransform="uppercase"
                   letterSpacing="wide"
@@ -126,12 +132,13 @@ const ComponentList = React.forwardRef<HTMLDivElement, ComponentListProps>(
                         width="45%"
                         padding="2"
                         borderWidth="1px"
+                        borderColor={styles.componentItem.borderColor}
                         borderRadius="md"
                         cursor="pointer"
-                        _hover={{ bg: "gray.900" }}
+                        _hover={{ bg: styles.componentItem.hoverBg }}
                         bg={
                           focusedIndex === globalIndex
-                            ? "gray.700"
+                            ? styles.componentItem.focusBg
                             : "transparent"
                         }
                         tabIndex={-1}
@@ -144,7 +151,11 @@ const ComponentList = React.forwardRef<HTMLDivElement, ComponentListProps>(
                         }}
                       >
                         <span
-                          style={{ fontSize: "0.8rem", textAlign: "center" }}
+                          style={{ 
+                            fontSize: "0.8rem", 
+                            textAlign: "center",
+                            color: styles.componentText.color
+                          }}
                         >
                           {component.type}
                         </span>
@@ -192,6 +203,32 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const listRef = React.useRef<HTMLDivElement>(null);
   const [focusedIndex, setFocusedIndex] = React.useState(-1);
+
+  // Common styling variables for consistency
+  const styles = {
+    popover: {
+      bg: "gray.800/70",
+      borderColor: "gray.900/50",
+    },
+    input: {
+      bg: "gray.700/80",
+      borderColor: "gray.600/60",
+    },
+    categoryText: {
+      color: "gray.400/90",
+    },
+    categoryDivider: {
+      bg: "gray.600/60",
+    },
+    componentItem: {
+      borderColor: "gray.600/40",
+      hoverBg: "gray.700/80",
+      focusBg: "gray.600/70",
+    },
+    componentText: {
+      color: "gray.200/95",
+    },
+  };
 
   const closePopover = React.useCallback(() => {
     setIsOpen(false);
@@ -348,11 +385,12 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
             maxWidth="60vw"
             height="31.25rem"
             maxHeight="80vh"
-            bg="gray.800"
+            bg={styles.popover.bg}
+            backdropFilter="blur(12px)"
             borderRadius="md"
             boxShadow="lg"
             border="1px solid"
-            borderColor="gray.600"
+            borderColor={styles.popover.borderColor}
             zIndex={1500}
             overflowY="auto"
             onKeyDown={handleKeyDown}
@@ -378,14 +416,20 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
                   setFocusedIndex(-1);
                 }}
                 mb={4}
-                bg="gray.700"
-                borderColor="gray.600"
+                bg={styles.input.bg}
+                borderColor={styles.input.borderColor}
               />
               <ComponentList
                 ref={listRef}
                 availableComponents={filteredComponents}
                 clickCallback={clickCallBack}
                 focusedIndex={focusedIndex}
+                styles={{
+                  categoryText: styles.categoryText,
+                  categoryDivider: styles.categoryDivider,
+                  componentItem: styles.componentItem,
+                  componentText: styles.componentText,
+                }}
               />
             </Box>
           </Box>,
