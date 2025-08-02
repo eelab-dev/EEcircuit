@@ -24,6 +24,21 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
     onClose();
   }, [onClose]);
 
+  // Common styling variables for consistency
+  const styles = {
+    heading: {
+      color: "gray.400/90",
+    },
+    text: {
+      color: "gray.300/90",
+    },
+    keyBox: {
+      bg: "gray.500/90",
+      borderColor: "gray.300/80",
+      color: "gray.100/95",
+    },
+  };
+
   const shortcutSections = [
     {
       title: "Navigation",
@@ -86,6 +101,10 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
             transform="translate(-50%, -50%)"
             zIndex="modal"
             overflowY="auto"
+            bg="gray.800/60"
+            backdropFilter="blur(12px)"
+            borderWidth="1px"
+            borderColor="gray.900/50"
           >
             <Dialog.Header position="relative" pb="4">
               <Dialog.Title>
@@ -113,8 +132,8 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
                 flexDirection={{ base: "column", md: "row" }}
                 gap="0rem"
               >
-                <Box 
-                  flex={{ base: "1", md: "0 0 48%" }} 
+                <Box
+                  flex={{ base: "1", md: "0 0 48%" }}
                   pr={{ base: "0", md: "1rem" }}
                   mb={{ base: "1rem", md: "0" }}
                 >
@@ -123,8 +142,7 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
                       <Heading
                         size="sm"
                         mb={{ base: "1.5", md: "2" }}
-                        color="gray.600"
-                        _dark={{ color: "gray.400" }}
+                        color={styles.heading.color}
                       >
                         {section.title}
                       </Heading>
@@ -137,11 +155,8 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
                             gap={2}
                           >
                             <Box
-                              bg="gray.100"
-                              _dark={{
-                                bg: "gray.700",
-                                borderColor: "gray.600",
-                              }}
+                              bg={styles.keyBox.bg}
+                              color={styles.keyBox.color}
                               px={1.5}
                               py={0.5}
                               borderRadius="sm"
@@ -149,7 +164,7 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
                               fontSize="xs"
                               textAlign="center"
                               border="1px solid"
-                              borderColor="gray.300"
+                              borderColor={styles.keyBox.borderColor}
                               minW="fit-content"
                               whiteSpace="nowrap"
                               fontWeight="medium"
@@ -159,8 +174,7 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
                             </Box>
                             <Text
                               fontSize="sm"
-                              color="gray.700"
-                              _dark={{ color: "gray.300" }}
+                              color={styles.text.color}
                               flex={1}
                               lineHeight="1.3"
                               wordBreak="break-word"
@@ -173,8 +187,8 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
                     </Box>
                   ))}
                 </Box>
-                <Box 
-                  flex={{ base: "1", md: "0 0 48%" }} 
+                <Box
+                  flex={{ base: "1", md: "0 0 48%" }}
                   pl={{ base: "0", md: "1rem" }}
                 >
                   {shortcutSections.slice(2).map((section, sectionIndex) => (
@@ -182,8 +196,7 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
                       <Heading
                         size="sm"
                         mb={{ base: "1.5", md: "2" }}
-                        color="gray.600"
-                        _dark={{ color: "gray.400" }}
+                        color={styles.heading.color}
                       >
                         {section.title}
                       </Heading>
@@ -196,11 +209,8 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
                             gap={2}
                           >
                             <Box
-                              bg="gray.100"
-                              _dark={{
-                                bg: "gray.700",
-                                borderColor: "gray.600",
-                              }}
+                              bg={styles.keyBox.bg}
+                              color={styles.keyBox.color}
                               px={1.5}
                               py={0.5}
                               borderRadius="sm"
@@ -208,7 +218,7 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
                               fontSize="xs"
                               textAlign="center"
                               border="1px solid"
-                              borderColor="gray.300"
+                              borderColor={styles.keyBox.borderColor}
                               minW="fit-content"
                               whiteSpace="nowrap"
                               fontWeight="medium"
@@ -218,8 +228,7 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
                             </Box>
                             <Text
                               fontSize="sm"
-                              color="gray.700"
-                              _dark={{ color: "gray.300" }}
+                              color={styles.text.color}
                               flex={1}
                               lineHeight="1.3"
                               wordBreak="break-word"
@@ -235,7 +244,7 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
               </Box>
             </Dialog.Body>
             <Dialog.Footer>
-              <Button onClick={handleClose} width="100%">
+              <Button onClick={handleClose} width="100%" variant="outline">
                 Close
               </Button>
             </Dialog.Footer>
