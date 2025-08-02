@@ -76,8 +76,10 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content
-            maxW="650px"
+            maxW={{ base: "90vw", sm: "35rem", md: "40rem", lg: "42rem" }}
             maxH="85vh"
+            minW={{ base: "20rem", sm: "30rem" }}
+            w="fit-content"
             position="fixed"
             top="50%"
             left="50%"
@@ -108,15 +110,19 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
             <Dialog.Body pb="4">
               <Box
                 display="flex"
-                flexDirection={{ base: "column", lg: "row" }}
+                flexDirection={{ base: "column", md: "row" }}
                 gap="0rem"
               >
-                <Box flex="0 0 48%" pr="1rem">
+                <Box 
+                  flex={{ base: "1", md: "0 0 48%" }} 
+                  pr={{ base: "0", md: "1rem" }}
+                  mb={{ base: "1rem", md: "0" }}
+                >
                   {shortcutSections.slice(0, 2).map((section, sectionIndex) => (
-                    <Box key={sectionIndex} mb={4}>
+                    <Box key={sectionIndex} mb={{ base: "3", md: "4" }}>
                       <Heading
                         size="sm"
-                        mb={2}
+                        mb={{ base: "1.5", md: "2" }}
                         color="gray.600"
                         _dark={{ color: "gray.400" }}
                       >
@@ -167,12 +173,15 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
                     </Box>
                   ))}
                 </Box>
-                <Box flex="0 0 48%" pl="1rem">
+                <Box 
+                  flex={{ base: "1", md: "0 0 48%" }} 
+                  pl={{ base: "0", md: "1rem" }}
+                >
                   {shortcutSections.slice(2).map((section, sectionIndex) => (
-                    <Box key={sectionIndex + 2} mb={4}>
+                    <Box key={sectionIndex + 2} mb={{ base: "3", md: "4" }}>
                       <Heading
                         size="sm"
-                        mb={2}
+                        mb={{ base: "1.5", md: "2" }}
                         color="gray.600"
                         _dark={{ color: "gray.400" }}
                       >
