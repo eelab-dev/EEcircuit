@@ -22,7 +22,6 @@ import Actions from "./actions";
 import Properties from "./properties";
 import Status from "./status";
 import { Tooltip } from "../components/ui/tooltip";
-import { useColorModeValue } from "../components/ui/color-mode";
 import ExportImageDialog from "./ExportImageDialog";
 import ShortcutsDialog from "./ShortcutsDialog";
 import { ToBePlotted } from "src/types/commonTypes";
@@ -106,9 +105,6 @@ const Schematic: React.FC<SchematicProps> = ({
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
 
   // Color mode values - must be called at top level to avoid hooks order issues
-  const plotSelectionBg = useColorModeValue("blue.50", "blue.900");
-  const plotSelectionColor = useColorModeValue("blue.800", "blue.100");
-  const plotSelectionBorderColor = useColorModeValue("blue.200", "blue.700");
 
   // Use refs to access current values in msgCallback without causing re-renders
   const isPlotSelectionModeRef = useRef(isPlotSelectionMode);
@@ -721,47 +717,48 @@ const Schematic: React.FC<SchematicProps> = ({
         {isPlotSelectionMode && (
           <Box
             position="fixed"
-            top="10px"
+            top="1rem"
             left="50%"
             transform="translateX(-50%)"
             zIndex={1000}
-            bg={plotSelectionBg}
-            color={plotSelectionColor}
+            bg="gray.800/60"
+            backdropFilter="blur(12px)"
+            color="gray.200/95"
             px={4}
             py={2}
             borderRadius="md"
             border="1px solid"
-            borderColor={plotSelectionBorderColor}
+            borderColor="gray.900/50"
             fontSize="sm"
-            boxShadow="sm"
+            boxShadow="lg"
             textAlign="center"
           >
             <div>🎯 Plot Selection Mode Active</div>
-            <div style={{ fontSize: "0.8em", marginTop: "4px" }}>
+            <div
+              style={{ fontSize: "0.8em", marginTop: "4px", color: "inherit" }}
+            >
               Click on components (for current) or wires (for voltage) to add to
               plot. Press ESC when done.
             </div>
             {/* Show selected items */}
             {toBePlotted.length > 0 && (
-              <div
-                style={{
-                  fontSize: "0.75em",
-                  marginTop: "8px",
-                  padding: "4px",
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  borderRadius: "4px",
-                  border: "1px solid rgba(255, 255, 255, 0.2)",
-                }}
+              <Box
+                fontSize="xs"
+                mt={2}
+                p={3}
+                bg="gray.800/70"
+                borderRadius="md"
+                border="1px solid"
+                borderColor="gray.900/50"
               >
-                <div style={{ fontWeight: "bold", marginBottom: "2px" }}>
+                <Box fontWeight="bold" mb="0.5" color="gray.300/90">
                   Selected ({toBePlotted.length}):
-                </div>
-                <div
-                  style={{
-                    wordWrap: "break-word",
-                    lineHeight: "1.2",
-                    maxWidth: "400px", // Limit width to prevent blocking too much of the canvas
-                  }}
+                </Box>
+                <Box
+                  wordBreak="break-word"
+                  lineHeight="1.2"
+                  maxWidth={{ base: "15.625rem", sm: "21.875rem", md: "25rem", lg: "31.25rem" }}
+                  color="gray.200/95"
                 >
                   {toBePlotted.map((item, index) => (
                     <span key={index}>
@@ -769,8 +766,8 @@ const Schematic: React.FC<SchematicProps> = ({
                       {index < toBePlotted.length - 1 ? ", " : ""}
                     </span>
                   ))}
-                </div>
-              </div>
+                </Box>
+              </Box>
             )}
           </Box>
         )}
