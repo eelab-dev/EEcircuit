@@ -10,6 +10,7 @@ import {
   Heading,
 } from "@chakra-ui/react";
 import { X, Keyboard } from "lucide-react";
+import { useAppStore } from "../store/appStore";
 
 type ShortcutsDialogProps = {
   isOpen: boolean;
@@ -20,6 +21,8 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
   isOpen,
   onClose,
 }) => {
+  const inputProfile = useAppStore((state) => state.inputProfile);
+
   const handleClose = React.useCallback(() => {
     onClose();
   }, [onClose]);
@@ -37,6 +40,28 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
       borderColor: "gray.300/80",
       color: "gray.100/95",
     },
+  };
+
+  const getProfileNavigationInstructions = () => {
+    if (inputProfile === "mouse") {
+      return [
+        { keys: "Right Down + Drag", description: "Pan the canvas" },
+        { keys: "Scroll Wheel", description: "Zoom in and out" },
+        { keys: "Shift + Scroll", description: "Pan horizontally" },
+        { keys: "Ctrl + Scroll", description: "Pan vertically" },
+      ];
+    } else if (inputProfile === "trackpad") {
+      return [
+        { keys: "Two Finger Pinch", description: "Pinch and zoom" },
+        { keys: "Two Finger Drag", description: "Pan the canvas" },
+      ];
+    } else if (inputProfile === "touchscreen") {
+      return [
+        { keys: "Two Finger Pinch", description: "Pinch and zoom" },
+        { keys: "Two Finger Drag", description: "Pan the canvas" },
+      ];
+    }
+    return [];
   };
 
   const shortcutSections = [
@@ -69,9 +94,6 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
       shortcuts: [
         { keys: "Shift + Z", description: "Undo" },
         { keys: "Shift + R", description: "Redo" },
-        { keys: "Shift + E", description: "Export netlist" },
-        { keys: "Shift + G", description: "Export SVG" },
-        { keys: "Shift + S", description: "Save schematic" },
         { keys: "Shift + H", description: "This shortcuts dialog" },
         { keys: "Ctrl + H", description: "This shortcuts dialog" },
       ],
@@ -127,6 +149,54 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
               </Dialog.CloseTrigger>
             </Dialog.Header>
             <Dialog.Body pb="4">
+              {/* Navigation Section - Full Width */}
+              <Box mb="4">
+                <Heading size="sm" mb="2" color={styles.heading.color}>
+                  Navigation ({inputProfile})
+                </Heading>
+                <VStack gap={1.5} align="stretch">
+                  {getProfileNavigationInstructions().map(
+                    (instruction, index) => (
+                      <Box
+                        key={index}
+                        display="flex"
+                        alignItems="flex-start"
+                        gap={2}
+                      >
+                        <Box
+                          bg={styles.keyBox.bg}
+                          color={styles.keyBox.color}
+                          px={1.5}
+                          py={0.5}
+                          borderRadius="sm"
+                          fontFamily="mono"
+                          fontSize="xs"
+                          textAlign="center"
+                          border="1px solid"
+                          borderColor={styles.keyBox.borderColor}
+                          minW="fit-content"
+                          whiteSpace="nowrap"
+                          fontWeight="medium"
+                          flexShrink={0}
+                        >
+                          {instruction.keys}
+                        </Box>
+                        <Text
+                          fontSize="sm"
+                          color={styles.text.color}
+                          flex={1}
+                          lineHeight="1.3"
+                          wordBreak="break-word"
+                        >
+                          {instruction.description}
+                        </Text>
+                      </Box>
+                    )
+                  )}
+                </VStack>
+              </Box>
+
+              {/* Keyboard Shortcuts Section - Two Columns */}
               <Box
                 display="flex"
                 flexDirection={{ base: "column", md: "row" }}
