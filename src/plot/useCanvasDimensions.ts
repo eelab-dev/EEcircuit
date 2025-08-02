@@ -36,14 +36,6 @@ export const useCanvasDimensions = ({
         return;
       }
 
-      const aspectRatio = newWidth / newHeight;
-
-      console.log("Canvas dimensions update:", {
-        newWidth,
-        newHeight,
-        aspectRatio,
-      });
-
       // If the canvas is initialized and size changed, update WebGL canvas size
       if (isCanvasInitialized) {
         const devicePixelRatio = window.devicePixelRatio || 1;
