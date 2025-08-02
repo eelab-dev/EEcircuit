@@ -16,6 +16,7 @@ import {
 import { formatEngineering } from "./formatUtils";
 import Axis from "./axis";
 import { ZoomController } from "./zoomController";
+import { useAppStore } from "../store/appStore";
 
 interface PlotCanvasProps {
   results: ResultType[];
@@ -37,6 +38,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   hoveredVariable,
   colorMode,
 }) => {
+  const inputProfile = useAppStore((state) => state.inputProfile);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wglpRef = useRef<WebglPlot | null>(null);
   const plotLineRef = useRef<WebglLineThick | null>(null);
@@ -63,6 +65,17 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     offsetY: 0,
   });
   const [isAxis] = useState(true);
+
+  // Touch gesture state for pinch and zoom
+  const [touchState, setTouchState] = useState<{
+    initialDistance: number | null;
+    initialTouchX: number;
+    initialTouchY: number;
+  }>({
+    initialDistance: null,
+    initialTouchX: 0,
+    initialTouchY: 0,
+  });
 
   // Debug: Log axisScales changes (can be removed when debugging is complete)
   // useEffect(() => {
@@ -381,6 +394,92 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     calculateAndApplyScaling();
     if (isCanvasInitialized) {
       // Full update to apply visibility, colors, and transforms
+      updatePlot();
+    }
+  };
+
+  // Handle zoom at cursor position based on input profile
+  const handleZoomAtCursor = (
+    mouseX: number,
+    mouseY: number,
+    zoomIn: boolean
+  ) => {
+    if (!canvasRef.current || selectedVariables.length === 0) return;
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+
+    // Convert mouse position to data coordinates
+    const mouseNdcX = (mouseX / rect.width) * 2 - 1;
+    const mouseDataX = (mouseNdcX - axisScales.offsetX) / axisScales.scaleX;
+
+    // Get full data bounds for zoom limits
+    const firstVisibleLineIndex = lineDataRef.current.findIndex((_, index) => {
+      const variableNames = results[0].variableNames.slice(1);
+      const variableName = variableNames[index];
+      return variableName && selectedVariables.includes(variableName);
+    });
+
+    if (firstVisibleLineIndex === -1) return;
+
+    const points = lineDataRef.current[firstVisibleLineIndex].points;
+    let fullXMin = points[0];
+    let fullXMax = points[0];
+    for (let i = 0; i < points.length; i += 2) {
+      const x = points[i];
+      fullXMin = Math.min(fullXMin, x);
+      fullXMax = Math.max(fullXMax, x);
+    }
+    const fullRange = fullXMax - fullXMin;
+
+    // Create a zoom region centered on the cursor
+    const currentBounds = zoomController.current.getZoomBounds();
+    let xMin, xMax;
+
+    if (currentBounds) {
+      xMin = currentBounds.min;
+      xMax = currentBounds.max;
+    } else {
+      xMin = fullXMin;
+      xMax = fullXMax;
+    }
+
+    const currentRange = xMax - xMin;
+
+    // Adjust zoom factor based on input profile - trackpad is more sensitive so use smaller increments
+    let zoomFactor;
+    if (inputProfile === "trackpad") {
+      zoomFactor = zoomIn ? 0.98 : 1.02; // Zoom in by 10% or out by 11% (slower)
+    } else {
+      zoomFactor = zoomIn ? 0.8 : 1.25; // Zoom in by 20% or out by 25% (normal speed)
+    }
+
+    const newRange = currentRange * zoomFactor;
+
+    // Prevent zooming out beyond the full data range
+    if (!zoomIn && newRange >= fullRange) {
+      // If trying to zoom out beyond full range, reset to full view
+      zoomController.current.resetZoom();
+      calculateAndApplyScaling();
+      if (isCanvasInitialized) {
+        updatePlot();
+      }
+      return;
+    }
+
+    // Calculate the cursor position as a ratio within the current view
+    const cursorRatio = (mouseDataX - xMin) / currentRange;
+
+    // Calculate new bounds centered on cursor position
+    const newXMin = mouseDataX - newRange * cursorRatio;
+    const newXMax = mouseDataX + newRange * (1 - cursorRatio);
+
+    // Apply zoom using zoom controller
+    zoomController.current.setZoomBounds(newXMin, newXMax);
+
+    // Recalculate and redraw
+    calculateAndApplyScaling();
+    if (isCanvasInitialized) {
       updatePlot();
     }
   };
@@ -756,6 +855,87 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     }
   }, [hoveredVariable, isCanvasInitialized]);
 
+  // Add touch event listeners for pinch and zoom in touchscreen mode
+  useEffect(() => {
+    if (!canvasRef.current || inputProfile !== "touchscreen") return;
+
+    const canvas = canvasRef.current;
+
+    const getTouchDistance = (touch1: Touch, touch2: Touch) => {
+      const dx = touch1.clientX - touch2.clientX;
+      const dy = touch1.clientY - touch2.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const getTouchCenter = (touch1: Touch, touch2: Touch) => {
+      const rect = canvas.getBoundingClientRect();
+      const centerX = (touch1.clientX + touch2.clientX) / 2 - rect.left;
+      const centerY = (touch1.clientY + touch2.clientY) / 2 - rect.top;
+      return { x: centerX, y: centerY };
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const distance = getTouchDistance(e.touches[0], e.touches[1]);
+        const center = getTouchCenter(e.touches[0], e.touches[1]);
+        setTouchState({
+          initialDistance: distance,
+          initialTouchX: center.x,
+          initialTouchY: center.y,
+        });
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && touchState.initialDistance !== null) {
+        e.preventDefault();
+        const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
+        const center = getTouchCenter(e.touches[0], e.touches[1]);
+
+        // Calculate zoom based on distance change
+        const distanceRatio = currentDistance / touchState.initialDistance;
+
+        // Only trigger zoom if there's significant change (> 5% for smoother touch experience)
+        if (Math.abs(distanceRatio - 1) > 0.05) {
+          const zoomIn = distanceRatio > 1;
+          handleZoomAtCursor(center.x, center.y, zoomIn);
+
+          // Update the reference distance for next calculation
+          setTouchState((prev) => ({
+            ...prev,
+            initialDistance: currentDistance,
+          }));
+        }
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) {
+        setTouchState({
+          initialDistance: null,
+          initialTouchX: 0,
+          initialTouchY: 0,
+        });
+      }
+    };
+
+    canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+    canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
+
+    return () => {
+      canvas.removeEventListener("touchstart", handleTouchStart);
+      canvas.removeEventListener("touchmove", handleTouchMove);
+      canvas.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [
+    isCanvasInitialized,
+    selectedVariables,
+    inputProfile,
+    touchState.initialDistance,
+  ]);
+
   // Add native wheel event listener to properly handle preventDefault
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -763,24 +943,56 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     const canvas = canvasRef.current;
 
     const handleWheel = (e: WheelEvent) => {
-      // Only handle wheel events when zoomed in to avoid interfering with page scroll
-      if (zoomController.current.isZoomedIn()) {
-        e.preventDefault(); // This works with native events
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
 
-        // Detect horizontal scroll (most mice send this as shiftKey + wheel)
-        // Some mice have dedicated horizontal scroll that sends deltaX
-        let deltaX = e.deltaX;
-
-        // For mice without horizontal scroll, use Shift + vertical scroll
-        if (Math.abs(deltaX) < Math.abs(e.deltaY) && e.shiftKey) {
-          deltaX = e.deltaY;
+      // Handle different input profiles
+      if (inputProfile === "trackpad") {
+        // Trackpad mode: ctrl+wheel for zoom
+        if (e.ctrlKey) {
+          e.preventDefault();
+          const zoomIn = e.deltaY < 0;
+          handleZoomAtCursor(mouseX, mouseY, zoomIn);
+          return;
         }
-
-        // Only handle if there's horizontal movement
-        if (Math.abs(deltaX) > 0) {
-          // Normalize scroll delta and apply panning
-          const normalizedDelta = deltaX > 0 ? 1 : -1;
-          handleHorizontalScroll(normalizedDelta);
+        // Regular trackpad scroll for panning when zoomed in
+        if (zoomController.current.isZoomedIn()) {
+          e.preventDefault();
+          let deltaX = e.deltaX;
+          if (Math.abs(deltaX) < Math.abs(e.deltaY) && e.shiftKey) {
+            deltaX = e.deltaY;
+          }
+          if (Math.abs(deltaX) > 0) {
+            const normalizedDelta = deltaX > 0 ? 1 : -1;
+            handleHorizontalScroll(normalizedDelta);
+          }
+        }
+      } else if (inputProfile === "mouse") {
+        // Mouse mode: mouse wheel for zoom
+        e.preventDefault();
+        const zoomIn = e.deltaY < 0;
+        handleZoomAtCursor(mouseX, mouseY, zoomIn);
+      } else if (inputProfile === "touchscreen") {
+        // Touchscreen mode: handle pinch and zoom (via wheel events)
+        if (e.ctrlKey) {
+          // Pinch gesture often translates to ctrl+wheel
+          e.preventDefault();
+          const zoomIn = e.deltaY < 0;
+          handleZoomAtCursor(mouseX, mouseY, zoomIn);
+          return;
+        }
+        // Regular scroll for panning when zoomed in
+        if (zoomController.current.isZoomedIn()) {
+          e.preventDefault();
+          let deltaX = e.deltaX;
+          if (Math.abs(deltaX) < Math.abs(e.deltaY) && e.shiftKey) {
+            deltaX = e.deltaY;
+          }
+          if (Math.abs(deltaX) > 0) {
+            const normalizedDelta = deltaX > 0 ? 1 : -1;
+            handleHorizontalScroll(normalizedDelta);
+          }
         }
       }
     };
@@ -791,7 +1003,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     return () => {
       canvas.removeEventListener("wheel", handleWheel);
     };
-  }, [isCanvasInitialized, selectedVariables]); // Re-add listener when canvas is re-initialized and when selectedVariables change
+  }, [isCanvasInitialized, selectedVariables, inputProfile]); // Re-add listener when canvas is re-initialized, selectedVariables change, or input profile changes
 
   return (
     <Grid
@@ -923,7 +1135,12 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               zIndex={10}
               boxShadow="sm"
             >
-              💡 Click & drag to zoom X-axis • Double-click to reset
+              {inputProfile === "trackpad" &&
+                "💡 Ctrl+scroll to zoom • Click & drag to zoom X-axis • Double-click to reset"}
+              {inputProfile === "mouse" &&
+                "💡 Mouse wheel to zoom • Click & drag to zoom X-axis • Double-click to reset"}
+              {inputProfile === "touchscreen" &&
+                "💡 Pinch to zoom • Click & drag to zoom X-axis • Double-click to reset"}
             </Box>
           )}
 

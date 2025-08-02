@@ -189,6 +189,17 @@ export class ZoomController {
   }
 
   /**
+   * Set custom zoom bounds directly
+   * @param min Minimum X value
+   * @param max Maximum X value
+   */
+  setZoomBounds(min: number, max: number): void {
+    this.customXBounds = { min, max };
+    this.panOffsetX = 0; // Reset pan offset when setting new bounds
+    console.log("ZoomController: Set zoom bounds:", { min, max });
+  }
+
+  /**
    * Reset zoom to show full data range
    * @returns True if zoom was reset, false if no zoom was active
    */
