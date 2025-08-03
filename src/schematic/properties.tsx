@@ -175,7 +175,8 @@ const Properties: React.FC<PropertiesProps> = ({
     <Float offset="10rem" placement="middle-end">
       <Flex
         direction="column"
-        bg="gray.900"
+        bg="gray.900/70"
+        backdropFilter="blur(12px)"
         padding={1.5}
         borderRadius="md"
         width={{ base: "14rem", md: "15rem", lg: "16rem" }}
