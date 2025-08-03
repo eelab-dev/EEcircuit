@@ -187,7 +187,16 @@ const Properties: React.FC<PropertiesProps> = ({
         }
         overflowY="hidden"
       >
-        <Flex alignItems="end" width={"100%"} justify="flex-end">
+        <Flex alignItems="center" width={"100%"} justify="space-between">
+          {selectedItem.type === "instance" && (
+            <Span fontWeight="medium">{selectedItem.typeName}</Span>
+          )}
+          {selectedItem.type === "wire" && (
+            <Span fontWeight="medium">Wire</Span>
+          )}
+          {selectedItem.type === "none" && (
+            <Span color="gray.500">No Selection</Span>
+          )}
           <CloseButton onClick={onCloseButtonClick} />
         </Flex>
         <Flex
@@ -203,16 +212,8 @@ const Properties: React.FC<PropertiesProps> = ({
             maxW="sm"
             onSubmit={(e) => e.preventDefault()}
           >
-            <Span>Properties</Span>
-            {selectedItem.type === "none" && (
-              <Span color="gray.500">No item selected</Span>
-            )}
-
             {selectedItem.type === "instance" && (
               <>
-                <Field.Root>
-                  <Field.Label>Component: {selectedItem.typeName}</Field.Label>
-                </Field.Root>
                 {/* special case for ports to only show the net name*/}
                 {selectedItem.typeName !== "port" && (
                   <Field.Root>
@@ -236,23 +237,15 @@ const Properties: React.FC<PropertiesProps> = ({
             )}
 
             {selectedItem.type === "wire" && (
-              <>
-                <Field.Root>
-                  <Field.Label>Wire Properties</Field.Label>
-                </Field.Root>
-
-                <Field.Root>
-                  <Field.Label>Net Name</Field.Label>
-                  {
-                    <Input
-                      placeholder="Network name (e.g., VDD, GND, net1)"
-                      value={localValues.name}
-                      onChange={(e) => handleNameChange(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                    />
-                  }
-                </Field.Root>
-              </>
+              <Field.Root>
+                <Field.Label>Net Name</Field.Label>
+                <Input
+                  placeholder="Network name (e.g., VDD, GND, net1)"
+                  value={localValues.name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+              </Field.Root>
             )}
 
             {/* Action buttons */}
