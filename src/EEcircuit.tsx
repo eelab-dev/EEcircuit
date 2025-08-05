@@ -12,6 +12,7 @@ import {
   Text,
   IconButton,
   TabsValueChangeDetails,
+  Spinner,
 } from "@chakra-ui/react";
 
 import { Toaster } from "./components/ui/toaster.tsx";
@@ -21,7 +22,7 @@ import Schematic from "./schematic/schematic.tsx";
 import SimulationEditor from "./Simulate/simulate.tsx";
 import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
-import { sendCommand, Schematic as SchematicType } from "eecircuit-schematic";
+import { sendCommand, loadSchematic, Schematic as SchematicType } from "eecircuit-schematic";
 import { EEcircuitFile } from "./types/commonTypes.ts";
 import { Mouse, Touchpad, Download, Smartphone } from "lucide-react";
 import { useAppStore } from "./store/appStore";
@@ -44,6 +45,10 @@ const EEcircuit: React.FC = () => {
     setHasResizedSinceSchematicView,
     dragBox,
     setDragBox,
+    isSchematicLoading,
+    setIsSchematicLoading,
+    schematicLoadingMessage,
+    setSchematicLoadingMessage,
     inputProfile,
     toggleInputProfile,
     exportNetlist,
@@ -190,10 +195,12 @@ const EEcircuit: React.FC = () => {
 
     const handleDrop = async (e: DragEvent) => {
       preventDefault(e);
-      setDragBox(false);
 
       const files = e.dataTransfer?.files;
-      if (!files?.length) return;
+      if (!files?.length) {
+        setDragBox(false);
+        return;
+      }
 
       const file = files[0];
 
@@ -202,25 +209,44 @@ const EEcircuit: React.FC = () => {
         console.warn(
           "Invalid file type dropped. Please drop a valid schematic file."
         );
+        setDragBox(false);
         return;
       }
 
       try {
+        // Switch to schematic tab if not already there
+        if (mainTabValue !== "schematic") {
+          setMainTabValue("schematic");
+        }
+        
+        // Batch all state changes together for faster rendering
+        setDragBox(false);
+        setIsSchematicLoading(true);
+        setSchematicLoadingMessage("Processing file...");
+
         const content = await file.text();
         const parsedContent: EEcircuitFile = JSON.parse(content);
+        
         // check the schema version is correct
         if (parsedContent.schema !== "EEcircuitV1") {
           console.error(
             "Invalid schema version. Please drop a valid EEcircuit file."
           );
+          setDragBox(false);
+          setIsSchematicLoading(false);
           return;
         }
+        
         if (parsedContent.schematic) {
-          // Use the imported sendCommand from eecircuit-schematic
-          await sendCommand({
-            command: "loadSchematic",
-            schematic: parsedContent.schematic,
-          });
+          setSchematicLoadingMessage("Loading schematic...");
+          
+          // Ensure minimum loading time for better UX (run both operations in parallel)
+          await Promise.all([
+            loadSchematic(parsedContent.schematic),
+            new Promise(resolve => setTimeout(resolve, 400)) // Minimum 400ms visible time
+          ]);
+          
+          setIsSchematicLoading(false);
         }
 
         // Restore simulation configurations if they exist
@@ -246,6 +272,8 @@ const EEcircuit: React.FC = () => {
         }
       } catch (error) {
         console.error("Failed to load schematic from dropped file:", error);
+        setDragBox(false);
+        setIsSchematicLoading(false);
         alert(
           "Failed to load schematic from dropped file. Please ensure the file is valid."
         );
@@ -265,7 +293,7 @@ const EEcircuit: React.FC = () => {
       container.removeEventListener("dragleave", handleDragLeave);
       container.removeEventListener("drop", handleDrop);
     };
-  }, [setDragBox]); // Only depend on setDragBox to prevent unnecessary re-registrations
+  }, [setDragBox, setIsSchematicLoading, setSchematicLoadingMessage, mainTabValue, setMainTabValue]); // Include all dependencies
 
   // Helper function to wait for schematic export completion
   const waitForSchematicExport =
@@ -480,12 +508,42 @@ const EEcircuit: React.FC = () => {
           </Flex>
         </Tabs.List>
 
-        <Tabs.Content value="schematic" flex={1} minHeight={0}>
+        <Tabs.Content value="schematic" flex={1} minHeight={0} position="relative">
           <Schematic
             onNetlistExported={exportedNetlist}
             onCanvasResized={handleCanvasResized}
             onSchematicDataChange={handleSchematicDataChange}
           />
+          {isSchematicLoading && (
+            <Box
+              position="absolute"
+              top={0}
+              left={0}
+              right={0}
+              bottom={0}
+              bg="blackAlpha.400"
+              backdropFilter="blur(4px)"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              zIndex={10000}
+            >
+              <Flex
+                align="center"
+                justify="center"
+                direction="column"
+                gap={4}
+                bg="white"
+                p={6}
+                borderRadius="md"
+                boxShadow="lg"
+                _dark={{ bg: "gray.800" }}
+              >
+                <Spinner size="xl" />
+                <Text>{schematicLoadingMessage}</Text>
+              </Flex>
+            </Box>
+          )}
         </Tabs.Content>
 
         <Tabs.Content value="simulate" flex={1} minHeight={0}>
