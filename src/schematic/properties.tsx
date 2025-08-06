@@ -19,6 +19,7 @@ import {
   getPropertiesFromSelectedItem,
   applyPropertiesToSelectedItem,
 } from "../types/componentTypes";
+import { dialogTheme } from "../styles/dialogTheme";
 
 type PropertiesProps = {
   onCloseButtonClick: () => void;
@@ -175,7 +176,7 @@ const Properties: React.FC<PropertiesProps> = ({
     <Float offset="10rem" placement="middle-end">
       <Flex
         direction="column"
-        bg="gray.900/70"
+        bg={dialogTheme.bg}
         backdropFilter="blur(12px)"
         padding={1.5}
         borderRadius="md"
@@ -195,7 +196,7 @@ const Properties: React.FC<PropertiesProps> = ({
             <Span fontWeight="medium">Wire</Span>
           )}
           {selectedItem.type === "none" && (
-            <Span color="gray.500">No Selection</Span>
+            <Span color={dialogTheme.secondaryText}>No Selection</Span>
           )}
           <CloseButton onClick={onCloseButtonClick} />
         </Flex>
@@ -220,7 +221,7 @@ const Properties: React.FC<PropertiesProps> = ({
                     <Field.Label>Name</Field.Label>
                     {isFixedInstance ? (
                       // Display fixed instance net name (VDD/GND) as non-editable text
-                      <Span color="gray.500">{selectedItem.typeName}</Span>
+                      <Span color={dialogTheme.secondaryText}>{selectedItem.typeName}</Span>
                     ) : (
                       <Input
                         placeholder="Component name (e.g., R1, C1)"

@@ -11,6 +11,7 @@ import {
 } from "@chakra-ui/react";
 import { X, Keyboard } from "lucide-react";
 import { useAppStore } from "../store/appStore";
+import { dialogTheme } from "../styles/dialogTheme";
 
 type ShortcutsDialogProps = {
   isOpen: boolean;
@@ -27,18 +28,17 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
     onClose();
   }, [onClose]);
 
-  // Common styling variables for consistency
   const styles = {
     heading: {
-      color: "gray.400/90",
+      color: dialogTheme.categoryText,
     },
     text: {
-      color: "gray.300/90",
+      color: dialogTheme.secondaryText,
     },
     keyBox: {
-      bg: "gray.500/90",
-      borderColor: "gray.300/80",
-      color: "gray.100/95",
+      bg: dialogTheme.keyBoxBg,
+      borderColor: dialogTheme.keyBoxBorderColor,
+      color: dialogTheme.keyBoxText,
     },
   };
 
@@ -123,10 +123,10 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
             transform="translate(-50%, -50%)"
             zIndex="modal"
             overflowY="auto"
-            bg="gray.800/60"
-            backdropFilter="blur(12px)"
-            borderWidth="1px"
-            borderColor="gray.900/50"
+            bg={dialogTheme.bg}
+            backdropFilter={dialogTheme.backdropFilter}
+            borderWidth={dialogTheme.borderWidth}
+            borderColor={dialogTheme.borderColor}
           >
             <Dialog.Header position="relative" pb="4">
               <Dialog.Title>

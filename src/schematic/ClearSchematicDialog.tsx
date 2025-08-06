@@ -2,6 +2,7 @@ import React from "react";
 import { Dialog, Button, Flex, IconButton, Portal } from "@chakra-ui/react";
 import { X } from "lucide-react";
 import { sendCommand, loadDemoSchematic } from "eecircuit-schematic";
+import { dialogTheme } from "../styles/dialogTheme";
 
 type ClearSchematicDialogProps = {
   isOpen: boolean;
@@ -46,6 +47,10 @@ const ClearSchematicDialog: React.FC<ClearSchematicDialogProps> = ({
             left="50%"
             transform="translate(-50%, -50%)"
             zIndex="modal"
+            bg={dialogTheme.bg}
+            backdropFilter={dialogTheme.backdropFilter}
+            borderWidth={dialogTheme.borderWidth}
+            borderColor={dialogTheme.borderColor}
           >
             <Dialog.Header position="relative" pb="4">
               <Dialog.Title>Clear Schematic</Dialog.Title>

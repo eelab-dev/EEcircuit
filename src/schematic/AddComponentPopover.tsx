@@ -5,6 +5,7 @@ import { Tooltip } from "../components/ui/tooltip";
 import { useColorModeValue } from "../components/ui/color-mode";
 import { CopyPlus, X } from "lucide-react";
 import { AvailableComponent, sendCommand } from "eecircuit-schematic";
+import { dialogTheme } from "../styles/dialogTheme";
 
 type ComponentCategory = AvailableComponent["category"];
 
@@ -251,29 +252,28 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   // Theme-aware icon coloring using Chakra UI's color mode
   const isDarkMode = useColorModeValue(false, true);
 
-  // Common styling variables for consistency
   const styles = {
     popover: {
-      bg: "gray.subtle/70",
-      borderColor: "gray.solid/50",
+      bg: dialogTheme.bg,
+      borderColor: dialogTheme.borderColor,
     },
     input: {
-      bg: "gray.emphasized/80",
-      borderColor: "gray.focusRing/60",
+      bg: dialogTheme.inputBg,
+      borderColor: dialogTheme.inputBorderColor,
     },
     categoryText: {
-      color: "gray.focusRing/90",
+      color: dialogTheme.categoryText,
     },
     categoryDivider: {
-      bg: "gray.emphasized/60",
+      bg: dialogTheme.dividerBg,
     },
     componentItem: {
-      borderColor: "gray.emphasized/40",
-      hoverBg: "gray.muted/80",
-      focusBg: "gray.emphasized/70",
+      borderColor: dialogTheme.itemBorderColor,
+      hoverBg: dialogTheme.hoverBg,
+      focusBg: dialogTheme.focusBg,
     },
     componentText: {
-      color: "gray.fg/95",
+      color: dialogTheme.primaryText,
     },
   };
 
@@ -416,7 +416,11 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   return (
     <>
       <Tooltip content="Add Component" showArrow openDelay={300}>
-        <IconButton ref={buttonRef} onClick={openPopover} bg="gray.solid/90">
+        <IconButton
+          ref={buttonRef}
+          onClick={openPopover}
+          bg={dialogTheme.buttonIconBg}
+        >
           <CopyPlus />
         </IconButton>
       </Tooltip>

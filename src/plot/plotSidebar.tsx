@@ -10,6 +10,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { ChevronRight, Settings, Pin, PinOff, Download } from "lucide-react";
+import { dialogTheme } from "../styles/dialogTheme";
 
 interface PlotSidebarProps {
   variableNames: string[];
@@ -104,7 +105,12 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
       name="variables"
     >
       {/* Top section with legend and action buttons */}
-      <Text fontSize="sm" mb="2" fontWeight="medium" color="gray.300/90">
+      <Text
+        fontSize="sm"
+        mb="2"
+        fontWeight="medium"
+        color={dialogTheme.secondaryText}
+      >
         X-axis: {variableNames[0]}
       </Text>
 
@@ -169,8 +175,8 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
           isDrawerOpen ? "Close plot variables" : "Open plot variables"
         }
         onClick={handleToggleDrawer}
-        bg="gray.100/90"
-        backdropFilter="blur(8px)"
+        bg={dialogTheme.buttonIconBg}
+        backdropFilter={dialogTheme.toggleButtonBackdropFilter}
         transition="right 0.3s ease"
       >
         {isDrawerOpen ? <ChevronRight size={16} /> : <Settings size={16} />}
@@ -184,18 +190,26 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
           right={0}
           width="12rem"
           height="100%"
-          bg="gray.800/60"
-          backdropFilter="blur(12px)"
+          bg={dialogTheme.bg}
+          backdropFilter={dialogTheme.backdropFilter}
           borderLeft="1px solid"
-          borderColor="gray.900/50"
+          borderColor={dialogTheme.borderColor}
           borderRadius="md"
           shadow="sm"
           zIndex={1000}
         >
           {/* Header */}
-          <Box p={4} borderBottom="1px solid" borderColor="gray.900/50">
+          <Box
+            p={4}
+            borderBottom="1px solid"
+            borderColor={dialogTheme.borderColor}
+          >
             <HStack justify="space-between" align="center">
-              <Text fontSize="sm" fontWeight="semibold" color="gray.300/90">
+              <Text
+                fontSize="sm"
+                fontWeight="semibold"
+                color={dialogTheme.secondaryText}
+              >
                 Plot Variables
               </Text>
               <HStack gap={1}>
@@ -242,10 +256,10 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
                 right={0}
                 p={4}
                 pt={2}
-                bg="gray.800/60"
-                backdropFilter="blur(12px)"
+                bg={dialogTheme.bg}
+                backdropFilter={dialogTheme.backdropFilter}
                 borderTop="1px solid"
-                borderColor="gray.900/50"
+                borderColor={dialogTheme.borderColor}
               >
                 <Button
                   size="xs"
@@ -293,14 +307,22 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             width="20rem"
             maxWidth="80vw"
             height="100vh"
-            bg="gray.800/60"
-            backdropFilter="blur(12px)"
+            bg={dialogTheme.bg}
+            backdropFilter={dialogTheme.backdropFilter}
             shadow="2xl"
           >
             {/* Header */}
-            <Box p={4} borderBottom="1px solid" borderColor="gray.900/50">
+            <Box
+              p={4}
+              borderBottom="1px solid"
+              borderColor={dialogTheme.borderColor}
+            >
               <HStack justify="space-between" align="center">
-                <Text fontSize="sm" fontWeight="semibold" color="gray.300/90">
+                <Text
+                  fontSize="sm"
+                  fontWeight="semibold"
+                  color={dialogTheme.secondaryText}
+                >
                   Plot Variables
                 </Text>
                 <IconButton
@@ -339,10 +361,10 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
                   right={0}
                   p={4}
                   pt={2}
-                  bg="gray.800/60"
-                  backdropFilter="blur(12px)"
+                  bg={dialogTheme.bg}
+                  backdropFilter={dialogTheme.backdropFilter}
                   borderTop="1px solid"
-                  borderColor="gray.900/50"
+                  borderColor={dialogTheme.borderColor}
                 >
                   <Button
                     size="xs"

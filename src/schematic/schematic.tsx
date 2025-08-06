@@ -27,6 +27,7 @@ import ShortcutsDialog from "./ShortcutsDialog";
 import { ToBePlotted } from "src/types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import { getRecommendedInputProfile } from "../utils/deviceDetection";
+import { dialogTheme } from "../styles/dialogTheme";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
@@ -692,7 +693,7 @@ const Schematic: React.FC<SchematicProps> = ({
             <IconButton
               aria-label="Fullscreen"
               onClick={fullscreenHandler}
-              bg="gray.solid/90"
+              bg={dialogTheme.buttonIconBg}
             >
               {!fullscreen ? <Expand /> : <SquareX />}
             </IconButton>
@@ -721,14 +722,14 @@ const Schematic: React.FC<SchematicProps> = ({
             left="50%"
             transform="translateX(-50%)"
             zIndex={1000}
-            bg="gray.muted/60"
-            backdropFilter="blur(12px)"
-            color="gray.fg/95"
+            bg={dialogTheme.bg}
+            backdropFilter={dialogTheme.backdropFilter}
+            color={dialogTheme.primaryText}
             px={4}
             py={2}
             borderRadius="md"
             border="1px solid"
-            borderColor="gray.subtle/50"
+            borderColor={dialogTheme.borderColor}
             fontSize="sm"
             boxShadow="lg"
             textAlign="center"
@@ -746,12 +747,16 @@ const Schematic: React.FC<SchematicProps> = ({
                 fontSize="xs"
                 mt={2}
                 p={3}
-                bg="gray.muted/70"
+                bg={dialogTheme.bg}
                 borderRadius="md"
                 border="1px solid"
-                borderColor="gray.subtle/50"
+                borderColor={dialogTheme.borderColor}
               >
-                <Box fontWeight="bold" mb="0.5" color="gray.300/90">
+                <Box
+                  fontWeight="bold"
+                  mb="0.5"
+                  color={dialogTheme.secondaryText}
+                >
                   Selected ({toBePlotted.length}):
                 </Box>
                 <Box
@@ -763,7 +768,7 @@ const Schematic: React.FC<SchematicProps> = ({
                     md: "25rem",
                     lg: "31.25rem",
                   }}
-                  color="gray.fg/95"
+                  color={dialogTheme.primaryText}
                 >
                   {toBePlotted.map((item, index) => (
                     <span key={index}>

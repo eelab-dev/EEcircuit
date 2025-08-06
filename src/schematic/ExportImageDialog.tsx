@@ -11,6 +11,7 @@ import {
 } from "@chakra-ui/react";
 import { X, ZoomIn, ZoomOut, Download, ChevronDown } from "lucide-react";
 import { convertSvgToPdf } from "../utils/svgToPdf";
+import { dialogTheme } from "../styles/dialogTheme";
 
 type ExportImageDialogProps = {
   isOpen: boolean;
@@ -152,6 +153,10 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
             transform="translate(-50%, -50%)"
             zIndex="modal"
             margin="auto"
+            bg={dialogTheme.bg}
+            backdropFilter={dialogTheme.backdropFilter}
+            borderWidth={dialogTheme.borderWidth}
+            borderColor={dialogTheme.borderColor}
           >
             <Dialog.Header position="relative" pb="4">
               <Dialog.Title>Export Schematic</Dialog.Title>
@@ -181,11 +186,12 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                 </Box>
               )}
               {svgContent && (
+                // The background color should always be white for clarity
                 <Box
                   border="1px"
-                  borderColor="gray.200"
+                  borderColor={dialogTheme.borderColor}
                   borderRadius="md"
-                  bg="white"
+                  bg={"white"}
                   p={4}
                   w="100%"
                   maxW="min(37.5rem, 80vw)"

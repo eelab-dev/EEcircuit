@@ -18,6 +18,7 @@ import {
   Keyboard,
 } from "lucide-react";
 import { AvailableComponent, sendCommand } from "eecircuit-schematic";
+import { dialogTheme } from "src/styles/dialogTheme";
 
 type ActionsProps = {
   availableComponents: AvailableComponent[];
@@ -30,7 +31,6 @@ const Actions: React.FC<ActionsProps> = ({
   onExportImage,
   onShowShortcuts,
 }) => {
-  const buttonBg = "gray.solid/90";
   const [isCompact, setIsCompact] = React.useState(false);
   const [showClearDialog, setShowClearDialog] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -82,42 +82,45 @@ const Actions: React.FC<ActionsProps> = ({
       }}
     >
       <Tooltip content="Select/Move" showArrow openDelay={300}>
-        <IconButton bg={buttonBg}>
+        <IconButton bg={dialogTheme.buttonIconBg}>
           <MousePointer />
         </IconButton>
       </Tooltip>
       <Tooltip content="Pan View" showArrow openDelay={300}>
-        <IconButton bg={buttonBg}>
+        <IconButton bg={dialogTheme.buttonIconBg}>
           <Move />
         </IconButton>
       </Tooltip>
       <Separator display={isCompact ? "none" : "block"} />
       <Tooltip content="Add Wire" showArrow openDelay={300}>
-        <IconButton bg={buttonBg}>
+        <IconButton bg={dialogTheme.buttonIconBg}>
           <Cable />
         </IconButton>
       </Tooltip>
       <AddComponentPopover availableComponents={availableComponents} />
       <Separator display={isCompact ? "none" : "block"} />
       <Tooltip content="Remove Selected" showArrow openDelay={300}>
-        <IconButton bg={buttonBg}>
+        <IconButton bg={dialogTheme.buttonIconBg}>
           <Eraser />
         </IconButton>
       </Tooltip>
       <Tooltip content="Clear Schematic" showArrow openDelay={300}>
-        <IconButton bg={buttonBg} onClick={() => setShowClearDialog(true)}>
+        <IconButton
+          bg={dialogTheme.buttonIconBg}
+          onClick={() => setShowClearDialog(true)}
+        >
           <Trash2 />
         </IconButton>
       </Tooltip>
       <Separator display={isCompact ? "none" : "block"} />
       <Tooltip content="Hand Tool" showArrow openDelay={300}>
-        <IconButton bg={buttonBg}>
+        <IconButton bg={dialogTheme.buttonIconBg}>
           <Hand />
         </IconButton>
       </Tooltip>
       <Tooltip content="Fit to Screen" showArrow openDelay={300}>
         <IconButton
-          bg={buttonBg}
+          bg={dialogTheme.buttonIconBg}
           onClick={() => {
             sendCommand({ command: "view", viewType: "fit" });
           }}
@@ -126,12 +129,12 @@ const Actions: React.FC<ActionsProps> = ({
         </IconButton>
       </Tooltip>
       <Tooltip content="Return to Origin" showArrow openDelay={300}>
-        <IconButton bg={buttonBg}>
+        <IconButton bg={dialogTheme.buttonIconBg}>
           <CircleDot />
         </IconButton>
       </Tooltip>
       <Tooltip content="Export Image" showArrow openDelay={300}>
-        <IconButton bg={buttonBg} onClick={onExportImage}>
+        <IconButton bg={dialogTheme.buttonIconBg} onClick={onExportImage}>
           <ImageDown />
         </IconButton>
       </Tooltip>
@@ -140,7 +143,7 @@ const Actions: React.FC<ActionsProps> = ({
         showArrow
         openDelay={300}
       >
-        <IconButton bg={buttonBg} onClick={onShowShortcuts}>
+        <IconButton bg={dialogTheme.buttonIconBg} onClick={onShowShortcuts}>
           <Keyboard />
         </IconButton>
       </Tooltip>
