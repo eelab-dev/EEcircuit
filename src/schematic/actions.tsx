@@ -30,7 +30,7 @@ const Actions: React.FC<ActionsProps> = ({
   onExportImage,
   onShowShortcuts,
 }) => {
-  const buttonBg = "gray.100/90";
+  const buttonBg = "gray.solid/90";
   const [isCompact, setIsCompact] = React.useState(false);
   const [showClearDialog, setShowClearDialog] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);

@@ -692,7 +692,7 @@ const Schematic: React.FC<SchematicProps> = ({
             <IconButton
               aria-label="Fullscreen"
               onClick={fullscreenHandler}
-              bg="gray.100/90"
+              bg="gray.solid/90"
             >
               {!fullscreen ? <Expand /> : <SquareX />}
             </IconButton>
@@ -721,14 +721,14 @@ const Schematic: React.FC<SchematicProps> = ({
             left="50%"
             transform="translateX(-50%)"
             zIndex={1000}
-            bg="gray.800/60"
+            bg="gray.muted/60"
             backdropFilter="blur(12px)"
-            color="gray.200/95"
+            color="gray.fg/95"
             px={4}
             py={2}
             borderRadius="md"
             border="1px solid"
-            borderColor="gray.900/50"
+            borderColor="gray.subtle/50"
             fontSize="sm"
             boxShadow="lg"
             textAlign="center"
@@ -746,10 +746,10 @@ const Schematic: React.FC<SchematicProps> = ({
                 fontSize="xs"
                 mt={2}
                 p={3}
-                bg="gray.800/70"
+                bg="gray.muted/70"
                 borderRadius="md"
                 border="1px solid"
-                borderColor="gray.900/50"
+                borderColor="gray.subtle/50"
               >
                 <Box fontWeight="bold" mb="0.5" color="gray.300/90">
                   Selected ({toBePlotted.length}):
@@ -757,8 +757,13 @@ const Schematic: React.FC<SchematicProps> = ({
                 <Box
                   wordBreak="break-word"
                   lineHeight="1.2"
-                  maxWidth={{ base: "15.625rem", sm: "21.875rem", md: "25rem", lg: "31.25rem" }}
-                  color="gray.200/95"
+                  maxWidth={{
+                    base: "15.625rem",
+                    sm: "21.875rem",
+                    md: "25rem",
+                    lg: "31.25rem",
+                  }}
+                  color="gray.fg/95"
                 >
                   {toBePlotted.map((item, index) => (
                     <span key={index}>
@@ -813,10 +818,10 @@ const Schematic: React.FC<SchematicProps> = ({
           <Box display={{ base: "block", md: "none" }}>
             <Status info={info} />
           </Box>
-          
+
           {/* Simulate button - always visible */}
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             onClick={sendToNetListButtonHandler}
             flexShrink={0}
             minWidth="fit-content"

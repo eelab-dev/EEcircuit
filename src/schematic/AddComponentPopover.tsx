@@ -2,6 +2,7 @@ import React from "react";
 import { Flex, IconButton, Box, Input, Text } from "@chakra-ui/react";
 import { createPortal } from "react-dom";
 import { Tooltip } from "../components/ui/tooltip";
+import { useColorModeValue } from "../components/ui/color-mode";
 import { CopyPlus, X } from "lucide-react";
 import { AvailableComponent, sendCommand } from "eecircuit-schematic";
 
@@ -18,6 +19,37 @@ const createCategoryPriority = (): Record<ComponentCategory, number> => {
   };
 
   return priorities;
+};
+
+// Helper function to apply theme-aware styling to SVG content using string replacement
+const applySvgTheming = (svgContent: string, isDark: boolean): string => {
+  const targetColor = isDark ? "#ffffff" : "#000000";
+
+  // Replace common color attributes with theme-appropriate colors
+  let themedSvg = svgContent
+    // Replace stroke colors (but preserve 'none')
+    .replace(/stroke=["'](?!none)[^"']*["']/gi, `stroke="${targetColor}"`)
+    // Replace fill colors (but preserve 'none')
+    .replace(/fill=["'](?!none)[^"']*["']/gi, `fill="${targetColor}"`)
+    // Handle style attributes with stroke
+    .replace(/stroke:\s*(?!none)[^;"'}]*/gi, `stroke: ${targetColor}`)
+    // Handle style attributes with fill
+    .replace(/fill:\s*(?!none)[^;"'}]*/gi, `fill: ${targetColor}`);
+
+  // If no stroke or fill attributes found, add default stroke
+  if (
+    !themedSvg.includes("stroke=") &&
+    !themedSvg.includes("fill=") &&
+    !themedSvg.includes("stroke:") &&
+    !themedSvg.includes("fill:")
+  ) {
+    themedSvg = themedSvg.replace(
+      /<svg([^>]*)>/,
+      `<svg$1 stroke="${targetColor}" fill="none">`
+    );
+  }
+
+  return themedSvg;
 };
 
 // Helper function to group components by category
@@ -64,6 +96,7 @@ type ComponentListProps = {
   availableComponents: AvailableComponent[];
   clickCallback: () => void;
   focusedIndex: number;
+  isDarkMode: boolean;
   styles: {
     categoryText: { color: string };
     categoryDivider: { bg: string };
@@ -74,7 +107,10 @@ type ComponentListProps = {
 
 // Component list to render available components grouped by category
 const ComponentList = React.forwardRef<HTMLDivElement, ComponentListProps>(
-  ({ availableComponents, clickCallback, focusedIndex, styles }, ref) => {
+  (
+    { availableComponents, clickCallback, focusedIndex, isDarkMode, styles },
+    ref
+  ) => {
     const groupedComponents = groupComponentsByCategory(availableComponents);
 
     // Create a flattened list for focus management
@@ -102,7 +138,12 @@ const ComponentList = React.forwardRef<HTMLDivElement, ComponentListProps>(
             return (
               <Box key={category}>
                 {categoryIndex > 0 && (
-                  <Box height="1px" bg={styles.categoryDivider.bg} width="100%" mb="3" />
+                  <Box
+                    height="1px"
+                    bg={styles.categoryDivider.bg}
+                    width="100%"
+                    mb="3"
+                  />
                 )}
                 <Text
                   fontSize="xs"
@@ -151,10 +192,10 @@ const ComponentList = React.forwardRef<HTMLDivElement, ComponentListProps>(
                         }}
                       >
                         <span
-                          style={{ 
-                            fontSize: "0.8rem", 
+                          style={{
+                            fontSize: "0.8rem",
                             textAlign: "center",
-                            color: styles.componentText.color
+                            color: styles.componentText.color,
                           }}
                         >
                           {component.type}
@@ -172,7 +213,10 @@ const ComponentList = React.forwardRef<HTMLDivElement, ComponentListProps>(
                               transform: "scaleY(-1)",
                             }}
                             dangerouslySetInnerHTML={{
-                              __html: component.svg,
+                              __html: applySvgTheming(
+                                component.svg,
+                                isDarkMode
+                              ),
                             }}
                           />
                         </Flex>
@@ -204,29 +248,32 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   const listRef = React.useRef<HTMLDivElement>(null);
   const [focusedIndex, setFocusedIndex] = React.useState(-1);
 
+  // Theme-aware icon coloring using Chakra UI's color mode
+  const isDarkMode = useColorModeValue(false, true);
+
   // Common styling variables for consistency
   const styles = {
     popover: {
-      bg: "gray.800/70",
-      borderColor: "gray.900/50",
+      bg: "gray.subtle/70",
+      borderColor: "gray.solid/50",
     },
     input: {
-      bg: "gray.700/80",
-      borderColor: "gray.600/60",
+      bg: "gray.emphasized/80",
+      borderColor: "gray.focusRing/60",
     },
     categoryText: {
-      color: "gray.400/90",
+      color: "gray.focusRing/90",
     },
     categoryDivider: {
-      bg: "gray.600/60",
+      bg: "gray.emphasized/60",
     },
     componentItem: {
-      borderColor: "gray.600/40",
-      hoverBg: "gray.700/80",
-      focusBg: "gray.600/70",
+      borderColor: "gray.emphasized/40",
+      hoverBg: "gray.muted/80",
+      focusBg: "gray.emphasized/70",
     },
     componentText: {
-      color: "gray.200/95",
+      color: "gray.fg/95",
     },
   };
 
@@ -369,7 +416,7 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   return (
     <>
       <Tooltip content="Add Component" showArrow openDelay={300}>
-        <IconButton ref={buttonRef} onClick={openPopover} bg="gray.100/90">
+        <IconButton ref={buttonRef} onClick={openPopover} bg="gray.solid/90">
           <CopyPlus />
         </IconButton>
       </Tooltip>
@@ -424,6 +471,7 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
                 availableComponents={filteredComponents}
                 clickCallback={clickCallBack}
                 focusedIndex={focusedIndex}
+                isDarkMode={isDarkMode}
                 styles={{
                   categoryText: styles.categoryText,
                   categoryDivider: styles.categoryDivider,
