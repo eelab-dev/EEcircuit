@@ -24,13 +24,31 @@ import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
 import { sendCommand, loadSchematic, Schematic as SchematicType } from "eecircuit-schematic";
 import { EEcircuitFile } from "./types/commonTypes.ts";
-import { Mouse, Touchpad, Download, Smartphone } from "lucide-react";
+import { Mouse, Touchpad, Download, Smartphone, Sun, Moon } from "lucide-react";
 import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
 
 type MainTabsValue = "schematic" | "simulate" | "plot";
 
 const EEcircuit: React.FC = () => {
+  // Simple dark mode state
+  const [isDarkMode, setIsDarkMode] = React.useState(() => {
+    // Check if user prefers dark mode
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  // Apply dark mode class to document
+  React.useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode);
+    document.documentElement.classList.toggle('light', !isDarkMode);
+    console.log("Dark mode:", isDarkMode);
+  }, [isDarkMode]);
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+  
   // Use Zustand store instead of multiple useState calls
   const {
     mainTabValue,
@@ -465,7 +483,7 @@ const EEcircuit: React.FC = () => {
               </Tabs.Trigger>
             </Flex>
 
-            {/* Save button and Input Profile Toggle Button */}
+            {/* Save button, Dark Mode Toggle, and Input Profile Toggle Button */}
             <Flex alignItems="center" gap={2}>
               {/* Save File Button */}
               <Tooltip
@@ -480,6 +498,22 @@ const EEcircuit: React.FC = () => {
                   onClick={handleSaveFile}
                 >
                   <Download size={16} />
+                </IconButton>
+              </Tooltip>
+
+              {/* Dark Mode Toggle Button */}
+              <Tooltip
+                showArrow
+                content="Toggle light/dark mode"
+                positioning={{ placement: "bottom" }}
+              >
+                <IconButton
+                  aria-label="Toggle color mode"
+                  size="sm"
+                  variant="ghost"
+                  onClick={toggleDarkMode}
+                >
+                  {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
                 </IconButton>
               </Tooltip>
 
