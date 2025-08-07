@@ -417,7 +417,6 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
       overflow={{ base: "visible", md: "hidden" }}
       borderLeft={{ base: "none", md: "1px solid" }}
       borderTop={{ base: "1px solid", md: "none" }}
-      borderColor={useColorModeValue("gray.200", "gray.600")}
       position="relative"
     >
       {/* Config area - no scrolling on mobile, scrollable on desktop */}

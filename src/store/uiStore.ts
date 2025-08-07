@@ -9,6 +9,7 @@ export interface UiState {
   showDevMessages: boolean;
   isSchematicLoading: boolean;
   schematicLoadingMessage: string;
+  isDarkMode: boolean;
 }
 
 export interface UiActions {
@@ -18,6 +19,8 @@ export interface UiActions {
   setIsSchematicLoading: (loading: boolean) => void;
   setSchematicLoadingMessage: (message: string) => void;
   toggleInputProfile: () => void;
+  setIsDarkMode: (isDark: boolean) => void;
+  toggleTheme: () => void;
 }
 
 export type UiSlice = UiState & UiActions;
@@ -26,12 +29,15 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
   set,
   get
 ) => ({
-  // Initial state - automatically detect device type
+  // Initial state - automatically detect device type and system theme
   inputProfile: getRecommendedInputProfile(),
   dragBox: false,
   showDevMessages: false,
   isSchematicLoading: false,
   schematicLoadingMessage: "Loading schematic...",
+  isDarkMode: typeof window !== 'undefined' 
+    ? window.matchMedia('(prefers-color-scheme: dark)').matches 
+    : false,
 
     // Actions
     setInputProfile: (profile) => set({ inputProfile: profile }),
@@ -58,5 +64,12 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
       command: "setInputProfile",
       profile: newProfile,
     });
+  },
+
+  // Theme actions
+  setIsDarkMode: (isDark) => set({ isDarkMode: isDark }),
+  toggleTheme: () => {
+    const currentMode = get().isDarkMode;
+    set({ isDarkMode: !currentMode });
   },
 });

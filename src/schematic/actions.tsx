@@ -74,7 +74,6 @@ const Actions: React.FC<ActionsProps> = ({
         display: "grid",
         gridTemplateColumns: isCompact ? "1fr 1fr" : "1fr",
         gap: isCompact ? "0.25rem" : "0.5rem",
-        backgroundColor: "gray.800/60",
         padding: "0.375rem",
         borderRadius: "0.375rem",
         width: "fit-content",

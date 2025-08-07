@@ -22,33 +22,49 @@ import Schematic from "./schematic/schematic.tsx";
 import SimulationEditor from "./Simulate/simulate.tsx";
 import Logo from "./logo.tsx";
 import Plot from "./plot/plot.tsx";
-import { sendCommand, loadSchematic, Schematic as SchematicType } from "eecircuit-schematic";
+import {
+  sendCommand,
+  loadSchematic,
+  Schematic as SchematicType,
+} from "eecircuit-schematic";
 import { EEcircuitFile } from "./types/commonTypes.ts";
 import { Mouse, Touchpad, Download, Smartphone, Sun, Moon } from "lucide-react";
 import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
+import { dialogTheme } from "./styles/dialogTheme.ts";
 
 type MainTabsValue = "schematic" | "simulate" | "plot";
 
 const EEcircuit: React.FC = () => {
-  // Simple dark mode state
-  const [isDarkMode, setIsDarkMode] = React.useState(() => {
-    // Check if user prefers dark mode
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
+  // Use theme state from Zustand store
+  const isDarkMode = useAppStore((state) => state.isDarkMode);
+  const setIsDarkMode = useAppStore((state) => state.setIsDarkMode);
+  const toggleTheme = useAppStore((state) => state.toggleTheme);
 
-  // Apply dark mode class to document
+  // Listen for system theme changes
   React.useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDarkMode);
-    document.documentElement.classList.toggle('light', !isDarkMode);
-    console.log("Dark mode:", isDarkMode);
+    if (typeof window !== "undefined") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const handleChange = (e: MediaQueryListEvent) => {
+        setIsDarkMode(e.matches);
+      };
+
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+  }, [setIsDarkMode]);
+
+  // Apply theme class to document root
+  React.useEffect(() => {
+    if (typeof document !== "undefined") {
+      const htmlElement = document.documentElement;
+      htmlElement.classList.remove("light", "dark");
+      htmlElement.classList.add(isDarkMode ? "dark" : "light");
+    }
   }, [isDarkMode]);
 
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-  
+  // Toggle theme function is now from the store
+
   // Use Zustand store instead of multiple useState calls
   const {
     mainTabValue,
@@ -236,7 +252,7 @@ const EEcircuit: React.FC = () => {
         if (mainTabValue !== "schematic") {
           setMainTabValue("schematic");
         }
-        
+
         // Batch all state changes together for faster rendering
         setDragBox(false);
         setIsSchematicLoading(true);
@@ -244,7 +260,7 @@ const EEcircuit: React.FC = () => {
 
         const content = await file.text();
         const parsedContent: EEcircuitFile = JSON.parse(content);
-        
+
         // check the schema version is correct
         if (parsedContent.schema !== "EEcircuitV1") {
           console.error(
@@ -254,16 +270,16 @@ const EEcircuit: React.FC = () => {
           setIsSchematicLoading(false);
           return;
         }
-        
+
         if (parsedContent.schematic) {
           setSchematicLoadingMessage("Loading schematic...");
-          
+
           // Ensure minimum loading time for better UX (run both operations in parallel)
           await Promise.all([
             loadSchematic(parsedContent.schematic),
-            new Promise(resolve => setTimeout(resolve, 400)) // Minimum 400ms visible time
+            new Promise((resolve) => setTimeout(resolve, 400)), // Minimum 400ms visible time
           ]);
-          
+
           setIsSchematicLoading(false);
         }
 
@@ -311,7 +327,13 @@ const EEcircuit: React.FC = () => {
       container.removeEventListener("dragleave", handleDragLeave);
       container.removeEventListener("drop", handleDrop);
     };
-  }, [setDragBox, setIsSchematicLoading, setSchematicLoadingMessage, mainTabValue, setMainTabValue]); // Include all dependencies
+  }, [
+    setDragBox,
+    setIsSchematicLoading,
+    setSchematicLoadingMessage,
+    mainTabValue,
+    setMainTabValue,
+  ]); // Include all dependencies
 
   // Helper function to wait for schematic export completion
   const waitForSchematicExport =
@@ -426,7 +448,7 @@ const EEcircuit: React.FC = () => {
       >
         {dragBox ? (
           <Box
-            bg="blue.400/80"
+            bg="blue.focusRing/80"
             width="100%"
             height="100%"
             position="absolute"
@@ -443,7 +465,7 @@ const EEcircuit: React.FC = () => {
             >
               <Box
                 p={4}
-                color="gray.100"
+                color="gray.solid"
                 fontSize="5xl"
                 width="50%"
                 textAlign="center"
@@ -511,7 +533,7 @@ const EEcircuit: React.FC = () => {
                   aria-label="Toggle color mode"
                   size="sm"
                   variant="ghost"
-                  onClick={toggleDarkMode}
+                  onClick={toggleTheme}
                 >
                   {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
                 </IconButton>
@@ -542,7 +564,12 @@ const EEcircuit: React.FC = () => {
           </Flex>
         </Tabs.List>
 
-        <Tabs.Content value="schematic" flex={1} minHeight={0} position="relative">
+        <Tabs.Content
+          value="schematic"
+          flex={1}
+          minHeight={0}
+          position="relative"
+        >
           <Schematic
             onNetlistExported={exportedNetlist}
             onCanvasResized={handleCanvasResized}
@@ -555,8 +582,8 @@ const EEcircuit: React.FC = () => {
               left={0}
               right={0}
               bottom={0}
-              bg="blackAlpha.400"
-              backdropFilter="blur(4px)"
+              bg={dialogTheme.bg}
+              backdropFilter={dialogTheme.backdropFilter}
               display="flex"
               alignItems="center"
               justifyContent="center"
@@ -571,7 +598,6 @@ const EEcircuit: React.FC = () => {
                 p={6}
                 borderRadius="md"
                 boxShadow="lg"
-                _dark={{ bg: "gray.800" }}
               >
                 <Spinner size="xl" />
                 <Text>{schematicLoadingMessage}</Text>

@@ -1,12 +1,19 @@
 import React from "react";
+import { useAppStore } from "./store/appStore";
 
-const Logo: React.FC = () => (
-  <svg
-    id="Layer_1"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 121.49 35.03"
-    height="3em"
-  >
+const Logo: React.FC = () => {
+  const isDarkMode = useAppStore((state) => state.isDarkMode);
+  const fillColor = isDarkMode ? "#f7fafc" : "#1a202c";
+
+  return (
+    <svg
+      id="Layer_1"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 121.49 35.03"
+      height="3em"
+      fill={fillColor}
+      style={{ transition: 'fill 0.2s ease' }}
+    >
     <g>
       <path d="M2.2,31.54V4.47h14.73v5.26h-8.44v4.97h7.79v5.43h-7.79v5.91h8.44v5.5H2.2Z" />
       <path d="M20.85,31.54V4.47h14.73v5.26h-8.44v4.97h7.79v5.43h-7.79v5.91h8.44v5.5h-14.73Z" />
@@ -20,7 +27,8 @@ const Logo: React.FC = () => (
       <path d="M110.42,17.29v13.87h-5.21v-13.87h5.21ZM107.83,11.1c.71,0,1.32.25,1.83.74.52.5.77,1.08.77,1.76,0,.72-.24,1.32-.73,1.78-.49.46-1.11.7-1.87.7s-1.38-.23-1.87-.7c-.49-.46-.73-1.06-.73-1.78,0-.68.26-1.26.77-1.76.51-.5,1.12-.74,1.83-.74Z" />
       <path d="M118.11,12.17v5.32h2.34v5.5h-2.34c0,1.1.17,1.86.52,2.28.35.42.99.63,1.91.63v5.47c-.27,0-.47.01-.6.01-1.18,0-2.29-.27-3.33-.82-1.04-.55-1.88-1.29-2.51-2.23-.8-1.2-1.2-2.78-1.2-4.76v-11.4h5.2Z" />
     </g>
-  </svg>
-);
+    </svg>
+  );
+};
 
 export default Logo;

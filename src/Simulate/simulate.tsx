@@ -1,13 +1,13 @@
 import { Button, Flex, Menu } from "@chakra-ui/react";
 import React, { Suspense, useEffect, useState } from "react";
 import EditorCustom from "../editor/editorCustom";
-import { useColorModeValue } from "../components/ui/color-mode";
 import { Skeleton } from "@chakra-ui/react";
 import { toaster } from "../components/ui/toaster";
 import { X } from "lucide-react";
 import { SimulationType, ToBePlotted } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import SimulationConfigPanel from "./SimulationConfigPanel";
+import { dialogTheme } from "src/styles/dialogTheme";
 
 type SimulationEditorProps = {
   netList: string;
@@ -22,6 +22,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   const selectedSimType = useAppStore((state) => state.selectedSimType);
   const toBePlotted = useAppStore((state) => state.toBePlotted);
   const removeToBePlotted = useAppStore((state) => state.removeToBePlotted);
+  const isDarkMode = useAppStore((state) => state.isDarkMode);
 
   // Import handleNewResults from the main app store for handling simulation results
   const handleNewResults = useAppStore((state) => state.handleNewResults);
@@ -186,20 +187,23 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         flexShrink={{ base: 1, md: 0 }}
         flexGrow={0}
       >
-        <Flex flex={{ base: "none", md: "1" }} overflow={{ base: "visible", md: "hidden" }}>
+        <Flex
+          flex={{ base: "none", md: "1" }}
+          overflow={{ base: "visible", md: "hidden" }}
+        >
           <SimulationConfigPanel
             onStringConfigChange={handleStringConfigChange}
             onFullConfigChange={handleFullConfigChange}
           />
         </Flex>
-        
+
         {/* Simulation button at bottom */}
         <Flex
           height="80px"
           padding="4"
-          backgroundColor={useColorModeValue("white", "gray.800")}
+          backgroundColor={dialogTheme.bg}
           borderTop="1px solid"
-          borderColor={useColorModeValue("gray.200", "gray.600")}
+          borderColor={dialogTheme.borderColor}
           alignItems="center"
           flexShrink={0}
         >
@@ -210,9 +214,9 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       </Flex>
 
       {/* Editor on the left/bottom */}
-      <Flex 
+      <Flex
         flex={{ base: "0 0 auto", md: "1" }}
-        flexDirection="column" 
+        flexDirection="column"
         height={{ base: "400px", md: "100%" }}
         minHeight={{ base: "400px", md: "auto" }}
         overflow="hidden"
@@ -222,7 +226,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         <Flex
           padding="2"
           borderBottom="1px solid"
-          borderColor={useColorModeValue("gray.200", "gray.600")}
+          borderColor={dialogTheme.borderColor}
           justifyContent="flex-start"
           alignItems="center"
           gap="2"
@@ -292,7 +296,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
             language="spice"
             value={netListToSim}
             valueChanged={handleEditor}
-            theme={useColorModeValue("light", "dark")}
+            theme={isDarkMode ? "dark" : "light"}
           />
         </Suspense>
       </Flex>
