@@ -12,7 +12,6 @@ import {
   Input,
 } from "@chakra-ui/react";
 import React, { useEffect, useState, useRef } from "react";
-import { useColorModeValue } from "../components/ui/color-mode";
 import DcConfig from "./simConfigs/dc";
 import AcConfig from "./simConfigs/ac";
 import TransConfig from "./simConfigs/tran";
@@ -432,10 +431,6 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
         css={{
           overscrollBehavior: "contain",
           scrollbarWidth: "thin",
-          scrollbarColor: useColorModeValue(
-            "rgb(203, 213, 225) transparent",
-            "rgb(75, 85, 99) transparent"
-          ),
         }}
       >
         <Flex flexDirection="column" gap={4}>

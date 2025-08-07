@@ -1,7 +1,6 @@
 import React from "react";
 import { ResultType } from "eecircuit-engine";
 import { Flex } from "@chakra-ui/react";
-import { useColorMode } from "../components/ui/color-mode";
 import PlotCanvas from "./plotCanvas";
 import PlotSidebar from "./plotSidebar";
 import { useAppStore } from "../store/appStore";
@@ -14,21 +13,23 @@ interface PlotProps {
 const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   // Use Zustand store for plot state
   const storeResults = useAppStore((state) => state.results);
-  
+
   // Use local state for plot variable selection instead of Zustand store
   // This approach is necessary because CheckboxGroup's controlled behavior
   // works better with local React state. Previous attempts to use Zustand
   // store for selectedVariables caused checkbox state update issues.
   // For future refactoring: if moving back to store state, ensure proper
   // state synchronization between CheckboxGroup and store updates.
-  const [selectedVariables, setSelectedVariables] = React.useState<string[]>([]);
-  const [hoveredVariable, setHoveredVariable] = React.useState<string | null>(null);
+  const [selectedVariables, setSelectedVariables] = React.useState<string[]>(
+    []
+  );
+  const [hoveredVariable, setHoveredVariable] = React.useState<string | null>(
+    null
+  );
 
   // Use results from props if provided, otherwise from store
   const results = propsResults || storeResults;
 
-  const { colorMode } = useColorMode();
-  
   // State for drawer pinning
   const [isDrawerPinned, setIsDrawerPinned] = React.useState(false);
 
@@ -48,11 +49,19 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   };
 
   return (
-    <Flex direction="row" w="100%" h="100%" gap={4} p={4} overflow="hidden" position="relative">
-      <Flex 
-        flex="1" 
-        minW="0" 
-        direction="column" 
+    <Flex
+      direction="row"
+      w="100%"
+      h="100%"
+      gap={4}
+      p={4}
+      overflow="hidden"
+      position="relative"
+    >
+      <Flex
+        flex="1"
+        minW="0"
+        direction="column"
         minHeight={0}
         marginRight={{ base: 0, md: isDrawerPinned ? "12rem" : 0 }}
         transition="margin-right 0.3s ease"
@@ -61,7 +70,9 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
           results={results}
           selectedVariables={selectedVariables}
           hoveredVariable={hoveredVariable}
-          colorMode={colorMode}
+          colorMode={useAppStore((state) =>
+            state.isDarkMode ? "dark" : "light"
+          )}
         />
       </Flex>
       {results.length > 0 && results[0].variableNames && (

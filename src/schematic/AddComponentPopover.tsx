@@ -2,10 +2,10 @@ import React from "react";
 import { Flex, IconButton, Box, Input, Text } from "@chakra-ui/react";
 import { createPortal } from "react-dom";
 import { Tooltip } from "../components/ui/tooltip";
-import { useColorModeValue } from "../components/ui/color-mode";
 import { CopyPlus, X } from "lucide-react";
 import { AvailableComponent, sendCommand } from "eecircuit-schematic";
 import { dialogTheme } from "../styles/dialogTheme";
+import { useAppStore } from "../store/appStore";
 
 type ComponentCategory = AvailableComponent["category"];
 
@@ -250,7 +250,7 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   const [focusedIndex, setFocusedIndex] = React.useState(-1);
 
   // Theme-aware icon coloring using Chakra UI's color mode
-  const isDarkMode = useColorModeValue(false, true);
+  const isDarkMode = useAppStore((state) => state.isDarkMode);
 
   const styles = {
     popover: {
