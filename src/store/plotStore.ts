@@ -2,7 +2,6 @@ import { StateCreator } from "zustand";
 import { ResultType } from "eecircuit-engine";
 import { ToBePlotted } from "../types/commonTypes";
 import type { AggregatedResult } from "../simulation/resultAggregator";
-import type { BracketOperation } from "../utils/bracketParser";
 
 // Define the store interface that includes both plot and tab slices
 interface StoreWithTabAndSimulation {

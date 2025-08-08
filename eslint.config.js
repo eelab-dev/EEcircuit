@@ -5,6 +5,10 @@ import pluginReact from "eslint-plugin-react";
 import { defineConfig } from "eslint/config";
 
 export default defineConfig([
+  {
+    ignores: ["temp/**", "tests/**", "types/**"], // ✅ ignore these folders completely
+  },
+
   // Base JS config for src
   {
     files: ["src/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
@@ -15,13 +19,13 @@ export default defineConfig([
     },
   },
 
-  // TypeScript configs (array → map)
+  // TypeScript configs
   ...tseslint.configs.recommended.map((config) => ({
     ...config,
     files: ["src/**/*.{ts,tsx}"],
   })),
 
-  // React config (single object → wrap in array and add files)
+  // React config
   {
     ...pluginReact.configs.flat.recommended,
     files: ["src/**/*.{jsx,tsx}"],

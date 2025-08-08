@@ -90,7 +90,7 @@ export function analyzeBracketOperations(netlist: string): {
       totalBracketOperations,
       estimatedExpansionCount: parseResult.values?.length || 0
     };
-  } catch (error) {
+  } catch {
     return {
       hasBracketOperations: false,
       totalBracketOperations: 0

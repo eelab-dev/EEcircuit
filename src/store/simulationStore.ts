@@ -267,7 +267,7 @@ export const createSimulationSlice: StateCreator<
             failed,
           });
         },
-        onResult: (result) => {
+        onResult: () => {
           // Handle individual result if needed
         },
         onThreadUpdate: (threadId, status, currentSim) => {
@@ -306,8 +306,8 @@ export const createSimulationSlice: StateCreator<
           // Update results and trigger plot tab using handleNewResults for bracket operation detection
           // Type assertion needed because AggregatedResult extends ResultType but with additional properties
           const appActions = get() as SimulationSlice &
-            StoreWithTab & { handleNewResults: (results: any[]) => void };
-          appActions.handleNewResults([aggregated as any]);
+            StoreWithTab & { handleNewResults: (results: ResultType[]) => void };
+          appActions.handleNewResults([aggregated as ResultType]);
         }
       }
     } catch (error) {

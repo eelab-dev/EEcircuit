@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { ResultType } from "eecircuit-engine";
-import { Box, Grid, GridItem, Button, Text, Badge } from "@chakra-ui/react";
+import { Box, Grid, GridItem, Button } from "@chakra-ui/react";
 import { clearColorCache } from "./colorUtils";
 import { formatEngineering } from "./formatUtils";
 import Axis from "./axis";
@@ -20,7 +20,6 @@ interface PlotCanvasProps {
   // Bracket operation props
   isBracketOperationPlot?: boolean;
   bracketOperationResults?: AggregatedResult;
-  currentParameterValues?: string[];
 }
 
 const PlotCanvas: React.FC<PlotCanvasProps> = ({
@@ -29,7 +28,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   hoveredVariable,
   isBracketOperationPlot = false,
   bracketOperationResults,
-  currentParameterValues,
 }) => {
   const inputProfile = useAppStore((state) => state.inputProfile);
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
@@ -126,7 +124,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   } = useZoom({
     zoomController,
     canvasRef,
-    results,
     selectedVariables,
     lineDataRef,
     axisScales,

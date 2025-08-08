@@ -1,5 +1,4 @@
 import { RefObject } from "react";
-import { ResultType } from "eecircuit-engine";
 import { LineConfig } from "webgl-plot";
 import { ZoomController } from "./zoomController";
 
@@ -20,7 +19,6 @@ interface AxisScales {
 interface UseZoomProps {
   zoomController: RefObject<ZoomController>;
   canvasRef: RefObject<HTMLCanvasElement | null>;
-  results: ResultType[];
   selectedVariables: string[];
   lineDataRef: RefObject<ExtendedLineConfig[]>;
   axisScales: AxisScales;
@@ -33,7 +31,6 @@ interface UseZoomProps {
 export const useZoom = ({
   zoomController,
   canvasRef,
-  results,
   selectedVariables,
   lineDataRef,
   axisScales,

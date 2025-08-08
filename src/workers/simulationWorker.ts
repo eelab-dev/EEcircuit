@@ -1,4 +1,4 @@
-import { Simulation } from "eecircuit-engine";
+import { Simulation, ResultType } from "eecircuit-engine";
 
 interface WorkerMessage {
   netlist: string;
@@ -6,7 +6,7 @@ interface WorkerMessage {
 
 interface WorkerResponse {
   success: boolean;
-  result?: any;
+  result?: ResultType;
   error?: string;
 }
 

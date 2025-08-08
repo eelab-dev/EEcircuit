@@ -23,13 +23,6 @@ export interface ParseResult {
  */
 const BRACKET_REGEX = /\[(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\s*:\s*(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\s*:\s*(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\]\s*(u|m|k|Meg|G|T|p|n|f|a)?/;
 
-/**
- * Parse a number with optional unit suffix
- */
-function parseNumberWithUnit(value: string, unit?: string): { number: number; unit?: string } {
-  const num = parseFloat(value);
-  return { number: num, unit };
-}
 
 /**
  * Generate values array from start, step, stop parameters
@@ -127,7 +120,7 @@ export function parseBracketOperation(netlist: string): ParseResult {
  */
 export function validateBracketOperation(netlist: string): { isValid: boolean; error?: string } {
   try {
-    const result = parseBracketOperation(netlist);
+    parseBracketOperation(netlist);
     return { isValid: true };
   } catch (error) {
     return {

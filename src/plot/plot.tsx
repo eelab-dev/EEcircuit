@@ -18,7 +18,6 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   // Bracket operation state from store
   const isBracketOperationPlot = useAppStore((state) => state.isBracketOperationPlot);
   const bracketOperationResults = useAppStore((state) => state.bracketOperationResults);
-  const currentParameterValues = useAppStore((state) => state.currentParameterValues);
   
   // Theme state
   const colorMode = useAppStore((state) => state.isDarkMode ? "dark" : "light");
@@ -105,7 +104,6 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
             hoveredVariable={hoveredVariable}
             isBracketOperationPlot={isBracketOperationPlot}
             bracketOperationResults={bracketOperationResults}
-            currentParameterValues={currentParameterValues}
           />
         </Flex>
         {results.length > 0 && results[0]?.variableNames && (
