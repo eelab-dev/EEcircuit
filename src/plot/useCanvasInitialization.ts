@@ -170,7 +170,8 @@ export const useCanvasInitialization = ({
       // Calculate the number of lines needed
       const typedFirstResult = firstResult as AggregatedResult;
       const isBracketResult =
-        "bracketPlotData" in typedFirstResult && typedFirstResult.bracketPlotData;
+        "bracketPlotData" in typedFirstResult &&
+        typedFirstResult.bracketPlotData;
 
       let totalLines: number;
       if (isBracketResult && typedFirstResult.bracketPlotData) {
@@ -183,9 +184,7 @@ export const useCanvasInitialization = ({
       }
 
       // Create plot line with the correct number of lines
-      console.log(
-        `Creating WebglLineThick with ${totalLines} lines (isBracket: ${isBracketResult}, variables: ${numVariables})`
-      );
+
       plotLineRef.current = new WebglLineThick(
         { gl: wglpRef.current.gl },
         totalLines
@@ -217,7 +216,7 @@ export const useCanvasInitialization = ({
           ) {
             const paramData = bracketData[paramIndex];
             if (!paramData) continue;
-            
+
             const numPoints = paramData.data[0]?.values?.length || 0;
 
             if (numPoints === 0) {
@@ -250,7 +249,9 @@ export const useCanvasInitialization = ({
             // Fill array with x,y data for this parameter sweep
             for (let i = 0; i < numPoints; i++) {
               array[i * 2] = paramData.data[0]?.values?.[i] as number; // X-axis data
-              array[i * 2 + 1] = paramData.data[lineIndex]?.values?.[i] as number; // Y-axis data
+              array[i * 2 + 1] = paramData.data[lineIndex]?.values?.[
+                i
+              ] as number; // Y-axis data
             }
 
             allLineData.push({
@@ -282,7 +283,9 @@ export const useCanvasInitialization = ({
           // Fill array with x,y data
           for (let i = 0; i < numX; i++) {
             array[i * 2] = firstResult.data[0]?.values?.[i] as number; // X-axis data
-            array[i * 2 + 1] = firstResult.data[lineIndex]?.values?.[i] as number; // Y-axis data
+            array[i * 2 + 1] = firstResult.data[lineIndex]?.values?.[
+              i
+            ] as number; // Y-axis data
           }
 
           allLineData.push({
