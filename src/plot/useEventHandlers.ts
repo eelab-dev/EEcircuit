@@ -53,8 +53,12 @@ export const useEventHandlers = ({
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
         e.preventDefault();
-        const distance = getTouchDistance(e.touches[0], e.touches[1]);
-        const center = getTouchCenter(e.touches[0], e.touches[1]);
+        const touch0 = e.touches[0];
+        const touch1 = e.touches[1];
+        if (!touch0 || !touch1) return;
+        
+        const distance = getTouchDistance(touch0, touch1);
+        const center = getTouchCenter(touch0, touch1);
         setTouchState({
           initialDistance: distance,
           initialTouchX: center.x,
@@ -66,8 +70,12 @@ export const useEventHandlers = ({
     const handleTouchMove = (e: TouchEvent) => {
       if (e.touches.length === 2 && touchState.initialDistance !== null) {
         e.preventDefault();
-        const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
-        const center = getTouchCenter(e.touches[0], e.touches[1]);
+        const touch0 = e.touches[0];
+        const touch1 = e.touches[1];
+        if (!touch0 || !touch1) return;
+        
+        const currentDistance = getTouchDistance(touch0, touch1);
+        const center = getTouchCenter(touch0, touch1);
 
         // Calculate zoom based on distance change
         const distanceRatio = currentDistance / touchState.initialDistance;

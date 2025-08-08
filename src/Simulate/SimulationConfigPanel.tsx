@@ -131,15 +131,15 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
       setSelectedConfigIndex(configIndex);
 
       // Update simulation type if it differs from current selection
-      if (selectedConfig.type !== selectedSimType) {
-        setSelectedSimType(selectedConfig.type);
+      if (selectedConfig!.type !== selectedSimType) {
+        setSelectedSimType(selectedConfig!.type);
       }
 
       // Update the current simulation config in store
       setSimulationConfig(selectedConfig);
 
       // Notify parent of the configuration change
-      onFullConfigChange(selectedConfig);
+      onFullConfigChange(selectedConfig!);
     }
   };
 
@@ -238,9 +238,9 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
 
       // Update all related state
       setSelectedConfigIndex(newSelectedIndex);
-      setSelectedSimType(newSelectedConfig.type);
-      setSimulationConfig(newSelectedConfig);
-      onFullConfigChange(newSelectedConfig);
+      setSelectedSimType(newSelectedConfig!.type);
+      setSimulationConfig(newSelectedConfig!);
+      onFullConfigChange(newSelectedConfig!);
     } else if (selectedConfigIndex > configIndex) {
       // Adjust selected index if we deleted a config before the selected one
       const newSelectedIndex = selectedConfigIndex - 1;
@@ -662,8 +662,8 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
                       // Use the most recent valid config
                       const mostRecentConfig =
                         existingValidConfigs[existingValidConfigs.length - 1];
-                      newConfig = mostRecentConfig.config;
-                      setSelectedConfigIndex(mostRecentConfig.index);
+                      newConfig = mostRecentConfig!.config;
+                      setSelectedConfigIndex(mostRecentConfig!.index);
                     } else {
                       // Create an empty config for this type (not saved until validated)
                       const defaultName = generateDefaultConfigName(

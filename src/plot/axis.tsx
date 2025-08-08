@@ -101,6 +101,7 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
         );
       };
     }
+    return () => {}; // Return empty cleanup for when canvas is not available
   }, [canvasRef, isDarkMode]); // Remove yHeight dependency
 
   // Add an effect to ensure we redraw when context becomes available after being lost

@@ -98,6 +98,7 @@ const EEcircuit: React.FC = () => {
       }, 200); // Longer delay for initial load
       return () => clearTimeout(timer);
     }
+    return () => {}; // Return empty cleanup for other paths
   }, [mainTabValue, hasViewedSchematic]);
 
   // Reset shouldFitToScreen flag after it's been processed
@@ -108,6 +109,7 @@ const EEcircuit: React.FC = () => {
       }, 100); // Small delay to ensure the command is processed
       return () => clearTimeout(timer);
     }
+    return () => {}; // Return empty cleanup for other paths
   }, [shouldFitToScreen, setShouldFitToScreen]);
 
   // Callback when canvas is resized
@@ -212,6 +214,10 @@ const EEcircuit: React.FC = () => {
       }
 
       const file = files[0];
+      if (!file) {
+        setDragBox(false);
+        return;
+      }
 
       // Validate file type
       if (!isValidSchematicFile(file)) {
@@ -263,15 +269,17 @@ const EEcircuit: React.FC = () => {
           // For now, load the first simulation configuration as the active one
           // In the future, this could be enhanced to load all configurations
           const firstSimConfig = parsedContent.simulations[0];
-          // Use the store actions to update simulation state
-          const {
-            setSelectedSimType,
-            setSimulationConfig,
-            setAllSimulationConfigs,
-          } = useAppStore.getState();
-          setSelectedSimType(firstSimConfig.type);
-          setSimulationConfig(firstSimConfig);
-          setAllSimulationConfigs(parsedContent.simulations);
+          if (firstSimConfig) {
+            // Use the store actions to update simulation state
+            const {
+              setSelectedSimType,
+              setSimulationConfig,
+              setAllSimulationConfigs,
+            } = useAppStore.getState();
+            setSelectedSimType(firstSimConfig.type);
+            setSimulationConfig(firstSimConfig);
+            setAllSimulationConfigs(parsedContent.simulations);
+          }
         } else {
           // Reset simulation config if no simulation data in file
           const { setSelectedSimType, setSimulationConfig } =

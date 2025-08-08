@@ -12,6 +12,11 @@
     "baseUrl": "./",
     /* Additional Options */
     "strict": true,
+    /* Strict Any Type Checks */
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "allowImportingTsExtensions": true,

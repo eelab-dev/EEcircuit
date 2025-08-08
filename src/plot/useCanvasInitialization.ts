@@ -158,18 +158,24 @@ export const useCanvasInitialization = ({
         );
       }
 
-      const numX = results[0].numPoints;
-      const numVariables = results[0].numVariables;
+      const firstResult = results[0];
+      if (!firstResult) {
+        console.error("No results available for canvas initialization");
+        return;
+      }
+
+      const numX = firstResult.numPoints;
+      const numVariables = firstResult.numVariables;
 
       // Calculate the number of lines needed
-      const firstResult = results[0] as AggregatedResult;
+      const typedFirstResult = firstResult as AggregatedResult;
       const isBracketResult =
-        "bracketPlotData" in firstResult && firstResult.bracketPlotData;
+        "bracketPlotData" in typedFirstResult && typedFirstResult.bracketPlotData;
 
       let totalLines: number;
-      if (isBracketResult && firstResult.bracketPlotData) {
+      if (isBracketResult && typedFirstResult.bracketPlotData) {
         // For bracket operations: number of variables (excluding X) × number of parameter sweeps
-        const numParameterSweeps = firstResult.bracketPlotData.length;
+        const numParameterSweeps = typedFirstResult.bracketPlotData.length;
         totalLines = (numVariables - 1) * numParameterSweeps;
       } else {
         // For normal simulations: number of variables excluding X-axis
@@ -188,12 +194,12 @@ export const useCanvasInitialization = ({
       // Prepare line data for all variables (excluding X-axis at index 0)
       const allLineData: LineConfig[] = [];
 
-      if (isBracketResult && firstResult.bracketPlotData) {
+      if (isBracketResult && typedFirstResult.bracketPlotData) {
         // Handle bracket operation: create separate lines for each parameter sweep
-        const bracketData = (firstResult as AggregatedResult).bracketPlotData!;
+        const bracketData = typedFirstResult.bracketPlotData;
 
         for (let lineIndex = 1; lineIndex < numVariables; lineIndex++) {
-          const variableName = results[0].variableNames[lineIndex];
+          const variableName = firstResult.variableNames[lineIndex];
           if (!variableName) continue;
 
           // Get the base color for this variable
@@ -210,6 +216,8 @@ export const useCanvasInitialization = ({
             paramIndex++
           ) {
             const paramData = bracketData[paramIndex];
+            if (!paramData) continue;
+            
             const numPoints = paramData.data[0]?.values?.length || 0;
 
             if (numPoints === 0) {
@@ -222,7 +230,7 @@ export const useCanvasInitialization = ({
             // Verify Y-axis data exists for this variable
             if (
               !paramData.data[lineIndex] ||
-              !paramData.data[lineIndex].values
+              !paramData.data[lineIndex]?.values
             ) {
               console.warn(
                 `Skipping parameter ${paramData.parameterValue} for variable ${variableName}: missing Y data`
@@ -230,7 +238,7 @@ export const useCanvasInitialization = ({
               continue;
             }
 
-            const yDataLength = paramData.data[lineIndex].values.length;
+            const yDataLength = paramData.data[lineIndex]?.values?.length || 0;
             if (yDataLength !== numPoints) {
               console.warn(
                 `Data length mismatch for ${variableName}, param ${paramData.parameterValue}: X=${numPoints}, Y=${yDataLength}`
@@ -241,8 +249,8 @@ export const useCanvasInitialization = ({
 
             // Fill array with x,y data for this parameter sweep
             for (let i = 0; i < numPoints; i++) {
-              array[i * 2] = paramData.data[0].values[i] as number; // X-axis data
-              array[i * 2 + 1] = paramData.data[lineIndex].values[i] as number; // Y-axis data
+              array[i * 2] = paramData.data[0]?.values?.[i] as number; // X-axis data
+              array[i * 2 + 1] = paramData.data[lineIndex]?.values?.[i] as number; // Y-axis data
             }
 
             allLineData.push({
@@ -264,7 +272,7 @@ export const useCanvasInitialization = ({
         const array = new Float32Array(numX * 2);
 
         for (let lineIndex = 1; lineIndex < numVariables; lineIndex++) {
-          const variableName = results[0].variableNames[lineIndex];
+          const variableName = firstResult.variableNames[lineIndex];
 
           // Add bounds check for variableName
           if (!variableName) {
@@ -273,8 +281,8 @@ export const useCanvasInitialization = ({
 
           // Fill array with x,y data
           for (let i = 0; i < numX; i++) {
-            array[i * 2] = results[0].data[0].values[i] as number; // X-axis data
-            array[i * 2 + 1] = results[0].data[lineIndex].values[i] as number; // Y-axis data
+            array[i * 2] = firstResult.data[0]?.values?.[i] as number; // X-axis data
+            array[i * 2 + 1] = firstResult.data[lineIndex]?.values?.[i] as number; // Y-axis data
           }
 
           allLineData.push({

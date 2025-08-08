@@ -60,7 +60,7 @@ export function aggregateParallelResults(
   console.log(`Total results: ${results.length}, Successful: ${successfulResults.length}, Failed: ${results.length - successfulResults.length}`);
 
   // Use the first result as the base structure
-  const baseResult = successfulResults[0].result!;
+  const baseResult = successfulResults[0]!.result!;
   const aggregated: AggregatedResult = {
     header: baseResult.header,
     numVariables: baseResult.numVariables,
@@ -84,7 +84,7 @@ export function aggregateParallelResults(
   for (let varIndex = 0; varIndex < numberOfVariables; varIndex++) {
     aggregated.data[varIndex] = {
       values: [],
-      name: baseResult.variableNames[varIndex]
+      name: baseResult.variableNames[varIndex]!
     };
   }
 
@@ -110,9 +110,9 @@ export function aggregateParallelResults(
 
     // Process each variable
     for (let varIndex = 0; varIndex < numberOfVariables; varIndex++) {
-      if (result.data[varIndex] && result.data[varIndex].values) {
+      if (result.data[varIndex] && result.data[varIndex]!.values) {
         // Handle both real and complex data types
-        const values = result.data[varIndex].values;
+        const values = result.data[varIndex]!.values;
         let processedValues: number[];
         
         if (typeof values[0] === 'number') {
@@ -132,12 +132,12 @@ export function aggregateParallelResults(
         }
 
         // Add to concatenated data (for backward compatibility)
-        aggregated.data[varIndex].values.push(...processedValues);
+        aggregated.data[varIndex]!.values.push(...processedValues);
 
         // Add to separate parameter plot data
         parameterPlotData.data[varIndex] = {
           values: [...processedValues],
-          name: baseResult.variableNames[varIndex]
+          name: baseResult.variableNames[varIndex]!
         };
       }
     }
@@ -278,11 +278,11 @@ export function canAggregateResults(results: SimulationWorkerResult[]): {
   }
 
   // Check that all results have compatible structure
-  const baseVariableNames = successfulResults[0].result!.variableNames;
+  const baseVariableNames = successfulResults[0]!.result!.variableNames;
   const baseVariableCount = baseVariableNames.length;
 
   for (let i = 1; i < successfulResults.length; i++) {
-    const result = successfulResults[i].result!;
+    const result = successfulResults[i]!.result!;
     
     if (result.variableNames.length !== baseVariableCount) {
       return {

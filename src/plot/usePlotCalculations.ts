@@ -94,11 +94,16 @@ export const usePlotCalculations = ({
       );
 
       if (firstVisibleLineIndex !== -1 && lineDataRef.current) {
-        const points = lineDataRef.current[firstVisibleLineIndex].points;
-        for (let i = 0; i < points.length; i += 2) {
-          const x = points[i];
-          xMin = Math.min(xMin, x);
-          xMax = Math.max(xMax, x);
+        const firstVisibleLine = lineDataRef.current[firstVisibleLineIndex];
+        if (firstVisibleLine) {
+          const points = firstVisibleLine.points;
+          for (let i = 0; i < points.length; i += 2) {
+            const x = points[i];
+            if (x !== undefined) {
+              xMin = Math.min(xMin, x);
+              xMax = Math.max(xMax, x);
+            }
+          }
         }
       }
     }
@@ -123,6 +128,8 @@ export const usePlotCalculations = ({
         for (let i = 1; i < points.length; i += 2) {
           const x = points[i - 1]; // X coordinate
           const y = points[i]; // Y coordinate
+
+          if (x === undefined || y === undefined) continue;
 
           // If zoom is active, only include Y values within X bounds
           if (customXBounds) {

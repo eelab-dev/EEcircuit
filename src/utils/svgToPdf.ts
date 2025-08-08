@@ -120,9 +120,9 @@ const extractSvgDimensions = (svgElement: SVGSVGElement): SvgDimensions => {
   const viewBoxAttr = svgElement.getAttribute("viewBox");
   if (viewBoxAttr) {
     const [x, y, w, h] = viewBoxAttr.split(/\s+/).map(Number);
-    viewBox = { x, y, width: w, height: h };
-    width = w;
-    height = h;
+    viewBox = { x: x!, y: y!, width: w!, height: h! };
+    width = w!;
+    height = h!;
   }
 
   // Try to get width and height attributes
@@ -328,8 +328,8 @@ const processSvgElements = async (
             // Draw the rectangle as four lines
             if (strokeColor) {
               for (let i = 0; i < 4; i++) {
-                const start = transformedCorners[i];
-                const end = transformedCorners[(i + 1) % 4];
+                const start = transformedCorners[i]!;
+                const end = transformedCorners[(i + 1) % 4]!;
 
                 page.drawLine({
                   start: {
@@ -506,8 +506,8 @@ const processSvgElements = async (
               // Draw lines between consecutive points
               for (let i = 0; i < coords.length - 1; i++) {
                 page.drawLine({
-                  start: coords[i],
-                  end: coords[i + 1],
+                  start: coords[i]!,
+                  end: coords[i + 1]!,
                   thickness: strokeWidth * scale,
                   color: strokeColor,
                 });
@@ -516,8 +516,8 @@ const processSvgElements = async (
               // Close the shape for polygon
               if (tagName === "polygon" && coords.length > 2) {
                 page.drawLine({
-                  start: coords[coords.length - 1],
-                  end: coords[0],
+                  start: coords[coords.length - 1]!,
+                  end: coords[0]!,
                   thickness: strokeWidth * scale,
                   color: strokeColor,
                 });
@@ -615,7 +615,7 @@ const parseTransform = (transformStr: string) => {
   // Parse translate
   const translateMatch = transformStr.match(/translate\(([^)]+)\)/);
   if (translateMatch) {
-    const values = translateMatch[1].split(/[\s,]+/).map(Number);
+    const values = translateMatch[1]!.split(/[\s,]+/).map(Number);
     transform.translateX = values[0] || 0;
     transform.translateY = values[1] || 0;
   }
@@ -623,7 +623,7 @@ const parseTransform = (transformStr: string) => {
   // Parse scale
   const scaleMatch = transformStr.match(/scale\(([^)]+)\)/);
   if (scaleMatch) {
-    const values = scaleMatch[1].split(/[\s,]+/).map(Number);
+    const values = scaleMatch[1]!.split(/[\s,]+/).map(Number);
     transform.scaleX = values[0] || 1;
     transform.scaleY = values[1] || values[0] || 1;
   }
@@ -631,7 +631,7 @@ const parseTransform = (transformStr: string) => {
   // Parse rotate
   const rotateMatch = transformStr.match(/rotate\(([^)]+)\)/);
   if (rotateMatch) {
-    const values = rotateMatch[1].split(/[\s,]+/).map(Number);
+    const values = rotateMatch[1]!.split(/[\s,]+/).map(Number);
     transform.rotate = values[0] || 0; // rotation angle in degrees
     transform.rotateX = values[1] || 0; // rotation center X (optional)
     transform.rotateY = values[2] || 0; // rotation center Y (optional)
@@ -658,9 +658,9 @@ const parseColor = (colorStr: string) => {
     const hex = colorStr.slice(1);
     if (hex.length === 3) {
       // Short hex like #f0a
-      const r = parseInt(hex[0] + hex[0], 16) / 255;
-      const g = parseInt(hex[1] + hex[1], 16) / 255;
-      const b = parseInt(hex[2] + hex[2], 16) / 255;
+      const r = parseInt(hex[0]! + hex[0]!, 16) / 255;
+      const g = parseInt(hex[1]! + hex[1]!, 16) / 255;
+      const b = parseInt(hex[2]! + hex[2]!, 16) / 255;
       return rgb(r, g, b);
     } else if (hex.length === 6) {
       // Full hex like #ff00aa
@@ -674,11 +674,11 @@ const parseColor = (colorStr: string) => {
   // Handle rgb() and rgba() colors
   const rgbMatch = colorStr.match(/rgba?\(([^)]+)\)/);
   if (rgbMatch) {
-    const values = rgbMatch[1].split(",").map((val) => parseFloat(val.trim()));
+    const values = rgbMatch[1]!.split(",").map((val) => parseFloat(val.trim()));
     if (values.length >= 3) {
-      const r = Math.min(values[0] / 255, 1);
-      const g = Math.min(values[1] / 255, 1);
-      const b = Math.min(values[2] / 255, 1);
+      const r = Math.min(values[0]! / 255, 1);
+      const g = Math.min(values[1]! / 255, 1);
+      const b = Math.min(values[2]! / 255, 1);
       return rgb(r, g, b);
     }
   }
@@ -720,7 +720,7 @@ const getStyleValue = (style: string, property: string): string | null => {
   if (!style) return null;
   const regex = new RegExp(`${property}\\s*:\\s*([^;]+)`, "i");
   const match = style.match(regex);
-  return match ? match[1].trim() : null;
+  return match ? match[1]!.trim() : null;
 };
 
 // Path parsing functionality
@@ -779,8 +779,8 @@ const parseSvgPath = (
         // Move to
         const isRelative = command === "m";
         for (let i = 0; i < args.length; i += 2) {
-          const x = isRelative ? currentX + args[i] : args[i];
-          const y = isRelative ? currentY + args[i + 1] : args[i + 1];
+          const x = isRelative ? currentX + args[i]! : args[i]!;
+          const y = isRelative ? currentY + args[i + 1]! : args[i + 1]!;
 
           if (i === 0) {
             // First move command
@@ -808,8 +808,8 @@ const parseSvgPath = (
         // Line to
         const isRelative = command === "l";
         for (let i = 0; i < args.length; i += 2) {
-          const x = isRelative ? currentX + args[i] : args[i];
-          const y = isRelative ? currentY + args[i + 1] : args[i + 1];
+          const x = isRelative ? currentX + args[i]! : args[i]!;
+          const y = isRelative ? currentY + args[i + 1]! : args[i + 1]!;
 
           const start = transformPoint(currentX, currentY);
           const end = transformPoint(x, y);
@@ -828,7 +828,7 @@ const parseSvgPath = (
         // Horizontal line
         const isRelative = command === "h";
         for (const dx of args) {
-          const x = isRelative ? currentX + dx : dx;
+          const x = isRelative ? currentX + dx! : dx!;
 
           const start = transformPoint(currentX, currentY);
           const end = transformPoint(x, currentY);
@@ -846,7 +846,7 @@ const parseSvgPath = (
         // Vertical line
         const isRelative = command === "v";
         for (const dy of args) {
-          const y = isRelative ? currentY + dy : dy;
+          const y = isRelative ? currentY + dy! : dy!;
 
           const start = transformPoint(currentX, currentY);
           const end = transformPoint(currentX, y);
@@ -864,12 +864,12 @@ const parseSvgPath = (
         // Cubic Bezier curve
         const isRelative = command === "c";
         for (let i = 0; i < args.length; i += 6) {
-          const x1 = isRelative ? currentX + args[i] : args[i];
-          const y1 = isRelative ? currentY + args[i + 1] : args[i + 1];
-          const x2 = isRelative ? currentX + args[i + 2] : args[i + 2];
-          const y2 = isRelative ? currentY + args[i + 3] : args[i + 3];
-          const x = isRelative ? currentX + args[i + 4] : args[i + 4];
-          const y = isRelative ? currentY + args[i + 5] : args[i + 5];
+          const x1 = isRelative ? currentX + args[i]! : args[i]!;
+          const y1 = isRelative ? currentY + args[i + 1]! : args[i + 1]!;
+          const x2 = isRelative ? currentX + args[i + 2]! : args[i + 2]!;
+          const y2 = isRelative ? currentY + args[i + 3]! : args[i + 3]!;
+          const x = isRelative ? currentX + args[i + 4]! : args[i + 4]!;
+          const y = isRelative ? currentY + args[i + 5]! : args[i + 5]!;
 
           // For now, approximate curve with a line from start to end
           // In a more sophisticated implementation, you could break the curve into segments
@@ -891,10 +891,10 @@ const parseSvgPath = (
         // Quadratic Bezier curve
         const isRelative = command === "q";
         for (let i = 0; i < args.length; i += 4) {
-          const x1 = isRelative ? currentX + args[i] : args[i];
-          const y1 = isRelative ? currentY + args[i + 1] : args[i + 1];
-          const x = isRelative ? currentX + args[i + 2] : args[i + 2];
-          const y = isRelative ? currentY + args[i + 3] : args[i + 3];
+          const x1 = isRelative ? currentX + args[i]! : args[i]!;
+          const y1 = isRelative ? currentY + args[i + 1]! : args[i + 1]!;
+          const x = isRelative ? currentX + args[i + 2]! : args[i + 2]!;
+          const y = isRelative ? currentY + args[i + 3]! : args[i + 3]!;
 
           // Approximate curve with a line
           const start = transformPoint(currentX, currentY);
@@ -947,8 +947,8 @@ const parsePathData = (pathData: string): PathCommand[] => {
 
   let match;
   while ((match = commandRegex.exec(pathStr)) !== null) {
-    const commandStr = match[0];
-    const command = commandStr[0];
+    const commandStr = match[0]!;
+    const command = commandStr[0]!;
     const argsStr = commandStr.slice(1).trim();
 
     // Parse the arguments (numbers)
@@ -995,7 +995,7 @@ const approximateCurve = (
     if (operation.controlPoints.length === 1) {
       // Quadratic Bezier curve
       const p0 = operation.start;
-      const p1 = operation.controlPoints[0];
+      const p1 = operation.controlPoints[0]!;
       const p2 = operation.end;
 
       point = {
@@ -1005,8 +1005,8 @@ const approximateCurve = (
     } else {
       // Cubic Bezier curve
       const p0 = operation.start;
-      const p1 = operation.controlPoints[0];
-      const p2 = operation.controlPoints[1];
+      const p1 = operation.controlPoints[0]!;
+      const p2 = operation.controlPoints[1]!;
       const p3 = operation.end;
 
       point = {
@@ -1029,8 +1029,8 @@ const approximateCurve = (
   // Convert points to line segments
   for (let i = 0; i < points.length - 1; i++) {
     segments.push({
-      start: points[i],
-      end: points[i + 1],
+      start: points[i]!,
+      end: points[i + 1]!,
     });
   }
 

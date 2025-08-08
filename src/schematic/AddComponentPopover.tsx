@@ -83,7 +83,7 @@ const groupComponentsByCategory = (components: AvailableComponent[]) => {
       return a.localeCompare(b);
     })
     .forEach((category) => {
-      sortedGroups[category] = groups[category];
+      sortedGroups[category] = groups[category]!;
     });
 
   return sortedGroups;
@@ -366,7 +366,7 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
         e.preventDefault();
         sendCommand({
           command: "add",
-          instanceType: filteredComponents[focusedIndex].type,
+          instanceType: filteredComponents[focusedIndex]!.type,
         });
         clickCallBack();
         return;

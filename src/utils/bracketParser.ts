@@ -80,9 +80,9 @@ export function findFirstBracketOperation(netlist: string): BracketOperation | n
   // Determine the unit to use (external unit takes precedence)
   const finalUnit = externalUnit || startUnit || stepUnit || stopUnit;
   
-  const start = parseFloat(startStr);
-  const step = parseFloat(stepStr);
-  const stop = parseFloat(stopStr);
+  const start = parseFloat(startStr!);
+  const step = parseFloat(stepStr!);
+  const stop = parseFloat(stopStr!);
   
   if (isNaN(start) || isNaN(step) || isNaN(stop)) {
     throw new Error(`Invalid bracket operation: ${fullMatch}. All values must be valid numbers.`);

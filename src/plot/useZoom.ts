@@ -122,19 +122,29 @@ export const useZoom = ({
 
     if (firstVisibleLineIndex === -1 || !lineDataRef.current) return;
 
-    const points = lineDataRef.current[firstVisibleLineIndex].points;
+    const firstVisibleLine = lineDataRef.current[firstVisibleLineIndex];
+    if (!firstVisibleLine) return;
+    
+    const points = firstVisibleLine.points;
+    if (points.length < 2) return;
+    
     let fullXMin = points[0];
     let fullXMax = points[0];
+    
+    if (fullXMin === undefined || fullXMax === undefined) return;
+    
     for (let i = 0; i < points.length; i += 2) {
       const x = points[i];
-      fullXMin = Math.min(fullXMin, x);
-      fullXMax = Math.max(fullXMax, x);
+      if (x !== undefined) {
+        fullXMin = Math.min(fullXMin, x);
+        fullXMax = Math.max(fullXMax, x);
+      }
     }
     const fullRange = fullXMax - fullXMin;
 
     // Create a zoom region centered on the cursor
     const currentBounds = zoomController.current?.getZoomBounds();
-    let xMin, xMax;
+    let xMin: number, xMax: number;
 
     if (currentBounds) {
       xMin = currentBounds.min;

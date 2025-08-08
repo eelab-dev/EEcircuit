@@ -49,7 +49,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
 
   // Initialize with all variables selected by default (like original)
   React.useEffect(() => {
-    if (results.length > 0 && results[0].variableNames) {
+    if (results.length > 0 && results[0]?.variableNames) {
       // Skip the first variable (usually time) and select all others by default
       setSelectedVariables(results[0].variableNames.slice(1));
     }
@@ -89,10 +89,10 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
           currentParameterValues={currentParameterValues}
         />
       </Flex>
-      {results.length > 0 && results[0].variableNames && (
+      {results.length > 0 && results[0]?.variableNames && (
         <PlotSidebar
           variableNames={
-            results.length > 0 ? results[0].variableNames || [] : []
+            results.length > 0 ? results[0]?.variableNames || [] : []
           }
           selectedVariables={selectedVariables}
           onSelectedVariablesChange={setSelectedVariables}

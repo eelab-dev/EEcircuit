@@ -90,6 +90,7 @@ export const useCrosshair = ({
 
         for (let i = 0; i < points.length; i += 2) {
           const x = points[i];
+          if (x === undefined) continue;
           const xDiff = Math.abs(x - mouseDataX);
           if (xDiff < minXDiff) {
             minXDiff = xDiff;
@@ -108,6 +109,8 @@ export const useCrosshair = ({
             const x = points[idx];
             const y = points[idx + 1];
 
+            if (x === undefined || y === undefined) continue;
+
             // Calculate distance to mouse position (weighted more towards Y difference)
             const xDiff = Math.abs(x - mouseDataX);
             const yDiff = Math.abs(y - mouseDataY);
@@ -120,10 +123,10 @@ export const useCrosshair = ({
         }
       });
 
-      finalDataX = closestPoint.x;
-      finalDataY = closestPoint.y;
-      finalNdcX = closestPoint.x * axisScales.scaleX + axisScales.offsetX;
-      finalNdcY = closestPoint.y * axisScales.scaleY + axisScales.offsetY;
+      finalDataX = closestPoint.x ?? mouseDataX;
+      finalDataY = closestPoint.y ?? mouseDataY;
+      finalNdcX = finalDataX * axisScales.scaleX + axisScales.offsetX;
+      finalNdcY = finalDataY * axisScales.scaleY + axisScales.offsetY;
     } else {
       // FREE ROAMING MODE: Use mouse position directly
       const axisScales = getAxisScales();

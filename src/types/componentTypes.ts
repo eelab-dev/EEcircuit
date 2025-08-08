@@ -534,7 +534,7 @@ export function parseComponentProperties(
   const properties: Record<string, string> = {};
 
   // For simple components with just a value
-  if (config.length === 1 && config[0].key === "value") {
+  if (config.length === 1 && config[0]!.key === "value") {
     properties.value = valueString;
     return properties;
   }
@@ -543,7 +543,7 @@ export function parseComponentProperties(
   if (componentType === "vsin" || componentType === "isin") {
     const sinMatch = valueString.match(/SIN\s*\(\s*([^)]+)\s*\)/i);
     if (sinMatch) {
-      const params = sinMatch[1].split(/\s+/);
+      const params = sinMatch[1]!.split(/\s+/);
       const keys = [
         "offset",
         "amplitude",
@@ -555,7 +555,7 @@ export function parseComponentProperties(
 
       params.forEach((param, index) => {
         if (param.trim() && index < keys.length) {
-          properties[keys[index]] = param.trim();
+          properties[keys[index]!] = param.trim();
         }
       });
       return properties;
@@ -569,7 +569,7 @@ export function parseComponentProperties(
   if (componentType === "vpulse" || componentType === "ipulse") {
     const pulseMatch = valueString.match(/PULSE\s*\(\s*([^)]+)\s*\)/i);
     if (pulseMatch) {
-      const params = pulseMatch[1].split(/\s+/);
+      const params = pulseMatch[1]!.split(/\s+/);
       const keys =
         componentType === "vpulse"
           ? ["v1", "v2", "timeDelay", "riseTime", "fallTime", "width", "period"]
@@ -585,7 +585,7 @@ export function parseComponentProperties(
 
       params.forEach((param, index) => {
         if (param.trim() && index < keys.length) {
-          properties[keys[index]] = param.trim();
+          properties[keys[index]!] = param.trim();
         }
       });
       return properties;
@@ -603,11 +603,11 @@ export function parseComponentProperties(
 
     if (tokens.length > 0) {
       // First token is the model name
-      const firstToken = tokens[0];
+      const firstToken = tokens[0]!;
 
       // Check if first token looks like a parameter (contains =), if not it's the model
-      if (!firstToken.includes("=")) {
-        properties.model = firstToken;
+      if (!firstToken!.includes("=")) {
+        properties.model = firstToken!;
       }
 
       // Parse W and L parameters from the remaining tokens
@@ -615,10 +615,10 @@ export function parseComponentProperties(
       const lMatch = valueString.match(/L=([^\s]+)/i);
 
       if (wMatch) {
-        properties.W = wMatch[1];
+        properties.W = wMatch[1]!;
       }
       if (lMatch) {
-        properties.L = lMatch[1];
+        properties.L = lMatch[1]!;
       }
 
       // Parse other optional parameters
@@ -626,9 +626,9 @@ export function parseComponentProperties(
       const adMatch = valueString.match(/ad=([^\s]+)/i);
       const asMatch = valueString.match(/as=([^\s]+)/i);
 
-      if (mMatch) properties.m = mMatch[1];
-      if (adMatch) properties.ad = adMatch[1];
-      if (asMatch) properties.as = asMatch[1];
+      if (mMatch) properties.m = mMatch[1]!;
+      if (adMatch) properties.ad = adMatch[1]!;
+      if (asMatch) properties.as = asMatch[1]!;
     }
 
     return properties;

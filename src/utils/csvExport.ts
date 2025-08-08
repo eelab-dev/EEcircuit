@@ -14,24 +14,24 @@ export const exportResultsToCSV = (
     return;
   }
 
-  const result = results[0]; // Use first result
-  if (!result.data || !result.variableNames) {
+  const result = results[0]!; // Use first result
+  if (!result!.data || !result!.variableNames) {
     console.warn("Invalid result data");
     return;
   }
 
   // Create CSV header
-  const headers = result.variableNames.join(",");
+  const headers = result!.variableNames.join(",");
   
   // Create CSV rows
   const rows: string[] = [];
-  const numDataPoints = result.data[0]?.values?.length || 0;
+  const numDataPoints = result!.data[0]?.values?.length || 0;
   
   for (let i = 0; i < numDataPoints; i++) {
     const row: string[] = [];
-    result.data.forEach((dataSet) => {
-      if (dataSet.values && i < dataSet.values.length) {
-        row.push(dataSet.values[i].toString());
+    result!.data.forEach((dataSet) => {
+      if (dataSet!.values && i < dataSet!.values.length) {
+        row.push(dataSet!.values[i]!.toString());
       } else {
         row.push("");
       }
@@ -78,23 +78,23 @@ export const resultsToCSVString = (results: ResultType[]): string | null => {
     return null;
   }
 
-  const result = results[0]; // Use first result
-  if (!result.data || !result.variableNames) {
+  const result = results[0]!; // Use first result
+  if (!result!.data || !result!.variableNames) {
     return null;
   }
 
   // Create CSV header
-  const headers = result.variableNames.join(",");
+  const headers = result!.variableNames.join(",");
   
   // Create CSV rows
   const rows: string[] = [];
-  const numDataPoints = result.data[0]?.values?.length || 0;
+  const numDataPoints = result!.data[0]?.values?.length || 0;
   
   for (let i = 0; i < numDataPoints; i++) {
     const row: string[] = [];
-    result.data.forEach((dataSet) => {
-      if (dataSet.values && i < dataSet.values.length) {
-        row.push(dataSet.values[i].toString());
+    result!.data.forEach((dataSet) => {
+      if (dataSet!.values && i < dataSet!.values.length) {
+        row.push(dataSet!.values[i]!.toString());
       } else {
         row.push("");
       }

@@ -110,7 +110,6 @@ async function runSimulationInWorker(
   timeout: number = DEFAULT_TIMEOUT
 ): Promise<SimulationWorkerResult> {
   return new Promise((resolve) => {
-    let timeoutId: NodeJS.Timeout;
     let resolved = false;
 
     const handleMessage = (event: MessageEvent) => {
@@ -168,7 +167,7 @@ async function runSimulationInWorker(
     worker.addEventListener('error', handleError);
 
     // Set up timeout
-    timeoutId = setTimeout(handleTimeout, timeout);
+    const timeoutId = setTimeout(handleTimeout, timeout) as unknown as number;
 
     // Send netlist to worker
     worker.postMessage({ netlist });

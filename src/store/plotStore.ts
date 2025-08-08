@@ -113,23 +113,23 @@ export const createPlotSlice: StateCreator<
     const hasValidResults =
       newResults &&
       newResults.length > 0 &&
-      newResults[0].data &&
-      newResults[0].data.length > 0 &&
-      newResults[0].variableNames &&
-      newResults[0].variableNames.length > 0;
+      newResults[0]!.data &&
+      newResults[0]!.data.length > 0 &&
+      newResults[0]!.variableNames &&
+      newResults[0]!.variableNames.length > 0;
 
     // Additional check for actual data points
     let hasDataPoints = false;
     if (hasValidResults) {
-      hasDataPoints = newResults[0].data.some(
-        (dataSet) => dataSet.values && dataSet.values.length > 0
+      hasDataPoints = newResults[0]!.data.some(
+        (dataSet) => dataSet!.values && dataSet!.values.length > 0
       );
     }
 
     if (hasValidResults && hasDataPoints) {
       const currentState = get();
-      const firstResult = newResults[0];
-      const newVariableNames = firstResult.variableNames.slice(1); // Skip first variable (usually time/x-axis)
+      const firstResult = newResults[0]!;
+      const newVariableNames = firstResult!.variableNames.slice(1); // Skip first variable (usually time/x-axis)
 
       // Check if this is a bracket operation result
       const isBracketResult = 'bracketOperation' in firstResult && 'parameterValues' in firstResult;

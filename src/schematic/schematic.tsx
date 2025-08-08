@@ -319,8 +319,8 @@ const Schematic: React.FC<SchematicProps> = ({
     // Simple visibility observer to detect when tab becomes visible
     const visibilityObserver = new IntersectionObserver(
       (entries) => {
-        const entry = entries[0];
-        const isVisible = entry.isIntersecting && entry.intersectionRatio > 0;
+        const entry = entries[0]!;
+        const isVisible = entry!.isIntersecting && entry!.intersectionRatio > 0;
         const wasVisible = isTabVisibleRef.current;
 
         console.log("Tab visibility changed:", isVisible, "was:", wasVisible);
