@@ -1,6 +1,8 @@
 import { StateCreator } from "zustand";
 import { ResultType } from "eecircuit-engine";
 import { ToBePlotted } from "../types/commonTypes";
+import type { AggregatedResult } from "../simulation/resultAggregator";
+import type { BracketOperation } from "../utils/bracketParser";
 
 // Define the store interface that includes both plot and tab slices
 interface StoreWithTabAndSimulation {
@@ -24,6 +26,11 @@ export interface PlotState {
   // Plot variable management
   selectedVariables: string[];
   hoveredVariable: string | null;
+
+  // Bracket operation plot state
+  bracketOperationResults?: AggregatedResult;
+  isBracketOperationPlot: boolean;
+  currentParameterValues?: string[];
 }
 
 export interface PlotActions {
@@ -36,6 +43,11 @@ export interface PlotActions {
   // Plot variable actions
   setSelectedVariables: (variables: string[]) => void;
   setHoveredVariable: (variable: string | null) => void;
+
+  // Bracket operation plot actions
+  setBracketOperationResults: (results?: AggregatedResult) => void;
+  setIsBracketOperationPlot: (isBracket: boolean) => void;
+  setCurrentParameterValues: (values?: string[]) => void;
 
   // Combined actions for common operations
   handleNewResults: (results: ResultType[]) => void;
@@ -56,6 +68,9 @@ export const createPlotSlice: StateCreator<
   toBePlotted: [],
   selectedVariables: [],
   hoveredVariable: null,
+  bracketOperationResults: undefined,
+  isBracketOperationPlot: false,
+  currentParameterValues: undefined,
 
   // Plot selection actions
   setIsPlotSelectionMode: (mode) => set({ isPlotSelectionMode: mode }),
@@ -87,6 +102,11 @@ export const createPlotSlice: StateCreator<
   setSelectedVariables: (variables) => set({ selectedVariables: variables }),
   setHoveredVariable: (variable) => set({ hoveredVariable: variable }),
 
+  // Bracket operation plot actions
+  setBracketOperationResults: (results) => set({ bracketOperationResults: results }),
+  setIsBracketOperationPlot: (isBracket) => set({ isBracketOperationPlot: isBracket }),
+  setCurrentParameterValues: (values) => set({ currentParameterValues: values }),
+
   // Combined actions for common operations
   handleNewResults: (newResults) => {
     // Double-check that we have valid results before enabling plot tab
@@ -108,7 +128,12 @@ export const createPlotSlice: StateCreator<
 
     if (hasValidResults && hasDataPoints) {
       const currentState = get();
-      const newVariableNames = newResults[0].variableNames.slice(1); // Skip first variable (usually time/x-axis)
+      const firstResult = newResults[0];
+      const newVariableNames = firstResult.variableNames.slice(1); // Skip first variable (usually time/x-axis)
+
+      // Check if this is a bracket operation result
+      const isBracketResult = 'bracketOperation' in firstResult && 'parameterValues' in firstResult;
+      const aggregatedResult = isBracketResult ? firstResult as AggregatedResult : undefined;
 
       // Determine which variables to select based on previous user selections
       let variablesToSelect: string[];
@@ -149,11 +174,24 @@ export const createPlotSlice: StateCreator<
         }
       }
 
+      // Log bracket operation info
+      if (isBracketResult && aggregatedResult) {
+        console.log("Bracket operation results received:");
+        console.log("- Parameter values:", aggregatedResult.parameterValues);
+        console.log("- Successful results:", aggregatedResult.successfulResults);
+        console.log("- Failed results:", aggregatedResult.failedResults);
+        console.log("- Total data points:", firstResult.data[0]?.values?.length || 0);
+      }
+
       set({
         results: newResults,
         isPlotTabEnabled: true,
         mainTabValue: "plot",
         selectedVariables: variablesToSelect,
+        // Set bracket operation specific state
+        bracketOperationResults: aggregatedResult,
+        isBracketOperationPlot: isBracketResult,
+        currentParameterValues: aggregatedResult?.parameterValues,
       });
     } else {
       console.warn(

@@ -14,6 +14,11 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   // Use Zustand store for plot state
   const storeResults = useAppStore((state) => state.results);
 
+  // Bracket operation state from store
+  const isBracketOperationPlot = useAppStore((state) => state.isBracketOperationPlot);
+  const bracketOperationResults = useAppStore((state) => state.bracketOperationResults);
+  const currentParameterValues = useAppStore((state) => state.currentParameterValues);
+
   // Use local state for plot variable selection instead of Zustand store
   // This approach is necessary because CheckboxGroup's controlled behavior
   // works better with local React state. Previous attempts to use Zustand
@@ -79,6 +84,9 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
           results={results}
           selectedVariables={selectedVariables}
           hoveredVariable={hoveredVariable}
+          isBracketOperationPlot={isBracketOperationPlot}
+          bracketOperationResults={bracketOperationResults}
+          currentParameterValues={currentParameterValues}
         />
       </Flex>
       {results.length > 0 && results[0].variableNames && (

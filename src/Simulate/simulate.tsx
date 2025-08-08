@@ -1,9 +1,9 @@
-import { Button, Flex, Menu } from "@chakra-ui/react";
+import { Button, Flex, Menu, Text, Box } from "@chakra-ui/react";
 import React, { Suspense, useEffect, useState } from "react";
 import EditorCustom from "../editor/editorCustom";
 import { Skeleton } from "@chakra-ui/react";
 import { toaster } from "../components/ui/toaster";
-import { X } from "lucide-react";
+import { X, Play, Square } from "lucide-react";
 import { SimulationType, ToBePlotted } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import SimulationConfigPanel from "./SimulationConfigPanel";
@@ -26,6 +26,12 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
   // Import handleNewResults from the main app store for handling simulation results
   const handleNewResults = useAppStore((state) => state.handleNewResults);
+
+  // Bracket operation state
+  const isParallelSimulationRunning = useAppStore((state) => state.isParallelSimulationRunning);
+  const parallelSimulationProgress = useAppStore((state) => state.parallelSimulationProgress);
+  const bracketOperation = useAppStore((state) => state.bracketOperation);
+  const runParallelSimulation = useAppStore((state) => state.runParallelSimulation);
 
   // Local state for UI management
   const [netListToSim, setNetListToSim] = useState(netList);
@@ -111,53 +117,75 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   }, []);
 
   const handleSimRun = async () => {
-    const { Simulation } = await import("eecircuit-engine");
-
-    const sim = new Simulation();
-    await sim.start();
-
-    sim.setNetList(netListToSim);
-
-    const result = await sim.runSim();
-
-    if (result) {
-      // Check if the result has valid data and variables
-      const hasData = result.data && result.data.length > 0;
-      const hasVariables =
-        result.variableNames && result.variableNames.length > 0;
-
-      // Additional check for actual data points in the result
-      let hasDataPoints = false;
-      if (hasData) {
-        hasDataPoints = result.data.some(
-          (dataSet) => dataSet.values && dataSet.values.length > 0
-        );
+    try {
+      // First check if netlist contains bracket operations
+      const { findFirstBracketOperation } = await import("../utils/bracketParser");
+      const bracketOp = findFirstBracketOperation(netListToSim);
+      
+      if (bracketOp) {
+        // Run parallel simulation for bracket operations
+        console.log("Bracket operation detected, running parallel simulation");
+        await runParallelSimulation(netListToSim);
+        return;
       }
+      
+      // Standard single simulation
+      const { Simulation } = await import("eecircuit-engine");
 
-      if (!hasData || !hasVariables || !hasDataPoints) {
-        // Show error toast for empty results
+      const sim = new Simulation();
+      await sim.start();
+
+      sim.setNetList(netListToSim);
+
+      const result = await sim.runSim();
+
+      if (result) {
+        // Check if the result has valid data and variables
+        const hasData = result.data && result.data.length > 0;
+        const hasVariables =
+          result.variableNames && result.variableNames.length > 0;
+
+        // Additional check for actual data points in the result
+        let hasDataPoints = false;
+        if (hasData) {
+          hasDataPoints = result.data.some(
+            (dataSet) => dataSet.values && dataSet.values.length > 0
+          );
+        }
+
+        if (!hasData || !hasVariables || !hasDataPoints) {
+          // Show error toast for empty results
+          toaster.create({
+            title: "Simulation Error",
+            description:
+              "Simulation run but no results were generated. Check your netlist and simulation configuration.",
+            type: "error",
+            duration: 5000,
+          });
+          console.error("Simulation completed but returned empty results.");
+          return; // Don't call handleNewResults, preventing tab switch
+        }
+
+        // Valid results, proceed normally
+        handleNewResults([result]);
+      } else {
+        // Show error toast for failed simulation
         toaster.create({
           title: "Simulation Error",
-          description:
-            "Simulation run but no results were generated. Check your netlist and simulation configuration.",
+          description: "Simulation failed to run. Check your netlist for errors.",
           type: "error",
           duration: 5000,
         });
-        console.error("Simulation completed but returned empty results.");
-        return; // Don't call handleNewResults, preventing tab switch
+        console.error("Simulation failed or returned no results.");
       }
-
-      // Valid results, proceed normally
-      handleNewResults([result]);
-    } else {
-      // Show error toast for failed simulation
+    } catch (error) {
+      console.error("Simulation error:", error);
       toaster.create({
         title: "Simulation Error",
-        description: "Simulation failed to run. Check your netlist for errors.",
+        description: error instanceof Error ? error.message : "Unknown simulation error",
         type: "error",
         duration: 5000,
       });
-      console.error("Simulation failed or returned no results.");
     }
   };
 
@@ -197,18 +225,74 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
           />
         </Flex>
 
-        {/* Simulation button at bottom */}
+        {/* Simulation controls and progress */}
         <Flex
-          height="80px"
+          flexDirection="column"
+          minHeight="80px"
           padding="4"
           backgroundColor={dialogTheme.bg}
           borderTop="1px solid"
           borderColor={dialogTheme.borderColor}
-          alignItems="center"
           flexShrink={0}
+          gap="2"
         >
-          <Button onClick={handleSimRun} width="100%">
-            Run Simulation
+          {/* Progress bar for parallel simulations */}
+          {isParallelSimulationRunning && (
+            <Flex flexDirection="column" gap="2">
+              <Flex justifyContent="space-between" alignItems="center">
+                <Text fontSize="sm" color="fg.muted">
+                  Parallel Simulation Running
+                </Text>
+                <Text fontSize="sm" color="fg.muted">
+                  {parallelSimulationProgress.completed}/{parallelSimulationProgress.total}
+                </Text>
+              </Flex>
+              <Box 
+                bg="gray.200" 
+                borderRadius="full" 
+                overflow="hidden" 
+                height="2"
+              >
+                <Box 
+                  bg="blue.500" 
+                  height="100%" 
+                  width={`${(parallelSimulationProgress.completed / Math.max(parallelSimulationProgress.total, 1)) * 100}%`}
+                  transition="width 0.3s ease"
+                />
+              </Box>
+              <Flex justifyContent="space-between" fontSize="xs" color="fg.muted">
+                <Text>✓ {parallelSimulationProgress.successful} successful</Text>
+                <Text>✗ {parallelSimulationProgress.failed} failed</Text>
+              </Flex>
+            </Flex>
+          )}
+          
+          {/* Bracket operation info */}
+          {bracketOperation && !isParallelSimulationRunning && (
+            <Flex 
+              p="2" 
+              bg="blue.50" 
+              borderRadius="md" 
+              borderLeft="3px solid" 
+              borderColor="blue.500"
+            >
+              <Text fontSize="sm" color="blue.800">
+                💡 Bracket operation detected: [{bracketOperation.start}:{bracketOperation.step}:{bracketOperation.stop}]
+                {bracketOperation.unit && bracketOperation.unit}
+              </Text>
+            </Flex>
+          )}
+
+          {/* Simulation button */}
+          <Button 
+            onClick={handleSimRun} 
+            width="100%"
+            disabled={isParallelSimulationRunning}
+          >
+            <Flex alignItems="center" gap="2">
+              {isParallelSimulationRunning ? <Square size={16} /> : <Play size={16} />}
+              {isParallelSimulationRunning ? "Simulating..." : "Run Simulation"}
+            </Flex>
           </Button>
         </Flex>
       </Flex>

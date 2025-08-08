@@ -1,13 +1,18 @@
 import { StateCreator } from "zustand";
 import { ResultType } from "eecircuit-engine";
 import { SimulationType } from "../types/commonTypes";
+import type { BracketOperation } from "../utils/bracketParser";
+import type { ParallelSimulationResult } from "../simulation/parallelSimulation";
+import type { AggregatedResult } from "../simulation/resultAggregator";
 
 // Define the store interface that includes both simulation and tab slices
 interface StoreWithTab {
   // Tab management
   isSimulateTabEnabled: boolean;
+  isPlotTabEnabled: boolean;
   mainTabValue: "schematic" | "simulate" | "plot";
   setIsSimulateTabEnabled: (enabled: boolean) => void;
+  setIsPlotTabEnabled: (enabled: boolean) => void;
   setMainTabValue: (tab: "schematic" | "simulate" | "plot") => void;
 }
 
@@ -21,6 +26,17 @@ export interface SimulationState {
   selectedSimType: SimulationType["type"];
   simulationConfig?: SimulationType;
   allSimulationConfigs: SimulationType[];
+
+  // Bracket operation state
+  bracketOperation?: BracketOperation;
+  isParallelSimulationRunning: boolean;
+  parallelSimulationProgress: {
+    total: number;
+    completed: number;
+    successful: number;
+    failed: number;
+  };
+  parallelSimulationResults?: ParallelSimulationResult;
 }
 
 export interface SimulationActions {
@@ -36,8 +52,16 @@ export interface SimulationActions {
   updateSimulationConfig: (index: number, config: SimulationType) => void;
   deleteSimulationConfig: (index: number) => void;
 
+  // Bracket operation actions
+  setBracketOperation: (bracketOp?: BracketOperation) => void;
+  setParallelSimulationRunning: (running: boolean) => void;
+  updateParallelSimulationProgress: (progress: { total: number; completed: number; successful: number; failed: number }) => void;
+  setParallelSimulationResults: (results?: ParallelSimulationResult) => void;
+  resetParallelSimulation: () => void;
+
   // Combined actions for common operations
   exportNetlist: (netlist: string) => void;
+  runParallelSimulation: (netlist: string) => Promise<void>;
 }
 
 export type SimulationSlice = SimulationState & SimulationActions;
@@ -47,13 +71,22 @@ export const createSimulationSlice: StateCreator<
   [],
   [],
   SimulationSlice
-> = (set) => ({
+> = (set, get) => ({
   // Initial state
   netList: "",
   results: [],
   selectedSimType: "None",
   simulationConfig: undefined,
   allSimulationConfigs: [],
+  bracketOperation: undefined,
+  isParallelSimulationRunning: false,
+  parallelSimulationProgress: {
+    total: 0,
+    completed: 0,
+    successful: 0,
+    failed: 0
+  },
+  parallelSimulationResults: undefined,
 
   // Netlist and simulation actions
   setNetList: (netList) => set({ netList }),
@@ -83,6 +116,18 @@ export const createSimulationSlice: StateCreator<
       ),
     })),
 
+  // Bracket operation actions
+  setBracketOperation: (bracketOp) => set({ bracketOperation: bracketOp }),
+  setParallelSimulationRunning: (running) => set({ isParallelSimulationRunning: running }),
+  updateParallelSimulationProgress: (progress) => set({ parallelSimulationProgress: progress }),
+  setParallelSimulationResults: (results) => set({ parallelSimulationResults: results }),
+  resetParallelSimulation: () => set({
+    bracketOperation: undefined,
+    isParallelSimulationRunning: false,
+    parallelSimulationProgress: { total: 0, completed: 0, successful: 0, failed: 0 },
+    parallelSimulationResults: undefined
+  }),
+
   // Combined actions for common operations
   exportNetlist: (netlist) => {
     const netListPreamble = `
@@ -96,5 +141,67 @@ export const createSimulationSlice: StateCreator<
       isSimulateTabEnabled: true,
       mainTabValue: "simulate",
     });
+  },
+
+  runParallelSimulation: async (netlist: string) => {
+    const { findFirstBracketOperation } = await import("../utils/bracketParser");
+    const { runParallelSimulation } = await import("../simulation/parallelSimulation");
+    const { aggregateParallelResults } = await import("../simulation/resultAggregator");
+    
+    try {
+      // Reset previous state
+      const actions = get() as SimulationSlice & StoreWithTab;
+      actions.resetParallelSimulation();
+      
+      // Find bracket operation
+      const bracketOp = findFirstBracketOperation(netlist);
+      if (!bracketOp) {
+        throw new Error("No bracket operation found in netlist");
+      }
+      
+      actions.setBracketOperation(bracketOp);
+      actions.setParallelSimulationRunning(true);
+      
+      // Run parallel simulation
+      const result = await runParallelSimulation(netlist, {
+        maxWorkers: 4,
+        onProgress: (completed, total, results) => {
+          const successful = results.filter(r => r.success).length;
+          const failed = results.length - successful;
+          actions.updateParallelSimulationProgress({
+            total,
+            completed,
+            successful,
+            failed
+          });
+        },
+        onResult: (result) => {
+          // Handle individual result if needed
+          console.log(`Individual result: ${result.parameterValue} - ${result.success ? 'success' : 'failed'}`);
+        }
+      });
+      
+      actions.setParallelSimulationResults(result);
+      
+      if (result.success && result.results.length > 0) {
+        // Aggregate results for plotting
+        const aggregated = aggregateParallelResults(result.results, bracketOp);
+        if (aggregated) {
+          // Update results and trigger plot tab
+          // Type assertion needed because AggregatedResult extends ResultType but with additional properties
+          actions.setResults([aggregated as any]);
+          set({
+            mainTabValue: "plot",
+            isPlotTabEnabled: true
+          });
+        }
+      }
+      
+    } catch (error) {
+      console.error("Parallel simulation failed:", error);
+    } finally {
+      const actions = get() as SimulationSlice & StoreWithTab;
+      actions.setParallelSimulationRunning(false);
+    }
   },
 });
