@@ -10,6 +10,14 @@ import {
 import { generatePlotColor, type PlotColor } from "./colorUtils";
 import { ZoomController } from "./zoomController";
 
+// Extended LineConfig with metadata for variable tracking
+type ExtendedLineConfig = LineConfig & {
+  variableName?: string;
+  parameterValue?: string;
+  isBracketLine?: boolean;
+};
+import type { AggregatedResult } from "../simulation/resultAggregator";
+
 interface UseCanvasInitializationProps {
   results: ResultType[];
   colorMode: "light" | "dark";
@@ -29,7 +37,7 @@ export const useCanvasInitialization = ({
   const zoomController = useRef<ZoomController>(new ZoomController());
   const zoomLinesRef = useRef<WebglLinePlot | null>(null);
   const zoomRegionRef = useRef<WebglPolygonPlot | null>(null);
-  const lineDataRef = useRef<LineConfig[]>([]);
+  const lineDataRef = useRef<ExtendedLineConfig[]>([]);
   const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
 
@@ -153,44 +161,123 @@ export const useCanvasInitialization = ({
       const numX = results[0].numPoints;
       const numVariables = results[0].numVariables;
 
-      // Create plot line with maximum possible lines
+      // Calculate the number of lines needed
+      const firstResult = results[0] as AggregatedResult;
+      const isBracketResult = 'bracketPlotData' in firstResult && firstResult.bracketPlotData;
+      
+      let totalLines: number;
+      if (isBracketResult && firstResult.bracketPlotData) {
+        // For bracket operations: number of variables (excluding X) × number of parameter sweeps
+        const numParameterSweeps = firstResult.bracketPlotData.length;
+        totalLines = (numVariables - 1) * numParameterSweeps;
+      } else {
+        // For normal simulations: number of variables excluding X-axis
+        totalLines = numVariables - 1;
+      }
+
+      // Create plot line with the correct number of lines
+      console.log(`Creating WebglLineThick with ${totalLines} lines (isBracket: ${isBracketResult}, variables: ${numVariables})`);
       plotLineRef.current = new WebglLineThick(
         { gl: wglpRef.current.gl },
-        numVariables - 1
+        totalLines
       );
 
       // Prepare line data for all variables (excluding X-axis at index 0)
       const allLineData: LineConfig[] = [];
-      const array = new Float32Array(numX * 2);
+      
+      if (isBracketResult && firstResult.bracketPlotData) {
+        // Handle bracket operation: create separate lines for each parameter sweep
+        const bracketData = (firstResult as AggregatedResult).bracketPlotData!;
+        
+        for (let lineIndex = 1; lineIndex < numVariables; lineIndex++) {
+          const variableName = results[0].variableNames[lineIndex];
+          if (!variableName) continue;
 
-      for (let lineIndex = 1; lineIndex < numVariables; lineIndex++) {
-        const variableName = results[0].variableNames[lineIndex];
+          // Get the base color for this variable
+          const baseColor = generatePlotColor(variableName, colorMode, colorMapRef.current);
 
-        // Add bounds check for variableName
-        if (!variableName) {
-          continue; // Skip this line
+          // Create a separate line for each parameter sweep
+          for (let paramIndex = 0; paramIndex < bracketData.length; paramIndex++) {
+            const paramData = bracketData[paramIndex];
+            const numPoints = paramData.data[0]?.values?.length || 0;
+            
+            if (numPoints === 0) {
+              console.warn(`Skipping parameter ${paramData.parameterValue}: no data points`);
+              continue;
+            }
+
+            // Verify Y-axis data exists for this variable
+            if (!paramData.data[lineIndex] || !paramData.data[lineIndex].values) {
+              console.warn(`Skipping parameter ${paramData.parameterValue} for variable ${variableName}: missing Y data`);
+              continue;
+            }
+
+            const yDataLength = paramData.data[lineIndex].values.length;
+            if (yDataLength !== numPoints) {
+              console.warn(`Data length mismatch for ${variableName}, param ${paramData.parameterValue}: X=${numPoints}, Y=${yDataLength}`);
+            }
+
+            const array = new Float32Array(numPoints * 2);
+            
+            // Fill array with x,y data for this parameter sweep
+            for (let i = 0; i < numPoints; i++) {
+              array[i * 2] = paramData.data[0].values[i] as number; // X-axis data
+              array[i * 2 + 1] = paramData.data[lineIndex].values[i] as number; // Y-axis data
+            }
+
+            console.log(`Created line for variable ${variableName}, param ${paramData.parameterValue}: ${numPoints} points`);
+            
+            allLineData.push({
+              points: new Float32Array(array),
+              color: baseColor, // Use same color for all parameter sweeps of this variable
+              thickness: 5,
+              scale: [1, 1],
+              offset: [0, 0],
+              enabled: true,
+              // Add metadata to track which variable this line belongs to
+              variableName: variableName,
+              parameterValue: paramData.parameterValue,
+              isBracketLine: true,
+            } as ExtendedLineConfig);
+          }
         }
+      } else {
+        // Handle normal (non-bracket) results
+        const array = new Float32Array(numX * 2);
 
-        // Fill array with x,y data
-        for (let i = 0; i < numX; i++) {
-          array[i * 2] = results[0].data[0].values[i] as number; // X-axis data
-          array[i * 2 + 1] = results[0].data[lineIndex].values[i] as number; // Y-axis data
+        for (let lineIndex = 1; lineIndex < numVariables; lineIndex++) {
+          const variableName = results[0].variableNames[lineIndex];
+
+          // Add bounds check for variableName
+          if (!variableName) {
+            continue; // Skip this line
+          }
+
+          // Fill array with x,y data
+          for (let i = 0; i < numX; i++) {
+            array[i * 2] = results[0].data[0].values[i] as number; // X-axis data
+            array[i * 2 + 1] = results[0].data[lineIndex].values[i] as number; // Y-axis data
+          }
+
+          allLineData.push({
+            points: new Float32Array(array),
+            color: generatePlotColor(
+              variableName,
+              colorMode,
+              colorMapRef.current
+            ),
+            thickness: 5,
+            scale: [1, 1],
+            offset: [0, 0],
+            enabled: true,
+            // Add metadata for normal lines too
+            variableName: variableName,
+            isBracketLine: false,
+          } as ExtendedLineConfig);
         }
-
-        allLineData.push({
-          points: new Float32Array(array),
-          color: generatePlotColor(
-            variableName,
-            colorMode,
-            colorMapRef.current
-          ),
-          thickness: 5,
-          scale: [1, 1],
-          offset: [0, 0],
-          enabled: true,
-        });
       }
 
+      console.log(`Created ${allLineData.length} line configs for ${totalLines} WebGL lines`);
       lineDataRef.current = allLineData;
       plotLineRef.current.initLines(allLineData);
       plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);

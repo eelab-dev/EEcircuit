@@ -17,6 +17,14 @@ export interface AggregatedResult {
   parameterCount?: number;
   successfulResults?: number;
   failedResults?: number;
+  
+  // Bracket operation specific plotting data
+  // Each element represents one parameter sweep as a separate line
+  bracketPlotData?: Array<{
+    parameterValue: string;
+    parameterIndex: number;
+    data: Array<{ values: number[]; name: string }>;
+  }>;
 }
 
 export interface AggregationOptions {
@@ -51,6 +59,11 @@ export function aggregateParallelResults(
     successfulResults.sort((a, b) => a.parameterIndex - b.parameterIndex);
   }
 
+  // Debug: Log which parameter values we received
+  console.log("Parameter values received for aggregation:", successfulResults.map(r => r.parameterValue));
+  console.log("Parameter indices received:", successfulResults.map(r => r.parameterIndex));
+  console.log(`Total results: ${results.length}, Successful: ${successfulResults.length}, Failed: ${results.length - successfulResults.length}`);
+
   // Use the first result as the base structure
   const baseResult = successfulResults[0].result!;
   const aggregated: AggregatedResult = {
@@ -80,6 +93,9 @@ export function aggregateParallelResults(
     };
   }
 
+  // Initialize bracket plot data for separate lines
+  aggregated.bracketPlotData = [];
+
   // Combine data from all results
   for (const workerResult of successfulResults) {
     const result = workerResult.result!;
@@ -90,24 +106,44 @@ export function aggregateParallelResults(
       continue;
     }
 
-    // Add data from this result to the aggregated data
+    // Create separate plot data for this parameter sweep
+    const parameterPlotData = {
+      parameterValue: workerResult.parameterValue,
+      parameterIndex: workerResult.parameterIndex,
+      data: [] as Array<{ values: number[]; name: string }>
+    };
+
+    // Process each variable
     for (let varIndex = 0; varIndex < numberOfVariables; varIndex++) {
       if (result.data[varIndex] && result.data[varIndex].values) {
         // Handle both real and complex data types
         const values = result.data[varIndex].values;
+        let processedValues: number[];
+        
         if (typeof values[0] === 'number') {
           // Real data
-          aggregated.data[varIndex].values.push(...(values as number[]));
+          processedValues = values as number[];
         } else {
           // Complex data - convert to real (magnitude) for now
           // TODO: Proper complex number handling
-          const realValues = values.map(v => 
+          processedValues = values.map(v => 
             typeof v === 'number' ? v : Math.sqrt((v as any).real ** 2 + (v as any).imag ** 2)
           );
-          aggregated.data[varIndex].values.push(...realValues);
         }
+
+        // Add to concatenated data (for backward compatibility)
+        aggregated.data[varIndex].values.push(...processedValues);
+
+        // Add to separate parameter plot data
+        parameterPlotData.data[varIndex] = {
+          values: [...processedValues],
+          name: baseResult.variableNames[varIndex]
+        };
       }
     }
+
+    // Add this parameter's plot data to the collection
+    aggregated.bracketPlotData.push(parameterPlotData);
   }
 
   // Calculate total number of points
@@ -115,6 +151,7 @@ export function aggregateParallelResults(
 
   // Log aggregation summary
   console.log(`Aggregated ${successfulResults.length} results with ${aggregated.numPoints} total data points`);
+  console.log(`Created ${aggregated.bracketPlotData?.length || 0} bracket plot data entries`);
   
   return aggregated;
 }

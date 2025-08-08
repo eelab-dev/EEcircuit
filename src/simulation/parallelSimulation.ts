@@ -238,32 +238,29 @@ export async function runParallelSimulation(
 
         // Wait for at least one simulation to complete
         if (runningSimulations.size > 0) {
-          const completedSimulation = await Promise.race(runningSimulations.values());
+          // Create array of promises with their corresponding workers
+          const promiseWorkerPairs = Array.from(runningSimulations.entries()).map(([worker, promise]) => ({
+            worker,
+            promise: promise.then(result => ({ worker, result }))
+          }));
           
-          // Find and remove the completed simulation
-          for (const [worker, promise] of runningSimulations.entries()) {
-            try {
-              const result = await Promise.race([promise, Promise.resolve(completedSimulation)]);
-              if (result === completedSimulation) {
-                runningSimulations.delete(worker);
-                workerPool.releaseWorker(worker);
-                results.push(result);
-                
-                // Call progress and result callbacks
-                if (onResult) {
-                  onResult(result);
-                }
-                if (onProgress) {
-                  onProgress(results.length, totalSimulations, results);
-                }
-                
-                console.log(`Completed simulation ${results.length}/${totalSimulations}: ${result.parameterValue} (${result.success ? 'success' : 'failed'})`);
-                break;
-              }
-            } catch {
-              // Continue to next worker
-            }
+          // Wait for the first one to complete
+          const { worker, result } = await Promise.race(promiseWorkerPairs.map(pair => pair.promise));
+          
+          // Remove the completed simulation
+          runningSimulations.delete(worker);
+          workerPool.releaseWorker(worker);
+          results.push(result);
+          
+          // Call progress and result callbacks
+          if (onResult) {
+            onResult(result);
           }
+          if (onProgress) {
+            onProgress(results.length, totalSimulations, results);
+          }
+          
+          console.log(`Completed simulation ${results.length}/${totalSimulations}: ${result.parameterValue} (${result.success ? 'success' : 'failed'})`);
         }
       }
     };
@@ -277,6 +274,8 @@ export async function runParallelSimulation(
     const failedSimulations = results.length - successfulSimulations;
 
     console.log(`Parallel simulation completed: ${successfulSimulations} successful, ${failedSimulations} failed`);
+    console.log("Successful parameter values:", results.filter(r => r.success).map(r => r.parameterValue));
+    console.log("Failed parameter values:", results.filter(r => !r.success).map(r => r.parameterValue));
 
     return {
       success: successfulSimulations > 0,

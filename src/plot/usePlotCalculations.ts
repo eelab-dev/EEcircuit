@@ -4,6 +4,13 @@ import { LineConfig, WebglLineThick, WebglLinePlot, WebglPolygonPlot, WebglPlot 
 import { generatePlotColor, type PlotColor } from "./colorUtils";
 import { ZoomController } from "./zoomController";
 
+// Extended LineConfig with metadata for variable tracking
+type ExtendedLineConfig = LineConfig & {
+  variableName?: string;
+  parameterValue?: string;
+  isBracketLine?: boolean;
+};
+
 interface AxisScales {
   scaleX: number;
   scaleY: number;
@@ -19,7 +26,7 @@ interface UsePlotCalculationsProps {
   zoomLinesRef: RefObject<WebglLinePlot | null>;
   zoomRegionRef: RefObject<WebglPolygonPlot | null>;
   zoomController: RefObject<ZoomController>;
-  lineDataRef: RefObject<LineConfig[]>;
+  lineDataRef: RefObject<ExtendedLineConfig[]>;
   colorMapRef: RefObject<Map<string, PlotColor>>;
   results: ResultType[];
   selectedVariables: string[];
@@ -63,7 +70,6 @@ export const usePlotCalculations = ({
       return;
     }
 
-    const variableNames = results[0].variableNames.slice(1); // Exclude X-axis
     let xMin = Infinity,
       xMax = -Infinity;
     let yMin = Infinity,
@@ -77,8 +83,11 @@ export const usePlotCalculations = ({
       xMax = customXBounds.max;
     } else {
       const firstVisibleLineIndex = lineDataRef.current?.findIndex(
-        (_, index) => {
-          const variableName = variableNames[index];
+        (lineData) => {
+          // Use variableName from line metadata instead of array index
+          // This is crucial for bracket operations where there are multiple lines per variable
+          const extendedLineData = lineData as ExtendedLineConfig;
+          const variableName = extendedLineData.variableName;
           // Add bounds check before checking selectedVariables
           return variableName && selectedVariables.includes(variableName);
         }
@@ -96,8 +105,11 @@ export const usePlotCalculations = ({
 
     // Calculate Y-axis bounds for all visible lines
     // If zoom is active, only consider Y values within the zoomed X range
-    lineDataRef.current?.forEach((lineData, index) => {
-      const variableName = variableNames[index];
+    lineDataRef.current?.forEach((lineData) => {
+      // Use variableName from line metadata instead of array index
+      // This is crucial for bracket operations where there are multiple lines per variable
+      const extendedLineData = lineData as ExtendedLineConfig;
+      const variableName = extendedLineData.variableName;
 
       // Add bounds check before checking selectedVariables
       if (!variableName) {
@@ -185,13 +197,12 @@ export const usePlotCalculations = ({
     }
 
     // Update line visibility based on selected variables
-    const variableNames = results[0].variableNames.slice(1); // Exclude X-axis
-
     lineDataRef.current?.forEach((lineData, index) => {
-      // Add bounds checking to prevent accessing undefined variable names
-      const variableName = variableNames[index];
+      // Use metadata from lineData instead of assuming index mapping
+      const extendedLineData = lineData as ExtendedLineConfig;
+      const variableName = extendedLineData.variableName;
 
-      // Skip processing if variableName is undefined (out of bounds)
+      // Skip processing if variableName is undefined
       if (!variableName) {
         // Ensure line is disabled if variable name is undefined
         plotLineRef.current!.setLineEnabled(index, false);

@@ -3,6 +3,13 @@ import { ResultType } from "eecircuit-engine";
 import { LineConfig } from "webgl-plot";
 import { ZoomController } from "./zoomController";
 
+// Extended LineConfig with metadata for variable tracking
+type ExtendedLineConfig = LineConfig & {
+  variableName?: string;
+  parameterValue?: string;
+  isBracketLine?: boolean;
+};
+
 interface AxisScales {
   scaleX: number;
   scaleY: number;
@@ -15,7 +22,7 @@ interface UseZoomProps {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   results: ResultType[];
   selectedVariables: string[];
-  lineDataRef: RefObject<LineConfig[]>;
+  lineDataRef: RefObject<ExtendedLineConfig[]>;
   axisScales: AxisScales;
   isCanvasInitialized: boolean;
   inputProfile: string;
@@ -105,9 +112,11 @@ export const useZoom = ({
     const mouseDataX = (mouseNdcX - axisScales.offsetX) / axisScales.scaleX;
 
     // Get full data bounds for zoom limits
-    const firstVisibleLineIndex = lineDataRef.current?.findIndex((_, index) => {
-      const variableNames = results[0].variableNames.slice(1);
-      const variableName = variableNames[index];
+    const firstVisibleLineIndex = lineDataRef.current?.findIndex((lineData) => {
+      // Use variableName from line metadata instead of array index
+      // This is crucial for bracket operations where there are multiple lines per variable
+      const extendedLineData = lineData as ExtendedLineConfig;
+      const variableName = extendedLineData.variableName;
       return variableName && selectedVariables.includes(variableName);
     });
 

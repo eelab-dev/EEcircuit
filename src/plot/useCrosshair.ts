@@ -2,6 +2,13 @@ import { useState, RefObject } from "react";
 import { ResultType } from "eecircuit-engine";
 import { LineConfig, WebglLinePlot, WebglPolygonPlot } from "webgl-plot";
 
+// Extended LineConfig with metadata for variable tracking
+type ExtendedLineConfig = LineConfig & {
+  variableName?: string;
+  parameterValue?: string;
+  isBracketLine?: boolean;
+};
+
 interface AxisScales {
   scaleX: number;
   scaleY: number;
@@ -15,7 +22,7 @@ interface UseCrosshairProps {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   results: ResultType[];
   selectedVariables: string[];
-  lineDataRef: RefObject<LineConfig[]>;
+  lineDataRef: RefObject<ExtendedLineConfig[]>;
   getAxisScales: () => AxisScales;
 }
 
@@ -60,13 +67,13 @@ export const useCrosshair = ({
 
       let closestPoint = { x: mouseDataX, y: mouseDataY, distance: Infinity };
 
-      const variableNames = results[0].variableNames.slice(1); // Exclude X-axis
+      lineDataRef.current?.forEach((lineData) => {
+        // Use variableName from line metadata instead of array index
+        // This is crucial for bracket operations where there are multiple lines per variable
+        const extendedLineData = lineData as ExtendedLineConfig;
+        const variableName = extendedLineData.variableName;
 
-      lineDataRef.current?.forEach((lineData, index) => {
-        // Add bounds checking to prevent accessing undefined variable names
-        const variableName = variableNames[index];
-
-        // Skip processing if variableName is undefined (out of bounds)
+        // Skip processing if variableName is undefined
         if (!variableName) {
           return; // Skip this iteration
         }

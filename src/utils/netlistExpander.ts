@@ -32,6 +32,8 @@ export function expandNetlist(netlist: string): NetlistExpansionResult {
     const { bracketOperation, values } = parseResult;
     
     // Generate expanded netlists by substituting each value
+    console.log(`Expanding bracket operation [${bracketOperation.start}:${bracketOperation.step}:${bracketOperation.stop}] into ${values.length} values:`, values);
+    
     const expandedNetlists: ExpandedNetlist[] = values.map((value, index) => {
       const expandedNetlist = netlist.replace(bracketOperation.originalText, value);
       
