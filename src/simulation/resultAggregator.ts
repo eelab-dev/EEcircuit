@@ -1,14 +1,9 @@
-import { ResultType } from "eecircuit-engine";
+import { ResultType, ComplexNumber } from "eecircuit-engine";
 import type { SimulationWorkerResult } from "./parallelSimulation";
 import type { BracketOperation } from "../utils/bracketParser";
 
-export interface AggregatedResult {
-  // Base result data compatible with ResultType
-  header: string;
-  numVariables: number;
-  variableNames: string[];
-  numPoints: number;
-  dataType: "real" | "complex";
+export interface AggregatedResult extends Omit<ResultType, 'data'> {
+  // Extended result data for bracket operations
   data: Array<{ values: number[]; name: string }>;
   
   // Additional metadata for bracket operations
@@ -126,9 +121,14 @@ export function aggregateParallelResults(
         } else {
           // Complex data - convert to real (magnitude) for now
           // TODO: Proper complex number handling
-          processedValues = values.map(v => 
-            typeof v === 'number' ? v : Math.sqrt((v as any).real ** 2 + (v as any).imag ** 2)
-          );
+          processedValues = values.map(v => {
+            if (typeof v === 'number') {
+              return v;
+            } else {
+              const complexV = v as ComplexNumber;
+              return Math.sqrt(complexV.real ** 2 + complexV.img ** 2);
+            }
+          });
         }
 
         // Add to concatenated data (for backward compatibility)
@@ -246,14 +246,19 @@ export function createPartialAggregation(
     return null;
   }
 
-  // Add metadata about partial status
+  const successful = results.filter(r => r.success).length;
+  const failed = results.filter(r => !r.success).length;
+  const total = results.length;
+
+  // Add metadata about partial status including progress
   return {
     ...aggregated,
-    parameterCount: results.filter(r => r.success).length,
-    successfulResults: results.filter(r => r.success).length,
-    failedResults: results.filter(r => !r.success).length,
-    // Could add progress indicators here
-  };
+    parameterCount: successful,
+    successfulResults: successful,
+    failedResults: failed,
+    // Add progress calculation using expectedTotal
+    completionPercentage: expectedTotal > 0 ? (total / expectedTotal) * 100 : 0,
+  } as AggregatedResult & { completionPercentage: number };
 }
 
 /**

@@ -163,8 +163,9 @@ export const useCanvasInitialization = ({
 
       // Calculate the number of lines needed
       const firstResult = results[0] as AggregatedResult;
-      const isBracketResult = 'bracketPlotData' in firstResult && firstResult.bracketPlotData;
-      
+      const isBracketResult =
+        "bracketPlotData" in firstResult && firstResult.bracketPlotData;
+
       let totalLines: number;
       if (isBracketResult && firstResult.bracketPlotData) {
         // For bracket operations: number of variables (excluding X) × number of parameter sweeps
@@ -176,7 +177,9 @@ export const useCanvasInitialization = ({
       }
 
       // Create plot line with the correct number of lines
-      console.log(`Creating WebglLineThick with ${totalLines} lines (isBracket: ${isBracketResult}, variables: ${numVariables})`);
+      console.log(
+        `Creating WebglLineThick with ${totalLines} lines (isBracket: ${isBracketResult}, variables: ${numVariables})`
+      );
       plotLineRef.current = new WebglLineThick(
         { gl: wglpRef.current.gl },
         totalLines
@@ -184,49 +187,64 @@ export const useCanvasInitialization = ({
 
       // Prepare line data for all variables (excluding X-axis at index 0)
       const allLineData: LineConfig[] = [];
-      
+
       if (isBracketResult && firstResult.bracketPlotData) {
         // Handle bracket operation: create separate lines for each parameter sweep
         const bracketData = (firstResult as AggregatedResult).bracketPlotData!;
-        
+
         for (let lineIndex = 1; lineIndex < numVariables; lineIndex++) {
           const variableName = results[0].variableNames[lineIndex];
           if (!variableName) continue;
 
           // Get the base color for this variable
-          const baseColor = generatePlotColor(variableName, colorMode, colorMapRef.current);
+          const baseColor = generatePlotColor(
+            variableName,
+            colorMode,
+            colorMapRef.current
+          );
 
           // Create a separate line for each parameter sweep
-          for (let paramIndex = 0; paramIndex < bracketData.length; paramIndex++) {
+          for (
+            let paramIndex = 0;
+            paramIndex < bracketData.length;
+            paramIndex++
+          ) {
             const paramData = bracketData[paramIndex];
             const numPoints = paramData.data[0]?.values?.length || 0;
-            
+
             if (numPoints === 0) {
-              console.warn(`Skipping parameter ${paramData.parameterValue}: no data points`);
+              console.warn(
+                `Skipping parameter ${paramData.parameterValue}: no data points`
+              );
               continue;
             }
 
             // Verify Y-axis data exists for this variable
-            if (!paramData.data[lineIndex] || !paramData.data[lineIndex].values) {
-              console.warn(`Skipping parameter ${paramData.parameterValue} for variable ${variableName}: missing Y data`);
+            if (
+              !paramData.data[lineIndex] ||
+              !paramData.data[lineIndex].values
+            ) {
+              console.warn(
+                `Skipping parameter ${paramData.parameterValue} for variable ${variableName}: missing Y data`
+              );
               continue;
             }
 
             const yDataLength = paramData.data[lineIndex].values.length;
             if (yDataLength !== numPoints) {
-              console.warn(`Data length mismatch for ${variableName}, param ${paramData.parameterValue}: X=${numPoints}, Y=${yDataLength}`);
+              console.warn(
+                `Data length mismatch for ${variableName}, param ${paramData.parameterValue}: X=${numPoints}, Y=${yDataLength}`
+              );
             }
 
             const array = new Float32Array(numPoints * 2);
-            
+
             // Fill array with x,y data for this parameter sweep
             for (let i = 0; i < numPoints; i++) {
               array[i * 2] = paramData.data[0].values[i] as number; // X-axis data
               array[i * 2 + 1] = paramData.data[lineIndex].values[i] as number; // Y-axis data
             }
 
-            console.log(`Created line for variable ${variableName}, param ${paramData.parameterValue}: ${numPoints} points`);
-            
             allLineData.push({
               points: new Float32Array(array),
               color: baseColor, // Use same color for all parameter sweeps of this variable
@@ -277,7 +295,9 @@ export const useCanvasInitialization = ({
         }
       }
 
-      console.log(`Created ${allLineData.length} line configs for ${totalLines} WebGL lines`);
+      console.log(
+        `Created ${allLineData.length} line configs for ${totalLines} WebGL lines`
+      );
       lineDataRef.current = allLineData;
       plotLineRef.current.initLines(allLineData);
       plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
