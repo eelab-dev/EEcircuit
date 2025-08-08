@@ -8,6 +8,7 @@ import { SimulationType, ToBePlotted } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import SimulationConfigPanel from "./SimulationConfigPanel";
 import { dialogTheme } from "src/styles/dialogTheme";
+import ThreadProgressBar from "../components/ThreadProgressBar";
 
 type SimulationEditorProps = {
   netList: string;
@@ -247,6 +248,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                   {parallelSimulationProgress.completed}/{parallelSimulationProgress.total}
                 </Text>
               </Flex>
+              
+              {/* Overall progress bar */}
               <Box 
                 bg="gray.200" 
                 borderRadius="full" 
@@ -260,6 +263,19 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                   transition="width 0.3s ease"
                 />
               </Box>
+
+              {/* Thread progress bars */}
+              {parallelSimulationProgress.threads.length > 0 && (
+                <Flex flexDirection="column" gap="1">
+                  {parallelSimulationProgress.threads.map((thread) => (
+                    <ThreadProgressBar 
+                      key={thread.threadId} 
+                      thread={thread}
+                    />
+                  ))}
+                </Flex>
+              )}
+
               <Flex justifyContent="space-between" fontSize="xs" color="fg.muted">
                 <Text>✓ {parallelSimulationProgress.successful} successful</Text>
                 <Text>✗ {parallelSimulationProgress.failed} failed</Text>

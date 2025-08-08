@@ -12,8 +12,17 @@ export interface SimulationWorkerResult {
 export interface ParallelSimulationOptions {
   maxWorkers?: number;
   timeout?: number; // milliseconds
-  onProgress?: (completed: number, total: number, results: SimulationWorkerResult[]) => void;
+  onProgress?: (
+    completed: number,
+    total: number,
+    results: SimulationWorkerResult[]
+  ) => void;
   onResult?: (result: SimulationWorkerResult) => void;
+  onThreadUpdate?: (
+    threadId: number,
+    status: "start" | "complete",
+    currentSim?: { parameterValue: string; parameterIndex: number }
+  ) => void;
 }
 
 export interface ParallelSimulationResult {
@@ -36,6 +45,7 @@ class SimulationWorkerPool {
   private workers: Worker[] = [];
   private availableWorkers: Worker[] = [];
   private busyWorkers: Set<Worker> = new Set();
+  private workerToThreadId: Map<Worker, number> = new Map();
   private maxWorkers: number;
 
   constructor(maxWorkers: number = DEFAULT_MAX_WORKERS) {
@@ -48,19 +58,20 @@ class SimulationWorkerPool {
       try {
         // Create a web worker that imports and uses eecircuit-engine
         const worker = new Worker(
-          new URL('../workers/simulationWorker.ts', import.meta.url),
-          { type: 'module' }
+          new URL("../workers/simulationWorker.ts", import.meta.url),
+          { type: "module" }
         );
-        
+
         this.workers.push(worker);
         this.availableWorkers.push(worker);
+        this.workerToThreadId.set(worker, i); // Map worker to thread ID
       } catch (error) {
         console.warn(`Failed to create worker ${i}:`, error);
       }
     }
 
     if (this.workers.length === 0) {
-      throw new Error('Failed to create any simulation workers');
+      throw new Error("Failed to create any simulation workers");
     }
 
     console.log(`Initialized ${this.workers.length} simulation workers`);
@@ -82,12 +93,17 @@ class SimulationWorkerPool {
   }
 
   terminate(): void {
-    this.workers.forEach(worker => {
+    this.workers.forEach((worker) => {
       worker.terminate();
     });
     this.workers = [];
     this.availableWorkers = [];
     this.busyWorkers.clear();
+    this.workerToThreadId.clear();
+  }
+
+  getThreadId(worker: Worker): number {
+    return this.workerToThreadId.get(worker) ?? -1;
   }
 
   get availableCount(): number {
@@ -117,17 +133,17 @@ async function runSimulationInWorker(
       resolved = true;
 
       clearTimeout(timeoutId);
-      worker.removeEventListener('message', handleMessage);
-      worker.removeEventListener('error', handleError);
+      worker.removeEventListener("message", handleMessage);
+      worker.removeEventListener("error", handleError);
 
       const { success, result, error } = event.data;
-      
+
       resolve({
         success,
         result,
         error,
         parameterValue,
-        parameterIndex
+        parameterIndex,
       });
     };
 
@@ -136,14 +152,14 @@ async function runSimulationInWorker(
       resolved = true;
 
       clearTimeout(timeoutId);
-      worker.removeEventListener('message', handleMessage);
-      worker.removeEventListener('error', handleError);
+      worker.removeEventListener("message", handleMessage);
+      worker.removeEventListener("error", handleError);
 
       resolve({
         success: false,
         error: `Worker error: ${error.message}`,
         parameterValue,
-        parameterIndex
+        parameterIndex,
       });
     };
 
@@ -151,20 +167,20 @@ async function runSimulationInWorker(
       if (resolved) return;
       resolved = true;
 
-      worker.removeEventListener('message', handleMessage);
-      worker.removeEventListener('error', handleError);
+      worker.removeEventListener("message", handleMessage);
+      worker.removeEventListener("error", handleError);
 
       resolve({
         success: false,
         error: `Simulation timeout after ${timeout}ms`,
         parameterValue,
-        parameterIndex
+        parameterIndex,
       });
     };
 
     // Set up event listeners
-    worker.addEventListener('message', handleMessage);
-    worker.addEventListener('error', handleError);
+    worker.addEventListener("message", handleMessage);
+    worker.addEventListener("error", handleError);
 
     // Set up timeout
     const timeoutId = setTimeout(handleTimeout, timeout) as unknown as number;
@@ -185,13 +201,14 @@ export async function runParallelSimulation(
     maxWorkers = DEFAULT_MAX_WORKERS,
     timeout = DEFAULT_TIMEOUT,
     onProgress,
-    onResult
+    onResult,
+    onThreadUpdate,
   } = options;
 
   try {
     // First, expand the netlist
     const expansionResult = expandNetlist(netlist);
-    
+
     if (!expansionResult.hasExpansion || !expansionResult.expandedNetlists) {
       return {
         success: false,
@@ -199,7 +216,7 @@ export async function runParallelSimulation(
         totalSimulations: 0,
         successfulSimulations: 0,
         failedSimulations: 0,
-        error: 'No bracket operations found in netlist or expansion failed'
+        error: "No bracket operations found in netlist or expansion failed",
       };
     }
 
@@ -210,11 +227,16 @@ export async function runParallelSimulation(
     const workerPool = new SimulationWorkerPool(maxWorkers);
     await workerPool.initialize();
 
-    console.log(`Starting ${totalSimulations} parallel simulations with ${workerPool.totalCount} workers`);
+    console.log(
+      `Starting ${totalSimulations} parallel simulations with ${workerPool.totalCount} workers`
+    );
 
     const results: SimulationWorkerResult[] = [];
     const pendingSimulations = [...expandedNetlists];
-    const runningSimulations = new Map<Worker, Promise<SimulationWorkerResult>>();
+    const runningSimulations = new Map<
+      Worker,
+      Promise<SimulationWorkerResult>
+    >();
 
     // Process simulations
     const processNext = async (): Promise<void> => {
@@ -223,6 +245,15 @@ export async function runParallelSimulation(
         while (pendingSimulations.length > 0 && workerPool.availableCount > 0) {
           const expandedNetlist = pendingSimulations.shift()!;
           const worker = workerPool.getAvailableWorker()!;
+          const threadId = workerPool.getThreadId(worker);
+
+          // Notify thread started working on this simulation
+          if (onThreadUpdate) {
+            onThreadUpdate(threadId, "start", {
+              parameterValue: expandedNetlist.parameterValue,
+              parameterIndex: expandedNetlist.parameterIndex,
+            });
+          }
 
           const simulationPromise = runSimulationInWorker(
             worker,
@@ -238,19 +269,32 @@ export async function runParallelSimulation(
         // Wait for at least one simulation to complete
         if (runningSimulations.size > 0) {
           // Create array of promises with their corresponding workers
-          const promiseWorkerPairs = Array.from(runningSimulations.entries()).map(([worker, promise]) => ({
+          const promiseWorkerPairs = Array.from(
+            runningSimulations.entries()
+          ).map(([worker, promise]) => ({
             worker,
-            promise: promise.then(result => ({ worker, result }))
+            promise: promise.then((result) => ({ worker, result })),
           }));
-          
+
           // Wait for the first one to complete
-          const { worker, result } = await Promise.race(promiseWorkerPairs.map(pair => pair.promise));
-          
+          const { worker, result } = await Promise.race(
+            promiseWorkerPairs.map((pair) => pair.promise)
+          );
+          const threadId = workerPool.getThreadId(worker);
+
           // Remove the completed simulation
           runningSimulations.delete(worker);
           workerPool.releaseWorker(worker);
           results.push(result);
-          
+
+          // Notify thread completed this simulation
+          if (onThreadUpdate) {
+            onThreadUpdate(threadId, "complete", {
+              parameterValue: result.parameterValue,
+              parameterIndex: result.parameterIndex,
+            });
+          }
+
           // Call progress and result callbacks
           if (onResult) {
             onResult(result);
@@ -258,8 +302,6 @@ export async function runParallelSimulation(
           if (onProgress) {
             onProgress(results.length, totalSimulations, results);
           }
-          
-          console.log(`Completed simulation ${results.length}/${totalSimulations}: ${result.parameterValue} (${result.success ? 'success' : 'failed'})`);
         }
       }
     };
@@ -269,30 +311,37 @@ export async function runParallelSimulation(
     // Clean up worker pool
     workerPool.terminate();
 
-    const successfulSimulations = results.filter(r => r.success).length;
+    const successfulSimulations = results.filter((r) => r.success).length;
     const failedSimulations = results.length - successfulSimulations;
 
-    console.log(`Parallel simulation completed: ${successfulSimulations} successful, ${failedSimulations} failed`);
-    console.log("Successful parameter values:", results.filter(r => r.success).map(r => r.parameterValue));
-    console.log("Failed parameter values:", results.filter(r => !r.success).map(r => r.parameterValue));
+    console.log(
+      `Parallel simulation completed: ${successfulSimulations} successful, ${failedSimulations} failed`
+    );
+    console.log(
+      "Successful parameter values:",
+      results.filter((r) => r.success).map((r) => r.parameterValue)
+    );
+    console.log(
+      "Failed parameter values:",
+      results.filter((r) => !r.success).map((r) => r.parameterValue)
+    );
 
     return {
       success: successfulSimulations > 0,
       results: results.sort((a, b) => a.parameterIndex - b.parameterIndex), // Sort by parameter index
       totalSimulations,
       successfulSimulations,
-      failedSimulations
+      failedSimulations,
     };
-
   } catch (error) {
-    console.error('Parallel simulation failed:', error);
+    console.error("Parallel simulation failed:", error);
     return {
       success: false,
       results: [],
       totalSimulations: 0,
       successfulSimulations: 0,
       failedSimulations: 0,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -301,5 +350,5 @@ export async function runParallelSimulation(
  * Check if parallel simulation is supported in the current environment
  */
 export function isParallelSimulationSupported(): boolean {
-  return typeof Worker !== 'undefined' && typeof navigator !== 'undefined';
+  return typeof Worker !== "undefined" && typeof navigator !== "undefined";
 }
