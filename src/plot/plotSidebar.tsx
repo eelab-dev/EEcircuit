@@ -45,10 +45,11 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768; // md breakpoint
+      const wasMobile = isMobile;
       setIsMobile(mobile);
 
-      // Only set defaults on initial load, not on resize
       if (!hasInitialized) {
+        // Initial load - set defaults
         if (mobile) {
           // Mobile: closed and unpinned by default
           setIsDrawerOpen(false);
@@ -61,13 +62,26 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
           onPinnedChange?.(true);
         }
         setHasInitialized(true);
+      } else if (hasInitialized && wasMobile !== mobile) {
+        // Screen size changed after initialization
+        if (mobile) {
+          // Switched to mobile - force close and unpin
+          setIsDrawerOpen(false);
+          setIsPinned(false);
+          onPinnedChange?.(false);
+        } else {
+          // Switched to desktop - if unpinned, open drawer but keep unpinned
+          if (!isPinned) {
+            setIsDrawerOpen(true);
+          }
+        }
       }
     };
 
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
-  }, [onPinnedChange, hasInitialized]);
+  }, [onPinnedChange, hasInitialized, isMobile, isPinned]);
 
   if (variableNames.length === 0) {
     return null;
