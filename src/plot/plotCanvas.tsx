@@ -215,50 +215,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
           overflow="hidden"
           position="relative"
         >
-          {/* Bracket operation info panel */}
-          {isBracketOperationPlot && bracketOperationResults && (
-            <Box
-              position="absolute"
-              top="10px"
-              left="10px"
-              zIndex={10}
-              bg={
-                colorMode === "dark"
-                  ? "rgba(45, 55, 72, 0.9)"
-                  : "rgba(255, 255, 255, 0.9)"
-              }
-              backdropFilter="blur(4px)"
-              borderRadius="md"
-              boxShadow="sm"
-              padding="2"
-              fontSize="xs"
-              maxW="300px"
-            >
-              <Text fontWeight="semibold" mb="1">
-                Parameter Sweep
-              </Text>
-              <Text mb="1">
-                [{bracketOperationResults.bracketOperation?.start}:
-                {bracketOperationResults.bracketOperation?.step}:
-                {bracketOperationResults.bracketOperation?.stop}]
-                {bracketOperationResults.bracketOperation?.unit}
-              </Text>
-              <Box display="flex" gap="2" alignItems="center">
-                <Badge colorScheme="green" size="sm">
-                  ✓ {bracketOperationResults.successfulResults}
-                </Badge>
-                {(bracketOperationResults.failedResults || 0) > 0 && (
-                  <Badge colorScheme="red" size="sm">
-                    ✗ {bracketOperationResults.failedResults}
-                  </Badge>
-                )}
-                <Text color="fg.muted">
-                  {bracketOperationResults.parameterCount} values
-                </Text>
-              </Box>
-            </Box>
-          )}
-
           {/* Crosshair snap toggle button - always visible */}
           <Button
             position="absolute"

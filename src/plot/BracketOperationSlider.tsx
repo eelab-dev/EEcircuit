@@ -28,50 +28,47 @@ const BracketOperationSlider: React.FC<BracketOperationSliderProps> = ({
   return (
     <Box
       w="100%"
-      p={4}
-      pb={2}
+      px={4}
+      py={2}
+      display="flex"
+      alignItems="center"
+      gap={3}
+      fontSize="sm"
       bg={
         colorMode === "dark"
-          ? "gray.800"
-          : "gray.50"
+          ? "gray.900"
+          : "gray.100"
       }
       borderBottom="1px solid"
       borderColor={
         colorMode === "dark"
           ? "gray.700"
-          : "gray.200"
+          : "gray.300"
       }
     >
-      <Text fontWeight="semibold" mb="2" fontSize="xs">
-        Emphasize Parameter Value
+      <Text fontWeight="medium" fontSize="xs" minW="fit-content" color="fg.muted">
+        Parameter:
       </Text>
-      <Slider.Root
-        value={[emphasizedPlotIndex]}
-        min={0}
-        max={parameterValues.length - 1}
-        step={1}
-        onValueChange={(details: { value: number[] }) => setEmphasizedPlotIndex(details.value[0] ?? 0)}
-        mb="2"
-        width="100%"
-      >
-        <Slider.Control>
-          <Slider.Track>
-            <Slider.Range />
-          </Slider.Track>
-          <Slider.Thumbs />
-        </Slider.Control>
-      </Slider.Root>
-      <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Text fontSize="xs" color="fg.muted">
-          {formatEngineering(parseFloat(parameterValues[0] || "0"))}{unit}
-        </Text>
-        <Text fontSize="sm" fontWeight="bold">
-          {formatEngineering(parseFloat(currentParameterValue || "0"))}{unit}
-        </Text>
-        <Text fontSize="xs" color="fg.muted">
-          {formatEngineering(parseFloat(parameterValues[parameterValues.length - 1] || "0"))}{unit}
-        </Text>
+      <Box flex="1" px={2}>
+        <Slider.Root
+          value={[emphasizedPlotIndex]}
+          min={0}
+          max={parameterValues.length - 1}
+          step={1}
+          onValueChange={(details: { value: number[] }) => setEmphasizedPlotIndex(details.value[0] ?? 0)}
+          size="sm"
+        >
+          <Slider.Control>
+            <Slider.Track h="2px" bg={colorMode === "dark" ? "gray.700" : "gray.300"}>
+              <Slider.Range bg={colorMode === "dark" ? "blue.400" : "blue.500"} />
+            </Slider.Track>
+            <Slider.Thumbs />
+          </Slider.Control>
+        </Slider.Root>
       </Box>
+      <Text fontSize="xs" fontWeight="medium" minW="fit-content">
+        {formatEngineering(parseFloat(currentParameterValue || "0"))}{unit}
+      </Text>
     </Box>
   );
 };
