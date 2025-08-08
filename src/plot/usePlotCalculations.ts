@@ -3,6 +3,8 @@ import { ResultType } from "eecircuit-engine";
 import { LineConfig, WebglLineThick, WebglLinePlot, WebglPolygonPlot, WebglPlot } from "webgl-plot";
 import { generatePlotColor, type PlotColor } from "./colorUtils";
 import { ZoomController } from "./zoomController";
+import { BRACKET_PLOT_STYLES } from "./bracketPlotStyles";
+import type { AggregatedResult } from "../simulation/resultAggregator";
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -34,6 +36,10 @@ interface UsePlotCalculationsProps {
   colorMode: "light" | "dark";
   showCrosshair: boolean;
   crosshairSnapToLines: boolean;
+  // Bracket operation props
+  isBracketOperationPlot?: boolean;
+  bracketOperationResults?: AggregatedResult;
+  emphasizedPlotIndex?: number;
 }
 
 export const usePlotCalculations = ({
@@ -52,6 +58,9 @@ export const usePlotCalculations = ({
   colorMode,
   showCrosshair,
   crosshairSnapToLines,
+  isBracketOperationPlot = false,
+  bracketOperationResults,
+  emphasizedPlotIndex = 0,
 }: UsePlotCalculationsProps) => {
   const [axisScales, setAxisScales] = useState<AxisScales>({
     scaleX: 1,
@@ -220,11 +229,36 @@ export const usePlotCalculations = ({
       const isHovered = hoveredVariable === variableName;
 
       // Regenerate color for current theme if not cached
-      const currentColor = generatePlotColor(
+      let currentColor = generatePlotColor(
         variableName,
         colorMode,
         colorMapRef.current!
       );
+
+      // Handle bracket operation emphasis
+      let thickness: number;
+      if (isBracketOperationPlot && extendedLineData.isBracketLine && bracketOperationResults) {
+        // For bracket operations, determine if this line should be emphasized
+        const parameterIndex = bracketOperationResults.parameterValues?.findIndex(
+          (paramValue) => paramValue === extendedLineData.parameterValue
+        ) ?? -1;
+        
+        const isEmphasized = parameterIndex === emphasizedPlotIndex;
+        
+        // Apply emphasis styling
+        thickness = isEmphasized 
+          ? BRACKET_PLOT_STYLES.EMPHASIZED_LINE_THICKNESS
+          : BRACKET_PLOT_STYLES.NORMAL_LINE_THICKNESS;
+          
+        // Apply transparency to color
+        const alpha = isEmphasized 
+          ? BRACKET_PLOT_STYLES.EMPHASIZED_TRANSPARENCY
+          : BRACKET_PLOT_STYLES.NORMAL_TRANSPARENCY;
+        currentColor = [currentColor[0], currentColor[1], currentColor[2], alpha];
+      } else {
+        // Regular plot behavior
+        thickness = isSelected && isHovered ? 10 : 5;
+      }
 
       // Update line properties using the new API methods
       plotLineRef.current!.updateLineColor(index, currentColor);
@@ -232,8 +266,6 @@ export const usePlotCalculations = ({
       // Explicitly set line enabled/disabled state - this is critical for proper line visibility
       plotLineRef.current!.setLineEnabled(index, isSelected);
 
-      // Increase thickness for hovered lines if they are selected
-      const thickness = isSelected && isHovered ? 10 : 5;
       plotLineRef.current!.updateLineThickness(index, thickness);
 
       // Update local cache for consistency

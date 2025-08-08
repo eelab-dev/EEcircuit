@@ -32,6 +32,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   currentParameterValues,
 }) => {
   const inputProfile = useAppStore((state) => state.inputProfile);
+  const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
   const [isAxis] = useState(true);
   const colorMode = useAppStore((state) =>
     state.isDarkMode ? "dark" : "light"
@@ -102,6 +103,9 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       colorMode,
       showCrosshair,
       crosshairSnapToLines,
+      isBracketOperationPlot,
+      bracketOperationResults,
+      emphasizedPlotIndex,
     });
 
   // Update refs when functions change
@@ -174,6 +178,13 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       updatePlot();
     }
   }, [hoveredVariable, isCanvasInitialized]);
+
+  // Update plot when emphasized plot index changes for bracket operations
+  useEffect(() => {
+    if (isCanvasInitialized && isBracketOperationPlot) {
+      updatePlot();
+    }
+  }, [emphasizedPlotIndex, isCanvasInitialized, isBracketOperationPlot]);
 
   return (
     <Grid

@@ -187,13 +187,10 @@ export const createSimulationSlice: StateCreator<
         // Aggregate results for plotting
         const aggregated = aggregateParallelResults(result.results, bracketOp);
         if (aggregated) {
-          // Update results and trigger plot tab
+          // Update results and trigger plot tab using handleNewResults for bracket operation detection
           // Type assertion needed because AggregatedResult extends ResultType but with additional properties
-          actions.setResults([aggregated as any]);
-          set({
-            mainTabValue: "plot",
-            isPlotTabEnabled: true
-          });
+          const appActions = get() as SimulationSlice & StoreWithTab & { handleNewResults: (results: any[]) => void };
+          appActions.handleNewResults([aggregated as any]);
         }
       }
       

@@ -31,6 +31,7 @@ export interface PlotState {
   bracketOperationResults?: AggregatedResult;
   isBracketOperationPlot: boolean;
   currentParameterValues?: string[];
+  emphasizedPlotIndex: number;
 }
 
 export interface PlotActions {
@@ -48,6 +49,7 @@ export interface PlotActions {
   setBracketOperationResults: (results?: AggregatedResult) => void;
   setIsBracketOperationPlot: (isBracket: boolean) => void;
   setCurrentParameterValues: (values?: string[]) => void;
+  setEmphasizedPlotIndex: (index: number) => void;
 
   // Combined actions for common operations
   handleNewResults: (results: ResultType[]) => void;
@@ -71,6 +73,7 @@ export const createPlotSlice: StateCreator<
   bracketOperationResults: undefined,
   isBracketOperationPlot: false,
   currentParameterValues: undefined,
+  emphasizedPlotIndex: 0,
 
   // Plot selection actions
   setIsPlotSelectionMode: (mode) => set({ isPlotSelectionMode: mode }),
@@ -106,6 +109,7 @@ export const createPlotSlice: StateCreator<
   setBracketOperationResults: (results) => set({ bracketOperationResults: results }),
   setIsBracketOperationPlot: (isBracket) => set({ isBracketOperationPlot: isBracket }),
   setCurrentParameterValues: (values) => set({ currentParameterValues: values }),
+  setEmphasizedPlotIndex: (index) => set({ emphasizedPlotIndex: index }),
 
   // Combined actions for common operations
   handleNewResults: (newResults) => {
