@@ -39,6 +39,7 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // Check if mobile and set default states
   useEffect(() => {
@@ -46,24 +47,27 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
       const mobile = window.innerWidth < 768; // md breakpoint
       setIsMobile(mobile);
 
-      // Set defaults based on screen size
-      if (mobile) {
-        // Mobile: closed and unpinned by default
-        setIsDrawerOpen(false);
-        setIsPinned(false);
-        onPinnedChange?.(false);
-      } else {
-        // Desktop: open and pinned by default
-        setIsDrawerOpen(true);
-        setIsPinned(true);
-        onPinnedChange?.(true);
+      // Only set defaults on initial load, not on resize
+      if (!hasInitialized) {
+        if (mobile) {
+          // Mobile: closed and unpinned by default
+          setIsDrawerOpen(false);
+          setIsPinned(false);
+          onPinnedChange?.(false);
+        } else {
+          // Desktop: open and pinned by default
+          setIsDrawerOpen(true);
+          setIsPinned(true);
+          onPinnedChange?.(true);
+        }
+        setHasInitialized(true);
       }
     };
 
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
-  }, [onPinnedChange]);
+  }, [onPinnedChange, hasInitialized]);
 
   if (variableNames.length === 0) {
     return null;

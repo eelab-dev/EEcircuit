@@ -30,8 +30,17 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   // Use results from props if provided, otherwise from store
   const results = propsResults || storeResults;
 
-  // State for drawer pinning
+  // State for drawer pinning and visibility
   const [isDrawerPinned, setIsDrawerPinned] = React.useState(false);
+
+  // Trigger resize when pinning state changes
+  React.useEffect(() => {
+    // Small delay to ensure layout has updated before triggering resize
+    const timeoutId = setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 50);
+    return () => clearTimeout(timeoutId);
+  }, [isDrawerPinned]);
 
   // Initialize with all variables selected by default (like original)
   React.useEffect(() => {
