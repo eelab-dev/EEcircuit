@@ -36,34 +36,9 @@ import { dialogTheme } from "./styles/dialogTheme.ts";
 type MainTabsValue = "schematic" | "simulate" | "plot";
 
 const EEcircuit: React.FC = () => {
-  // Use theme state from Zustand store
+  // Use theme state from Zustand store (system preference detection and document class handling is now in the store)
   const isDarkMode = useAppStore((state) => state.isDarkMode);
-  const setIsDarkMode = useAppStore((state) => state.setIsDarkMode);
   const toggleTheme = useAppStore((state) => state.toggleTheme);
-
-  // Listen for system theme changes
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      const handleChange = (e: MediaQueryListEvent) => {
-        setIsDarkMode(e.matches);
-      };
-
-      mediaQuery.addEventListener("change", handleChange);
-      return () => mediaQuery.removeEventListener("change", handleChange);
-    }
-  }, [setIsDarkMode]);
-
-  // Apply theme class to document root
-  React.useEffect(() => {
-    if (typeof document !== "undefined") {
-      const htmlElement = document.documentElement;
-      htmlElement.classList.remove("light", "dark");
-      htmlElement.classList.add(isDarkMode ? "dark" : "light");
-    }
-  }, [isDarkMode]);
-
-  // Toggle theme function is now from the store
 
   // Use Zustand store instead of multiple useState calls
   const {

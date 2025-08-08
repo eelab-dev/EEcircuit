@@ -1,11 +1,11 @@
 import React, { JSX, useEffect, useRef, useState } from "react";
 import { unitConvert2string } from "./unitConverter.ts";
+import { useAppStore } from "../store/appStore.ts";
 
 type AxisType = {
   scale: number;
   offset: number;
   axis: "x" | "y";
-  theme?: "light" | "dark";
 };
 
 type CanvasSize = {
@@ -13,12 +13,10 @@ type CanvasSize = {
   height: number;
 };
 
-const Axis = ({
-  scale,
-  offset,
-  axis,
-  theme = "dark",
-}: AxisType): JSX.Element => {
+const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
+  // Get theme from the app store
+  const isDarkMode = useAppStore((state) => state.isDarkMode);
+  
   // console.log(`Axis ${axis} component rendered with:`, { scale, offset });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ctx, setCtx] = useState<CanvasRenderingContext2D>();
@@ -57,12 +55,13 @@ const Axis = ({
           const scaleFactor = window.devicePixelRatio || 1;
           const fontSize = 0.85 * rootFontSize * scaleFactor;
           ctx2d.font = `${fontSize}px Courier New`;
-          ctx2d.fillStyle = theme === "light" ? "black" : "white";
-          ctx2d.strokeStyle = theme === "light" ? "black" : "white";
+          ctx2d.fillStyle = isDarkMode ? "white" : "black";
+          ctx2d.strokeStyle = isDarkMode ? "white" : "black";
 
           setCtx(ctx2d);
 
-          // Don't draw initially - let the useEffect handle drawing when scale/offset are ready
+          // Force a redraw after theme change to apply new colors
+          setForceRedraw((prev) => prev + 1);
         }
       };
 
@@ -102,7 +101,7 @@ const Axis = ({
         );
       };
     }
-  }, [canvasRef, theme]); // Remove yHeight dependency
+  }, [canvasRef, isDarkMode]); // Remove yHeight dependency
 
   // Add an effect to ensure we redraw when context becomes available after being lost
   useEffect(() => {
@@ -111,6 +110,17 @@ const Axis = ({
       setForceRedraw((prev) => prev + 1);
     }
   }, [ctx, axis]);
+
+  // Force redraw when theme changes to ensure colors are updated
+  useEffect(() => {
+    if (ctx) {
+      // Update context colors immediately when theme changes
+      ctx.fillStyle = isDarkMode ? "white" : "black";
+      ctx.strokeStyle = isDarkMode ? "white" : "black";
+      // Force a redraw to apply the new colors
+      setForceRedraw((prev) => prev + 1);
+    }
+  }, [isDarkMode, ctx]);
 
   useEffect(() => {
     if (ctx && axis == "x" && canvasSize.width > 0 && canvasSize.height > 0) {
@@ -122,7 +132,7 @@ const Axis = ({
     offset,
     canvasSize.width,
     canvasSize.height,
-    theme,
+    isDarkMode,
     forceRedraw,
   ]);
 
@@ -136,7 +146,7 @@ const Axis = ({
     offset,
     canvasSize.width,
     canvasSize.height,
-    theme,
+    isDarkMode,
     forceRedraw,
   ]);
 
@@ -219,8 +229,8 @@ const Axis = ({
     const scaleFactor = window.devicePixelRatio || 1;
     const fontSize = 0.85 * rootFontSize * scaleFactor;
     ctx2d.font = `${fontSize}px Courier New`;
-    ctx2d.fillStyle = theme === "light" ? "black" : "white";
-    ctx2d.strokeStyle = theme === "light" ? "black" : "white";
+    ctx2d.fillStyle = isDarkMode ? "white" : "black";
+    ctx2d.strokeStyle = isDarkMode ? "white" : "black";
 
     ctx2d.beginPath();
 
@@ -312,8 +322,8 @@ const Axis = ({
     const scaleFactor = window.devicePixelRatio || 1;
     const fontSize = 0.85 * rootFontSize * scaleFactor;
     ctx2d.font = `${fontSize}px Courier New`;
-    ctx2d.fillStyle = theme === "light" ? "black" : "white";
-    ctx2d.strokeStyle = theme === "light" ? "black" : "white";
+    ctx2d.fillStyle = isDarkMode ? "white" : "black";
+    ctx2d.strokeStyle = isDarkMode ? "white" : "black";
 
     ctx2d.beginPath();
 

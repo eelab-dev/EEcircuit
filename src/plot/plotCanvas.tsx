@@ -16,17 +16,18 @@ interface PlotCanvasProps {
   results: ResultType[];
   selectedVariables: string[];
   hoveredVariable: string | null;
-  colorMode: "light" | "dark";
 }
 
 const PlotCanvas: React.FC<PlotCanvasProps> = ({
   results,
   selectedVariables,
   hoveredVariable,
-  colorMode,
 }) => {
   const inputProfile = useAppStore((state) => state.inputProfile);
   const [isAxis] = useState(true);
+  const colorMode = useAppStore((state) =>
+    state.isDarkMode ? "dark" : "light"
+  );
 
   // We need to use refs to avoid circular dependencies between hooks
   const updatePlotRef = useRef<(() => void) | null>(null);
@@ -181,7 +182,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
             scale={axisScales.scaleY}
             offset={axisScales.offsetY}
             axis="y"
-            theme={colorMode}
           />
         ) : (
           <></>
@@ -432,7 +432,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
             scale={axisScales.scaleX}
             offset={axisScales.offsetX}
             axis="x"
-            theme={colorMode}
           />
         ) : (
           <></>

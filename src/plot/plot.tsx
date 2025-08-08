@@ -70,9 +70,6 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
           results={results}
           selectedVariables={selectedVariables}
           hoveredVariable={hoveredVariable}
-          colorMode={useAppStore((state) =>
-            state.isDarkMode ? "dark" : "light"
-          )}
         />
       </Flex>
       {results.length > 0 && results[0].variableNames && (
