@@ -28,7 +28,7 @@ import {
   Schematic as SchematicType,
 } from "eecircuit-schematic";
 import { EEcircuitFile } from "./types/commonTypes.ts";
-import { Mouse, Touchpad, Download, Smartphone, Sun, Moon } from "lucide-react";
+import { Mouse, Touchpad, Download, Smartphone, Sun, Moon, Github } from "lucide-react";
 import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
 import { dialogTheme } from "./styles/dialogTheme.ts";
@@ -412,11 +412,6 @@ const EEcircuit: React.FC = () => {
       flexDirection={"column"}
       overflow="hidden"
     >
-      <Flex direction="row" alignItems={"self-end"} gapX={2} flexShrink={0}>
-        <Logo />
-        <Text>a SPICE based circuit simulator</Text>
-      </Flex>
-
       <Tabs.Root
         ref={tabsContainerRef}
         defaultValue="schematic"
@@ -429,6 +424,121 @@ const EEcircuit: React.FC = () => {
         minHeight={0}
         position="relative"
       >
+        {/* Header row with Logo, Tabs, and Buttons */}
+        <Flex direction="row" alignItems="center" justifyContent="space-between" flexShrink={0} p={2}>
+          <Logo />
+          
+          {/* Tabs in the center */}
+          <Flex alignItems="center">
+            <Tabs.Trigger value="schematic" marginX="0.5em">
+              Schematic
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="simulate"
+              marginX="0.5em"
+              disabled={!isSimulateTabEnabled}
+              style={{
+                opacity: isSimulateTabEnabled ? 1 : 0.5,
+                cursor: isSimulateTabEnabled ? "pointer" : "not-allowed",
+              }}
+            >
+              Simulate
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="plot"
+              marginX="0.5em"
+              disabled={!isPlotTabEnabled}
+              style={{
+                opacity: isPlotTabEnabled ? 1 : 0.5,
+                cursor: isPlotTabEnabled ? "pointer" : "not-allowed",
+              }}
+            >
+              Plot
+            </Tabs.Trigger>
+          </Flex>
+
+          {/* Buttons on the right */}
+          <Flex alignItems="center" gap={2}>
+            {/* Save File Button */}
+            <Tooltip
+              showArrow
+              content="Save complete EEcircuit file with schematic and simulation configurations"
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label="Save EEcircuit file"
+                size="sm"
+                variant="ghost"
+                onClick={handleSaveFile}
+              >
+                <Download size={16} />
+              </IconButton>
+            </Tooltip>
+
+            {/* Dark Mode Toggle Button */}
+            <Tooltip
+              showArrow
+              content="Toggle light/dark mode"
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label="Toggle color mode"
+                size="sm"
+                variant="ghost"
+                onClick={toggleTheme}
+              >
+                {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+              </IconButton>
+            </Tooltip>
+
+            {/* Input Profile Toggle Button */}
+            <Tooltip
+              showArrow
+              content={`Current: ${inputProfile} - Click to cycle input profiles`}
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label={`Current input profile: ${inputProfile} - Click to cycle`}
+                size="sm"
+                variant="ghost"
+                onClick={toggleInputProfile}
+              >
+                {inputProfile === "mouse" ? (
+                  <Mouse size={16} />
+                ) : inputProfile === "trackpad" ? (
+                  <Touchpad size={16} />
+                ) : (
+                  <Smartphone size={16} />
+                )}
+              </IconButton>
+            </Tooltip>
+
+            {/* Subtle divider */}
+            <Box
+              width="1px"
+              height="20px"
+              bg="gray.300"
+              _dark={{ bg: "gray.600" }}
+              mx={1}
+            />
+
+            {/* GitHub Button */}
+            <Tooltip
+              showArrow
+              content="Visit EEcircuit on GitHub"
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label="Visit EEcircuit on GitHub"
+                size="sm"
+                variant="ghost"
+                onClick={() => window.open("https://github.com/eelab-dev/EEcircuit", "_blank")}
+              >
+                <Github size={16} />
+              </IconButton>
+            </Tooltip>
+          </Flex>
+        </Flex>
         {dragBox ? (
           <Box
             bg="blue.focusRing/80"
@@ -458,94 +568,6 @@ const EEcircuit: React.FC = () => {
             </Flex>
           </Box>
         ) : null}
-        <Tabs.List flexShrink={0}>
-          <Flex width="100%" alignItems="center" justifyContent="space-between">
-            <Flex alignItems="center">
-              <Tabs.Trigger value="schematic" marginRight="0.5em">
-                Schematic
-              </Tabs.Trigger>
-              <Tabs.Trigger
-                value="simulate"
-                marginRight="0.5em"
-                disabled={!isSimulateTabEnabled}
-                style={{
-                  opacity: isSimulateTabEnabled ? 1 : 0.5,
-                  cursor: isSimulateTabEnabled ? "pointer" : "not-allowed",
-                }}
-              >
-                Simulate
-              </Tabs.Trigger>
-              <Tabs.Trigger
-                value="plot"
-                marginRight="0.5em"
-                disabled={!isPlotTabEnabled}
-                style={{
-                  opacity: isPlotTabEnabled ? 1 : 0.5,
-                  cursor: isPlotTabEnabled ? "pointer" : "not-allowed",
-                }}
-              >
-                Plot
-              </Tabs.Trigger>
-            </Flex>
-
-            {/* Save button, Dark Mode Toggle, and Input Profile Toggle Button */}
-            <Flex alignItems="center" gap={2}>
-              {/* Save File Button */}
-              <Tooltip
-                showArrow
-                content="Save complete EEcircuit file with schematic and simulation configurations"
-                positioning={{ placement: "bottom" }}
-              >
-                <IconButton
-                  aria-label="Save EEcircuit file"
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleSaveFile}
-                >
-                  <Download size={16} />
-                </IconButton>
-              </Tooltip>
-
-              {/* Dark Mode Toggle Button */}
-              <Tooltip
-                showArrow
-                content="Toggle light/dark mode"
-                positioning={{ placement: "bottom" }}
-              >
-                <IconButton
-                  aria-label="Toggle color mode"
-                  size="sm"
-                  variant="ghost"
-                  onClick={toggleTheme}
-                >
-                  {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
-                </IconButton>
-              </Tooltip>
-
-              {/* Input Profile Toggle Button */}
-              <Tooltip
-                showArrow
-                content={`Current: ${inputProfile} - Click to cycle input profiles`}
-                positioning={{ placement: "bottom" }}
-              >
-                <IconButton
-                  aria-label={`Current input profile: ${inputProfile} - Click to cycle`}
-                  size="sm"
-                  variant="ghost"
-                  onClick={toggleInputProfile}
-                >
-                  {inputProfile === "mouse" ? (
-                    <Mouse size={16} />
-                  ) : inputProfile === "trackpad" ? (
-                    <Touchpad size={16} />
-                  ) : (
-                    <Smartphone size={16} />
-                  )}
-                </IconButton>
-              </Tooltip>
-            </Flex>
-          </Flex>
-        </Tabs.List>
 
         <Tabs.Content
           value="schematic"
