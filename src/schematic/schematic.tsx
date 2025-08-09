@@ -14,14 +14,13 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import * as eeSch from "eecircuit-schematic";
 import { Schematic as SchematicType } from "eecircuit-schematic";
-import { Box, Flex, Float, IconButton, Button } from "@chakra-ui/react";
-import { ArrowBigRight, Expand, SquareX } from "lucide-react";
+import { Box, Flex, Float, Button } from "@chakra-ui/react";
+import { ArrowBigRight } from "lucide-react";
 import debounce from "lodash.debounce";
 
 import Actions from "./actions";
 import Properties from "./properties";
 import Status from "./status";
-import { Tooltip } from "../components/ui/tooltip";
 import ExportImageDialog from "./ExportImageDialog";
 import ShortcutsDialog from "./ShortcutsDialog";
 import { ToBePlotted } from "src/types/commonTypes";
@@ -93,7 +92,6 @@ const Schematic: React.FC<SchematicProps> = ({
   const [availableComponents, setAvailableComponents] = useState<
     eeSch.AvailableComponent[]
   >([]);
-  const [fullscreen, setFullscreen] = useState(false);
   const [propertiesOpen, setPropertiesOpen] = useState(false);
 
   const [info, setInfo] = useState<
@@ -680,20 +678,6 @@ const Schematic: React.FC<SchematicProps> = ({
     eeSch.sendCommand({ command: "export", exportType: "netList" });
   }, []);
 
-  const fullscreenHandler = React.useCallback(() => {
-    if (!canvasRef.current) return;
-    if (fullscreen) {
-      document.exitFullscreen().catch((err) => {
-        console.error(`Error exiting fullscreen: ${err.message}`);
-      });
-      setFullscreen(false);
-    } else {
-      document.documentElement.requestFullscreen().catch((err) => {
-        console.error(`Error entering fullscreen: ${err.message}`);
-      });
-      setFullscreen(true);
-    }
-  }, [fullscreen]);
 
   const propertiesCallBack = React.useCallback(() => {
     setPropertiesOpen(false);
@@ -740,19 +724,6 @@ const Schematic: React.FC<SchematicProps> = ({
               onShowShortcuts={handleShowShortcuts}
             />
           }
-        </Float>
-        <Float offset="10">
-          <Tooltip
-            content={fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-          >
-            <IconButton
-              aria-label="Fullscreen"
-              onClick={fullscreenHandler}
-              bg={dialogTheme.buttonIconBg}
-            >
-              {!fullscreen ? <Expand /> : <SquareX />}
-            </IconButton>
-          </Tooltip>
         </Float>
         {propertiesOpen && (
           <Properties

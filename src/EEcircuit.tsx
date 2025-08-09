@@ -28,7 +28,17 @@ import {
   Schematic as SchematicType,
 } from "eecircuit-schematic";
 import { EEcircuitFile } from "./types/commonTypes.ts";
-import { Mouse, Touchpad, Download, Smartphone, Sun, Moon, Github } from "lucide-react";
+import {
+  Mouse,
+  Touchpad,
+  Download,
+  Smartphone,
+  Sun,
+  Moon,
+  Github,
+  Expand,
+  SquareX,
+} from "lucide-react";
 import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
 import { dialogTheme } from "./styles/dialogTheme.ts";
@@ -39,6 +49,9 @@ const EEcircuit: React.FC = () => {
   // Use theme state from Zustand store (system preference detection and document class handling is now in the store)
   const isDarkMode = useAppStore((state) => state.isDarkMode);
   const toggleTheme = useAppStore((state) => state.toggleTheme);
+
+  // Fullscreen state
+  const [fullscreen, setFullscreen] = React.useState(false);
 
   // Use Zustand store instead of multiple useState calls
   const {
@@ -403,6 +416,21 @@ const EEcircuit: React.FC = () => {
     setMainTabValue,
   ]); // Added setMainTabValue
 
+  // Fullscreen handler
+  const fullscreenHandler = React.useCallback(() => {
+    if (fullscreen) {
+      document.exitFullscreen().catch((err) => {
+        console.error(`Error exiting fullscreen: ${err.message}`);
+      });
+      setFullscreen(false);
+    } else {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.error(`Error entering fullscreen: ${err.message}`);
+      });
+      setFullscreen(true);
+    }
+  }, [fullscreen]);
+
   return (
     <Box
       border="solid 0px"
@@ -425,9 +453,15 @@ const EEcircuit: React.FC = () => {
         position="relative"
       >
         {/* Header row with Logo, Tabs, and Buttons */}
-        <Flex direction="row" alignItems="center" justifyContent="space-between" flexShrink={0} p={2}>
+        <Flex
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          flexShrink={0}
+          p={2}
+        >
           <Logo />
-          
+
           {/* Tabs in the center */}
           <Flex alignItems="center">
             <Tabs.Trigger value="schematic" marginX="0.5em">
@@ -513,6 +547,22 @@ const EEcircuit: React.FC = () => {
               </IconButton>
             </Tooltip>
 
+            {/* Fullscreen Button */}
+            <Tooltip
+              showArrow
+              content={fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label="Fullscreen"
+                size="sm"
+                variant="ghost"
+                onClick={fullscreenHandler}
+              >
+                {!fullscreen ? <Expand size={16} /> : <SquareX size={16} />}
+              </IconButton>
+            </Tooltip>
+
             {/* Subtle divider */}
             <Box
               width="1px"
@@ -532,7 +582,12 @@ const EEcircuit: React.FC = () => {
                 aria-label="Visit EEcircuit on GitHub"
                 size="sm"
                 variant="ghost"
-                onClick={() => window.open("https://github.com/eelab-dev/EEcircuit", "_blank")}
+                onClick={() =>
+                  window.open(
+                    "https://github.com/eelab-dev/EEcircuit",
+                    "_blank"
+                  )
+                }
               >
                 <Github size={16} />
               </IconButton>
