@@ -54,10 +54,10 @@ export function aggregateParallelResults(
     successfulResults.sort((a, b) => a.parameterIndex - b.parameterIndex);
   }
 
-  // Debug: Log which parameter values we received
-  console.log("Parameter values received for aggregation:", successfulResults.map(r => r.parameterValue));
-  console.log("Parameter indices received:", successfulResults.map(r => r.parameterIndex));
-  console.log(`Total results: ${results.length}, Successful: ${successfulResults.length}, Failed: ${results.length - successfulResults.length}`);
+  // Log aggregation info only for complete results to reduce console spam
+  if (successfulResults.length > 5) {
+    console.log(`Aggregating ${successfulResults.length} results (${results.length - successfulResults.length} failed)`);
+  }
 
   // Use the first result as the base structure
   const baseResult = successfulResults[0]!.result!;
@@ -149,9 +149,10 @@ export function aggregateParallelResults(
   // Calculate total number of points
   aggregated.numPoints = aggregated.data[0]?.values?.length || 0;
 
-  // Log aggregation summary
-  console.log(`Aggregated ${successfulResults.length} results with ${aggregated.numPoints} total data points`);
-  console.log(`Created ${aggregated.bracketPlotData?.length || 0} bracket plot data entries`);
+  // Log aggregation summary only for final results
+  if (successfulResults.length > 10) {
+    console.log(`Aggregated ${successfulResults.length} results with ${aggregated.numPoints} total data points`);
+  }
   
   return aggregated;
 }

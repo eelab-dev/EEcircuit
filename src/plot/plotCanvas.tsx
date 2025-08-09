@@ -11,6 +11,7 @@ import { useCrosshair } from "./useCrosshair";
 import { useZoom } from "./useZoom";
 import { usePlotCalculations } from "./usePlotCalculations";
 import { useEventHandlers } from "./useEventHandlers";
+import PlotProgressOverlay from "../components/PlotProgressOverlay";
 import type { AggregatedResult } from "../simulation/resultAggregator";
 
 interface PlotCanvasProps {
@@ -434,6 +435,9 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               }
             }}
           ></canvas>
+          
+          {/* Progress overlay positioned in bottom right corner of canvas */}
+          <PlotProgressOverlay />
         </Box>
       </GridItem>
       <GridItem

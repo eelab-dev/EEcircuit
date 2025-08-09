@@ -1,4 +1,4 @@
-import { Button, Flex, Menu, Text, Box } from "@chakra-ui/react";
+import { Button, Flex, Menu, Text } from "@chakra-ui/react";
 import React, { Suspense, useEffect, useState } from "react";
 import EditorCustom from "../editor/editorCustom";
 import { Skeleton } from "@chakra-ui/react";
@@ -8,7 +8,6 @@ import { SimulationType, ToBePlotted } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import SimulationConfigPanel from "./SimulationConfigPanel";
 import { dialogTheme } from "src/styles/dialogTheme";
-import ThreadProgressBar from "../components/ThreadProgressBar";
 
 type SimulationEditorProps = {
   netList: string;
@@ -30,7 +29,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
   // Bracket operation state
   const isParallelSimulationRunning = useAppStore((state) => state.isParallelSimulationRunning);
-  const parallelSimulationProgress = useAppStore((state) => state.parallelSimulationProgress);
   const bracketOperation = useAppStore((state) => state.bracketOperation);
   const runParallelSimulation = useAppStore((state) => state.runParallelSimulation);
 
@@ -124,6 +122,11 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       const bracketOp = findFirstBracketOperation(netListToSim);
       
       if (bracketOp) {
+        // Switch to plot tab immediately when bracket simulation starts
+        const { setMainTabValue, setIsPlotTabEnabled } = useAppStore.getState();
+        setIsPlotTabEnabled(true);
+        setMainTabValue("plot");
+        
         // Run parallel simulation for bracket operations
         console.log("Bracket operation detected, running parallel simulation");
         await runParallelSimulation(netListToSim);
@@ -237,52 +240,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
           flexShrink={0}
           gap="2"
         >
-          {/* Progress bar for parallel simulations */}
-          {isParallelSimulationRunning && (
-            <Flex flexDirection="column" gap="2">
-              <Flex justifyContent="space-between" alignItems="center">
-                <Text fontSize="sm" color="fg.muted">
-                  Parallel Simulation Running
-                </Text>
-                <Text fontSize="sm" color="fg.muted">
-                  {parallelSimulationProgress.completed}/{parallelSimulationProgress.total}
-                </Text>
-              </Flex>
-              
-              {/* Overall progress bar */}
-              <Box 
-                bg="gray.200" 
-                borderRadius="full" 
-                overflow="hidden" 
-                height="2"
-              >
-                <Box 
-                  bg="blue.500" 
-                  height="100%" 
-                  width={`${(parallelSimulationProgress.completed / Math.max(parallelSimulationProgress.total, 1)) * 100}%`}
-                  transition="width 0.3s ease"
-                />
-              </Box>
-
-              {/* Thread progress bars */}
-              {parallelSimulationProgress.threads.length > 0 && (
-                <Flex flexDirection="column" gap="1">
-                  {parallelSimulationProgress.threads.map((thread) => (
-                    <ThreadProgressBar 
-                      key={thread.threadId} 
-                      thread={thread}
-                    />
-                  ))}
-                </Flex>
-              )}
-
-              <Flex justifyContent="space-between" fontSize="xs" color="fg.muted">
-                <Text>✓ {parallelSimulationProgress.successful} successful</Text>
-                <Text>✗ {parallelSimulationProgress.failed} failed</Text>
-              </Flex>
-            </Flex>
-          )}
-          
           {/* Bracket operation info */}
           {bracketOperation && !isParallelSimulationRunning && (
             <Flex 

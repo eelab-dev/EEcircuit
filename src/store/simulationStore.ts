@@ -254,6 +254,7 @@ export const createSimulationSlice: StateCreator<
         totalSims
       );
 
+
       // Run parallel simulation
       const result = await runParallelSimulation(netlist, {
         maxWorkers: maxWorkers,
@@ -268,7 +269,8 @@ export const createSimulationSlice: StateCreator<
           });
         },
         onResult: () => {
-          // Handle individual result if needed
+          // Individual results are handled for progress tracking only
+          // Plotting happens only when all simulations are complete
         },
         onThreadUpdate: (threadId, status, currentSim) => {
           if (status === "start") {
@@ -300,13 +302,15 @@ export const createSimulationSlice: StateCreator<
       actions.setParallelSimulationResults(result);
 
       if (result.success && result.results.length > 0) {
-        // Aggregate results for plotting
+        // Aggregate results for plotting - show all results at once when complete
         const aggregated = aggregateParallelResults(result.results, bracketOp);
         if (aggregated) {
           // Update results and trigger plot tab using handleNewResults for bracket operation detection
           // Type assertion needed because AggregatedResult extends ResultType but with additional properties
           const appActions = get() as SimulationSlice &
-            StoreWithTab & { handleNewResults: (results: ResultType[]) => void };
+            StoreWithTab & {
+              handleNewResults: (results: ResultType[]) => void;
+            };
           appActions.handleNewResults([aggregated as ResultType]);
         }
       }

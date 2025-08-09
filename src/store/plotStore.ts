@@ -177,13 +177,14 @@ export const createPlotSlice: StateCreator<
         }
       }
 
-      // Log bracket operation info
-      if (isBracketResult && aggregatedResult) {
-        console.log("Bracket operation results received:");
-        console.log("- Parameter values:", aggregatedResult.parameterValues);
-        console.log("- Successful results:", aggregatedResult.successfulResults);
-        console.log("- Failed results:", aggregatedResult.failedResults);
-        console.log("- Total data points:", firstResult.data[0]?.values?.length || 0);
+      // Log bracket operation info (only once when complete)
+      if (isBracketResult && aggregatedResult && aggregatedResult.successfulResults === aggregatedResult.parameterCount) {
+        console.log("Bracket operation completed:", {
+          parameterValues: aggregatedResult.parameterValues?.length,
+          successfulResults: aggregatedResult.successfulResults,
+          failedResults: aggregatedResult.failedResults,
+          totalDataPoints: firstResult.data[0]?.values?.length || 0
+        });
       }
 
       set({
