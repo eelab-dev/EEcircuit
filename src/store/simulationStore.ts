@@ -244,7 +244,7 @@ export const createSimulationSlice: StateCreator<
       actions.setParallelSimulationRunning(true);
 
       // Initialize threads first to get the worker count
-      const maxWorkers = 4;
+      const maxWorkers = (get() as SimulationSlice & StoreWithTab & { maxWebWorkers: number }).maxWebWorkers || 4;
       const { expandNetlist } = await import("../utils/netlistExpander");
       const expansionResult = expandNetlist(netlist);
       const totalSims = expansionResult.expandedNetlists?.length || 0;

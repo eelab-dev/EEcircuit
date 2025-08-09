@@ -3,11 +3,12 @@ import React, { Suspense, useEffect, useState } from "react";
 import EditorCustom from "../editor/editorCustom";
 import { Skeleton } from "@chakra-ui/react";
 import { toaster } from "../components/ui/toaster";
-import { X, Play, Square } from "lucide-react";
+import { X, Play, Square, Settings } from "lucide-react";
 import { SimulationType, ToBePlotted } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import SimulationConfigPanel from "./SimulationConfigPanel";
 import { dialogTheme } from "src/styles/dialogTheme";
+import SimulationConfigDialog from "./SimulationConfigDialog";
 
 type SimulationEditorProps = {
   netList: string;
@@ -35,6 +36,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   // Local state for UI management
   const [netListToSim, setNetListToSim] = useState(netList);
   const [simCommandString, setSimCommandString] = useState("");
+  const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
 
   const handleEditor = React.useCallback((value: string | undefined) => {
     if (value !== undefined) {
@@ -284,12 +286,13 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
           padding="2"
           borderBottom="1px solid"
           borderColor={dialogTheme.borderColor}
-          justifyContent="flex-start"
+          justifyContent="space-between"
           alignItems="center"
           gap="2"
         >
-          {/* "To Be Plotted" button with dropdown if items exist */}
-          {toBePlotted.length > 0 ? (
+          <Flex gap="2" alignItems="center">
+            {/* "To Be Plotted" button with dropdown if items exist */}
+            {toBePlotted.length > 0 ? (
             <Menu.Root>
               <Menu.Trigger asChild>
                 <Button size="sm" variant="outline">
@@ -344,7 +347,19 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
               To Be Plotted
             </Button>
           )}
+          </Flex>
+
+          {/* Simulation Configuration Button */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setIsConfigDialogOpen(true)}
+            title="Simulation Settings"
+          >
+            <Settings size={16} />
+          </Button>
         </Flex>
+
 
         <Suspense fallback={<Skeleton height="100%" width="100%" />}>
           <EditorCustom
@@ -357,6 +372,12 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
           />
         </Suspense>
       </Flex>
+
+      {/* Config Dialog - positioned outside main layout */}
+      <SimulationConfigDialog
+        open={isConfigDialogOpen}
+        onClose={() => setIsConfigDialogOpen(false)}
+      />
     </Flex>
   );
 };

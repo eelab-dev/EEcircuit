@@ -10,6 +10,7 @@ export interface UiState {
   isSchematicLoading: boolean;
   schematicLoadingMessage: string;
   isDarkMode: boolean;
+  maxWebWorkers: number;
 }
 
 export interface UiActions {
@@ -21,6 +22,7 @@ export interface UiActions {
   toggleInputProfile: () => void;
   setIsDarkMode: (isDark: boolean) => void;
   toggleTheme: () => void;
+  setMaxWebWorkers: (count: number) => void;
 }
 
 export type UiSlice = UiState & UiActions;
@@ -75,6 +77,7 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
     isSchematicLoading: false,
     schematicLoadingMessage: "Loading schematic...",
     isDarkMode: initialTheme,
+    maxWebWorkers: Math.min(4, navigator.hardwareConcurrency || 4),
 
     // Actions
     setInputProfile: (profile) => set({ inputProfile: profile }),
@@ -113,6 +116,12 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
       const newMode = !currentMode;
       set({ isDarkMode: newMode });
       applyThemeToDocument(newMode);
+    },
+
+    // Simulation configuration actions
+    setMaxWebWorkers: (count) => {
+      const clampedCount = Math.max(1, Math.min(count, navigator.hardwareConcurrency || 8));
+      set({ maxWebWorkers: clampedCount });
     },
   };
 };
