@@ -8,7 +8,7 @@ import { SimulationType, ToBePlotted } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import SimulationConfigPanel from "./SimulationConfigPanel";
 import { dialogTheme } from "src/styles/dialogTheme";
-import SimulationConfigDialog from "./SimulationConfigDialog";
+import SimulationGlobalConfigDialog from "./SimulationGlobalConfigDialog";
 
 type SimulationEditorProps = {
   netList: string;
@@ -29,9 +29,13 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   const handleNewResults = useAppStore((state) => state.handleNewResults);
 
   // Bracket operation state
-  const isParallelSimulationRunning = useAppStore((state) => state.isParallelSimulationRunning);
+  const isParallelSimulationRunning = useAppStore(
+    (state) => state.isParallelSimulationRunning
+  );
   const bracketOperation = useAppStore((state) => state.bracketOperation);
-  const runParallelSimulation = useAppStore((state) => state.runParallelSimulation);
+  const runParallelSimulation = useAppStore(
+    (state) => state.runParallelSimulation
+  );
 
   // Local state for UI management
   const [netListToSim, setNetListToSim] = useState(netList);
@@ -120,21 +124,23 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   const handleSimRun = async () => {
     try {
       // First check if netlist contains bracket operations
-      const { findFirstBracketOperation } = await import("../utils/bracketParser");
+      const { findFirstBracketOperation } = await import(
+        "../utils/bracketParser"
+      );
       const bracketOp = findFirstBracketOperation(netListToSim);
-      
+
       if (bracketOp) {
         // Switch to plot tab immediately when bracket simulation starts
         const { setMainTabValue, setIsPlotTabEnabled } = useAppStore.getState();
         setIsPlotTabEnabled(true);
         setMainTabValue("plot");
-        
+
         // Run parallel simulation for bracket operations
         console.log("Bracket operation detected, running parallel simulation");
         await runParallelSimulation(netListToSim);
         return;
       }
-      
+
       // Standard single simulation
       const { Simulation } = await import("eecircuit-engine");
 
@@ -178,7 +184,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         // Show error toast for failed simulation
         toaster.create({
           title: "Simulation Error",
-          description: "Simulation failed to run. Check your netlist for errors.",
+          description:
+            "Simulation failed to run. Check your netlist for errors.",
           type: "error",
           duration: 5000,
         });
@@ -188,7 +195,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       console.error("Simulation error:", error);
       toaster.create({
         title: "Simulation Error",
-        description: error instanceof Error ? error.message : "Unknown simulation error",
+        description:
+          error instanceof Error ? error.message : "Unknown simulation error",
         type: "error",
         duration: 5000,
       });
@@ -244,28 +252,33 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         >
           {/* Bracket operation info */}
           {bracketOperation && !isParallelSimulationRunning && (
-            <Flex 
-              p="2" 
-              bg="blue.50" 
-              borderRadius="md" 
-              borderLeft="3px solid" 
-              borderColor="blue.500"
+            <Flex
+              p="2"
+              bg="blue.subtle"
+              borderRadius="md"
+              borderLeft="3px solid"
+              borderColor="blue.solid"
             >
-              <Text fontSize="sm" color="blue.800">
-                💡 Bracket operation detected: [{bracketOperation.start}:{bracketOperation.step}:{bracketOperation.stop}]
+              <Text fontSize="sm" color="blue.fg">
+                💡 Bracket operation detected: [{bracketOperation.start}:
+                {bracketOperation.step}:{bracketOperation.stop}]
                 {bracketOperation.unit && bracketOperation.unit}
               </Text>
             </Flex>
           )}
 
           {/* Simulation button */}
-          <Button 
-            onClick={handleSimRun} 
+          <Button
+            onClick={handleSimRun}
             width="100%"
             disabled={isParallelSimulationRunning}
           >
             <Flex alignItems="center" gap="2">
-              {isParallelSimulationRunning ? <Square size={16} /> : <Play size={16} />}
+              {isParallelSimulationRunning ? (
+                <Square size={16} />
+              ) : (
+                <Play size={16} />
+              )}
               {isParallelSimulationRunning ? "Simulating..." : "Run Simulation"}
             </Flex>
           </Button>
@@ -293,60 +306,63 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
           <Flex gap="2" alignItems="center">
             {/* "To Be Plotted" button with dropdown if items exist */}
             {toBePlotted.length > 0 ? (
-            <Menu.Root>
-              <Menu.Trigger asChild>
-                <Button size="sm" variant="outline">
-                  To Be Plotted ({toBePlotted.length})
-                </Button>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content>
-                  {toBePlotted.map((item, index) => (
-                    <Menu.Item key={index} value={`${item.type}-${item.name}`}>
-                      <Flex
-                        justifyContent="space-between"
-                        alignItems="center"
-                        width="100%"
+              <Menu.Root>
+                <Menu.Trigger asChild>
+                  <Button size="sm" variant="outline">
+                    To Be Plotted ({toBePlotted.length})
+                  </Button>
+                </Menu.Trigger>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    {toBePlotted.map((item, index) => (
+                      <Menu.Item
+                        key={index}
+                        value={`${item.type}-${item.name}`}
                       >
-                        <span>
-                          {item.type === "voltage" ? "V" : "I"}({item.name})
-                        </span>
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          onClick={(e: React.MouseEvent) => {
-                            e.stopPropagation();
-                            removeToBePlotted(item);
-                          }}
+                        <Flex
+                          justifyContent="space-between"
+                          alignItems="center"
+                          width="100%"
                         >
-                          <X size={12} />
-                        </Button>
-                      </Flex>
+                          <span>
+                            {item.type === "voltage" ? "V" : "I"}({item.name})
+                          </span>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            onClick={(e: React.MouseEvent) => {
+                              e.stopPropagation();
+                              removeToBePlotted(item);
+                            }}
+                          >
+                            <X size={12} />
+                          </Button>
+                        </Flex>
+                      </Menu.Item>
+                    ))}
+                    <Menu.Separator />
+                    <Menu.Item
+                      value="add-more"
+                      onClick={() => {
+                        onSwitchToSchematic?.();
+                      }}
+                    >
+                      Add More...
                     </Menu.Item>
-                  ))}
-                  <Menu.Separator />
-                  <Menu.Item
-                    value="add-more"
-                    onClick={() => {
-                      onSwitchToSchematic?.();
-                    }}
-                  >
-                    Add More...
-                  </Menu.Item>
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                onSwitchToSchematic?.();
-              }}
-            >
-              To Be Plotted
-            </Button>
-          )}
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Menu.Root>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  onSwitchToSchematic?.();
+                }}
+              >
+                To Be Plotted
+              </Button>
+            )}
           </Flex>
 
           {/* Simulation Configuration Button */}
@@ -359,7 +375,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
             <Settings size={16} />
           </Button>
         </Flex>
-
 
         <Suspense fallback={<Skeleton height="100%" width="100%" />}>
           <EditorCustom
@@ -374,7 +389,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       </Flex>
 
       {/* Config Dialog - positioned outside main layout */}
-      <SimulationConfigDialog
+      <SimulationGlobalConfigDialog
         open={isConfigDialogOpen}
         onClose={() => setIsConfigDialogOpen(false)}
       />

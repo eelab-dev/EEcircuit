@@ -33,9 +33,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   const inputProfile = useAppStore((state) => state.inputProfile);
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
   const [isAxis] = useState(true);
-  const colorMode = useAppStore((state) =>
-    state.isDarkMode ? "dark" : "light"
-  );
 
   // We need to use refs to avoid circular dependencies between hooks
   const updatePlotRef = useRef<(() => void) | null>(null);
@@ -62,7 +59,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     isCanvasInitialized,
   } = useCanvasInitialization({
     results,
-    colorMode,
     updatePlot: () => updatePlotRef.current?.(),
   });
 
@@ -99,7 +95,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       results,
       selectedVariables,
       hoveredVariable,
-      colorMode,
       showCrosshair,
       crosshairSnapToLines,
       isBracketOperationPlot,
@@ -161,7 +156,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     if (isCanvasInitialized) {
       updatePlot();
     }
-  }, [colorMode, isCanvasInitialized]);
+  }, [isCanvasInitialized]);
 
   // Update plot visibility when selected variables change
   useEffect(() => {
@@ -216,11 +211,11 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
           {/* Crosshair snap toggle button - always visible */}
           <Button
             position="absolute"
-            top="10px"
-            right="10px"
+            top="0.625rem"
+            right="0.625rem"
             size="md"
             variant={crosshairSnapToLines ? "solid" : "outline"}
-            colorScheme={crosshairSnapToLines ? "white" : "gray.800"}
+            colorScheme="gray"
             onClick={() => setCrosshairSnapToLines(!crosshairSnapToLines)}
             fontSize="xs"
             px={2}
@@ -234,17 +229,11 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
                 : "Crosshair moves freely (Click to snap to lines)"
             }
             boxShadow="sm"
-            bg={
-              colorMode === "dark"
-                ? "rgba(45, 55, 72, 0.7)"
-                : "rgba(255, 255, 255, 0.7)"
-            }
-            backdropFilter="blur(4px)"
+            bg="bg.panel/70"
+            color="fg"
+            backdropFilter="blur(0.25rem)"
             _hover={{
-              bg:
-                colorMode === "dark"
-                  ? "rgba(45, 55, 72, 0.9)"
-                  : "rgba(255, 255, 255, 0.9)",
+              bg: "bg.panel/90",
             }}
           >
             {crosshairSnapToLines ? "📍 Snap" : "🎯 Free"}
@@ -254,8 +243,9 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
           {zoomController.current?.getZoomBounds() && (
             <Button
               position="absolute"
-              top="10px"
-              right="120px"
+              top="0.625rem"
+              right="50%"
+              transform="translateX(50%)"
               size="md"
               variant="solid"
               colorScheme="yellow"
@@ -268,18 +258,11 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               zIndex={10}
               title="Reset zoom to original view"
               boxShadow="sm"
-              bg={
-                colorMode === "dark"
-                  ? "rgba(255, 193, 7, 0.8)"
-                  : "rgba(255, 193, 7, 0.9)"
-              }
-              color={colorMode === "dark" ? "black" : "white"}
-              backdropFilter="blur(4px)"
+              bg="yellow.solid/80"
+              color="yellow.contrast"
+              backdropFilter="blur(0.25rem)"
               _hover={{
-                bg:
-                  colorMode === "dark"
-                    ? "rgba(255, 193, 7, 1)"
-                    : "rgba(255, 193, 7, 1)",
+                bg: "yellow.solid",
               }}
             >
               🔍 Reset Zoom
@@ -290,24 +273,16 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
           {!zoomController.current?.getIsZooming() && !showCrosshair && (
             <Box
               position="absolute"
-              bottom="10px"
-              left="10px"
-              bg={
-                colorMode === "dark"
-                  ? "rgba(26, 32, 44, 0.7)"
-                  : "rgba(255, 255, 255, 0.7)"
-              }
-              backdropFilter="blur(4px)"
-              color={colorMode === "dark" ? "white" : "black"}
-              px="8px"
-              py="4px"
+              bottom="0.625rem"
+              left="0.625rem"
+              bg="bg.panel/70"
+              backdropFilter="blur(0.25rem)"
+              color="fg"
+              px="0.5rem"
+              py="0.25rem"
               borderRadius="md"
               border="1px solid"
-              borderColor={
-                colorMode === "dark"
-                  ? "rgba(113, 128, 150, 0.5)"
-                  : "rgba(203, 213, 224, 0.5)"
-              }
+              borderColor="border.muted/50"
               fontSize="xs"
               fontFamily="monospace"
               zIndex={10}
@@ -326,24 +301,16 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
           {showCrosshair && (
             <Box
               position="absolute"
-              top="10px"
-              left="10px"
-              bg={
-                colorMode === "dark"
-                  ? "rgba(26, 32, 44, 0.7)"
-                  : "rgba(255, 255, 255, 0.7)"
-              }
-              backdropFilter="blur(4px)"
-              color={colorMode === "dark" ? "white" : "black"}
-              px="8px"
-              py="4px"
+              top="0.625rem"
+              left="0.625rem"
+              bg="bg.panel/70"
+              backdropFilter="blur(0.25rem)"
+              color="fg"
+              px="0.5rem"
+              py="0.25rem"
               borderRadius="md"
               border="1px solid"
-              borderColor={
-                colorMode === "dark"
-                  ? "rgba(113, 128, 150, 0.5)"
-                  : "rgba(203, 213, 224, 0.5)"
-              }
+              borderColor="border.muted/50"
               fontSize="sm"
               fontFamily="monospace"
               zIndex={10}

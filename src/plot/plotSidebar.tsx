@@ -313,7 +313,8 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             left={0}
             right={0}
             bottom={0}
-            bg="blackAlpha.600"
+            bg="bg.panel/80"
+            backdropFilter="blur(8px)"
             onClick={() => setIsDrawerOpen(false)}
           />
 

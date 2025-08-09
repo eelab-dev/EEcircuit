@@ -13,9 +13,9 @@ const ThreadProgressBar: React.FC<ThreadProgressBarProps> = ({ thread }) => {
       : 0;
 
   const getStatusColor = () => {
-    if (thread.isCompleted) return "green.focusRing";
-    if (thread.isRunning) return "blue.focusRing";
-    return "gray.focusRing";
+    if (thread.isCompleted) return "green.focusRing/80";
+    if (thread.isRunning) return "blue.focusRing/80";
+    return "gray.focusRing/80";
   };
 
   return (
@@ -28,7 +28,7 @@ const ThreadProgressBar: React.FC<ThreadProgressBarProps> = ({ thread }) => {
       {/* Progress bar */}
       <Box
         flex="1"
-        bg="gray.200"
+        bg="gray.fg/80"
         borderRadius="full"
         overflow="hidden"
         height="1.5"

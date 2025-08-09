@@ -19,8 +19,6 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   const isBracketOperationPlot = useAppStore((state) => state.isBracketOperationPlot);
   const bracketOperationResults = useAppStore((state) => state.bracketOperationResults);
   
-  // Theme state
-  const colorMode = useAppStore((state) => state.isDarkMode ? "dark" : "light");
 
   // Use local state for plot variable selection instead of Zustand store
   // This approach is necessary because CheckboxGroup's controlled behavior
@@ -77,7 +75,6 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
       {isBracketOperationPlot && bracketOperationResults && (
         <BracketOperationSlider
           bracketOperationResults={bracketOperationResults}
-          colorMode={colorMode}
         />
       )}
       

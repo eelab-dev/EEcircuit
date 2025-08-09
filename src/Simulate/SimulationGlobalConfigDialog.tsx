@@ -20,13 +20,13 @@ interface SimulationConfigDialogProps {
   onClose: () => void;
 }
 
-const SimulationConfigDialog: React.FC<SimulationConfigDialogProps> = ({
+const SimulationGlobalConfigDialog: React.FC<SimulationConfigDialogProps> = ({
   open,
   onClose,
 }) => {
   const maxWebWorkers = useAppStore((state) => state.maxWebWorkers);
   const setMaxWebWorkers = useAppStore((state) => state.setMaxWebWorkers);
-  
+
   const [tempMaxWorkers, setTempMaxWorkers] = React.useState(maxWebWorkers);
 
   // Reset temp value when dialog opens
@@ -82,8 +82,8 @@ const SimulationConfigDialog: React.FC<SimulationConfigDialogProps> = ({
                 Maximum Parallel Web Workers
               </Text>
               <Text fontSize="xs" color="fg.muted">
-                Number of parallel threads for bracket operations. Higher values may improve
-                performance but use more system resources.
+                Number of parallel threads for bracket operations. Higher values
+                may improve performance but use more system resources.
               </Text>
               <Flex alignItems="center" gap="2">
                 <Input
@@ -118,4 +118,4 @@ const SimulationConfigDialog: React.FC<SimulationConfigDialogProps> = ({
   );
 };
 
-export default SimulationConfigDialog;
+export default SimulationGlobalConfigDialog;

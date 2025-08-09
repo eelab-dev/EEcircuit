@@ -6,12 +6,10 @@ import type { AggregatedResult } from "../simulation/resultAggregator";
 
 interface BracketOperationSliderProps {
   bracketOperationResults: AggregatedResult;
-  colorMode: "light" | "dark";
 }
 
 const BracketOperationSlider: React.FC<BracketOperationSliderProps> = ({
   bracketOperationResults,
-  colorMode,
 }) => {
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
   const setEmphasizedPlotIndex = useAppStore((state) => state.setEmphasizedPlotIndex);
@@ -34,17 +32,9 @@ const BracketOperationSlider: React.FC<BracketOperationSliderProps> = ({
       alignItems="center"
       gap={3}
       fontSize="sm"
-      bg={
-        colorMode === "dark"
-          ? "gray.900"
-          : "gray.100"
-      }
+      bg="bg.muted"
       borderBottom="1px solid"
-      borderColor={
-        colorMode === "dark"
-          ? "gray.700"
-          : "gray.300"
-      }
+      borderColor="border.muted"
     >
       <Text fontWeight="medium" fontSize="xs" minW="fit-content" color="fg.muted">
         Parameter:
@@ -59,8 +49,8 @@ const BracketOperationSlider: React.FC<BracketOperationSliderProps> = ({
           size="sm"
         >
           <Slider.Control>
-            <Slider.Track h="2px" bg={colorMode === "dark" ? "gray.700" : "gray.300"}>
-              <Slider.Range bg={colorMode === "dark" ? "blue.400" : "blue.500"} />
+            <Slider.Track h="2px" bg="bg.muted">
+              <Slider.Range bg="blue.solid" />
             </Slider.Track>
             <Slider.Thumbs />
           </Slider.Control>

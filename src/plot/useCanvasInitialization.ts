@@ -9,6 +9,7 @@ import {
 } from "webgl-plot";
 import { generatePlotColor, type PlotColor } from "./colorUtils";
 import { ZoomController } from "./zoomController";
+import { useAppStore } from "../store/appStore";
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -20,15 +21,14 @@ import type { AggregatedResult } from "../simulation/resultAggregator";
 
 interface UseCanvasInitializationProps {
   results: ResultType[];
-  colorMode: "light" | "dark";
   updatePlot: () => void;
 }
 
 export const useCanvasInitialization = ({
   results,
-  colorMode,
   updatePlot,
 }: UseCanvasInitializationProps) => {
+  const isDarkMode = useAppStore((state) => state.isDarkMode);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wglpRef = useRef<WebglPlot | null>(null);
   const plotLineRef = useRef<WebglLineThick | null>(null);
@@ -204,7 +204,7 @@ export const useCanvasInitialization = ({
           // Get the base color for this variable
           const baseColor = generatePlotColor(
             variableName,
-            colorMode,
+            isDarkMode,
             colorMapRef.current
           );
 
@@ -292,7 +292,7 @@ export const useCanvasInitialization = ({
             points: new Float32Array(array),
             color: generatePlotColor(
               variableName,
-              colorMode,
+              isDarkMode,
               colorMapRef.current
             ),
             thickness: 5,

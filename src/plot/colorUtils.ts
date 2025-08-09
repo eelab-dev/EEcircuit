@@ -123,7 +123,7 @@ function generateContrastColor(
  */
 export function generatePlotColor(
   variableName: string,
-  colorMode: ColorMode,
+  isDarkMode: boolean,
   colorCache: Map<string, PlotColor>
 ): PlotColor {
   // Add defensive check for invalid variable names
@@ -133,7 +133,7 @@ export function generatePlotColor(
   }
 
   // Check if color is already cached
-  const cacheKey = `${variableName}-${colorMode}`;
+  const cacheKey = `${variableName}-${isDarkMode}`;
   if (colorCache.has(cacheKey)) {
     return colorCache.get(cacheKey)!;
   }
@@ -143,11 +143,11 @@ export function generatePlotColor(
   const hue = hash % 360;
 
   // Get background color and luminance
-  const [bgR, bgG, bgB] = getBackgroundColor(colorMode);
+  const [bgR, bgG, bgB] = getBackgroundColor(isDarkMode ? "dark" : "light");
   const backgroundLuminance = calcLuminance(bgR, bgG, bgB);
 
   // Generate color with good contrast
-  const [r, g, b] = generateContrastColor(hue, backgroundLuminance, colorMode);
+  const [r, g, b] = generateContrastColor(hue, backgroundLuminance, isDarkMode ? "dark" : "light");
 
   const color: PlotColor = [r, g, b, 1];
   colorCache.set(cacheKey, color);

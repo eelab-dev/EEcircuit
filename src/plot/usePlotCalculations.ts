@@ -5,6 +5,7 @@ import { generatePlotColor, type PlotColor } from "./colorUtils";
 import { ZoomController } from "./zoomController";
 import { BRACKET_PLOT_STYLES } from "./bracketPlotStyles";
 import type { AggregatedResult } from "../simulation/resultAggregator";
+import { useAppStore } from "../store/appStore";
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -33,7 +34,6 @@ interface UsePlotCalculationsProps {
   results: ResultType[];
   selectedVariables: string[];
   hoveredVariable: string | null;
-  colorMode: "light" | "dark";
   showCrosshair: boolean;
   crosshairSnapToLines: boolean;
   // Bracket operation props
@@ -55,13 +55,13 @@ export const usePlotCalculations = ({
   results,
   selectedVariables,
   hoveredVariable,
-  colorMode,
   showCrosshair,
   crosshairSnapToLines,
   isBracketOperationPlot = false,
   bracketOperationResults,
   emphasizedPlotIndex = 0,
 }: UsePlotCalculationsProps) => {
+  const isDarkMode = useAppStore((state) => state.isDarkMode);
   const [axisScales, setAxisScales] = useState<AxisScales>({
     scaleX: 1,
     scaleY: 1,
@@ -231,7 +231,7 @@ export const usePlotCalculations = ({
       // Regenerate color for current theme if not cached
       let currentColor = generatePlotColor(
         variableName,
-        colorMode,
+        isDarkMode,
         colorMapRef.current!
       );
 

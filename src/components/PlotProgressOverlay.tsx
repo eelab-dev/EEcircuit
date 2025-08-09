@@ -21,7 +21,7 @@ const PlotProgressOverlay: React.FC = () => {
       position="absolute"
       bottom="4"
       right="4"
-      bg="bg.panel"
+      bg="bg.panel/80"
       borderRadius="md"
       border="1px solid"
       borderColor="border.default"
@@ -55,7 +55,7 @@ const PlotProgressOverlay: React.FC = () => {
 
         {/* Overall progress bar */}
         <Box
-          bg="gray.muted/70"
+          bg="gray.muted/80"
           borderRadius="full"
           overflow="hidden"
           height="2"
