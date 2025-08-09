@@ -53,6 +53,18 @@ const EEcircuit: React.FC = () => {
   // Fullscreen state
   const [fullscreen, setFullscreen] = React.useState(false);
 
+  // Listen for fullscreen changes from browser/keyboard
+  React.useEffect(() => {
+    const handleFullscreenChange = () => {
+      setFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   // Use Zustand store instead of multiple useState calls
   const {
     mainTabValue,
@@ -422,12 +434,10 @@ const EEcircuit: React.FC = () => {
       document.exitFullscreen().catch((err) => {
         console.error(`Error exiting fullscreen: ${err.message}`);
       });
-      setFullscreen(false);
     } else {
       document.documentElement.requestFullscreen().catch((err) => {
         console.error(`Error entering fullscreen: ${err.message}`);
       });
-      setFullscreen(true);
     }
   }, [fullscreen]);
 
