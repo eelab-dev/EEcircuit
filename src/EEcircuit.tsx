@@ -42,6 +42,7 @@ import {
 import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
 import { dialogTheme } from "./styles/dialogTheme.ts";
+import { handleFullscreen } from "./utils/fullscreenUtils.tsx";
 
 type MainTabsValue = "schematic" | "simulate" | "plot";
 
@@ -428,17 +429,9 @@ const EEcircuit: React.FC = () => {
     setMainTabValue,
   ]); // Added setMainTabValue
 
-  // Fullscreen handler
-  const fullscreenHandler = React.useCallback(() => {
-    if (fullscreen) {
-      document.exitFullscreen().catch((err) => {
-        console.error(`Error exiting fullscreen: ${err.message}`);
-      });
-    } else {
-      document.documentElement.requestFullscreen().catch((err) => {
-        console.error(`Error entering fullscreen: ${err.message}`);
-      });
-    }
+  // Fullscreen handler using the utility module
+  const fullscreenHandler = React.useCallback(async () => {
+    await handleFullscreen(fullscreen);
   }, [fullscreen]);
 
   return (
