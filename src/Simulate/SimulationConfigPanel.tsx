@@ -717,7 +717,7 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
               }
             }}
           >
-            <RadioCard.Label>Simulation type</RadioCard.Label>
+            <RadioCard.Label>Simulation Configuration</RadioCard.Label>
             <Group
               attached
               display="grid"
