@@ -349,6 +349,61 @@ const Schematic: React.FC<SchematicProps> = ({
           console.log("Tab became visible, ensuring canvas is ready");
           safeInitCanvas(canvasRef.current);
         }
+
+        // Check if container size changed while tab was hidden - if so, force canvas recreation
+        if (isVisible && !wasVisible && canvasRef.current) {
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (rect) {
+            const currentWidth = Math.round(rect.width);
+            const currentHeight = Math.round(rect.height);
+            const lastSize = lastContainerSizeRef.current;
+            
+            // Check if size changed significantly while tab was hidden
+            const widthDiff = Math.abs(currentWidth - lastSize.width);
+            const heightDiff = Math.abs(currentHeight - lastSize.height);
+            const RESIZE_THRESHOLD = 5;
+            
+            if (widthDiff >= RESIZE_THRESHOLD || heightDiff >= RESIZE_THRESHOLD) {
+              console.log(
+                `Tab became visible with different container size (${currentWidth}x${currentHeight} vs ${lastSize.width}x${lastSize.height}), forcing canvas recreation`
+              );
+              
+              // Update the last known size
+              lastContainerSizeRef.current = {
+                width: currentWidth,
+                height: currentHeight,
+              };
+              
+              // Remove existing canvas
+              if (canvasRef.current && containerRef.current && canvasRef.current.parentNode === containerRef.current) {
+                console.log("Removing existing canvas for size change recreation");
+                containerRef.current.removeChild(canvasRef.current);
+                // Reset refs
+                initializedCanvasRef.current = null;
+                initializingCanvasRef.current = null;
+                canvasRef.current = null;
+              }
+              
+              // Create new canvas with current container dimensions
+              console.log("Creating new canvas for size change");
+              const newCanvas = document.createElement("canvas");
+              newCanvas.id = "schematic-canvas";
+              newCanvas.style.width = "100%";
+              newCanvas.style.height = "100%";
+              newCanvas.style.display = "block";
+              newCanvas.style.border = "solid 1px gray";
+              
+              // Add to container and update ref
+              if (containerRef.current) {
+                containerRef.current.appendChild(newCanvas);
+                canvasRef.current = newCanvas;
+                
+                // Initialize the new canvas
+                safeInitCanvas(newCanvas);
+              }
+            }
+          }
+        }
       },
       { threshold: 0.1 }
     );
