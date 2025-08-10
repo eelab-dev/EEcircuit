@@ -13,6 +13,7 @@ import { usePlotCalculations } from "./usePlotCalculations";
 import { useEventHandlers } from "./useEventHandlers";
 import PlotProgressOverlay from "../components/PlotProgressOverlay";
 import type { AggregatedResult } from "../simulation/resultAggregator";
+import type { ZoomController } from "./zoomController";
 
 interface PlotCanvasProps {
   results: ResultType[];
@@ -39,6 +40,14 @@ interface PlotCanvasProps {
     zoomEndX: number | null;
     zoomBounds: { min: number; max: number } | null;
   }) => void;
+  // Direct pan synchronization props - no React state needed
+  otherCanvasZoomController?: React.RefObject<ZoomController | null>;
+  zoomControllerRef?: React.RefObject<ZoomController | null>;
+  // Function refs for immediate plot updates
+  plotUpdateRef?: React.RefObject<(() => void) | null>;
+  plotScalingRef?: React.RefObject<(() => void) | null>;
+  otherCanvasUpdatePlot?: React.RefObject<(() => void) | null>;
+  otherCanvasCalcScaling?: React.RefObject<(() => void) | null>;
 }
 
 const PlotCanvas: React.FC<PlotCanvasProps> = ({
@@ -53,6 +62,12 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   onCursorVisibilityChange,
   sharedZoomState,
   onZoomStateChange,
+  otherCanvasZoomController,
+  zoomControllerRef,
+  plotUpdateRef,
+  plotScalingRef,
+  otherCanvasUpdatePlot,
+  otherCanvasCalcScaling,
 }) => {
   const inputProfile = useAppStore((state) => state.inputProfile);
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
@@ -144,7 +159,20 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     updatePlotRef.current = updatePlot;
     calculateAndApplyScalingRef.current = calculateAndApplyScaling;
     axisScalesRef.current = axisScales;
-  }, [updatePlot, calculateAndApplyScaling, axisScales]);
+    
+    // Set the zoom controller ref for direct pan synchronization
+    if (zoomControllerRef) {
+      zoomControllerRef.current = zoomController.current;
+    }
+    
+    // Set function refs for direct plot updates from other canvas
+    if (plotUpdateRef) {
+      plotUpdateRef.current = updatePlot;
+    }
+    if (plotScalingRef) {
+      plotScalingRef.current = calculateAndApplyScaling;
+    }
+  }, [updatePlot, calculateAndApplyScaling, axisScales, zoomController, zoomControllerRef, plotUpdateRef, plotScalingRef]);
 
   // Initialize zoom
   const {
@@ -166,6 +194,9 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     updatePlot,
     sharedZoomState,
     onZoomStateChange,
+    otherCanvasZoomController,
+    otherCanvasUpdatePlot,
+    otherCanvasCalcScaling,
     getAxisScales: () => axisScalesRef.current,
   });
 
@@ -370,11 +401,13 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               outline: "none", // Prevent focus outline on iPad and other touch devices
               cursor: zoomController.current?.getIsZooming()
                 ? "col-resize"
-                : zoomController.current?.isZoomedIn()
-                  ? "grab" // Show grab cursor when zoomed and can pan
-                  : showCrosshair
-                    ? "crosshair"
-                    : "default",
+                : zoomController.current?.getIsPanning()
+                  ? "grabbing" // Show grabbing cursor when actively panning
+                  : zoomController.current?.isZoomedIn()
+                    ? "grab" // Show grab cursor when zoomed and can pan
+                    : showCrosshair
+                      ? "crosshair"
+                      : "default",
             }}
             tabIndex={-1} // Prevent canvas from being focusable via keyboard
             onMouseDown={(e) => {
@@ -382,8 +415,13 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               const mouseX = e.clientX - rect.left;
 
               if (e.button === 0) {
-                // Left mouse button - start zoom
-                startZoom(mouseX);
+                if (zoomController.current?.isZoomedIn()) {
+                  // Left mouse button when zoomed - start drag panning
+                  zoomController.current.startPan(mouseX);
+                } else {
+                  // Left mouse button when not zoomed - start zoom
+                  startZoom(mouseX);
+                }
               } else if (e.button === 2) {
                 // Prevent context menu on right-click when zoomed in
                 if (zoomController.current?.isZoomedIn()) {
@@ -399,8 +437,16 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               if (zoomController.current?.getIsZooming()) {
                 // Update zoom selection
                 updateZoomSelection(mouseX);
+              } else if (zoomController.current?.getIsPanning()) {
+                // Real-time drag panning - this will sync to other canvas immediately
+                zoomController.current.updatePan(mouseX);
+                // Force immediate redraw to show pan effect
+                calculateAndApplyScaling();
+                if (isCanvasInitialized) {
+                  updatePlot();
+                }
               } else {
-                // Crosshair behavior when not zooming
+                // Crosshair behavior when not zooming or panning
                 updateCrosshair(mouseX, mouseY);
               }
               // Always redraw after mouse move
@@ -409,9 +455,19 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               }
             }}
             onMouseUp={(e) => {
-              if (e.button === 0 && zoomController.current?.getIsZooming()) {
-                // Complete zoom on left mouse button release
-                completeZoom();
+              if (e.button === 0) {
+                if (zoomController.current?.getIsZooming()) {
+                  // Complete zoom on left mouse button release
+                  completeZoom();
+                } else if (zoomController.current?.getIsPanning()) {
+                  // End drag panning
+                  zoomController.current.endPan();
+                  // Recalculate and redraw
+                  calculateAndApplyScaling();
+                  if (isCanvasInitialized) {
+                    updatePlot();
+                  }
+                }
               }
             }}
             onDoubleClick={() => {
@@ -427,9 +483,17 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               }
             }}
             onMouseLeave={() => {
-              // No drag-based panning; just hide crosshair
+              // Handle mouse leave during operations
               if (!zoomController.current?.getIsZooming()) {
                 setShowCrosshair(false);
+                if (isCanvasInitialized) {
+                  updatePlot();
+                }
+              }
+              // End panning if mouse leaves canvas
+              if (zoomController.current?.getIsPanning()) {
+                zoomController.current.endPan();
+                calculateAndApplyScaling();
                 if (isCanvasInitialized) {
                   updatePlot();
                 }

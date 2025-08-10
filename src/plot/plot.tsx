@@ -6,6 +6,7 @@ import PlotSidebar from "./plotSidebar";
 import BracketOperationSlider from "./BracketOperationSlider";
 import { useAppStore } from "../store/appStore";
 import { exportResultsToCSV } from "../utils/csvExport";
+import type { ZoomController } from "./zoomController";
 
 interface PlotProps {
   results?: ResultType[]; // Make optional since we can get it from store
@@ -65,6 +66,16 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
     zoomEndX: number | null;
     zoomBounds: { min: number; max: number } | null;
   } | null>(null);
+  
+  // Refs for direct pan synchronization without React state
+  const canvas1ZoomControllerRef = React.useRef<ZoomController | null>(null);
+  const canvas2ZoomControllerRef = React.useRef<ZoomController | null>(null);
+  
+  // Refs for direct plot update functions
+  const canvas1PlotUpdateRef = React.useRef<(() => void) | null>(null);
+  const canvas2PlotUpdateRef = React.useRef<(() => void) | null>(null);
+  const canvas1PlotScalingRef = React.useRef<(() => void) | null>(null);
+  const canvas2PlotScalingRef = React.useRef<(() => void) | null>(null);
 
   // Use results from props if provided, otherwise from store
   const results = propsResults || storeResults;
@@ -205,6 +216,12 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     onCursorVisibilityChange={setSharedCursorVisible}
                     sharedZoomState={sharedZoomState}
                     onZoomStateChange={setSharedZoomState}
+                    otherCanvasZoomController={canvas2ZoomControllerRef}
+                    zoomControllerRef={canvas1ZoomControllerRef}
+                    plotUpdateRef={canvas1PlotUpdateRef}
+                    plotScalingRef={canvas1PlotScalingRef}
+                    otherCanvasUpdatePlot={canvas2PlotUpdateRef}
+                    otherCanvasCalcScaling={canvas2PlotScalingRef}
                   />
                 </Box>
               </VStack>
@@ -227,6 +244,12 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     onCursorVisibilityChange={setSharedCursorVisible}
                     sharedZoomState={sharedZoomState}
                     onZoomStateChange={setSharedZoomState}
+                    otherCanvasZoomController={canvas1ZoomControllerRef}
+                    zoomControllerRef={canvas2ZoomControllerRef}
+                    plotUpdateRef={canvas2PlotUpdateRef}
+                    plotScalingRef={canvas2PlotScalingRef}
+                    otherCanvasUpdatePlot={canvas1PlotUpdateRef}
+                    otherCanvasCalcScaling={canvas1PlotScalingRef}
                   />
                 </Box>
               </VStack>

@@ -38,6 +38,9 @@ interface UseZoomProps {
     zoomEndX: number | null;
     zoomBounds: { min: number; max: number } | null;
   }) => void;
+  otherCanvasZoomController?: React.RefObject<ZoomController | null>;
+  otherCanvasUpdatePlot?: React.RefObject<(() => void) | null>;
+  otherCanvasCalcScaling?: React.RefObject<(() => void) | null>;
   getAxisScales: () => AxisScales;
 }
 
@@ -53,6 +56,9 @@ export const useZoom = ({
   updatePlot,
   sharedZoomState,
   onZoomStateChange,
+  otherCanvasZoomController,
+  otherCanvasUpdatePlot,
+  otherCanvasCalcScaling,
   getAxisScales,
 }: UseZoomProps) => {
   const lastSyncedZoomState = useRef<typeof sharedZoomState>(null);
@@ -70,6 +76,35 @@ export const useZoom = ({
       }
     };
   }, [zoomController, onZoomStateChange]);
+  
+  // Set up direct pan offset synchronization callback
+  useEffect(() => {
+    if (zoomController.current && otherCanvasZoomController) {
+      const directPanSyncCallback = (panOffset: number) => {
+        // Directly apply pan offset to the other canvas without React state
+        if (otherCanvasZoomController.current) {
+          otherCanvasZoomController.current.applyExternalPanOffset(panOffset);
+          
+          // CRITICAL: Immediately trigger redraw of the other canvas
+          if (otherCanvasCalcScaling?.current) {
+            otherCanvasCalcScaling.current();
+          }
+          if (otherCanvasUpdatePlot?.current) {
+            otherCanvasUpdatePlot.current();
+          }
+        }
+      };
+      
+      zoomController.current.setPanOffsetCallback(directPanSyncCallback);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (zoomController.current) {
+        zoomController.current.setPanOffsetCallback(null);
+      }
+    };
+  }, [zoomController, otherCanvasZoomController, otherCanvasUpdatePlot, otherCanvasCalcScaling]);
 
   // Handle incoming shared zoom state changes
   useEffect(() => {
@@ -100,6 +135,8 @@ export const useZoom = ({
       }
     }
   }, [sharedZoomState, zoomController, calculateAndApplyScaling, updatePlot, isCanvasInitialized, getAxisScales]);
+  
+  
   // Zoom functions
   const startZoom = (mouseX: number) => {
     // Update zoom controller with current axis scales before starting zoom

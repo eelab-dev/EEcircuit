@@ -22,6 +22,13 @@ type ExtendedLineConfig = LineConfig & {
  * - Zoom highlighting (yellow region) appears synchronized across both plots
  * - Final zoom bounds are applied to both canvases simultaneously
  * 
+ * PAN SYNCHRONIZATION works through shared pan offset state:
+ * - Both canvases share pan state: sharedPanOffset
+ * - When user pans (via scroll wheel or trackpad) in one canvas, the panOffset is shared with the other
+ * - ZoomController notifies parent about pan offset changes via callback
+ * - Other canvas receives the shared offset and applies it to maintain synchronized view
+ * - Works for both horizontal scroll wheel and trackpad pan gestures
+ * 
  * How cursor sync works:
  * 1. Parent Plot component maintains shared state: sharedCursorX, sharedCursorVisible
  * 2. Each PlotCanvas receives sync props: sharedCursorX, onCursorXChange, sharedCursorVisible, onCursorVisibilityChange

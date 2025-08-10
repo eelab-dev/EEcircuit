@@ -17,6 +17,13 @@ export class ZoomController {
     zoomEndX: number | null;
     zoomBounds: { min: number; max: number } | null;
   }) => void) | null = null;
+  
+  // Callback for pan offset synchronization
+  private onPanOffsetChangeCb: ((panOffset: number) => void) | null = null;
+  
+  // Flag to prevent infinite loops when applying external changes
+  private isApplyingExternalPanOffset = false;
+  
 
   // Panning state for horizontal movement when zoomed
   private isPanning = false;
@@ -81,6 +88,13 @@ export class ZoomController {
   }) => void) | null): void {
     this.onZoomStateChangeCb = callback;
   }
+  
+  /**
+   * Set pan offset change callback for synchronization
+   */
+  setPanOffsetCallback(callback: ((panOffset: number) => void) | null): void {
+    this.onPanOffsetChangeCb = callback;
+  }
 
   /**
    * Notify about zoom state changes for synchronization
@@ -93,6 +107,16 @@ export class ZoomController {
         zoomEndX: this.zoomEndX,
         zoomBounds: this.customXBounds ? { ...this.customXBounds } : null,
       });
+    }
+  }
+  
+  /**
+   * Notify about pan offset changes for synchronization
+   */
+  private notifyPanOffsetChange(): void {
+    // Don't notify if we're currently applying an external pan offset
+    if (this.onPanOffsetChangeCb && !this.isApplyingExternalPanOffset) {
+      this.onPanOffsetChangeCb(this.panOffsetX);
     }
   }
 
@@ -117,6 +141,15 @@ export class ZoomController {
       // Hide visuals if not zooming
       this.hideZoomVisuals();
     }
+  }
+  
+  /**
+   * Apply external pan offset for synchronization
+   */
+  applyExternalPanOffset(panOffset: number): void {
+    this.isApplyingExternalPanOffset = true;
+    this.panOffsetX = panOffset;
+    this.isApplyingExternalPanOffset = false;
   }
 
   /**
@@ -329,6 +362,7 @@ export class ZoomController {
     // Calculate pan delta (negative because dragging right should move view left)
     const panDelta = -(currentDataX - this.panStartX);
     this.panOffsetX = panDelta;
+    this.notifyPanOffsetChange();
   }
 
   /**
@@ -358,6 +392,7 @@ export class ZoomController {
     // Apply scroll delta to pan offset
     // Positive deltaX should pan right (positive offset)
     this.panOffsetX += deltaX * scrollSensitivity;
+    this.notifyPanOffsetChange();
   }
 
   /**
