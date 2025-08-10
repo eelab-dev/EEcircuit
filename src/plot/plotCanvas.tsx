@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { ResultType } from "eecircuit-engine";
 import { Box, Grid, GridItem, Button } from "@chakra-ui/react";
 import { clearColorCache } from "./colorUtils";
@@ -72,6 +72,10 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   const inputProfile = useAppStore((state) => state.inputProfile);
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
   const [isAxis] = useState(true);
+  
+  // Ref for direct DOM manipulation of crosshair coordinates (no React re-renders)
+  const crosshairDisplayRef = useRef<HTMLDivElement>(null);
+  
 
   // We need to use refs to avoid circular dependencies between hooks
   const updatePlotRef = useRef<(() => void) | null>(null);
@@ -89,6 +93,14 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       updatePlotRef.current();
     }
   };
+
+  // Direct DOM update for crosshair coordinates (no React re-render)
+  const updateCrosshairDisplay = useCallback((x: number, y: number) => {
+    if (crosshairDisplayRef.current) {
+      crosshairDisplayRef.current.textContent = `X: ${formatEngineering(x)}, Y: ${formatEngineering(y)}`;
+    }
+  }, []);
+
 
 
   // Initialize canvas first
@@ -115,7 +127,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     setShowCrosshair,
     crosshairSnapToLines,
     setCrosshairSnapToLines,
-    crosshairCoords,
     updateCrosshair,
   } = useCrosshair({
     crosshairRef,
@@ -130,6 +141,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     sharedCursorVisible,
     onCursorVisibilityChange,
     onRedrawNeeded: handleRedrawNeeded,
+    onCoordinateUpdate: updateCrosshairDisplay,
   });
 
   // Initialize plot calculations
@@ -371,6 +383,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
           {/* Crosshair coordinates display - only when crosshair is active */}
           {showCrosshair && (
             <Box
+              ref={crosshairDisplayRef}
               position="absolute"
               top="0.625rem"
               left="0.625rem"
@@ -387,8 +400,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               zIndex={10}
               boxShadow="sm"
             >
-              X: {formatEngineering(crosshairCoords.x)}, Y:{" "}
-              {formatEngineering(crosshairCoords.y)}
+              X: 0, Y: 0
             </Box>
           )}
           <canvas
@@ -448,10 +460,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               } else {
                 // Crosshair behavior when not zooming or panning
                 updateCrosshair(mouseX, mouseY);
-              }
-              // Always redraw after mouse move
-              if (isCanvasInitialized) {
-                updatePlot();
+                // Crosshair updates already trigger webgl redraw, no need for React re-render
+                return;
               }
             }}
             onMouseUp={(e) => {

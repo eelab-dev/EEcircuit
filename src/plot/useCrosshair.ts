@@ -10,9 +10,20 @@ type ExtendedLineConfig = LineConfig & {
 };
 
 /**
- * DUAL CANVAS CURSOR & ZOOM SYNCHRONIZATION
+ * HIGH-PERFORMANCE CROSSHAIR SYSTEM WITH DUAL CANVAS SYNCHRONIZATION
  * 
- * This module implements cursor synchronization between dual canvases in the plot view.
+ * This module implements a high-performance crosshair system optimized for real-time
+ * mouse tracking at maximum FPS. The crosshair uses webgl-plot lines for efficient
+ * rendering with minimal React overhead.
+ * 
+ * PERFORMANCE OPTIMIZATIONS:
+ * - webgl-plot lines updated directly via updateLinePoints() - no React re-renders
+ * - Crosshair coordinates stored in ref to avoid React state updates
+ * - Direct DOM manipulation for coordinate display (no React state changes)
+ * - Mouse move events bypass React updatePlot() calls for crosshair-only updates
+ * - Optimized for smooth 60+ FPS crosshair movement without throttling
+ * 
+ * DUAL CANVAS CURSOR SYNCHRONIZATION:
  * When the user moves the cursor in either the top or bottom plot, both cursors sync
  * their X coordinates (time/frequency) while maintaining independent Y coordinates.
  * 
@@ -33,22 +44,27 @@ type ExtendedLineConfig = LineConfig & {
  * 1. Parent Plot component maintains shared state: sharedCursorX, sharedCursorVisible
  * 2. Each PlotCanvas receives sync props: sharedCursorX, onCursorXChange, sharedCursorVisible, onCursorVisibilityChange
  * 3. When cursor moves in Canvas A:
- *    - updateCrosshair() calculates position and updates local crosshair
+ *    - updateCrosshair() calculates position and updates webgl-plot lines directly
+ *    - Updates coordinates via direct DOM manipulation (onCoordinateUpdate)
  *    - Calls onCursorXChange(xCoordinate) to share X position with parent
+ *    - Triggers webgl redraw via onRedrawNeeded() - no React re-render
  * 4. Parent updates sharedCursorX state, triggering props change in Canvas B
  * 5. Canvas B's useEffect detects sharedCursorX change and updates its vertical line
- * 6. onRedrawNeeded() forces canvas redraw to show the synchronized cursor
+ * 6. onRedrawNeeded() forces webgl redraw to show the synchronized cursor
  * 
  * Key implementation details:
  * - Only X coordinates are synchronized (Y positions remain canvas-specific)
  * - lastSyncedX ref prevents infinite loops and duplicate syncs
  * - Works in both snap-to-line and free-roam cursor modes
  * - Single canvas mode ignores sync props and works independently
+ * - Crosshair coordinates stored in crosshairCoordsRef to avoid React state
+ * - Coordinate display updated via direct textContent manipulation
  * 
- * Future developers: If modifying this sync behavior, ensure that:
+ * Future developers: If modifying this behavior, ensure that:
  * - Cursor visibility is shared between canvases (both show/hide together)
  * - X coordinate sharing doesn't interfere with individual canvas scaling
- * - Canvas redraws are triggered after sync updates to make changes visible
+ * - webgl redraws are triggered after sync updates to make changes visible
+ * - Performance optimizations are maintained (avoid React state on mouse move)
  */
 
 interface AxisScales {
@@ -72,6 +88,8 @@ interface UseCrosshairProps {
   onCursorVisibilityChange?: (visible: boolean) => void;
   // Add canvas redraw callback
   onRedrawNeeded?: () => void;
+  // Direct DOM update callback for crosshair display
+  onCoordinateUpdate?: (x: number, y: number) => void;
 }
 
 export const useCrosshair = ({
@@ -87,6 +105,7 @@ export const useCrosshair = ({
   sharedCursorVisible,
   onCursorVisibilityChange,
   onRedrawNeeded,
+  onCoordinateUpdate,
 }: UseCrosshairProps) => {
   const [localShowCrosshair, setLocalShowCrosshair] = useState(false);
   const lastSyncedX = useRef<number | null>(null);
@@ -95,10 +114,9 @@ export const useCrosshair = ({
   const showCrosshair = sharedCursorVisible !== undefined ? sharedCursorVisible : localShowCrosshair;
   const setShowCrosshair = sharedCursorVisible !== undefined ? onCursorVisibilityChange! : setLocalShowCrosshair;
   const [crosshairSnapToLines, setCrosshairSnapToLines] = useState(false);
-  const [crosshairCoords, setCrosshairCoords] = useState<{
-    x: number;
-    y: number;
-  }>({ x: 0, y: 0 });
+  
+  // Store crosshair coordinates in ref to avoid React re-renders
+  const crosshairCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Dual canvas cursor synchronization: sync vertical crosshair to shared X coordinate
   useEffect(() => {
@@ -208,8 +226,13 @@ export const useCrosshair = ({
       finalDataY = (mouseNdcY - axisScales.offsetY) / axisScales.scaleY;
     }
 
-    // Update crosshair coordinates state
-    setCrosshairCoords({ x: finalDataX, y: finalDataY });
+    // Update crosshair coordinates in ref (no React re-render)
+    crosshairCoordsRef.current = { x: finalDataX, y: finalDataY };
+
+    // Update coordinate display directly via DOM (no React re-render)
+    if (onCoordinateUpdate) {
+      onCoordinateUpdate(finalDataX, finalDataY);
+    }
 
     // Convert to NDC coordinates for rendering
     const axisScales = getAxisScales();
@@ -251,6 +274,11 @@ export const useCrosshair = ({
     if (onCursorXChange) {
       onCursorXChange(finalDataX);
     }
+
+    // Force webgl redraw for crosshair updates
+    if (onRedrawNeeded) {
+      onRedrawNeeded();
+    }
   };
 
   return {
@@ -258,7 +286,6 @@ export const useCrosshair = ({
     setShowCrosshair,
     crosshairSnapToLines,
     setCrosshairSnapToLines,
-    crosshairCoords,
     updateCrosshair,
   };
 };
