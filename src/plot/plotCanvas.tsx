@@ -21,6 +21,11 @@ interface PlotCanvasProps {
   // Bracket operation props
   isBracketOperationPlot?: boolean;
   bracketOperationResults?: AggregatedResult;
+  // Cursor synchronization props
+  sharedCursorX?: number | null;
+  onCursorXChange?: (x: number) => void;
+  sharedCursorVisible?: boolean;
+  onCursorVisibilityChange?: (visible: boolean) => void;
 }
 
 const PlotCanvas: React.FC<PlotCanvasProps> = ({
@@ -29,6 +34,10 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   hoveredVariable,
   isBracketOperationPlot = false,
   bracketOperationResults,
+  sharedCursorX,
+  onCursorXChange,
+  sharedCursorVisible,
+  onCursorVisibilityChange,
 }) => {
   const inputProfile = useAppStore((state) => state.inputProfile);
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
@@ -43,6 +52,13 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     offsetX: 0,
     offsetY: 0,
   });
+
+  // Callback for cursor sync redraw
+  const handleRedrawNeeded = () => {
+    if (updatePlotRef.current) {
+      updatePlotRef.current();
+    }
+  };
 
   // Initialize canvas first
   const {
@@ -78,6 +94,11 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     selectedVariables,
     lineDataRef,
     getAxisScales: () => axisScalesRef.current,
+    sharedCursorX,
+    onCursorXChange,
+    sharedCursorVisible,
+    onCursorVisibilityChange,
+    onRedrawNeeded: handleRedrawNeeded,
   });
 
   // Initialize plot calculations

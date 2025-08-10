@@ -1,4 +1,4 @@
-import { useState, RefObject } from "react";
+import { useState, useEffect, useRef, RefObject } from "react";
 import { ResultType } from "eecircuit-engine";
 import { LineConfig, WebglLinePlot, WebglPolygonPlot } from "webgl-plot";
 
@@ -8,6 +8,35 @@ type ExtendedLineConfig = LineConfig & {
   parameterValue?: string;
   isBracketLine?: boolean;
 };
+
+/**
+ * DUAL CANVAS CURSOR SYNCHRONIZATION
+ * 
+ * This module implements cursor synchronization between dual canvases in the plot view.
+ * When the user moves the cursor in either the top or bottom plot, both cursors sync
+ * their X coordinates (time/frequency) while maintaining independent Y coordinates.
+ * 
+ * How it works:
+ * 1. Parent Plot component maintains shared state: sharedCursorX, sharedCursorVisible
+ * 2. Each PlotCanvas receives sync props: sharedCursorX, onCursorXChange, sharedCursorVisible, onCursorVisibilityChange
+ * 3. When cursor moves in Canvas A:
+ *    - updateCrosshair() calculates position and updates local crosshair
+ *    - Calls onCursorXChange(xCoordinate) to share X position with parent
+ * 4. Parent updates sharedCursorX state, triggering props change in Canvas B
+ * 5. Canvas B's useEffect detects sharedCursorX change and updates its vertical line
+ * 6. onRedrawNeeded() forces canvas redraw to show the synchronized cursor
+ * 
+ * Key implementation details:
+ * - Only X coordinates are synchronized (Y positions remain canvas-specific)
+ * - lastSyncedX ref prevents infinite loops and duplicate syncs
+ * - Works in both snap-to-line and free-roam cursor modes
+ * - Single canvas mode ignores sync props and works independently
+ * 
+ * Future developers: If modifying this sync behavior, ensure that:
+ * - Cursor visibility is shared between canvases (both show/hide together)
+ * - X coordinate sharing doesn't interfere with individual canvas scaling
+ * - Canvas redraws are triggered after sync updates to make changes visible
+ */
 
 interface AxisScales {
   scaleX: number;
@@ -24,6 +53,12 @@ interface UseCrosshairProps {
   selectedVariables: string[];
   lineDataRef: RefObject<ExtendedLineConfig[]>;
   getAxisScales: () => AxisScales;
+  sharedCursorX?: number | null;
+  onCursorXChange?: (x: number) => void;
+  sharedCursorVisible?: boolean;
+  onCursorVisibilityChange?: (visible: boolean) => void;
+  // Add canvas redraw callback
+  onRedrawNeeded?: () => void;
 }
 
 export const useCrosshair = ({
@@ -34,13 +69,41 @@ export const useCrosshair = ({
   selectedVariables,
   lineDataRef,
   getAxisScales,
+  sharedCursorX,
+  onCursorXChange,
+  sharedCursorVisible,
+  onCursorVisibilityChange,
+  onRedrawNeeded,
 }: UseCrosshairProps) => {
-  const [showCrosshair, setShowCrosshair] = useState(false);
+  const [localShowCrosshair, setLocalShowCrosshair] = useState(false);
+  const lastSyncedX = useRef<number | null>(null);
+  
+  // Use shared cursor visibility in dual canvas mode, local state otherwise
+  const showCrosshair = sharedCursorVisible !== undefined ? sharedCursorVisible : localShowCrosshair;
+  const setShowCrosshair = sharedCursorVisible !== undefined ? onCursorVisibilityChange! : setLocalShowCrosshair;
   const [crosshairSnapToLines, setCrosshairSnapToLines] = useState(false);
   const [crosshairCoords, setCrosshairCoords] = useState<{
     x: number;
     y: number;
   }>({ x: 0, y: 0 });
+
+  // Dual canvas cursor synchronization: sync vertical crosshair to shared X coordinate
+  useEffect(() => {
+    if (sharedCursorX !== null && sharedCursorX !== undefined && crosshairRef.current && sharedCursorX !== lastSyncedX.current) {
+      lastSyncedX.current = sharedCursorX;
+      const axisScales = getAxisScales();
+      const sharedNdcX = sharedCursorX * axisScales.scaleX + axisScales.offsetX;
+      
+      // Update vertical line to shared X position
+      const verticalPoints = new Float32Array([sharedNdcX, -1, sharedNdcX, 1]);
+      crosshairRef.current.updateLinePoints(1, verticalPoints);
+      
+      // Force canvas redraw
+      if (onRedrawNeeded) {
+        onRedrawNeeded();
+      }
+    }
+  }, [sharedCursorX]);
 
   // Update crosshair position - can snap to nearest plot line or move freely
   const updateCrosshair = (mouseX: number, mouseY: number) => {
@@ -53,7 +116,7 @@ export const useCrosshair = ({
     const mouseNdcX = (mouseX / rect.width) * 2 - 1;
     const mouseNdcY = -((mouseY / rect.height) * 2 - 1); // Flip Y coordinate
 
-    let finalDataX, finalDataY, finalNdcX, finalNdcY;
+    let finalDataX, finalDataY;
 
     if (
       crosshairSnapToLines &&
@@ -125,57 +188,55 @@ export const useCrosshair = ({
 
       finalDataX = closestPoint.x ?? mouseDataX;
       finalDataY = closestPoint.y ?? mouseDataY;
-      finalNdcX = finalDataX * axisScales.scaleX + axisScales.offsetX;
-      finalNdcY = finalDataY * axisScales.scaleY + axisScales.offsetY;
     } else {
       // FREE ROAMING MODE: Use mouse position directly
       const axisScales = getAxisScales();
       finalDataX = (mouseNdcX - axisScales.offsetX) / axisScales.scaleX;
       finalDataY = (mouseNdcY - axisScales.offsetY) / axisScales.scaleY;
-      finalNdcX = mouseNdcX;
-      finalNdcY = mouseNdcY;
     }
 
     // Update crosshair coordinates state
     setCrosshairCoords({ x: finalDataX, y: finalDataY });
 
-    // Create horizontal line (constant Y, varying X)
-    const horizontalPoints = new Float32Array([-1, finalNdcY, 1, finalNdcY]);
+    // Convert to NDC coordinates for rendering
+    const axisScales = getAxisScales();
+    const finalNdcX = finalDataX * axisScales.scaleX + axisScales.offsetX;
+    const finalNdcY = finalDataY * axisScales.scaleY + axisScales.offsetY;
 
-    // Create vertical line (constant X, varying Y)
+    // Create horizontal and vertical lines
+    const horizontalPoints = new Float32Array([-1, finalNdcY, 1, finalNdcY]);
     const verticalPoints = new Float32Array([finalNdcX, -1, finalNdcX, 1]);
 
     // Update crosshair lines
-    crosshairRef.current.updateLinePoints(0, horizontalPoints); // Horizontal line
-    crosshairRef.current.updateLinePoints(1, verticalPoints); // Vertical line
+    crosshairRef.current.updateLinePoints(0, horizontalPoints);
+    crosshairRef.current.updateLinePoints(1, verticalPoints);
 
-    // Update snap circle position and visibility
+    // Update snap circle
     if (snapCircleRef.current) {
-      // Calculate aspect ratio for dynamic scaling
       const rect = canvasRef.current.getBoundingClientRect();
       const aspectRatio = rect.width / rect.height;
-
-      // Apply aspect ratio correction through scaling
+      
       let scaleX = 1;
       let scaleY = 1;
-
+      
       if (aspectRatio > 1) {
-        // Wide canvas: compress horizontally to maintain circular appearance
         scaleX = 1 / aspectRatio;
       } else {
-        // Tall canvas: compress vertically to maintain circular appearance
         scaleY = aspectRatio;
       }
-
-      // Update circle position using NDC coordinates with aspect ratio scaling
+      
       snapCircleRef.current.updatePolygonTransform(
         0,
         [scaleX, scaleY],
         [finalNdcX, finalNdcY]
       );
-
-      // Enable/disable the circle based on snap mode
+      
       snapCircleRef.current.setPolygonEnabled(0, crosshairSnapToLines);
+    }
+
+    // Share X coordinate with other canvas in dual mode
+    if (onCursorXChange) {
+      onCursorXChange(finalDataX);
     }
   };
 

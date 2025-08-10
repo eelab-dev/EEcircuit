@@ -53,6 +53,10 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   const [localCanvas1HoveredVariable, setLocalCanvas1HoveredVariable] = React.useState<string | null>(null);
   const [localCanvas2SelectedVariables, setLocalCanvas2SelectedVariables] = React.useState<string[]>([]);
   const [localCanvas2HoveredVariable, setLocalCanvas2HoveredVariable] = React.useState<string | null>(null);
+  
+  // Shared cursor state for dual canvas synchronization - only X coordinate matters
+  const [sharedCursorX, setSharedCursorX] = React.useState<number | null>(null);
+  const [sharedCursorVisible, setSharedCursorVisible] = React.useState(false);
 
   // Use results from props if provided, otherwise from store
   const results = propsResults || storeResults;
@@ -187,6 +191,10 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     hoveredVariable={localCanvas1HoveredVariable}
                     isBracketOperationPlot={isBracketOperationPlot}
                     bracketOperationResults={bracketOperationResults}
+                    sharedCursorX={sharedCursorX}
+                    onCursorXChange={setSharedCursorX}
+                    sharedCursorVisible={sharedCursorVisible}
+                    onCursorVisibilityChange={setSharedCursorVisible}
                   />
                 </Box>
               </VStack>
@@ -203,6 +211,10 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     hoveredVariable={localCanvas2HoveredVariable}
                     isBracketOperationPlot={isBracketOperationPlot}
                     bracketOperationResults={bracketOperationResults}
+                    sharedCursorX={sharedCursorX}
+                    onCursorXChange={setSharedCursorX}
+                    sharedCursorVisible={sharedCursorVisible}
+                    onCursorVisibilityChange={setSharedCursorVisible}
                   />
                 </Box>
               </VStack>
