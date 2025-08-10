@@ -8,11 +8,18 @@ import type { WebglLinePlot, WebglPolygonPlot } from "webgl-plot";
  * - Real-time panning via webgl redraw callbacks
  * - Smooth scroll wheel panning without React overhead
  * - Dual canvas synchronization with minimal React state updates
+ * - Pan bounds limiting to prevent empty axis areas
  * 
  * Performance optimizations:
  * - webglRedrawCallback enables direct canvas updates during real-time operations
  * - React re-renders only triggered for major state changes (zoom complete, pan end)
  * - All visual feedback (zoom selection, pan movement) handled via webgl-plot directly
+ * 
+ * IMPORTANT BUG PREVENTION:
+ * To prevent empty axis areas when panning outside data bounds:
+ * 1. ALWAYS call setOriginalDataBounds() with the full data range when plot data changes
+ * 2. Pan limiting automatically constrains view to stay within original data bounds
+ * 3. This prevents users from panning into areas with no data points
  * 
  * Independent of React lifecycle for maximum performance during user interactions.
  */
@@ -44,6 +51,9 @@ export class ZoomController {
   private isPanning = false;
   private panStartX: number | null = null;
   private panOffsetX = 0; // Current accumulated pan offset in data coordinates
+  
+  // Original data bounds for pan limiting
+  private originalDataBounds: { min: number; max: number } | null = null;
 
   // WebGL references - can be thin or thick lines
   private zoomLinesRef: WebglLinePlot | null = null;
@@ -90,6 +100,37 @@ export class ZoomController {
     offsetY: number;
   }): void {
     this.axisScales = { ...scales };
+  }
+  
+  /**
+   * Check if original data bounds have been set
+   * Used to prevent excessive calls to setOriginalDataBounds()
+   */
+  hasOriginalDataBounds(): boolean {
+    return this.originalDataBounds !== null;
+  }
+
+  /**
+   * Set the original data bounds for pan limiting
+   * 
+   * CRITICAL: This method prevents the "empty axis areas" bug by constraining
+   * pan operations to stay within the original data range.
+   * 
+   * @param min Minimum X value of the original data
+   * @param max Maximum X value of the original data
+   * 
+   * When to call:
+   * - Once when plot data is first loaded/calculated
+   * - When plot data changes (new simulation results, etc.)
+   * - Should be called from usePlotCalculations when calculating full data bounds
+   * 
+   * What it prevents:
+   * - Users panning outside data bounds and seeing empty axis tick marks
+   * - Axis showing values where no data points exist
+   * - Confusing empty areas to the left/right of actual plot data
+   */
+  setOriginalDataBounds(min: number, max: number): void {
+    this.originalDataBounds = { min, max };
   }
 
   /**
@@ -197,6 +238,7 @@ export class ZoomController {
     };
   }
 
+
   /**
    * Check if currently in zooming mode
    */
@@ -301,6 +343,7 @@ export class ZoomController {
     // Only apply zoom if there's a meaningful selection (avoid tiny selections)
     if (Math.abs(maxX - minX) > 1e-10) {
       this.customXBounds = { min: minX, max: maxX };
+      this.panOffsetX = 0; // Reset pan offset when applying new zoom bounds
       appliedBounds = { min: minX, max: maxX };
       console.log("ZoomController: Applied zoom bounds:", appliedBounds);
     }
@@ -397,7 +440,26 @@ export class ZoomController {
       (mouseNdcX - this.axisScales.offsetX) / this.axisScales.scaleX;
 
     // Calculate pan delta (negative because dragging right should move view left)
-    const panDelta = -(currentDataX - this.panStartX);
+    let panDelta = -(currentDataX - this.panStartX);
+    
+    // Limit panning to prevent moving too far outside original data bounds
+    if (this.customXBounds && this.originalDataBounds) {
+      // Prevent panning outside original data bounds entirely
+      const minPanBound = this.originalDataBounds.min;
+      const maxPanBound = this.originalDataBounds.max;
+      
+      // Calculate what the new bounds would be with this pan offset
+      const newMin = this.customXBounds.min + panDelta;
+      const newMax = this.customXBounds.max + panDelta;
+      
+      // Constrain the pan offset to keep view within data bounds
+      if (newMin < minPanBound) {
+        panDelta = minPanBound - this.customXBounds.min;
+      } else if (newMax > maxPanBound) {
+        panDelta = maxPanBound - this.customXBounds.max;
+      }
+    }
+    
     this.panOffsetX = panDelta;
     this.notifyPanOffsetChange();
     
@@ -426,12 +488,33 @@ export class ZoomController {
 
     // Calculate zoom range to determine appropriate scroll sensitivity
     const zoomRange = this.customXBounds.max - this.customXBounds.min;
-    // Very slow scroll sensitivity - 0.1% of current view range per scroll unit
-    const scrollSensitivity = zoomRange * 0.01; // Further reduced from 0.005 to 0.001 (5x slower)
+    // Very slow scroll sensitivity - 1% of current view range per scroll unit
+    const scrollSensitivity = zoomRange * 0.01;
+
+    // Calculate new pan offset
+    let newPanOffset = this.panOffsetX + deltaX * scrollSensitivity;
+    
+    // Limit panning to prevent moving too far outside original data bounds
+    if (this.originalDataBounds) {
+      // Prevent panning outside original data bounds entirely
+      const minPanBound = this.originalDataBounds.min;
+      const maxPanBound = this.originalDataBounds.max;
+      
+      // Calculate what the new bounds would be with this pan offset
+      const newMin = this.customXBounds.min + newPanOffset;
+      const newMax = this.customXBounds.max + newPanOffset;
+      
+      // Constrain the pan offset to keep view within reasonable bounds
+      if (newMin < minPanBound) {
+        newPanOffset = minPanBound - this.customXBounds.min;
+      } else if (newMax > maxPanBound) {
+        newPanOffset = maxPanBound - this.customXBounds.max;
+      }
+    }
 
     // Apply scroll delta to pan offset
     // Positive deltaX should pan right (positive offset)
-    this.panOffsetX += deltaX * scrollSensitivity;
+    this.panOffsetX = newPanOffset;
     this.notifyPanOffsetChange();
     
     // Trigger direct webgl redraw for smooth scroll panning

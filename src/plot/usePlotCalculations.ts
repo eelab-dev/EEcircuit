@@ -7,6 +7,24 @@ import { BRACKET_PLOT_STYLES } from "./bracketPlotStyles";
 import type { AggregatedResult } from "../simulation/resultAggregator";
 import { useAppStore } from "../store/appStore";
 
+/**
+ * EMPTY AXIS AREAS BUG PREVENTION:
+ * 
+ * This hook includes critical code to prevent the "empty axis areas" bug that occurs
+ * when users pan outside the original data bounds after zooming in.
+ * 
+ * The prevention mechanism:
+ * 1. When calculating full data bounds (no zoom), this hook calls setOriginalDataBounds()
+ *    on the ZoomController with the full X-axis data range
+ * 2. ZoomController then constrains all pan operations (drag and scroll) to keep the 
+ *    zoomed view within the original data bounds
+ * 3. This prevents users from panning into areas with no data points, which would
+ *    show confusing empty axis tick marks
+ * 
+ * IMPORTANT: If you modify the data bounds calculation logic, ensure that
+ * setOriginalDataBounds() is still called with the correct full data range.
+ */
+
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
   variableName?: string;
@@ -42,6 +60,12 @@ interface UsePlotCalculationsProps {
   emphasizedPlotIndex?: number;
 }
 
+interface UsePlotCalculationsReturn {
+  axisScales: AxisScales;
+  calculateAndApplyScaling: () => void;
+  updatePlot: () => void;
+}
+
 export const usePlotCalculations = ({
   plotLineRef,
   wglpRef,
@@ -60,7 +84,7 @@ export const usePlotCalculations = ({
   isBracketOperationPlot = false,
   bracketOperationResults,
   emphasizedPlotIndex = 0,
-}: UsePlotCalculationsProps) => {
+}: UsePlotCalculationsProps): UsePlotCalculationsReturn => {
   const isDarkMode = useAppStore((state) => state.isDarkMode);
   const [axisScales, setAxisScales] = useState<AxisScales>({
     scaleX: 1,
@@ -86,6 +110,7 @@ export const usePlotCalculations = ({
 
     // Calculate X-axis bounds once (same for all lines)
     // Use custom bounds if zoom is active, otherwise calculate from data
+    // Use bounds WITH pan offset for axis scaling calculation so axis matches visible area
     const customXBounds = zoomController.current?.getZoomBounds();
     if (customXBounds) {
       xMin = customXBounds.min;
@@ -113,12 +138,20 @@ export const usePlotCalculations = ({
               xMax = Math.max(xMax, x);
             }
           }
+          
+          // CRITICAL: Set original data bounds in zoom controller to prevent empty axis areas bug
+          // This constrains panning to stay within the original data range, preventing users
+          // from panning into areas with no data points (which would show empty axis tick marks)
+          // Only set once when bounds are first calculated (not on every scaling update)
+          if (isFinite(xMin) && isFinite(xMax) && zoomController.current && !zoomController.current.hasOriginalDataBounds()) {
+            zoomController.current.setOriginalDataBounds(xMin, xMax);
+          }
         }
       }
     }
 
     // Calculate Y-axis bounds for all visible lines
-    // If zoom is active, only consider Y values within the zoomed X range
+    // If zoom is active, only consider Y values within the VISIBLE X range (current view)
     lineDataRef.current?.forEach((lineData) => {
       // Use variableName from line metadata instead of array index
       // This is crucial for bracket operations where there are multiple lines per variable
@@ -140,9 +173,10 @@ export const usePlotCalculations = ({
 
           if (x === undefined || y === undefined) continue;
 
-          // If zoom is active, only include Y values within X bounds
+          // If zoom is active, only include Y values within the CURRENT visible X bounds
+          // Use xMin/xMax which already include pan offset for the visible range
           if (customXBounds) {
-            if (x >= customXBounds.min && x <= customXBounds.max) {
+            if (x >= xMin && x <= xMax) {
               yMin = Math.min(yMin, y);
               yMax = Math.max(yMax, y);
             }
@@ -157,16 +191,23 @@ export const usePlotCalculations = ({
 
     // Apply auto-scaling if we have valid bounds
     if (isFinite(xMin) && isFinite(xMax) && isFinite(yMin) && isFinite(yMax)) {
+
       const xRange = xMax - xMin;
       const yRange = yMax - yMin;
 
       // Add padding to avoid edge cases and ensure constant values are visible
       // For constant values (zero range), use minimum padding to create visual separation
-      const xPadding = xRange > 0 ? xRange * 0.05 : Math.abs(xMin) * 0.1 || 1;
       const yPadding = yRange > 0 ? yRange * 0.05 : Math.abs(yMin) * 0.1 || 1;
-
-      xMin -= xPadding;
-      xMax += xPadding;
+      
+      if (!customXBounds) {
+        // Normal view: add padding to both X and Y
+        const xPadding = xRange > 0 ? xRange * 0.05 : Math.abs(xMin) * 0.1 || 1;
+        xMin -= xPadding;
+        xMax += xPadding;
+      }
+      // For zoomed view: NO X padding (respect exact zoom bounds)
+      
+      // Always add Y padding
       yMin -= yPadding;
       yMax += yPadding;
 
@@ -182,7 +223,8 @@ export const usePlotCalculations = ({
       // Transform from data space to [-1, 1] space
       const offsetX = -1 - xMin * scaleX;
       const offsetY = -1 - yMin * scaleY;
-
+      
+      // No need to apply pan offset here since we're already using bounds with pan offset
 
       plotLineRef.current.setGlobalTransform(
         [scaleX, scaleY],

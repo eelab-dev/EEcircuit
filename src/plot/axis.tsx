@@ -246,16 +246,8 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
     const minValue = Math.min(leftValue, rightValue);
     const maxValue = Math.max(leftValue, rightValue);
 
-    // console.log(
-    //   "X-axis: scale=",
-    //   scale,
-    //   "offset=",
-    //   offset,
-    //   "leftValue=",
-    //   leftValue,
-    //   "rightValue=",
-    //   rightValue
-    // );
+    // Axis calculation based on scale and offset from plot calculations
+    // The scale and offset should now properly reflect the zoom bounds with pan offset
 
     // Calculate minimum spacing needed for text to avoid overlap
     const sampleText = unitConvert2string(

@@ -206,7 +206,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     canvasRef,
     selectedVariables,
     lineDataRef,
-    axisScales,
     isCanvasInitialized,
     inputProfile,
     calculateAndApplyScaling,
@@ -380,11 +379,17 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               boxShadow="sm"
             >
               {inputProfile === "trackpad" &&
-                "💡 Ctrl+scroll to zoom • Click & drag to zoom X-axis • Double-click to reset"}
+                (zoomController.current?.isZoomedIn() 
+                  ? "💡 Right-drag to pan • Left-drag to zoom • Ctrl+scroll to zoom • Double-click to reset"
+                  : "💡 Ctrl+scroll to zoom • Left-drag to zoom X-axis • Double-click to reset")}
               {inputProfile === "mouse" &&
-                "💡 Mouse wheel to zoom • Click & drag to zoom X-axis • Double-click to reset"}
+                (zoomController.current?.isZoomedIn()
+                  ? "💡 Right-drag to pan • Left-drag to zoom • Mouse wheel to zoom • Double-click to reset"
+                  : "💡 Mouse wheel to zoom • Left-drag to zoom X-axis • Double-click to reset")}
               {inputProfile === "touchscreen" &&
-                "💡 Pinch to zoom • Click & drag to zoom X-axis • Double-click to reset"}
+                (zoomController.current?.isZoomedIn()
+                  ? "💡 Right-drag to pan • Left-drag to zoom • Pinch to zoom • Double-click to reset"
+                  : "💡 Pinch to zoom • Left-drag to zoom X-axis • Double-click to reset")}
             </Box>
           )}
 
@@ -423,11 +428,9 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
                 ? "col-resize"
                 : zoomController.current?.getIsPanning()
                   ? "grabbing" // Show grabbing cursor when actively panning
-                  : zoomController.current?.isZoomedIn()
-                    ? "grab" // Show grab cursor when zoomed and can pan
-                    : showCrosshair
-                      ? "crosshair"
-                      : "default",
+                  : showCrosshair
+                    ? "crosshair"
+                    : "col-resize", // Default cursor suggests drag-to-zoom
             }}
             tabIndex={-1} // Prevent canvas from being focusable via keyboard
             onMouseDown={(e) => {
@@ -435,16 +438,15 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               const mouseX = e.clientX - rect.left;
 
               if (e.button === 0) {
+                // Always allow zoom with left mouse button
+                startZoom(mouseX);
+              } else if (e.button === 2) {
                 if (zoomController.current?.isZoomedIn()) {
-                  // Left mouse button when zoomed - start drag panning
+                  // Right mouse button when zoomed - start drag panning
+                  e.preventDefault(); // Prevent context menu
                   zoomController.current.startPan(mouseX);
                 } else {
-                  // Left mouse button when not zoomed - start zoom
-                  startZoom(mouseX);
-                }
-              } else if (e.button === 2) {
-                // Prevent context menu on right-click when zoomed in
-                if (zoomController.current?.isZoomedIn()) {
+                  // Prevent context menu on right-click when not zoomed
                   e.preventDefault();
                 }
               }
@@ -476,8 +478,10 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
                 if (zoomController.current?.getIsZooming()) {
                   // Complete zoom on left mouse button release
                   completeZoom();
-                } else if (zoomController.current?.getIsPanning()) {
-                  // End drag panning
+                }
+              } else if (e.button === 2) {
+                if (zoomController.current?.getIsPanning()) {
+                  // End drag panning on right mouse button release
                   zoomController.current.endPan();
                   // Final redraw after pan ends - use React update for state consistency
                   calculateAndApplyScaling();

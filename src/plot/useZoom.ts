@@ -21,7 +21,6 @@ interface UseZoomProps {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   selectedVariables: string[];
   lineDataRef: RefObject<ExtendedLineConfig[]>;
-  axisScales: AxisScales;
   isCanvasInitialized: boolean;
   inputProfile: string;
   calculateAndApplyScaling: () => void;
@@ -51,7 +50,6 @@ export const useZoom = ({
   canvasRef,
   selectedVariables,
   lineDataRef,
-  axisScales,
   isCanvasInitialized,
   inputProfile,
   calculateAndApplyScaling,
@@ -162,7 +160,7 @@ export const useZoom = ({
   // Zoom functions
   const startZoom = (mouseX: number) => {
     // Update zoom controller with current axis scales before starting zoom
-    zoomController.current?.updateAxisScales(axisScales);
+    zoomController.current?.updateAxisScales(getAxisScales());
     zoomController.current?.startZoom(mouseX);
   };
 
@@ -219,9 +217,12 @@ export const useZoom = ({
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
 
+    // Get current axis scales (important for zoomed state)
+    const currentAxisScales = getAxisScales();
+
     // Convert mouse position to data coordinates
     const mouseNdcX = (mouseX / rect.width) * 2 - 1;
-    const mouseDataX = (mouseNdcX - axisScales.offsetX) / axisScales.scaleX;
+    const mouseDataX = (mouseNdcX - currentAxisScales.offsetX) / currentAxisScales.scaleX;
 
     // Get full data bounds for zoom limits
     const firstVisibleLineIndex = lineDataRef.current?.findIndex((lineData) => {
