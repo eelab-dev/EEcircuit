@@ -49,7 +49,7 @@
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "comlink": "^4.4.2",
-    "eecircuit-engine": "^1.5.2",
+    "eecircuit-engine": "^1.5.4",
     "eecircuit-schematic": "file:../eecircuit-schematic/",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.534.0",

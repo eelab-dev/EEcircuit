@@ -166,6 +166,7 @@ export const useCanvasInitialization = ({
 
       const numX = firstResult.numPoints;
       const numVariables = firstResult.numVariables;
+      
 
       // Calculate the number of lines needed
       const typedFirstResult = firstResult as AggregatedResult;
@@ -277,15 +278,21 @@ export const useCanvasInitialization = ({
 
           // Add bounds check for variableName
           if (!variableName) {
+            console.warn(`Skipping lineIndex ${lineIndex} - no variable name`);
             continue; // Skip this line
           }
 
+          // Check if data exists at this index
+          if (!firstResult.data[lineIndex] || !firstResult.data[lineIndex]?.values) {
+            console.warn(`Skipping ${variableName} at lineIndex ${lineIndex} - no data`);
+            continue;
+          }
+
+
           // Fill array with x,y data
           for (let i = 0; i < numX; i++) {
-            array[i * 2] = firstResult.data[0]?.values?.[i] as number; // X-axis data
-            array[i * 2 + 1] = firstResult.data[lineIndex]?.values?.[
-              i
-            ] as number; // Y-axis data
+            array[i * 2] = firstResult.data[0]?.values?.[i] as number; // X-axis data (frequency)
+            array[i * 2 + 1] = firstResult.data[lineIndex]?.values?.[i] as number; // Y-axis data (mag/phase)
           }
 
           allLineData.push({
@@ -306,9 +313,6 @@ export const useCanvasInitialization = ({
         }
       }
 
-      console.log(
-        `Created ${allLineData.length} line configs for ${totalLines} WebGL lines`
-      );
       lineDataRef.current = allLineData;
       plotLineRef.current.initLines(allLineData);
       plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);

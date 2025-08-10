@@ -2,6 +2,7 @@ import { StateCreator } from "zustand";
 import { ResultType } from "eecircuit-engine";
 import { ToBePlotted } from "../types/commonTypes";
 import type { AggregatedResult } from "../simulation/resultAggregator";
+import { transformResultForComplexData } from "../utils/complexUtils";
 
 // Define the store interface that includes both plot and tab slices
 interface StoreWithTabAndSimulation {
@@ -131,12 +132,19 @@ export const createPlotSlice: StateCreator<
 
     if (hasValidResults && hasDataPoints) {
       const currentState = get();
-      const firstResult = newResults[0]!;
-      const newVariableNames = firstResult!.variableNames.slice(1); // Skip first variable (usually time/x-axis)
-
+      let firstResult = newResults[0]!;
+      
       // Check if this is a bracket operation result
       const isBracketResult = 'bracketOperation' in firstResult && 'parameterValues' in firstResult;
       const aggregatedResult = isBracketResult ? firstResult as AggregatedResult : undefined;
+      
+      // Transform single simulation results to handle complex data
+      if (!isBracketResult && firstResult.dataType === 'complex') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        firstResult = transformResultForComplexData(firstResult) as any;
+      }
+      
+      const newVariableNames = firstResult.variableNames.slice(1); // Skip first variable (frequency/time)
 
       // Determine which variables to select based on previous user selections
       let variablesToSelect: string[];
@@ -188,7 +196,7 @@ export const createPlotSlice: StateCreator<
       }
 
       set({
-        results: newResults,
+        results: isBracketResult ? newResults : [firstResult],
         isPlotTabEnabled: true,
         mainTabValue: "plot",
         selectedVariables: variablesToSelect,

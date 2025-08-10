@@ -154,6 +154,7 @@ export const usePlotCalculations = ({
       }
     });
 
+
     // Apply auto-scaling if we have valid bounds
     if (isFinite(xMin) && isFinite(xMax) && isFinite(yMin) && isFinite(yMax)) {
       const xRange = xMax - xMin;
@@ -181,6 +182,7 @@ export const usePlotCalculations = ({
       // Transform from data space to [-1, 1] space
       const offsetX = -1 - xMin * scaleX;
       const offsetY = -1 - yMin * scaleY;
+
 
       plotLineRef.current.setGlobalTransform(
         [scaleX, scaleY],

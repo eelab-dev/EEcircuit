@@ -1,6 +1,10 @@
 import { ResultType, ComplexNumber } from "eecircuit-engine";
 import type { SimulationWorkerResult } from "./parallelSimulation";
 import type { BracketOperation } from "../utils/bracketParser";
+import { 
+  processComplexArray, 
+  isComplexDataType
+} from "../utils/complexUtils";
 
 export interface AggregatedResult extends Omit<ResultType, 'data'> {
   // Extended result data for bracket operations
@@ -61,10 +65,14 @@ export function aggregateParallelResults(
 
   // Use the first result as the base structure
   const baseResult = successfulResults[0]!.result!;
+  
+  // For bracket operations, keep original variable names (transformation happens elsewhere)
+  const expandedVariableNames = baseResult.variableNames;
+  
   const aggregated: AggregatedResult = {
     header: baseResult.header,
-    numVariables: baseResult.numVariables,
-    variableNames: baseResult.variableNames,
+    numVariables: expandedVariableNames.length,
+    variableNames: expandedVariableNames,
     numPoints: 0, // Will be calculated after aggregation
     dataType: baseResult.dataType,
     data: [],
@@ -78,13 +86,14 @@ export function aggregateParallelResults(
 
   // Aggregate data from all successful results
   // Each variable will have data from all parameter sweeps concatenated
-  const numberOfVariables = baseResult.variableNames.length;
+  const originalNumberOfVariables = baseResult.variableNames.length;
+  const isComplex = isComplexDataType(baseResult.dataType);
   
-  // Initialize data arrays for each variable
-  for (let varIndex = 0; varIndex < numberOfVariables; varIndex++) {
+  // Initialize data arrays for each expanded variable (includes mag/phase for complex data)
+  for (let varIndex = 0; varIndex < expandedVariableNames.length; varIndex++) {
     aggregated.data[varIndex] = {
       values: [],
-      name: baseResult.variableNames[varIndex]!
+      name: expandedVariableNames[varIndex]!
     };
   }
 
@@ -96,7 +105,7 @@ export function aggregateParallelResults(
     const result = workerResult.result!;
     
     // Verify structure compatibility
-    if (result.variableNames.length !== numberOfVariables) {
+    if (result.variableNames.length !== originalNumberOfVariables) {
       console.warn(`Result structure mismatch for parameter ${workerResult.parameterValue}`);
       continue;
     }
@@ -108,37 +117,73 @@ export function aggregateParallelResults(
       data: [] as Array<{ values: number[]; name: string }>
     };
 
-    // Process each variable
-    for (let varIndex = 0; varIndex < numberOfVariables; varIndex++) {
-      if (result.data[varIndex] && result.data[varIndex]!.values) {
-        // Handle both real and complex data types
-        const values = result.data[varIndex]!.values;
-        let processedValues: number[];
+    // Process each original variable
+    let expandedVarIndex = 0;
+    
+    for (let originalVarIndex = 0; originalVarIndex < originalNumberOfVariables; originalVarIndex++) {
+      if (result.data[originalVarIndex] && result.data[originalVarIndex]!.values) {
+        const values = result.data[originalVarIndex]!.values;
         
-        if (typeof values[0] === 'number') {
-          // Real data
-          processedValues = values as number[];
+        if (originalVarIndex === 0) {
+          // First variable (frequency/time) - keep as is, no expansion
+          const processedValues = values as number[];
+          
+          // Add to concatenated data
+          aggregated.data[expandedVarIndex]!.values.push(...processedValues);
+          
+          // Add to separate parameter plot data
+          parameterPlotData.data[expandedVarIndex] = {
+            values: [...processedValues],
+            name: expandedVariableNames[expandedVarIndex]!
+          };
+          expandedVarIndex++;
+          
+        } else if (isComplex && typeof values[0] !== 'number') {
+          // Complex data - expand to magnitude and phase
+          const { magnitudes, phases } = processComplexArray(
+            values as (number | ComplexNumber)[]
+          );
+          
+          // Add magnitude data
+          aggregated.data[expandedVarIndex]!.values.push(...magnitudes);
+          parameterPlotData.data[expandedVarIndex] = {
+            values: [...magnitudes],
+            name: expandedVariableNames[expandedVarIndex]!
+          };
+          expandedVarIndex++;
+          
+          // Add phase data  
+          aggregated.data[expandedVarIndex]!.values.push(...phases);
+          parameterPlotData.data[expandedVarIndex] = {
+            values: [...phases],
+            name: expandedVariableNames[expandedVarIndex]!
+          };
+          expandedVarIndex++;
+          
         } else {
-          // Complex data - convert to real (magnitude) for now
-          // TODO: Proper complex number handling
-          processedValues = values.map(v => {
-            if (typeof v === 'number') {
-              return v;
-            } else {
-              const complexV = v as ComplexNumber;
-              return Math.sqrt(complexV.real ** 2 + complexV.img ** 2);
-            }
-          });
+          // Real data or complex data that's already been processed as numbers
+          let processedValues: number[];
+          
+          if (typeof values[0] === 'number') {
+            processedValues = values as number[];
+          } else {
+            // This shouldn't happen with proper complex detection, but handle gracefully
+            const { magnitudes } = processComplexArray(
+              values as (number | ComplexNumber)[]
+            );
+            processedValues = magnitudes;
+          }
+          
+          // Add to concatenated data
+          aggregated.data[expandedVarIndex]!.values.push(...processedValues);
+          
+          // Add to separate parameter plot data
+          parameterPlotData.data[expandedVarIndex] = {
+            values: [...processedValues],
+            name: expandedVariableNames[expandedVarIndex]!
+          };
+          expandedVarIndex++;
         }
-
-        // Add to concatenated data (for backward compatibility)
-        aggregated.data[varIndex]!.values.push(...processedValues);
-
-        // Add to separate parameter plot data
-        parameterPlotData.data[varIndex] = {
-          values: [...processedValues],
-          name: baseResult.variableNames[varIndex]!
-        };
       }
     }
 
