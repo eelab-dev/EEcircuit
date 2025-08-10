@@ -93,14 +93,12 @@ export const useCrosshair = ({
     y: number;
   }>({ x: 0, y: 0 });
 
-  // Store axis scales to detect changes
-  const lastAxisScalesRef = useRef<AxisScales | null>(null);
-
-  // Function to sync crosshair with current axis scales
-  const syncCrosshairWithAxisScales = () => {
-    if (sharedCursorX !== null && sharedCursorX !== undefined && crosshairRef.current) {
-      const axisScales = getAxisScales();
-      const sharedNdcX = sharedCursorX * axisScales.scaleX + axisScales.offsetX;
+  // Dual canvas cursor synchronization: sync vertical crosshair to shared X coordinate
+  useEffect(() => {
+    if (sharedCursorX !== null && sharedCursorX !== undefined && crosshairRef.current && sharedCursorX !== lastSyncedX.current) {
+      lastSyncedX.current = sharedCursorX;
+      const currentAxisScales = getAxisScales();
+      const sharedNdcX = sharedCursorX * currentAxisScales.scaleX + currentAxisScales.offsetX;
       
       // Update vertical line to shared X position
       const verticalPoints = new Float32Array([sharedNdcX, -1, sharedNdcX, 1]);
@@ -111,37 +109,7 @@ export const useCrosshair = ({
         onRedrawNeeded();
       }
     }
-  };
-
-  // Dual canvas cursor synchronization: sync vertical crosshair to shared X coordinate
-  useEffect(() => {
-    if (sharedCursorX !== null && sharedCursorX !== undefined && crosshairRef.current && sharedCursorX !== lastSyncedX.current) {
-      lastSyncedX.current = sharedCursorX;
-      syncCrosshairWithAxisScales();
-    }
   }, [sharedCursorX]);
-
-  // Monitor axis scales and re-sync crosshair when they change (e.g., after zoom operations)
-  // This effect runs on every render to check for axis scale changes, which is intentional
-  // because axis scales can change due to zoom operations and we need to detect these changes
-  useEffect(() => {
-    const currentAxisScales = getAxisScales();
-    
-    // Check if axis scales have changed significantly
-    const hasScalesChanged = !lastAxisScalesRef.current || 
-      Math.abs(lastAxisScalesRef.current.scaleX - currentAxisScales.scaleX) > 1e-10 ||
-      Math.abs(lastAxisScalesRef.current.scaleY - currentAxisScales.scaleY) > 1e-10 ||
-      Math.abs(lastAxisScalesRef.current.offsetX - currentAxisScales.offsetX) > 1e-10 ||
-      Math.abs(lastAxisScalesRef.current.offsetY - currentAxisScales.offsetY) > 1e-10;
-    
-    if (hasScalesChanged) {
-      // Re-apply shared cursor position with new axis scales
-      syncCrosshairWithAxisScales();
-      
-      // Update stored axis scales
-      lastAxisScalesRef.current = { ...currentAxisScales };
-    }
-  });
 
   // Update crosshair position - can snap to nearest plot line or move freely
   const updateCrosshair = (mouseX: number, mouseY: number) => {

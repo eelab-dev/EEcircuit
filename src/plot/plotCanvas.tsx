@@ -75,6 +75,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     }
   };
 
+
   // Initialize canvas first
   const {
     canvasRef,
