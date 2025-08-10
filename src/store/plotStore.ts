@@ -23,9 +23,17 @@ export interface PlotState {
   isPlotSelectionMode: boolean;
   toBePlotted: ToBePlotted[];
 
-  // Plot variable management
+  // Multi-canvas support
+  numCanvases: number;
+  isACModeActive: boolean; // Auto-dual mode for AC simulations
+  
+  // Plot variable management (per canvas)
   selectedVariables: string[];
   hoveredVariable: string | null;
+  canvas1SelectedVariables: string[];
+  canvas2SelectedVariables: string[];
+  canvas1HoveredVariable: string | null;
+  canvas2HoveredVariable: string | null;
 
   // Bracket operation plot state
   bracketOperationResults?: AggregatedResult;
@@ -41,9 +49,19 @@ export interface PlotActions {
   addToBePlotted: (item: ToBePlotted) => void;
   removeToBePlotted: (item: ToBePlotted) => void;
 
-  // Plot variable actions
+  // Multi-canvas actions
+  setNumCanvases: (num: 1 | 2) => void;
+  setIsACModeActive: (active: boolean) => void;
+
+  // Plot variable actions (legacy - for single canvas mode)
   setSelectedVariables: (variables: string[]) => void;
   setHoveredVariable: (variable: string | null) => void;
+  
+  // Per-canvas variable actions
+  setCanvas1SelectedVariables: (variables: string[]) => void;
+  setCanvas2SelectedVariables: (variables: string[]) => void;
+  setCanvas1HoveredVariable: (variable: string | null) => void;
+  setCanvas2HoveredVariable: (variable: string | null) => void;
 
   // Bracket operation plot actions
   setBracketOperationResults: (results?: AggregatedResult) => void;
@@ -68,8 +86,14 @@ export const createPlotSlice: StateCreator<
   // Initial state
   isPlotSelectionMode: false,
   toBePlotted: [],
+  numCanvases: 1,
+  isACModeActive: false,
   selectedVariables: [],
   hoveredVariable: null,
+  canvas1SelectedVariables: [],
+  canvas2SelectedVariables: [],
+  canvas1HoveredVariable: null,
+  canvas2HoveredVariable: null,
   bracketOperationResults: undefined,
   isBracketOperationPlot: false,
   currentParameterValues: undefined,
@@ -101,9 +125,19 @@ export const createPlotSlice: StateCreator<
       ),
     })),
 
-  // Plot variable actions
+  // Multi-canvas actions
+  setNumCanvases: (num) => set({ numCanvases: num }),
+  setIsACModeActive: (active) => set({ isACModeActive: active }),
+
+  // Plot variable actions (legacy - for single canvas mode)
   setSelectedVariables: (variables) => set({ selectedVariables: variables }),
   setHoveredVariable: (variable) => set({ hoveredVariable: variable }),
+  
+  // Per-canvas variable actions
+  setCanvas1SelectedVariables: (variables) => set({ canvas1SelectedVariables: variables }),
+  setCanvas2SelectedVariables: (variables) => set({ canvas2SelectedVariables: variables }),
+  setCanvas1HoveredVariable: (variable) => set({ canvas1HoveredVariable: variable }),
+  setCanvas2HoveredVariable: (variable) => set({ canvas2HoveredVariable: variable }),
 
   // Bracket operation plot actions
   setBracketOperationResults: (results) => set({ bracketOperationResults: results }),
@@ -139,7 +173,9 @@ export const createPlotSlice: StateCreator<
       const aggregatedResult = isBracketResult ? firstResult as AggregatedResult : undefined;
       
       // Transform single simulation results to handle complex data
+      let isACSimulation = false;
       if (!isBracketResult && firstResult.dataType === 'complex') {
+        isACSimulation = true;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         firstResult = transformResultForComplexData(firstResult) as any;
       }
@@ -148,41 +184,69 @@ export const createPlotSlice: StateCreator<
 
       // Determine which variables to select based on previous user selections
       let variablesToSelect: string[];
+      let canvas1Variables: string[] = [];
+      let canvas2Variables: string[] = [];
+      let numCanvases = 1;
+      let isACModeActive = false;
 
-      if (currentState.selectedVariables.length === 0) {
-        // No previous selection - select all variables by default
-        variablesToSelect = newVariableNames;
-        console.log("No previous selection found, selecting all variables");
+      if (isACSimulation) {
+        // AC simulation - automatically set up dual canvas mode
+        numCanvases = 2;
+        isACModeActive = true;
+        
+        // Separate magnitude and phase variables
+        const magVariables = newVariableNames.filter(name => name.includes('[mag]'));
+        const phaseVariables = newVariableNames.filter(name => name.includes('[phase]'));
+        
+        canvas1Variables = magVariables; // Magnitude canvas
+        canvas2Variables = phaseVariables; // Phase canvas
+        variablesToSelect = [...magVariables, ...phaseVariables]; // For legacy compatibility
+        
+        console.log("AC simulation detected, setting up dual canvas mode:", {
+          magnitudeVariables: magVariables.length,
+          phaseVariables: phaseVariables.length,
+          allVariables: newVariableNames
+        });
       } else {
-        // Preserve previously selected variables that still exist in new results
-        variablesToSelect = currentState.selectedVariables.filter(
-          (variable: string) => newVariableNames.includes(variable)
-        );
-
-        // Log which variables were preserved vs removed
-        const removedVariables = currentState.selectedVariables.filter(
-          (variable: string) => !newVariableNames.includes(variable)
-        );
-
-        if (removedVariables.length > 0) {
-          console.log(
-            "Variables removed from selection (no longer in results):",
-            removedVariables
-          );
-        }
-
-        if (variablesToSelect.length > 0) {
-          console.log(
-            "Variables preserved from previous selection:",
-            variablesToSelect
-          );
-        } else {
-          // All previously selected variables are gone, select all new ones
+        // Non-AC simulation - use single canvas mode with existing logic
+        if (currentState.selectedVariables.length === 0) {
+          // No previous selection - select all variables by default
           variablesToSelect = newVariableNames;
-          console.log(
-            "All previous variables removed, selecting all new variables"
+          console.log("No previous selection found, selecting all variables");
+        } else {
+          // Preserve previously selected variables that still exist in new results
+          variablesToSelect = currentState.selectedVariables.filter(
+            (variable: string) => newVariableNames.includes(variable)
           );
+
+          // Log which variables were preserved vs removed
+          const removedVariables = currentState.selectedVariables.filter(
+            (variable: string) => !newVariableNames.includes(variable)
+          );
+
+          if (removedVariables.length > 0) {
+            console.log(
+              "Variables removed from selection (no longer in results):",
+              removedVariables
+            );
+          }
+
+          if (variablesToSelect.length > 0) {
+            console.log(
+              "Variables preserved from previous selection:",
+              variablesToSelect
+            );
+          } else {
+            // All previously selected variables are gone, select all new ones
+            variablesToSelect = newVariableNames;
+            console.log(
+              "All previous variables removed, selecting all new variables"
+            );
+          }
         }
+        
+        // For single canvas, use the same selection for canvas1 (canvas2 remains empty)
+        canvas1Variables = variablesToSelect;
       }
 
       // Log bracket operation info (only once when complete)
@@ -200,6 +264,11 @@ export const createPlotSlice: StateCreator<
         isPlotTabEnabled: true,
         mainTabValue: "plot",
         selectedVariables: variablesToSelect,
+        // Multi-canvas state
+        numCanvases: numCanvases as 1 | 2,
+        isACModeActive,
+        canvas1SelectedVariables: canvas1Variables,
+        canvas2SelectedVariables: canvas2Variables,
         // Set bracket operation specific state
         bracketOperationResults: aggregatedResult,
         isBracketOperationPlot: isBracketResult,

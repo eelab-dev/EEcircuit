@@ -1,6 +1,6 @@
 import React from "react";
 import { ResultType } from "eecircuit-engine";
-import { Flex } from "@chakra-ui/react";
+import { Flex, VStack, HStack, Button, Text, Box } from "@chakra-ui/react";
 import PlotCanvas from "./plotCanvas";
 import PlotSidebar from "./plotSidebar";
 import BracketOperationSlider from "./BracketOperationSlider";
@@ -15,23 +15,44 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   // Use Zustand store for plot state
   const storeResults = useAppStore((state) => state.results);
 
+  // Multi-canvas state from store
+  const numCanvases = useAppStore((state) => state.numCanvases);
+  const isACModeActive = useAppStore((state) => state.isACModeActive);
+  const setNumCanvases = useAppStore((state) => state.setNumCanvases);
+
   // Bracket operation state from store
   const isBracketOperationPlot = useAppStore((state) => state.isBracketOperationPlot);
   const bracketOperationResults = useAppStore((state) => state.bracketOperationResults);
   
 
-  // Use local state for plot variable selection instead of Zustand store
-  // This approach is necessary because CheckboxGroup's controlled behavior
-  // works better with local React state. Previous attempts to use Zustand
-  // store for selectedVariables caused checkbox state update issues.
-  // For future refactoring: if moving back to store state, ensure proper
-  // state synchronization between CheckboxGroup and store updates.
+  // IMPORTANT: Checkbox State Management Pattern
+  // ==========================================
+  // Use LOCAL React state for all checkbox selections - NOT Zustand store state!
+  // 
+  // Problem: Chakra UI's CheckboxGroup has synchronization issues with Zustand store state.
+  // When selectedVariables comes from a Zustand store, checkboxes don't update their visual 
+  // state properly when clicked, even though the store state changes correctly.
+  //
+  // Solution: Always use React's useState for checkbox management. This pattern was 
+  // discovered in commit 0f72fe2 and must be maintained for all checkbox functionality.
+  //
+  // For future developers: If you need to add more checkbox groups, always use local
+  // React state and pass the values through props. Do NOT use Zustand store state directly
+  // in CheckboxGroup value/onValueChange props.
+
+  // Single canvas mode state
   const [selectedVariables, setSelectedVariables] = React.useState<string[]>(
     []
   );
   const [hoveredVariable, setHoveredVariable] = React.useState<string | null>(
     null
   );
+  
+  // Dual canvas mode - separate local state for each canvas (avoids Zustand sync issues)
+  const [localCanvas1SelectedVariables, setLocalCanvas1SelectedVariables] = React.useState<string[]>([]);
+  const [localCanvas1HoveredVariable, setLocalCanvas1HoveredVariable] = React.useState<string | null>(null);
+  const [localCanvas2SelectedVariables, setLocalCanvas2SelectedVariables] = React.useState<string[]>([]);
+  const [localCanvas2HoveredVariable, setLocalCanvas2HoveredVariable] = React.useState<string | null>(null);
 
   // Use results from props if provided, otherwise from store
   const results = propsResults || storeResults;
@@ -48,13 +69,34 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
     return () => clearTimeout(timeoutId);
   }, [isDrawerPinned]);
 
-  // Initialize with all variables selected by default (like original)
+  // Initialize variables when results change or canvas mode changes
   React.useEffect(() => {
     if (results.length > 0 && results[0]?.variableNames) {
-      // Skip the first variable (usually time) and select all others by default
-      setSelectedVariables(results[0].variableNames.slice(1));
+      const allVariables = results[0].variableNames.slice(1); // Skip first variable (time/frequency)
+      
+      if (numCanvases === 1) {
+        // Single canvas mode - select all variables
+        setSelectedVariables(allVariables);
+        // Clear local canvas states when going to single mode
+        setLocalCanvas1SelectedVariables([]);
+        setLocalCanvas2SelectedVariables([]);
+      } else if (numCanvases === 2) {
+        if (isACModeActive) {
+          // AC mode - separate magnitude and phase
+          const magVariables = allVariables.filter(v => v.includes('[mag]'));
+          const phaseVariables = allVariables.filter(v => v.includes('[phase]'));
+          setLocalCanvas1SelectedVariables(magVariables);
+          setLocalCanvas2SelectedVariables(phaseVariables);
+        } else {
+          // Manual dual mode - start with all variables in canvas 1, none in canvas 2
+          setLocalCanvas1SelectedVariables(allVariables);
+          setLocalCanvas2SelectedVariables([]);
+        }
+        // Clear single canvas state when going to dual mode
+        setSelectedVariables([]);
+      }
     }
-  }, [results]);
+  }, [results, numCanvases, isACModeActive]);
 
   // Variable selection initialization: select all variables except first (time/frequency)
   // by default when new results arrive. This matches the original behavior.
@@ -62,6 +104,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   const handleExportCSV = () => {
     exportResultsToCSV(results);
   };
+
 
   return (
     <Flex
@@ -87,33 +130,103 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
         overflow="hidden"
         position="relative"
       >
-        <Flex
+        <VStack 
           flex="1"
           minW="0"
-          direction="column"
           minHeight={0}
           marginRight={{ base: 0, md: isDrawerPinned ? "12rem" : 0 }}
           transition="margin-right 0.3s ease"
+          gap={4}
         >
-          <PlotCanvas
-            results={results}
-            selectedVariables={selectedVariables}
-            hoveredVariable={hoveredVariable}
-            isBracketOperationPlot={isBracketOperationPlot}
-            bracketOperationResults={bracketOperationResults}
-          />
-        </Flex>
+          {/* Canvas mode controls */}
+          {!isACModeActive && (
+            <HStack gap={2} alignSelf="flex-start">
+              <Text fontSize="sm" color="fg.muted">Canvas mode:</Text>
+              <Button
+                size="sm"
+                variant={numCanvases === 1 ? "solid" : "outline"}
+                onClick={() => setNumCanvases(1)}
+              >
+                Single
+              </Button>
+              <Button
+                size="sm"
+                variant={numCanvases === 2 ? "solid" : "outline"}
+                onClick={() => setNumCanvases(2)}
+              >
+                Dual
+              </Button>
+            </HStack>
+          )}
+          
+          {/* Single canvas mode */}
+          {numCanvases === 1 && (
+            <Box flex="1" w="100%" minH="0">
+              <PlotCanvas
+                results={results}
+                selectedVariables={selectedVariables}
+                hoveredVariable={hoveredVariable}
+                isBracketOperationPlot={isBracketOperationPlot}
+                bracketOperationResults={bracketOperationResults}
+              />
+            </Box>
+          )}
+          
+          {/* Dual canvas mode */}
+          {numCanvases === 2 && (
+            <VStack flex="1" w="100%" minH="0" gap={4}>
+              {/* Canvas 1 */}
+              <VStack flex="1" w="100%" minH="0" gap={1}>
+                <Text fontSize="sm" fontWeight="medium" alignSelf="flex-start" color="fg.muted">
+                  {isACModeActive ? "Magnitude" : "Plot 1"}
+                </Text>
+                <Box flex="1" w="100%" minH="0">
+                  <PlotCanvas
+                    results={results}
+                    selectedVariables={localCanvas1SelectedVariables}
+                    hoveredVariable={localCanvas1HoveredVariable}
+                    isBracketOperationPlot={isBracketOperationPlot}
+                    bracketOperationResults={bracketOperationResults}
+                  />
+                </Box>
+              </VStack>
+              
+              {/* Canvas 2 */}
+              <VStack flex="1" w="100%" minH="0" gap={1}>
+                <Text fontSize="sm" fontWeight="medium" alignSelf="flex-start" color="fg.muted">
+                  {isACModeActive ? "Phase" : "Plot 2"}
+                </Text>
+                <Box flex="1" w="100%" minH="0">
+                  <PlotCanvas
+                    results={results}
+                    selectedVariables={localCanvas2SelectedVariables}
+                    hoveredVariable={localCanvas2HoveredVariable}
+                    isBracketOperationPlot={isBracketOperationPlot}
+                    bracketOperationResults={bracketOperationResults}
+                  />
+                </Box>
+              </VStack>
+            </VStack>
+          )}
+        </VStack>
         {results.length > 0 && results[0]?.variableNames && (
           <PlotSidebar
             variableNames={
               results.length > 0 ? results[0]?.variableNames || [] : []
             }
-            selectedVariables={selectedVariables}
-            onSelectedVariablesChange={setSelectedVariables}
-            hoveredVariable={hoveredVariable}
-            onVariableHover={setHoveredVariable}
+            selectedVariables={numCanvases === 1 ? selectedVariables : localCanvas1SelectedVariables}
+            onSelectedVariablesChange={numCanvases === 1 ? setSelectedVariables : setLocalCanvas1SelectedVariables}
+            hoveredVariable={numCanvases === 1 ? hoveredVariable : localCanvas1HoveredVariable}
+            onVariableHover={numCanvases === 1 ? setHoveredVariable : setLocalCanvas1HoveredVariable}
             onPinnedChange={setIsDrawerPinned}
             onExportCSV={handleExportCSV}
+            // Multi-canvas support
+            numCanvases={numCanvases}
+            isACModeActive={isACModeActive}
+            canvas2SelectedVariables={localCanvas2SelectedVariables}
+            onCanvas2SelectedVariablesChange={setLocalCanvas2SelectedVariables}
+            canvas2HoveredVariable={localCanvas2HoveredVariable}
+            onCanvas2VariableHover={setLocalCanvas2HoveredVariable}
           />
         )}
       </Flex>
