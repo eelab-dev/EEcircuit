@@ -57,6 +57,14 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   // Shared cursor state for dual canvas synchronization - only X coordinate matters
   const [sharedCursorX, setSharedCursorX] = React.useState<number | null>(null);
   const [sharedCursorVisible, setSharedCursorVisible] = React.useState(false);
+  
+  // Shared zoom state for dual canvas synchronization
+  const [sharedZoomState, setSharedZoomState] = React.useState<{
+    isZooming: boolean;
+    zoomStartX: number | null;
+    zoomEndX: number | null;
+    zoomBounds: { min: number; max: number } | null;
+  } | null>(null);
 
   // Use results from props if provided, otherwise from store
   const results = propsResults || storeResults;
@@ -195,6 +203,8 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     onCursorXChange={setSharedCursorX}
                     sharedCursorVisible={sharedCursorVisible}
                     onCursorVisibilityChange={setSharedCursorVisible}
+                    sharedZoomState={sharedZoomState}
+                    onZoomStateChange={setSharedZoomState}
                   />
                 </Box>
               </VStack>
@@ -215,6 +225,8 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     onCursorXChange={setSharedCursorX}
                     sharedCursorVisible={sharedCursorVisible}
                     onCursorVisibilityChange={setSharedCursorVisible}
+                    sharedZoomState={sharedZoomState}
+                    onZoomStateChange={setSharedZoomState}
                   />
                 </Box>
               </VStack>

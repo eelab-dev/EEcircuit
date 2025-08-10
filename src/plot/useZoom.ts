@@ -1,4 +1,4 @@
-import { RefObject } from "react";
+import { RefObject, useEffect, useRef } from "react";
 import { LineConfig } from "webgl-plot";
 import { ZoomController } from "./zoomController";
 
@@ -26,6 +26,19 @@ interface UseZoomProps {
   inputProfile: string;
   calculateAndApplyScaling: () => void;
   updatePlot: () => void;
+  sharedZoomState?: {
+    isZooming: boolean;
+    zoomStartX: number | null;
+    zoomEndX: number | null;
+    zoomBounds: { min: number; max: number } | null;
+  } | null;
+  onZoomStateChange?: (zoomState: {
+    isZooming: boolean;
+    zoomStartX: number | null;
+    zoomEndX: number | null;
+    zoomBounds: { min: number; max: number } | null;
+  }) => void;
+  getAxisScales: () => AxisScales;
 }
 
 export const useZoom = ({
@@ -38,7 +51,55 @@ export const useZoom = ({
   inputProfile,
   calculateAndApplyScaling,
   updatePlot,
+  sharedZoomState,
+  onZoomStateChange,
+  getAxisScales,
 }: UseZoomProps) => {
+  const lastSyncedZoomState = useRef<typeof sharedZoomState>(null);
+
+  // Set up zoom state synchronization callback
+  useEffect(() => {
+    if (zoomController.current && onZoomStateChange) {
+      zoomController.current.setZoomStateCallback(onZoomStateChange);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (zoomController.current) {
+        zoomController.current.setZoomStateCallback(null);
+      }
+    };
+  }, [zoomController, onZoomStateChange]);
+
+  // Handle incoming shared zoom state changes
+  useEffect(() => {
+    if (
+      sharedZoomState &&
+      zoomController.current &&
+      sharedZoomState !== lastSyncedZoomState.current
+    ) {
+      lastSyncedZoomState.current = sharedZoomState;
+      
+      // Update axis scales before applying external zoom state
+      zoomController.current.updateAxisScales(getAxisScales());
+      
+      // Apply the external zoom state
+      zoomController.current.applyExternalZoomState(sharedZoomState);
+      
+      // If zoom bounds changed, recalculate scaling
+      if (sharedZoomState.zoomBounds || !sharedZoomState.isZooming) {
+        calculateAndApplyScaling();
+        if (isCanvasInitialized) {
+          updatePlot();
+        }
+      }
+      
+      // If we're showing zoom visuals, force a redraw
+      if (sharedZoomState.isZooming && isCanvasInitialized) {
+        updatePlot();
+      }
+    }
+  }, [sharedZoomState, zoomController, calculateAndApplyScaling, updatePlot, isCanvasInitialized, getAxisScales]);
   // Zoom functions
   const startZoom = (mouseX: number) => {
     // Update zoom controller with current axis scales before starting zoom

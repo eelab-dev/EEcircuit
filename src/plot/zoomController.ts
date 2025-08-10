@@ -9,6 +9,14 @@ export class ZoomController {
   private zoomStartX: number | null = null;
   private zoomEndX: number | null = null;
   private customXBounds: { min: number; max: number } | null = null;
+  
+  // Callback for zoom state synchronization
+  private onZoomStateChangeCb: ((zoomState: {
+    isZooming: boolean;
+    zoomStartX: number | null;
+    zoomEndX: number | null;
+    zoomBounds: { min: number; max: number } | null;
+  }) => void) | null = null;
 
   // Panning state for horizontal movement when zoomed
   private isPanning = false;
@@ -60,6 +68,55 @@ export class ZoomController {
     offsetY: number;
   }): void {
     this.axisScales = { ...scales };
+  }
+
+  /**
+   * Set zoom state change callback for synchronization
+   */
+  setZoomStateCallback(callback: ((zoomState: {
+    isZooming: boolean;
+    zoomStartX: number | null;
+    zoomEndX: number | null;
+    zoomBounds: { min: number; max: number } | null;
+  }) => void) | null): void {
+    this.onZoomStateChangeCb = callback;
+  }
+
+  /**
+   * Notify about zoom state changes for synchronization
+   */
+  private notifyZoomStateChange(): void {
+    if (this.onZoomStateChangeCb) {
+      this.onZoomStateChangeCb({
+        isZooming: this.isZooming,
+        zoomStartX: this.zoomStartX,
+        zoomEndX: this.zoomEndX,
+        zoomBounds: this.customXBounds ? { ...this.customXBounds } : null,
+      });
+    }
+  }
+
+  /**
+   * Apply external zoom state for synchronization
+   */
+  applyExternalZoomState(zoomState: {
+    isZooming: boolean;
+    zoomStartX: number | null;
+    zoomEndX: number | null;
+    zoomBounds: { min: number; max: number } | null;
+  }): void {
+    this.isZooming = zoomState.isZooming;
+    this.zoomStartX = zoomState.zoomStartX;
+    this.zoomEndX = zoomState.zoomEndX;
+    this.customXBounds = zoomState.zoomBounds ? { ...zoomState.zoomBounds } : null;
+    
+    // Update visual feedback if zooming
+    if (this.isZooming && this.zoomStartX !== null && this.zoomEndX !== null) {
+      this.showZoomVisuals(this.zoomStartX, this.zoomEndX);
+    } else if (!this.isZooming) {
+      // Hide visuals if not zooming
+      this.hideZoomVisuals();
+    }
   }
 
   /**
@@ -127,6 +184,9 @@ export class ZoomController {
 
     // Immediately show zoom visuals at start position
     this.showZoomVisuals(dataX, dataX);
+    
+    // Notify about zoom state change
+    this.notifyZoomStateChange();
   }
 
   /**
@@ -149,6 +209,9 @@ export class ZoomController {
 
     // Update zoom visual feedback
     this.showZoomVisuals(this.zoomStartX, dataX);
+    
+    // Notify about zoom state change
+    this.notifyZoomStateChange();
   }
 
   /**
@@ -174,6 +237,9 @@ export class ZoomController {
 
     // Clear zoom state and hide visuals
     this.clearZoomState();
+    
+    // Notify about zoom state change
+    this.notifyZoomStateChange();
 
     return appliedBounds;
   }
@@ -186,6 +252,9 @@ export class ZoomController {
 
     console.log("ZoomController: Cancelled zoom operation");
     this.clearZoomState();
+    
+    // Notify about zoom state change
+    this.notifyZoomStateChange();
   }
 
   /**
@@ -197,6 +266,9 @@ export class ZoomController {
     this.customXBounds = { min, max };
     this.panOffsetX = 0; // Reset pan offset when setting new bounds
     console.log("ZoomController: Set zoom bounds:", { min, max });
+    
+    // Notify about zoom state change
+    this.notifyZoomStateChange();
   }
 
   /**
@@ -210,6 +282,10 @@ export class ZoomController {
 
     this.customXBounds = null;
     this.panOffsetX = 0; // Reset pan offset when zoom is reset
+    
+    // Notify about zoom state change
+    this.notifyZoomStateChange();
+    
     return true;
   }
 
@@ -416,6 +492,24 @@ export class ZoomController {
   }
 
   /**
+   * Hide zoom visuals
+   * @private
+   */
+  private hideZoomVisuals(): void {
+    try {
+      if (this.zoomLinesRef) {
+        this.zoomLinesRef.setLineEnabled(0, false);
+        this.zoomLinesRef.setLineEnabled(1, false);
+      }
+      if (this.zoomRegionRef) {
+        this.zoomRegionRef.setPolygonEnabled(0, false);
+      }
+    } catch (error) {
+      console.error("ZoomController: Failed to hide zoom visuals:", error);
+    }
+  }
+
+  /**
    * Clear zoom state and hide all zoom visuals
    * @private
    */
@@ -429,16 +523,6 @@ export class ZoomController {
     this.panStartX = null;
 
     // Hide zoom visuals
-    try {
-      if (this.zoomLinesRef) {
-        this.zoomLinesRef.setLineEnabled(0, false);
-        this.zoomLinesRef.setLineEnabled(1, false);
-      }
-      if (this.zoomRegionRef) {
-        this.zoomRegionRef.setPolygonEnabled(0, false);
-      }
-    } catch (error) {
-      console.error("ZoomController: Failed to hide zoom visuals:", error);
-    }
+    this.hideZoomVisuals();
   }
 }

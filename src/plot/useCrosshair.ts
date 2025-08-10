@@ -10,13 +10,19 @@ type ExtendedLineConfig = LineConfig & {
 };
 
 /**
- * DUAL CANVAS CURSOR SYNCHRONIZATION
+ * DUAL CANVAS CURSOR & ZOOM SYNCHRONIZATION
  * 
  * This module implements cursor synchronization between dual canvases in the plot view.
  * When the user moves the cursor in either the top or bottom plot, both cursors sync
  * their X coordinates (time/frequency) while maintaining independent Y coordinates.
  * 
- * How it works:
+ * ZOOM SYNCHRONIZATION is implemented similarly in the ZoomController and useZoom hook:
+ * - Both canvases share zoom state: isZooming, zoomStartX, zoomEndX, zoomBounds
+ * - When zoom starts/updates/completes in one canvas, the other canvas mirrors the operation
+ * - Zoom highlighting (yellow region) appears synchronized across both plots
+ * - Final zoom bounds are applied to both canvases simultaneously
+ * 
+ * How cursor sync works:
  * 1. Parent Plot component maintains shared state: sharedCursorX, sharedCursorVisible
  * 2. Each PlotCanvas receives sync props: sharedCursorX, onCursorXChange, sharedCursorVisible, onCursorVisibilityChange
  * 3. When cursor moves in Canvas A:

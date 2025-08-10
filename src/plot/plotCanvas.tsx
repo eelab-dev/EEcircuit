@@ -26,6 +26,19 @@ interface PlotCanvasProps {
   onCursorXChange?: (x: number) => void;
   sharedCursorVisible?: boolean;
   onCursorVisibilityChange?: (visible: boolean) => void;
+  // Zoom synchronization props
+  sharedZoomState?: {
+    isZooming: boolean;
+    zoomStartX: number | null;
+    zoomEndX: number | null;
+    zoomBounds: { min: number; max: number } | null;
+  } | null;
+  onZoomStateChange?: (zoomState: {
+    isZooming: boolean;
+    zoomStartX: number | null;
+    zoomEndX: number | null;
+    zoomBounds: { min: number; max: number } | null;
+  }) => void;
 }
 
 const PlotCanvas: React.FC<PlotCanvasProps> = ({
@@ -38,6 +51,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   onCursorXChange,
   sharedCursorVisible,
   onCursorVisibilityChange,
+  sharedZoomState,
+  onZoomStateChange,
 }) => {
   const inputProfile = useAppStore((state) => state.inputProfile);
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
@@ -148,6 +163,9 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     inputProfile,
     calculateAndApplyScaling,
     updatePlot,
+    sharedZoomState,
+    onZoomStateChange,
+    getAxisScales: () => axisScalesRef.current,
   });
 
   // Initialize event handlers
