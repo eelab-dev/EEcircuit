@@ -42,6 +42,8 @@ interface UseZoomProps {
   otherCanvasUpdatePlot?: React.RefObject<(() => void) | null>;
   otherCanvasCalcScaling?: React.RefObject<(() => void) | null>;
   getAxisScales: () => AxisScales;
+  // Direct webgl redraw callback (no React re-render)
+  onWebglRedraw?: () => void;
 }
 
 export const useZoom = ({
@@ -60,6 +62,7 @@ export const useZoom = ({
   otherCanvasUpdatePlot,
   otherCanvasCalcScaling,
   getAxisScales,
+  onWebglRedraw,
 }: UseZoomProps) => {
   const lastSyncedZoomState = useRef<typeof sharedZoomState>(null);
 
@@ -76,6 +79,25 @@ export const useZoom = ({
       }
     };
   }, [zoomController, onZoomStateChange]);
+
+  // Set up direct webgl redraw callback
+  useEffect(() => {
+    if (zoomController.current && onWebglRedraw) {
+      // Create a combined callback that also recalculates scaling for real-time operations
+      const webglRedrawWithScaling = () => {
+        calculateAndApplyScaling();
+        onWebglRedraw();
+      };
+      zoomController.current.setWebglRedrawCallback(webglRedrawWithScaling);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (zoomController.current) {
+        zoomController.current.setWebglRedrawCallback(null);
+      }
+    };
+  }, [zoomController, onWebglRedraw, calculateAndApplyScaling]);
   
   // Set up direct pan offset synchronization callback
   useEffect(() => {
@@ -181,14 +203,9 @@ export const useZoom = ({
       return; // Only allow scrolling when zoomed in
     }
 
+    // ZoomController will handle the scroll and trigger webgl redraw automatically
     zoomController.current.handleHorizontalScroll(deltaX);
-
-    // Immediately recalculate and redraw to show pan effect, respecting current selection
-    calculateAndApplyScaling();
-    if (isCanvasInitialized) {
-      // Full update to apply visibility, colors, and transforms
-      updatePlot();
-    }
+    // No React re-render needed - webgl redraw callback handles the visual update
   };
 
   // Handle zoom at cursor position based on input profile

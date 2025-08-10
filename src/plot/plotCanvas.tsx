@@ -94,6 +94,13 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     }
   };
 
+  // Direct webgl redraw callback for zoom/pan operations (no React re-render)
+  const handleWebglRedraw = useCallback(() => {
+    if (updatePlotRef.current) {
+      updatePlotRef.current();
+    }
+  }, []);
+
   // Direct DOM update for crosshair coordinates (no React re-render)
   const updateCrosshairDisplay = useCallback((x: number, y: number) => {
     if (crosshairDisplayRef.current) {
@@ -210,6 +217,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     otherCanvasUpdatePlot,
     otherCanvasCalcScaling,
     getAxisScales: () => axisScalesRef.current,
+    onWebglRedraw: handleWebglRedraw,
   });
 
   // Initialize event handlers
@@ -447,16 +455,15 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               const mouseY = e.clientY - rect.top;
 
               if (zoomController.current?.getIsZooming()) {
-                // Update zoom selection
+                // Update zoom selection - ZoomController handles webgl redraw automatically
                 updateZoomSelection(mouseX);
+                // No React re-render needed for zoom selection visual updates
+                return;
               } else if (zoomController.current?.getIsPanning()) {
                 // Real-time drag panning - this will sync to other canvas immediately
                 zoomController.current.updatePan(mouseX);
-                // Force immediate redraw to show pan effect
-                calculateAndApplyScaling();
-                if (isCanvasInitialized) {
-                  updatePlot();
-                }
+                // ZoomController will trigger webgl redraw automatically via callback
+                // No React re-render needed for smooth panning
               } else {
                 // Crosshair behavior when not zooming or panning
                 updateCrosshair(mouseX, mouseY);
@@ -472,7 +479,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
                 } else if (zoomController.current?.getIsPanning()) {
                   // End drag panning
                   zoomController.current.endPan();
-                  // Recalculate and redraw
+                  // Final redraw after pan ends - use React update for state consistency
                   calculateAndApplyScaling();
                   if (isCanvasInitialized) {
                     updatePlot();
@@ -503,6 +510,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               // End panning if mouse leaves canvas
               if (zoomController.current?.getIsPanning()) {
                 zoomController.current.endPan();
+                // Final redraw after pan ends - use React update for state consistency
                 calculateAndApplyScaling();
                 if (isCanvasInitialized) {
                   updatePlot();

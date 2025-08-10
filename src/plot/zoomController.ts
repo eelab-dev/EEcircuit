@@ -1,8 +1,20 @@
 import type { WebglLinePlot, WebglPolygonPlot } from "webgl-plot";
 
 /**
- * Zoom controller for WebGL plot canvas
- * Handles zoom state and operations independent of React lifecycle
+ * HIGH-PERFORMANCE ZOOM CONTROLLER FOR WEBGL PLOT CANVAS
+ * 
+ * Handles zoom and pan operations with optimized performance:
+ * - Direct webgl-plot updates for zoom visuals (no React re-renders)
+ * - Real-time panning via webgl redraw callbacks
+ * - Smooth scroll wheel panning without React overhead
+ * - Dual canvas synchronization with minimal React state updates
+ * 
+ * Performance optimizations:
+ * - webglRedrawCallback enables direct canvas updates during real-time operations
+ * - React re-renders only triggered for major state changes (zoom complete, pan end)
+ * - All visual feedback (zoom selection, pan movement) handled via webgl-plot directly
+ * 
+ * Independent of React lifecycle for maximum performance during user interactions.
  */
 export class ZoomController {
   private isZooming = false;
@@ -20,6 +32,9 @@ export class ZoomController {
   
   // Callback for pan offset synchronization
   private onPanOffsetChangeCb: ((panOffset: number) => void) | null = null;
+  
+  // Callback for direct webgl redraw (no React re-render)
+  private onWebglRedrawCb: (() => void) | null = null;
   
   // Flag to prevent infinite loops when applying external changes
   private isApplyingExternalPanOffset = false;
@@ -95,6 +110,13 @@ export class ZoomController {
   setPanOffsetCallback(callback: ((panOffset: number) => void) | null): void {
     this.onPanOffsetChangeCb = callback;
   }
+  
+  /**
+   * Set webgl redraw callback for direct canvas updates (no React re-render)
+   */
+  setWebglRedrawCallback(callback: (() => void) | null): void {
+    this.onWebglRedrawCb = callback;
+  }
 
   /**
    * Notify about zoom state changes for synchronization
@@ -117,6 +139,15 @@ export class ZoomController {
     // Don't notify if we're currently applying an external pan offset
     if (this.onPanOffsetChangeCb && !this.isApplyingExternalPanOffset) {
       this.onPanOffsetChangeCb(this.panOffsetX);
+    }
+  }
+  
+  /**
+   * Trigger direct webgl redraw (no React re-render)
+   */
+  private triggerWebglRedraw(): void {
+    if (this.onWebglRedrawCb) {
+      this.onWebglRedrawCb();
     }
   }
 
@@ -218,6 +249,9 @@ export class ZoomController {
     // Immediately show zoom visuals at start position
     this.showZoomVisuals(dataX, dataX);
     
+    // Trigger direct webgl redraw for zoom visuals
+    this.triggerWebglRedraw();
+    
     // Notify about zoom state change
     this.notifyZoomStateChange();
   }
@@ -242,6 +276,9 @@ export class ZoomController {
 
     // Update zoom visual feedback
     this.showZoomVisuals(this.zoomStartX, dataX);
+    
+    // Trigger direct webgl redraw for zoom visuals
+    this.triggerWebglRedraw();
     
     // Notify about zoom state change
     this.notifyZoomStateChange();
@@ -363,6 +400,9 @@ export class ZoomController {
     const panDelta = -(currentDataX - this.panStartX);
     this.panOffsetX = panDelta;
     this.notifyPanOffsetChange();
+    
+    // Trigger direct webgl redraw for smooth panning
+    this.triggerWebglRedraw();
   }
 
   /**
@@ -393,6 +433,9 @@ export class ZoomController {
     // Positive deltaX should pan right (positive offset)
     this.panOffsetX += deltaX * scrollSensitivity;
     this.notifyPanOffsetChange();
+    
+    // Trigger direct webgl redraw for smooth scroll panning
+    this.triggerWebglRedraw();
   }
 
   /**
