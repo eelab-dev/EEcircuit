@@ -35,9 +35,9 @@ vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
 ## Usage
 
 Use the plot with different input profiles:
-- **Trackpad**: Scroll to pan, drag to zoom, double-click to reset
-- **Mouse**: Scroll wheel to pan, shift+scroll to zoom, drag to zoom, double-click to reset  
-- **Touch**: Two-finger scroll to pan, pinch to zoom, double-tap to reset
+- **Trackpad**: Ctrl+scroll to zoom, scroll to pan when zoomed, drag to zoom, double-click to reset
+- **Mouse**: Shift+scroll to zoom, scroll wheel to pan when zoomed, drag to zoom, double-click to reset  
+- **Touch**: Pinch to zoom, single-finger horizontal drag to pan when zoomed, double-tap to reset
 
 ## Documentation
 

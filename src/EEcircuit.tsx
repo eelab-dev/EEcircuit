@@ -531,7 +531,13 @@ const EEcircuit: React.FC = () => {
             {/* Input Profile Toggle Button */}
             <Tooltip
               showArrow
-              content={`Current: ${inputProfile} - Click to cycle input profiles`}
+              content={
+                inputProfile === "mouse" 
+                  ? "Mouse: Shift+wheel zoom, wheel pan when zoomed"
+                  : inputProfile === "trackpad"
+                  ? "Trackpad: Ctrl+scroll zoom, scroll pan when zoomed"  
+                  : "Touchscreen: Pinch zoom, single-finger drag pan when zoomed"
+              }
               positioning={{ placement: "bottom" }}
             >
               <IconButton

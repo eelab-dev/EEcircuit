@@ -22,21 +22,35 @@ export const useEventHandlers = ({
   handleHorizontalScroll,
   resetZoom,
 }: UseEventHandlersProps) => {
-  // Touch gesture state for pinch, zoom, and pan
+  // Touch gesture state for separate single-finger pan and two-finger zoom
   const [touchState, setTouchState] = useState<{
+    // Two-finger zoom state
     initialDistance: number | null;
-    initialTouchX: number;
-    initialTouchY: number;
+    initialZoomCenter: { x: number; y: number } | null;
+    isZooming: boolean;
+    accumulatedZoomFactor: number;
+    
+    // Single-finger pan state
+    singleFingerStart: { x: number; y: number } | null;
     isPanning: boolean;
     lastPanX: number;
+    
+    // Tap detection
     lastTapTime: number;
     tapCount: number;
   }>({
+    // Two-finger zoom state
     initialDistance: null,
-    initialTouchX: 0,
-    initialTouchY: 0,
+    initialZoomCenter: null,
+    isZooming: false,
+    accumulatedZoomFactor: 1.0,
+    
+    // Single-finger pan state
+    singleFingerStart: null,
     isPanning: false,
     lastPanX: 0,
+    
+    // Tap detection
     lastTapTime: 0,
     tapCount: 0,
   });
@@ -61,7 +75,25 @@ export const useEventHandlers = ({
     };
 
     const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
+      if (e.touches.length === 1) {
+        // Single finger - prepare for potential panning (only when zoomed in)
+        if (zoomController.current?.isZoomedIn()) {
+          const touch = e.touches[0];
+          if (!touch) return;
+          
+          const rect = canvas.getBoundingClientRect();
+          const touchX = touch.clientX - rect.left;
+          const touchY = touch.clientY - rect.top;
+          
+          setTouchState(prev => ({
+            ...prev,
+            singleFingerStart: { x: touchX, y: touchY },
+            isPanning: false,
+            lastPanX: touchX,
+          }));
+        }
+      } else if (e.touches.length === 2) {
+        // Two fingers - start zoom gesture
         e.preventDefault();
         const touch0 = e.touches[0];
         const touch1 = e.touches[1];
@@ -69,20 +101,58 @@ export const useEventHandlers = ({
 
         const distance = getTouchDistance(touch0, touch1);
         const center = getTouchCenter(touch0, touch1);
-        setTouchState({
+        
+        setTouchState(prev => ({
+          ...prev,
           initialDistance: distance,
-          initialTouchX: center.x,
-          initialTouchY: center.y,
+          initialZoomCenter: { x: center.x, y: center.y },
+          isZooming: false,
+          accumulatedZoomFactor: 1.0,
+          // Clear any single-finger state
+          singleFingerStart: null,
           isPanning: false,
-          lastPanX: center.x,
-          lastTapTime: touchState.lastTapTime,
-          tapCount: touchState.tapCount,
-        });
+        }));
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && touchState.initialDistance !== null) {
+      if (e.touches.length === 1 && touchState.singleFingerStart && zoomController.current?.isZoomedIn()) {
+        // Single finger panning (only when zoomed in)
+        const touch = e.touches[0];
+        if (!touch) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const touchX = touch.clientX - rect.left;
+        const touchY = touch.clientY - rect.top;
+        
+        const deltaX = touchX - touchState.singleFingerStart.x;
+        const deltaY = touchY - touchState.singleFingerStart.y;
+        
+        // Check if horizontal movement is dominant (for panning)
+        if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) {
+          e.preventDefault(); // Prevent scrolling
+          
+          if (!touchState.isPanning) {
+            // Start panning
+            setTouchState(prev => ({
+              ...prev,
+              isPanning: true,
+              lastPanX: touchX,
+            }));
+          } else {
+            // Continue panning
+            const panDelta = touchX - touchState.lastPanX;
+            const scrollDelta = panDelta * 0.1; // Responsive pan sensitivity
+            handleHorizontalScroll(-scrollDelta);
+            
+            setTouchState(prev => ({
+              ...prev,
+              lastPanX: touchX,
+            }));
+          }
+        }
+      } else if (e.touches.length === 2 && touchState.initialDistance !== null && touchState.initialZoomCenter !== null) {
+        // Two finger pinch zoom
         e.preventDefault();
         const touch0 = e.touches[0];
         const touch1 = e.touches[1];
@@ -91,93 +161,103 @@ export const useEventHandlers = ({
         const currentDistance = getTouchDistance(touch0, touch1);
         const center = getTouchCenter(touch0, touch1);
 
-        // Calculate distance and horizontal movement changes
+        // Calculate zoom factor from distance change
         const distanceRatio = currentDistance / touchState.initialDistance;
-        const horizontalMovement = Math.abs(center.x - touchState.initialTouchX);
-        const distanceChange = Math.abs(distanceRatio - 1);
-
-        // Determine gesture type: if horizontal movement is significant and distance change is minimal, it's panning
-        const isHorizontalPan = horizontalMovement > 10 && distanceChange < 0.1;
-
-        if (isHorizontalPan && zoomController.current?.isZoomedIn()) {
-          // Two-finger horizontal pan when zoomed in - use scroll-based panning like trackpad
-          if (!touchState.isPanning) {
-            // Start panning mode
-            setTouchState((prev) => ({
-              ...prev,
-              isPanning: true,
-              lastPanX: center.x,
-            }));
-          } else {
-            // Calculate horizontal movement delta and apply as scroll
-            const deltaX = center.x - touchState.lastPanX;
-            // Convert pixel delta to scroll units (higher sensitivity for touch)
-            const scrollDelta = deltaX * 0.05; // Increased sensitivity for touch input
-
-            handleHorizontalScroll(-scrollDelta); // Negative to match trackpad behavior
-
-            // Update last position for next delta calculation
-            setTouchState((prev) => ({
-              ...prev,
-              lastPanX: center.x,
-            }));
+        const zoomFactor = distanceRatio / touchState.accumulatedZoomFactor;
+        
+        // Apply smooth zoom with moderate sensitivity
+        if (Math.abs(zoomFactor - 1) > 0.02) { // Reasonable threshold
+          const steps = Math.max(1, Math.min(3, Math.floor(Math.abs(zoomFactor - 1) * 12)));
+          const stepSize = zoomFactor > 1 ? 1.04 : 0.96; // Smooth zoom steps
+          
+          for (let i = 0; i < steps; i++) {
+            handleZoomAtCursor(center.x, center.y, stepSize > 1);
           }
-        } else if (distanceChange > 0.05) {
-          // Pinch to zoom if there's significant distance change
-          const zoomIn = distanceRatio > 1;
-          handleZoomAtCursor(center.x, center.y, zoomIn);
-
-          // Update the reference distance for next calculation
-          setTouchState((prev) => ({
+          
+          // Update accumulated zoom factor
+          setTouchState(prev => ({
             ...prev,
-            initialDistance: currentDistance,
+            accumulatedZoomFactor: distanceRatio,
+            isZooming: true,
           }));
         }
       }
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length < 2) {
-        const currentTime = Date.now();
-        const timeSinceLastTap = currentTime - touchState.lastTapTime;
-        
-        // Check for single finger tap (double-tap detection)
-        if (e.changedTouches.length === 1 && !touchState.isPanning && touchState.initialDistance === null) {
+      const currentTime = Date.now();
+      const timeSinceLastTap = currentTime - touchState.lastTapTime;
+      
+      if (e.touches.length === 0) {
+        // All fingers lifted - check for double-tap or reset state
+        if (e.changedTouches.length === 1 && !touchState.isPanning && !touchState.isZooming && touchState.initialDistance === null) {
           if (timeSinceLastTap < 300 && touchState.tapCount === 1) {
             // Double-tap detected - reset zoom
             resetZoom();
             setTouchState({
+              // Two-finger zoom state
               initialDistance: null,
-              initialTouchX: 0,
-              initialTouchY: 0,
+              initialZoomCenter: null,
+              isZooming: false,
+              accumulatedZoomFactor: 1.0,
+              
+              // Single-finger pan state
+              singleFingerStart: null,
               isPanning: false,
               lastPanX: 0,
+              
+              // Tap detection
               lastTapTime: 0,
               tapCount: 0,
             });
           } else {
             // First tap or too long since last tap
-            setTouchState({
-              initialDistance: null,
-              initialTouchX: 0,
-              initialTouchY: 0,
+            setTouchState(prev => ({
+              ...prev,
+              // Clear gesture states
+              singleFingerStart: null,
               isPanning: false,
-              lastPanX: 0,
+              initialDistance: null,
+              initialZoomCenter: null,
+              isZooming: false,
+              accumulatedZoomFactor: 1.0,
+              // Update tap tracking
               lastTapTime: currentTime,
               tapCount: 1,
-            });
+            }));
           }
         } else {
-          // Reset touch state for multi-touch gestures or after panning
-          setTouchState({
+          // Reset all gesture states
+          setTouchState(prev => ({
+            ...prev,
+            // Two-finger zoom state
             initialDistance: null,
-            initialTouchX: 0,
-            initialTouchY: 0,
+            initialZoomCenter: null,
+            isZooming: false,
+            accumulatedZoomFactor: 1.0,
+            
+            // Single-finger pan state
+            singleFingerStart: null,
             isPanning: false,
-            lastPanX: 0,
-            lastTapTime: touchState.lastTapTime,
-            tapCount: touchState.tapCount,
-          });
+          }));
+        }
+      } else if (e.touches.length === 1) {
+        // Went from 2 fingers to 1 - end zoom, potentially start pan
+        if (touchState.isZooming) {
+          setTouchState(prev => ({
+            ...prev,
+            // Clear zoom state
+            initialDistance: null,
+            initialZoomCenter: null,
+            isZooming: false,
+            accumulatedZoomFactor: 1.0,
+            // Prepare for potential single-finger pan if zoomed in
+            singleFingerStart: zoomController.current?.isZoomedIn() && e.touches[0] ? {
+              x: e.touches[0].clientX - canvas.getBoundingClientRect().left,
+              y: e.touches[0].clientY - canvas.getBoundingClientRect().top,
+            } : null,
+            isPanning: false,
+          }));
         }
       }
     };
@@ -196,6 +276,10 @@ export const useEventHandlers = ({
     selectedVariables,
     inputProfile,
     touchState.initialDistance,
+    touchState.initialZoomCenter,
+    touchState.isZooming,
+    touchState.accumulatedZoomFactor,
+    touchState.singleFingerStart,
     touchState.isPanning,
     touchState.lastPanX,
     touchState.lastTapTime,

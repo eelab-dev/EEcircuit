@@ -406,7 +406,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
                   : "💡 Shift+scroll to zoom • Drag to zoom • Double-click to reset")}
               {inputProfile === "touchscreen" &&
                 (zoomController.current?.isZoomedIn()
-                  ? "💡 Two-finger scroll to pan • Pinch to zoom • Double-tap to reset"
+                  ? "💡 Single-finger drag to pan • Pinch to zoom • Double-tap to reset"
                   : "💡 Pinch to zoom • Double-tap to reset")}
             </Box>
           )}
