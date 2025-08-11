@@ -258,6 +258,13 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     }
   }, [isCanvasInitialized]);
 
+  // Update zoom colors when theme changes (after initialization)
+  useEffect(() => {
+    if (isCanvasInitialized && zoomController.current) {
+      zoomController.current.updateZoomColors(isDarkMode);
+    }
+  }, [isDarkMode, isCanvasInitialized]);
+
   // Update plot visibility when selected variables change
   useEffect(() => {
     if (isCanvasInitialized) {

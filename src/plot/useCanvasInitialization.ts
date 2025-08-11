@@ -143,8 +143,9 @@ export const useCanvasInitialization = ({
       zoomLinesRef.current.initLines(zoomLines);
 
       // Create zoom region polygon (initially empty rectangle using 6 points for two triangles)
+      // Color will be updated based on theme via zoomController.updateZoomColors()
       const zoomRegion = {
-        fillColor: [1, 1, 0, 0.3] as [number, number, number, number], // Semi-transparent yellow
+        fillColor: [1, 1, 0, 0.3] as [number, number, number, number], // Default yellow (will be updated by theme)
         strokeColor: [1, 1, 0, 0] as [number, number, number, number], // No stroke
         strokeWeight: 0,
         isFilled: true,
@@ -161,7 +162,8 @@ export const useCanvasInitialization = ({
         zoomController.current.initialize(
           zoomLinesRef.current,
           zoomRegionRef.current,
-          canvasRef.current
+          canvasRef.current,
+          isDarkMode
         );
       }
 

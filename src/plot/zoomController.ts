@@ -2,25 +2,25 @@ import type { WebglLinePlot, WebglPolygonPlot } from "webgl-plot";
 
 /**
  * HIGH-PERFORMANCE ZOOM CONTROLLER FOR WEBGL PLOT CANVAS
- * 
+ *
  * Handles zoom and pan operations with optimized performance:
  * - Direct webgl-plot updates for zoom visuals (no React re-renders)
  * - Real-time panning via webgl redraw callbacks
  * - Smooth scroll wheel panning without React overhead
  * - Dual canvas synchronization with minimal React state updates
  * - Pan bounds limiting to prevent empty axis areas
- * 
+ *
  * Performance optimizations:
  * - webglRedrawCallback enables direct canvas updates during real-time operations
  * - React re-renders only triggered for major state changes (zoom complete, pan end)
  * - All visual feedback (zoom selection, pan movement) handled via webgl-plot directly
- * 
+ *
  * IMPORTANT BUG PREVENTION:
  * To prevent empty axis areas when panning outside data bounds:
  * 1. ALWAYS call setOriginalDataBounds() with the full data range when plot data changes
  * 2. Pan limiting automatically constrains view to stay within original data bounds
  * 3. This prevents users from panning into areas with no data points
- * 
+ *
  * Independent of React lifecycle for maximum performance during user interactions.
  */
 export class ZoomController {
@@ -28,30 +28,31 @@ export class ZoomController {
   private zoomStartX: number | null = null;
   private zoomEndX: number | null = null;
   private customXBounds: { min: number; max: number } | null = null;
-  
+
   // Callback for zoom state synchronization
-  private onZoomStateChangeCb: ((zoomState: {
-    isZooming: boolean;
-    zoomStartX: number | null;
-    zoomEndX: number | null;
-    zoomBounds: { min: number; max: number } | null;
-  }) => void) | null = null;
-  
+  private onZoomStateChangeCb:
+    | ((zoomState: {
+      isZooming: boolean;
+      zoomStartX: number | null;
+      zoomEndX: number | null;
+      zoomBounds: { min: number; max: number } | null;
+    }) => void)
+    | null = null;
+
   // Callback for pan offset synchronization
   private onPanOffsetChangeCb: ((panOffset: number) => void) | null = null;
-  
+
   // Callback for direct webgl redraw (no React re-render)
   private onWebglRedrawCb: (() => void) | null = null;
-  
+
   // Flag to prevent infinite loops when applying external changes
   private isApplyingExternalPanOffset = false;
-  
 
   // Panning state for horizontal movement when zoomed
   private isPanning = false;
   private panStartX: number | null = null;
   private panOffsetX = 0; // Current accumulated pan offset in data coordinates
-  
+
   // Original data bounds for pan limiting
   private originalDataBounds: { min: number; max: number } | null = null;
 
@@ -73,18 +74,20 @@ export class ZoomController {
    * @param zoomLines WebGL line plotter for zoom indicator lines
    * @param zoomRegion WebGL polygon plotter for zoom region highlight
    * @param canvas HTML canvas element for coordinate calculations
+   * @param isDarkMode Whether dark mode is active for theme-appropriate colors
    */
   initialize(
     zoomLines: WebglLinePlot,
     zoomRegion: WebglPolygonPlot,
-    canvas: HTMLCanvasElement
+    canvas: HTMLCanvasElement,
+    isDarkMode: boolean = true
   ): void {
     this.zoomLinesRef = zoomLines;
     this.zoomRegionRef = zoomRegion;
     this.canvasElement = canvas;
 
-    // Initialize zoom visual components (disabled by default)
-    this.initializeZoomVisuals();
+    // Initialize zoom visual components with theme-appropriate colors
+    this.initializeZoomVisuals(isDarkMode);
 
     console.log("ZoomController initialized");
   }
@@ -101,7 +104,7 @@ export class ZoomController {
   }): void {
     this.axisScales = { ...scales };
   }
-  
+
   /**
    * Check if original data bounds have been set
    * Used to prevent excessive calls to setOriginalDataBounds()
@@ -112,18 +115,18 @@ export class ZoomController {
 
   /**
    * Set the original data bounds for pan limiting
-   * 
+   *
    * CRITICAL: This method prevents the "empty axis areas" bug by constraining
    * pan operations to stay within the original data range.
-   * 
+   *
    * @param min Minimum X value of the original data
    * @param max Maximum X value of the original data
-   * 
+   *
    * When to call:
    * - Once when plot data is first loaded/calculated
    * - When plot data changes (new simulation results, etc.)
    * - Should be called from usePlotCalculations when calculating full data bounds
-   * 
+   *
    * What it prevents:
    * - Users panning outside data bounds and seeing empty axis tick marks
    * - Axis showing values where no data points exist
@@ -136,22 +139,26 @@ export class ZoomController {
   /**
    * Set zoom state change callback for synchronization
    */
-  setZoomStateCallback(callback: ((zoomState: {
-    isZooming: boolean;
-    zoomStartX: number | null;
-    zoomEndX: number | null;
-    zoomBounds: { min: number; max: number } | null;
-  }) => void) | null): void {
+  setZoomStateCallback(
+    callback:
+      | ((zoomState: {
+        isZooming: boolean;
+        zoomStartX: number | null;
+        zoomEndX: number | null;
+        zoomBounds: { min: number; max: number } | null;
+      }) => void)
+      | null
+  ): void {
     this.onZoomStateChangeCb = callback;
   }
-  
+
   /**
    * Set pan offset change callback for synchronization
    */
   setPanOffsetCallback(callback: ((panOffset: number) => void) | null): void {
     this.onPanOffsetChangeCb = callback;
   }
-  
+
   /**
    * Set webgl redraw callback for direct canvas updates (no React re-render)
    */
@@ -172,7 +179,7 @@ export class ZoomController {
       });
     }
   }
-  
+
   /**
    * Notify about pan offset changes for synchronization
    */
@@ -182,7 +189,7 @@ export class ZoomController {
       this.onPanOffsetChangeCb(this.panOffsetX);
     }
   }
-  
+
   /**
    * Trigger direct webgl redraw (no React re-render)
    */
@@ -204,8 +211,10 @@ export class ZoomController {
     this.isZooming = zoomState.isZooming;
     this.zoomStartX = zoomState.zoomStartX;
     this.zoomEndX = zoomState.zoomEndX;
-    this.customXBounds = zoomState.zoomBounds ? { ...zoomState.zoomBounds } : null;
-    
+    this.customXBounds = zoomState.zoomBounds
+      ? { ...zoomState.zoomBounds }
+      : null;
+
     // Update visual feedback if zooming
     if (this.isZooming && this.zoomStartX !== null && this.zoomEndX !== null) {
       this.showZoomVisuals(this.zoomStartX, this.zoomEndX);
@@ -214,7 +223,7 @@ export class ZoomController {
       this.hideZoomVisuals();
     }
   }
-  
+
   /**
    * Apply external pan offset for synchronization
    */
@@ -237,7 +246,6 @@ export class ZoomController {
       max: this.customXBounds.max + this.panOffsetX,
     };
   }
-
 
   /**
    * Check if currently in zooming mode
@@ -281,19 +289,12 @@ export class ZoomController {
     this.zoomStartX = dataX;
     this.zoomEndX = dataX;
 
-    console.log(
-      "ZoomController: Started zoom at data X:",
-      dataX,
-      "NDC X:",
-      mouseNdcX
-    );
-
     // Immediately show zoom visuals at start position
     this.showZoomVisuals(dataX, dataX);
-    
+
     // Trigger direct webgl redraw for zoom visuals
     this.triggerWebglRedraw();
-    
+
     // Notify about zoom state change
     this.notifyZoomStateChange();
   }
@@ -318,10 +319,10 @@ export class ZoomController {
 
     // Update zoom visual feedback
     this.showZoomVisuals(this.zoomStartX, dataX);
-    
+
     // Trigger direct webgl redraw for zoom visuals
     this.triggerWebglRedraw();
-    
+
     // Notify about zoom state change
     this.notifyZoomStateChange();
   }
@@ -345,12 +346,11 @@ export class ZoomController {
       this.customXBounds = { min: minX, max: maxX };
       this.panOffsetX = 0; // Reset pan offset when applying new zoom bounds
       appliedBounds = { min: minX, max: maxX };
-      console.log("ZoomController: Applied zoom bounds:", appliedBounds);
     }
 
     // Clear zoom state and hide visuals
     this.clearZoomState();
-    
+
     // Notify about zoom state change
     this.notifyZoomStateChange();
 
@@ -365,7 +365,7 @@ export class ZoomController {
 
     console.log("ZoomController: Cancelled zoom operation");
     this.clearZoomState();
-    
+
     // Notify about zoom state change
     this.notifyZoomStateChange();
   }
@@ -379,7 +379,7 @@ export class ZoomController {
     this.customXBounds = { min, max };
     this.panOffsetX = 0; // Reset pan offset when setting new bounds
     console.log("ZoomController: Set zoom bounds:", { min, max });
-    
+
     // Notify about zoom state change
     this.notifyZoomStateChange();
   }
@@ -395,10 +395,10 @@ export class ZoomController {
 
     this.customXBounds = null;
     this.panOffsetX = 0; // Reset pan offset when zoom is reset
-    
+
     // Notify about zoom state change
     this.notifyZoomStateChange();
-    
+
     return true;
   }
 
@@ -441,17 +441,17 @@ export class ZoomController {
 
     // Calculate pan delta (negative because dragging right should move view left)
     let panDelta = -(currentDataX - this.panStartX);
-    
+
     // Limit panning to prevent moving too far outside original data bounds
     if (this.customXBounds && this.originalDataBounds) {
       // Prevent panning outside original data bounds entirely
       const minPanBound = this.originalDataBounds.min;
       const maxPanBound = this.originalDataBounds.max;
-      
+
       // Calculate what the new bounds would be with this pan offset
       const newMin = this.customXBounds.min + panDelta;
       const newMax = this.customXBounds.max + panDelta;
-      
+
       // Constrain the pan offset to keep view within data bounds
       if (newMin < minPanBound) {
         panDelta = minPanBound - this.customXBounds.min;
@@ -459,10 +459,10 @@ export class ZoomController {
         panDelta = maxPanBound - this.customXBounds.max;
       }
     }
-    
+
     this.panOffsetX = panDelta;
     this.notifyPanOffsetChange();
-    
+
     // Trigger direct webgl redraw for smooth panning
     this.triggerWebglRedraw();
   }
@@ -493,17 +493,17 @@ export class ZoomController {
 
     // Calculate new pan offset
     let newPanOffset = this.panOffsetX + deltaX * scrollSensitivity;
-    
+
     // Limit panning to prevent moving too far outside original data bounds
     if (this.originalDataBounds) {
       // Prevent panning outside original data bounds entirely
       const minPanBound = this.originalDataBounds.min;
       const maxPanBound = this.originalDataBounds.max;
-      
+
       // Calculate what the new bounds would be with this pan offset
       const newMin = this.customXBounds.min + newPanOffset;
       const newMax = this.customXBounds.max + newPanOffset;
-      
+
       // Constrain the pan offset to keep view within reasonable bounds
       if (newMin < minPanBound) {
         newPanOffset = minPanBound - this.customXBounds.min;
@@ -516,7 +516,7 @@ export class ZoomController {
     // Positive deltaX should pan right (positive offset)
     this.panOffsetX = newPanOffset;
     this.notifyPanOffsetChange();
-    
+
     // Trigger direct webgl redraw for smooth scroll panning
     this.triggerWebglRedraw();
   }
@@ -535,10 +535,24 @@ export class ZoomController {
   }
 
   /**
-   * Initialize zoom visual components with default configurations
+   * Get theme-appropriate zoom colors
+   * @param isDarkMode Whether dark mode is active
+   * @returns Fill color array [r, g, b, a]
    * @private
    */
-  private initializeZoomVisuals(): void {
+  private getZoomColors(isDarkMode: boolean): [number, number, number, number] {
+    // Use blue highlight for light mode, yellow for dark mode
+    return isDarkMode
+      ? [1, 1, 0, 0.2] // Semi-transparent yellow for dark mode
+      : [0.4, 0.4, 0, 0.5]; // Semi-transparent yellow for light mode
+  }
+
+  /**
+   * Initialize zoom visual components with theme-aware colors
+   * @param isDarkMode Whether dark mode is active
+   * @private
+   */
+  private initializeZoomVisuals(isDarkMode: boolean = true): void {
     if (!this.zoomLinesRef || !this.zoomRegionRef) return;
 
     try {
@@ -579,7 +593,7 @@ export class ZoomController {
       this.zoomRegionRef.initPolygons([
         {
           points: initialRegionPoints,
-          fillColor: [1, 1, 0, 0.2], // Semi-transparent yellow
+          fillColor: this.getZoomColors(isDarkMode),
           strokeColor: [1, 1, 0, 0], // No stroke
           strokeWeight: 0,
           isFilled: true,
@@ -685,5 +699,27 @@ export class ZoomController {
 
     // Hide zoom visuals
     this.hideZoomVisuals();
+  }
+
+  /**
+   * Update zoom highlight colors based on theme
+   * @param isDarkMode Whether dark mode is active
+   */
+  public updateZoomColors(isDarkMode: boolean): void {
+    if (!this.zoomRegionRef) return;
+
+    try {
+      // Update polygon color using updatePolygonStyle method
+      this.zoomRegionRef.updatePolygonStyle(0, {
+        fillColor: this.getZoomColors(isDarkMode),
+      });
+
+      // Trigger a redraw to apply the color change immediately
+      if (this.onWebglRedrawCb) {
+        this.onWebglRedrawCb();
+      }
+    } catch (error) {
+      console.error("ZoomController: Failed to update zoom colors:", error);
+    }
   }
 }
