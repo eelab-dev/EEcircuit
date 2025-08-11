@@ -20,15 +20,19 @@ export const useEventHandlers = ({
   handleZoomAtCursor,
   handleHorizontalScroll,
 }: UseEventHandlersProps) => {
-  // Touch gesture state for pinch and zoom
+  // Touch gesture state for pinch, zoom, and pan
   const [touchState, setTouchState] = useState<{
     initialDistance: number | null;
     initialTouchX: number;
     initialTouchY: number;
+    isPanning: boolean;
+    lastPanX: number;
   }>({
     initialDistance: null,
     initialTouchX: 0,
     initialTouchY: 0,
+    isPanning: false,
+    lastPanX: 0,
   });
 
   // Add touch event listeners for pinch and zoom in touchscreen mode
@@ -56,13 +60,15 @@ export const useEventHandlers = ({
         const touch0 = e.touches[0];
         const touch1 = e.touches[1];
         if (!touch0 || !touch1) return;
-        
+
         const distance = getTouchDistance(touch0, touch1);
         const center = getTouchCenter(touch0, touch1);
         setTouchState({
           initialDistance: distance,
           initialTouchX: center.x,
           initialTouchY: center.y,
+          isPanning: false,
+          lastPanX: center.x,
         });
       }
     };
@@ -73,15 +79,43 @@ export const useEventHandlers = ({
         const touch0 = e.touches[0];
         const touch1 = e.touches[1];
         if (!touch0 || !touch1) return;
-        
+
         const currentDistance = getTouchDistance(touch0, touch1);
         const center = getTouchCenter(touch0, touch1);
 
-        // Calculate zoom based on distance change
+        // Calculate distance and horizontal movement changes
         const distanceRatio = currentDistance / touchState.initialDistance;
+        const horizontalMovement = Math.abs(center.x - touchState.initialTouchX);
+        const distanceChange = Math.abs(distanceRatio - 1);
 
-        // Only trigger zoom if there's significant change (> 5% for smoother touch experience)
-        if (Math.abs(distanceRatio - 1) > 0.05) {
+        // Determine gesture type: if horizontal movement is significant and distance change is minimal, it's panning
+        const isHorizontalPan = horizontalMovement > 10 && distanceChange < 0.1;
+
+        if (isHorizontalPan && zoomController.current?.isZoomedIn()) {
+          // Two-finger horizontal pan when zoomed in - use scroll-based panning like trackpad
+          if (!touchState.isPanning) {
+            // Start panning mode
+            setTouchState((prev) => ({
+              ...prev,
+              isPanning: true,
+              lastPanX: center.x,
+            }));
+          } else {
+            // Calculate horizontal movement delta and apply as scroll
+            const deltaX = center.x - touchState.lastPanX;
+            // Convert pixel delta to scroll units (higher sensitivity for touch)
+            const scrollDelta = deltaX * 0.05; // Increased sensitivity for touch input
+
+            handleHorizontalScroll(-scrollDelta); // Negative to match trackpad behavior
+
+            // Update last position for next delta calculation
+            setTouchState((prev) => ({
+              ...prev,
+              lastPanX: center.x,
+            }));
+          }
+        } else if (distanceChange > 0.05) {
+          // Pinch to zoom if there's significant distance change
           const zoomIn = distanceRatio > 1;
           handleZoomAtCursor(center.x, center.y, zoomIn);
 
@@ -96,10 +130,13 @@ export const useEventHandlers = ({
 
     const handleTouchEnd = (e: TouchEvent) => {
       if (e.touches.length < 2) {
+        // Reset touch state - no need to explicitly end panning as we use scroll-based approach
         setTouchState({
           initialDistance: null,
           initialTouchX: 0,
           initialTouchY: 0,
+          isPanning: false,
+          lastPanX: 0,
         });
       }
     };
@@ -118,6 +155,8 @@ export const useEventHandlers = ({
     selectedVariables,
     inputProfile,
     touchState.initialDistance,
+    touchState.isPanning,
+    touchState.lastPanX,
   ]);
 
   // Add native wheel event listener to properly handle preventDefault
