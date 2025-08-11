@@ -10,6 +10,7 @@ import {
 import { generatePlotColor, type PlotColor } from "./colorUtils";
 import { ZoomController } from "./zoomController";
 import { useAppStore } from "../store/appStore";
+import { getPlotBackgroundColor } from "./plotBackgroundColors";
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -18,6 +19,7 @@ type ExtendedLineConfig = LineConfig & {
   isBracketLine?: boolean;
 };
 import type { AggregatedResult } from "../simulation/resultAggregator";
+
 
 interface UseCanvasInitializationProps {
   results: ResultType[];
@@ -83,8 +85,13 @@ export const useCanvasInitialization = ({
       canvas.width = width * devicePixelRatio;
       canvas.height = height * devicePixelRatio;
 
-      // Initialize WebGL plot
-      wglpRef.current = new WebglPlot(canvas);
+      // Get theme-aware background color (CSS string works for both canvas and webgl-plot)
+      const backgroundColor = getPlotBackgroundColor(isDarkMode);
+
+      // Initialize WebGL plot with theme-aware background
+      wglpRef.current = new WebglPlot(canvas, {
+        backgroundColor: backgroundColor,
+      });
 
       // Initialize crosshair (thin lines)
       crosshairRef.current = wglpRef.current.newThinLinePlotter(2);
@@ -166,7 +173,6 @@ export const useCanvasInitialization = ({
 
       const numX = firstResult.numPoints;
       const numVariables = firstResult.numVariables;
-      
 
       // Calculate the number of lines needed
       const typedFirstResult = firstResult as AggregatedResult;
@@ -283,16 +289,22 @@ export const useCanvasInitialization = ({
           }
 
           // Check if data exists at this index
-          if (!firstResult.data[lineIndex] || !firstResult.data[lineIndex]?.values) {
-            console.warn(`Skipping ${variableName} at lineIndex ${lineIndex} - no data`);
+          if (
+            !firstResult.data[lineIndex] ||
+            !firstResult.data[lineIndex]?.values
+          ) {
+            console.warn(
+              `Skipping ${variableName} at lineIndex ${lineIndex} - no data`
+            );
             continue;
           }
-
 
           // Fill array with x,y data
           for (let i = 0; i < numX; i++) {
             array[i * 2] = firstResult.data[0]?.values?.[i] as number; // X-axis data (frequency)
-            array[i * 2 + 1] = firstResult.data[lineIndex]?.values?.[i] as number; // Y-axis data (mag/phase)
+            array[i * 2 + 1] = firstResult.data[lineIndex]?.values?.[
+              i
+            ] as number; // Y-axis data (mag/phase)
           }
 
           allLineData.push({
@@ -327,7 +339,16 @@ export const useCanvasInitialization = ({
     return () => {
       cancelAnimationFrame(rafId);
     };
-  }, [results]);
+  }, [results, isDarkMode]);
+
+  // Handle theme changes after canvas is initialized
+  useEffect(() => {
+    if (isCanvasInitialized && wglpRef.current) {
+      const backgroundColor = getPlotBackgroundColor(isDarkMode);
+      wglpRef.current.setBackgroundColor(backgroundColor);
+      updatePlot(); // Redraw to apply the background color change
+    }
+  }, [isDarkMode, isCanvasInitialized]);
 
   return {
     canvasRef,

@@ -6,6 +6,7 @@ import { formatEngineering } from "./formatUtils";
 import Axis from "./axis";
 import { useAppStore } from "../store/appStore";
 import { useCanvasInitialization } from "./useCanvasInitialization";
+import { getPlotBackgroundColor } from "./plotBackgroundColors";
 import { useCanvasDimensions } from "./useCanvasDimensions";
 import { useCrosshair } from "./useCrosshair";
 import { useZoom } from "./useZoom";
@@ -71,11 +72,14 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 }) => {
   const inputProfile = useAppStore((state) => state.inputProfile);
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
+  const isDarkMode = useAppStore((state) => state.isDarkMode);
   const [isAxis] = useState(true);
   
+  // Theme-aware background color for canvas using single source of truth
+  const canvasBackgroundColor = getPlotBackgroundColor(isDarkMode);
+
   // Ref for direct DOM manipulation of crosshair coordinates (no React re-renders)
   const crosshairDisplayRef = useRef<HTMLDivElement>(null);
-  
 
   // We need to use refs to avoid circular dependencies between hooks
   const updatePlotRef = useRef<(() => void) | null>(null);
@@ -107,8 +111,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       crosshairDisplayRef.current.textContent = `X: ${formatEngineering(x)}, Y: ${formatEngineering(y)}`;
     }
   }, []);
-
-
 
   // Initialize canvas first
   const {
@@ -178,12 +180,12 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     updatePlotRef.current = updatePlot;
     calculateAndApplyScalingRef.current = calculateAndApplyScaling;
     axisScalesRef.current = axisScales;
-    
+
     // Set the zoom controller ref for direct pan synchronization
     if (zoomControllerRef) {
       zoomControllerRef.current = zoomController.current;
     }
-    
+
     // Set function refs for direct plot updates from other canvas
     if (plotUpdateRef) {
       plotUpdateRef.current = updatePlot;
@@ -191,7 +193,15 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     if (plotScalingRef) {
       plotScalingRef.current = calculateAndApplyScaling;
     }
-  }, [updatePlot, calculateAndApplyScaling, axisScales, zoomController, zoomControllerRef, plotUpdateRef, plotScalingRef]);
+  }, [
+    updatePlot,
+    calculateAndApplyScaling,
+    axisScales,
+    zoomController,
+    zoomControllerRef,
+    plotUpdateRef,
+    plotScalingRef,
+  ]);
 
   // Initialize zoom
   const {
@@ -379,7 +389,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               boxShadow="sm"
             >
               {inputProfile === "trackpad" &&
-                (zoomController.current?.isZoomedIn() 
+                (zoomController.current?.isZoomedIn()
                   ? "💡 Right-drag to pan • Left-drag to zoom • Ctrl+scroll to zoom • Double-click to reset"
                   : "💡 Ctrl+scroll to zoom • Left-drag to zoom X-axis • Double-click to reset")}
               {inputProfile === "mouse" &&
@@ -422,7 +432,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               width: "100%",
               height: "100%",
               display: "block",
-              backgroundColor: "transparent",
+              backgroundColor: canvasBackgroundColor, // Theme-aware background
               outline: "none", // Prevent focus outline on iPad and other touch devices
               cursor: zoomController.current?.getIsZooming()
                 ? "col-resize"
@@ -528,7 +538,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               }
             }}
           ></canvas>
-          
+
           {/* Progress overlay positioned in bottom right corner of canvas */}
           <PlotProgressOverlay />
         </Box>
