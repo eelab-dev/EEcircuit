@@ -9,6 +9,7 @@ interface UseEventHandlersProps {
   inputProfile: string;
   handleZoomAtCursor: (mouseX: number, mouseY: number, zoomIn: boolean) => void;
   handleHorizontalScroll: (deltaX: number) => void;
+  resetZoom: () => void;
 }
 
 export const useEventHandlers = ({
@@ -19,6 +20,7 @@ export const useEventHandlers = ({
   inputProfile,
   handleZoomAtCursor,
   handleHorizontalScroll,
+  resetZoom,
 }: UseEventHandlersProps) => {
   // Touch gesture state for pinch, zoom, and pan
   const [touchState, setTouchState] = useState<{
@@ -27,12 +29,16 @@ export const useEventHandlers = ({
     initialTouchY: number;
     isPanning: boolean;
     lastPanX: number;
+    lastTapTime: number;
+    tapCount: number;
   }>({
     initialDistance: null,
     initialTouchX: 0,
     initialTouchY: 0,
     isPanning: false,
     lastPanX: 0,
+    lastTapTime: 0,
+    tapCount: 0,
   });
 
   // Add touch event listeners for pinch and zoom in touchscreen mode
@@ -69,6 +75,8 @@ export const useEventHandlers = ({
           initialTouchY: center.y,
           isPanning: false,
           lastPanX: center.x,
+          lastTapTime: touchState.lastTapTime,
+          tapCount: touchState.tapCount,
         });
       }
     };
@@ -130,14 +138,47 @@ export const useEventHandlers = ({
 
     const handleTouchEnd = (e: TouchEvent) => {
       if (e.touches.length < 2) {
-        // Reset touch state - no need to explicitly end panning as we use scroll-based approach
-        setTouchState({
-          initialDistance: null,
-          initialTouchX: 0,
-          initialTouchY: 0,
-          isPanning: false,
-          lastPanX: 0,
-        });
+        const currentTime = Date.now();
+        const timeSinceLastTap = currentTime - touchState.lastTapTime;
+        
+        // Check for single finger tap (double-tap detection)
+        if (e.changedTouches.length === 1 && !touchState.isPanning && touchState.initialDistance === null) {
+          if (timeSinceLastTap < 300 && touchState.tapCount === 1) {
+            // Double-tap detected - reset zoom
+            resetZoom();
+            setTouchState({
+              initialDistance: null,
+              initialTouchX: 0,
+              initialTouchY: 0,
+              isPanning: false,
+              lastPanX: 0,
+              lastTapTime: 0,
+              tapCount: 0,
+            });
+          } else {
+            // First tap or too long since last tap
+            setTouchState({
+              initialDistance: null,
+              initialTouchX: 0,
+              initialTouchY: 0,
+              isPanning: false,
+              lastPanX: 0,
+              lastTapTime: currentTime,
+              tapCount: 1,
+            });
+          }
+        } else {
+          // Reset touch state for multi-touch gestures or after panning
+          setTouchState({
+            initialDistance: null,
+            initialTouchX: 0,
+            initialTouchY: 0,
+            isPanning: false,
+            lastPanX: 0,
+            lastTapTime: touchState.lastTapTime,
+            tapCount: touchState.tapCount,
+          });
+        }
       }
     };
 
@@ -157,6 +198,9 @@ export const useEventHandlers = ({
     touchState.initialDistance,
     touchState.isPanning,
     touchState.lastPanX,
+    touchState.lastTapTime,
+    touchState.tapCount,
+    resetZoom,
   ]);
 
   // Add native wheel event listener to properly handle preventDefault
@@ -192,10 +236,23 @@ export const useEventHandlers = ({
           }
         }
       } else if (inputProfile === "mouse") {
-        // Mouse mode: mouse wheel for zoom
-        e.preventDefault();
-        const zoomIn = e.deltaY < 0;
-        handleZoomAtCursor(mouseX, mouseY, zoomIn);
+        // Mouse mode: shift+wheel for zoom, regular wheel for panning
+        if (e.shiftKey) {
+          e.preventDefault();
+          const zoomIn = e.deltaY < 0;
+          handleZoomAtCursor(mouseX, mouseY, zoomIn);
+        } else if (zoomController.current?.isZoomedIn()) {
+          // Regular mouse wheel for panning when zoomed in
+          e.preventDefault();
+          let deltaX = e.deltaX;
+          if (Math.abs(deltaX) < Math.abs(e.deltaY)) {
+            deltaX = e.deltaY;
+          }
+          if (Math.abs(deltaX) > 0) {
+            const normalizedDelta = deltaX > 0 ? 1 : -1;
+            handleHorizontalScroll(normalizedDelta);
+          }
+        }
       } else if (inputProfile === "touchscreen") {
         // Touchscreen mode: handle pinch and zoom (via wheel events)
         if (e.ctrlKey) {

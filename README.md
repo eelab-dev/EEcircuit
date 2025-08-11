@@ -34,7 +34,10 @@ vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
 
 ## Usage
 
-Use your mouse to pan & zoom on the plot. left click for area **zoom** and right click hold and drag for **pan**. To reset the view **double click**.
+Use the plot with different input profiles:
+- **Trackpad**: Scroll to pan, drag to zoom, double-click to reset
+- **Mouse**: Scroll wheel to pan, shift+scroll to zoom, drag to zoom, double-click to reset  
+- **Touch**: Two-finger scroll to pan, pinch to zoom, double-tap to reset
 
 ## Documentation
 

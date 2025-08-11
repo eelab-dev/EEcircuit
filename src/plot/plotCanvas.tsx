@@ -238,6 +238,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     inputProfile,
     handleZoomAtCursor,
     handleHorizontalScroll,
+    resetZoom,
   });
 
   // Use canvas dimensions hook
@@ -397,16 +398,16 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
             >
               {inputProfile === "trackpad" &&
                 (zoomController.current?.isZoomedIn()
-                  ? "💡 Right-drag to pan • Left-drag to zoom • Ctrl+scroll to zoom • Double-click to reset"
-                  : "💡 Ctrl+scroll to zoom • Left-drag to zoom X-axis • Double-click to reset")}
+                  ? "💡 Scroll to pan • Drag to zoom • Double-click to reset"
+                  : "💡 Drag to zoom • Double-click to reset")}
               {inputProfile === "mouse" &&
                 (zoomController.current?.isZoomedIn()
-                  ? "💡 Right-drag to pan • Left-drag to zoom • Mouse wheel to zoom • Double-click to reset"
-                  : "💡 Mouse wheel to zoom • Left-drag to zoom X-axis • Double-click to reset")}
+                  ? "💡 Scroll wheel to pan • Drag to zoom • Shift+scroll to zoom • Double-click to reset"
+                  : "💡 Shift+scroll to zoom • Drag to zoom • Double-click to reset")}
               {inputProfile === "touchscreen" &&
                 (zoomController.current?.isZoomedIn()
-                  ? "💡 Two-finger drag to pan • Left-drag to zoom • Pinch to zoom • Double-click to reset"
-                  : "💡 Pinch to zoom • Left-drag to zoom X-axis • Double-click to reset")}
+                  ? "💡 Two-finger scroll to pan • Pinch to zoom • Double-tap to reset"
+                  : "💡 Pinch to zoom • Double-tap to reset")}
             </Box>
           )}
 
