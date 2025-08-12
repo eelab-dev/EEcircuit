@@ -1,6 +1,6 @@
 import React, { JSX, useEffect, useRef, useState } from "react";
-import { unitConvert2string } from "./unitConverter.ts";
-import { useAppStore } from "../store/appStore.ts";
+import { unitConvert2string } from "./unitConverter";
+import { useAppStore } from "../../../store/appStore";
 
 type AxisType = {
   scale: number;

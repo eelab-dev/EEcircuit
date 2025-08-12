@@ -1,20 +1,20 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { ResultType } from "eecircuit-engine";
 import { Box, Grid, GridItem, Button } from "@chakra-ui/react";
-import { clearColorCache } from "./colorUtils";
+import { clearColorCache } from "./styling/colorUtils";
 import { formatEngineering } from "./formatUtils";
-import Axis from "./axis";
-import { useAppStore } from "../store/appStore";
+import Axis from "./axis/axis";
+import { useAppStore } from "../../store/appStore";
 import { useCanvasInitialization } from "./useCanvasInitialization";
-import { getPlotBackgroundColor } from "./plotBackgroundColors";
+import { getPlotBackgroundColor } from "./styling/plotBackgroundColors";
 import { useCanvasDimensions } from "./useCanvasDimensions";
-import { useCrosshair } from "./useCrosshair";
-import { useZoom } from "./useZoom";
+import { useCrosshair } from "./interactions/useCrosshair";
+import { useZoom } from "./interactions/useZoom";
 import { usePlotCalculations } from "./usePlotCalculations";
-import { useEventHandlers } from "./useEventHandlers";
-import PlotProgressOverlay from "../components/PlotProgressOverlay";
-import type { AggregatedResult } from "../simulation/resultAggregator";
-import type { ZoomController } from "./zoomController";
+import { useEventHandlers } from "./interactions/useEventHandlers";
+import PlotProgressOverlay from "../../components/PlotProgressOverlay";
+import type { AggregatedResult } from "../../simulation/resultAggregator";
+import type { ZoomController } from "./interactions/zoomController";
 
 interface PlotCanvasProps {
   results: ResultType[];

@@ -7,10 +7,10 @@ import {
   WebglPlot,
   WebglPolygonPlot,
 } from "webgl-plot";
-import { generatePlotColor, type PlotColor } from "./colorUtils";
-import { ZoomController } from "./zoomController";
-import { useAppStore } from "../store/appStore";
-import { getPlotBackgroundColor } from "./plotBackgroundColors";
+import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
+import { ZoomController } from "./interactions/zoomController";
+import { useAppStore } from "../../store/appStore";
+import { getPlotBackgroundColor } from "./styling/plotBackgroundColors";
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -18,7 +18,7 @@ type ExtendedLineConfig = LineConfig & {
   parameterValue?: string;
   isBracketLine?: boolean;
 };
-import type { AggregatedResult } from "../simulation/resultAggregator";
+import type { AggregatedResult } from "../../simulation/resultAggregator";
 
 
 interface UseCanvasInitializationProps {

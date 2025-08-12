@@ -1,12 +1,12 @@
 import React from "react";
 import { ResultType } from "eecircuit-engine";
 import { Flex, VStack, HStack, Button, Text, Box } from "@chakra-ui/react";
-import PlotCanvas from "./plotCanvas";
+import PlotCanvas from "./plotcanvas/plotCanvas";
 import PlotSidebar from "./plotSidebar";
 import BracketOperationSlider from "./BracketOperationSlider";
 import { useAppStore } from "../store/appStore";
 import { exportResultsToCSV } from "../utils/csvExport";
-import type { ZoomController } from "./zoomController";
+import type { ZoomController } from "./plotcanvas/interactions/zoomController";
 
 interface PlotProps {
   results?: ResultType[]; // Make optional since we can get it from store

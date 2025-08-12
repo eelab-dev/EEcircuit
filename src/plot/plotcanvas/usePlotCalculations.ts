@@ -1,11 +1,11 @@
 import { useState, RefObject } from "react";
 import { ResultType } from "eecircuit-engine";
 import { LineConfig, WebglLineThick, WebglLinePlot, WebglPolygonPlot, WebglPlot } from "webgl-plot";
-import { generatePlotColor, type PlotColor } from "./colorUtils";
-import { ZoomController } from "./zoomController";
-import { BRACKET_PLOT_STYLES } from "./bracketPlotStyles";
-import type { AggregatedResult } from "../simulation/resultAggregator";
-import { useAppStore } from "../store/appStore";
+import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
+import { ZoomController } from "./interactions/zoomController";
+import { BRACKET_PLOT_STYLES } from "../bracketPlotStyles";
+import type { AggregatedResult } from "../../simulation/resultAggregator";
+import { useAppStore } from "../../store/appStore";
 
 /**
  * EMPTY AXIS AREAS BUG PREVENTION:
