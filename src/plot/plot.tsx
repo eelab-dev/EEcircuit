@@ -161,26 +161,40 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
           transition="margin-right 0.3s ease"
           gap={4}
         >
-          {/* Canvas mode controls */}
-          {!isACModeActive && (
-            <HStack gap={2} alignSelf="flex-start">
-              <Text fontSize="sm" color="fg.muted">Canvas mode:</Text>
+          {/* Canvas mode and cursor controls */}
+          <HStack gap={4} alignSelf="flex-start">
+            {!isACModeActive && (
+              <HStack gap={2}>
+                <Text fontSize="sm" color="fg.muted">Canvas mode:</Text>
+                <Button
+                  size="sm"
+                  variant={numCanvases === 1 ? "solid" : "outline"}
+                  onClick={() => setNumCanvases(1)}
+                >
+                  Single
+                </Button>
+                <Button
+                  size="sm"
+                  variant={numCanvases === 2 ? "solid" : "outline"}
+                  onClick={() => setNumCanvases(2)}
+                >
+                  Dual
+                </Button>
+              </HStack>
+            )}
+            
+            {/* Cursor toggle control */}
+            <HStack gap={2}>
+              <Text fontSize="sm" color="fg.muted">Cursor:</Text>
               <Button
                 size="sm"
-                variant={numCanvases === 1 ? "solid" : "outline"}
-                onClick={() => setNumCanvases(1)}
+                variant={sharedCursorVisible ? "solid" : "outline"}
+                onClick={() => setSharedCursorVisible(!sharedCursorVisible)}
               >
-                Single
-              </Button>
-              <Button
-                size="sm"
-                variant={numCanvases === 2 ? "solid" : "outline"}
-                onClick={() => setNumCanvases(2)}
-              >
-                Dual
+                {sharedCursorVisible ? "Hide" : "Show"}
               </Button>
             </HStack>
-          )}
+          </HStack>
           
           {/* Single canvas mode */}
           {numCanvases === 1 && (
@@ -191,6 +205,8 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                 hoveredVariable={hoveredVariable}
                 isBracketOperationPlot={isBracketOperationPlot}
                 bracketOperationResults={bracketOperationResults}
+                sharedCursorVisible={sharedCursorVisible}
+                onCursorVisibilityChange={setSharedCursorVisible}
               />
             </Box>
           )}

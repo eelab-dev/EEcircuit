@@ -93,26 +93,11 @@ export const useCanvasInitialization = ({
         backgroundColor: backgroundColor,
       });
 
-      // Initialize crosshair (thin lines)
+      // Initialize crosshair (thin lines) - start with no lines, useCrosshair hook will manage them
       crosshairRef.current = wglpRef.current.newThinLinePlotter(2);
-
-      // Create crosshair lines data (2 lines: horizontal and vertical)
-      const crosshairLines: LineConfig[] = [
-        {
-          points: new Float32Array([-1, 0, 1, 0]), // Horizontal line
-          color: [0, 1, 0, 0.8], // Green with transparency
-          thickness: 1,
-          enabled: true,
-        },
-        {
-          points: new Float32Array([0, -1, 0, 1]), // Vertical line
-          color: [0, 1, 0, 0.8], // Green with transparency
-          thickness: 1,
-          enabled: true,
-        },
-      ];
-
-      crosshairRef.current.initLines(crosshairLines);
+      
+      // Initialize with empty lines array - useCrosshair hook will add/remove lines as needed
+      crosshairRef.current.initLines([]);
 
       // Initialize snap circle (polygon plot)
       snapCircleRef.current = new WebglPolygonPlot(wglpRef.current);

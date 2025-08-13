@@ -133,7 +133,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   // Initialize crosshair
   const {
     showCrosshair,
-    setShowCrosshair,
     crosshairSnapToLines,
     setCrosshairSnapToLines,
     updateCrosshair,
@@ -517,18 +516,11 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
               }
             }}
             onMouseEnter={() => {
-              if (!zoomController.current?.getIsZooming()) {
-                setShowCrosshair(true);
-              }
+              // Don't automatically show cursor on mouse enter - let user control via toggle button
             }}
             onMouseLeave={() => {
               // Handle mouse leave during operations
-              if (!zoomController.current?.getIsZooming()) {
-                setShowCrosshair(false);
-                if (isCanvasInitialized) {
-                  updatePlot();
-                }
-              }
+              // Don't automatically hide cursor on mouse leave - let user control via toggle button
               // End panning if mouse leaves canvas
               if (zoomController.current?.getIsPanning()) {
                 zoomController.current.endPan();

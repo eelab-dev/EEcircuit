@@ -114,18 +114,55 @@ export const useCrosshair = ({
   const showCrosshair = sharedCursorVisible !== undefined ? sharedCursorVisible : localShowCrosshair;
   const setShowCrosshair = sharedCursorVisible !== undefined ? onCursorVisibilityChange! : setLocalShowCrosshair;
   const [crosshairSnapToLines, setCrosshairSnapToLines] = useState(false);
+
+  // Add/remove crosshair lines from webgl-plot based on showCrosshair state
+  useEffect(() => {
+    if (crosshairRef.current) {
+      if (showCrosshair) {
+        // Add crosshair lines to webgl-plot
+        const crosshairLines: LineConfig[] = [
+          {
+            points: new Float32Array([-1, 0, 1, 0]), // Horizontal line
+            color: [0, 1, 0, 0.8], // Green with transparency
+            thickness: 1,
+            enabled: true,
+          },
+          {
+            points: new Float32Array([0, -1, 0, 1]), // Vertical line
+            color: [0, 1, 0, 0.8], // Green with transparency
+            thickness: 1,
+            enabled: true,
+          },
+        ];
+        crosshairRef.current.initLines(crosshairLines);
+      } else {
+        // Remove all crosshair lines from webgl-plot
+        crosshairRef.current.initLines([]);
+      }
+      
+      // Also disable snap circle when crosshair is hidden
+      if (snapCircleRef.current) {
+        snapCircleRef.current.setPolygonEnabled(0, showCrosshair && crosshairSnapToLines);
+      }
+      
+      // Force canvas redraw to show/hide the crosshair
+      if (onRedrawNeeded) {
+        onRedrawNeeded();
+      }
+    }
+  }, [showCrosshair, crosshairSnapToLines]);
   
   // Store crosshair coordinates in ref to avoid React re-renders
   const crosshairCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Dual canvas cursor synchronization: sync vertical crosshair to shared X coordinate
   useEffect(() => {
-    if (sharedCursorX !== null && sharedCursorX !== undefined && crosshairRef.current && sharedCursorX !== lastSyncedX.current) {
+    if (sharedCursorX !== null && sharedCursorX !== undefined && crosshairRef.current && showCrosshair && sharedCursorX !== lastSyncedX.current) {
       lastSyncedX.current = sharedCursorX;
       const currentAxisScales = getAxisScales();
       const sharedNdcX = sharedCursorX * currentAxisScales.scaleX + currentAxisScales.offsetX;
       
-      // Update vertical line to shared X position
+      // Update vertical line to shared X position (only if lines exist)
       const verticalPoints = new Float32Array([sharedNdcX, -1, sharedNdcX, 1]);
       crosshairRef.current.updateLinePoints(1, verticalPoints);
       
@@ -134,11 +171,11 @@ export const useCrosshair = ({
         onRedrawNeeded();
       }
     }
-  }, [sharedCursorX]);
+  }, [sharedCursorX, showCrosshair]);
 
   // Update crosshair position - can snap to nearest plot line or move freely
   const updateCrosshair = (mouseX: number, mouseY: number) => {
-    if (!crosshairRef.current || !canvasRef.current) return;
+    if (!crosshairRef.current || !canvasRef.current || !showCrosshair) return;
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -267,7 +304,7 @@ export const useCrosshair = ({
         [finalNdcX, finalNdcY]
       );
       
-      snapCircleRef.current.setPolygonEnabled(0, crosshairSnapToLines);
+      snapCircleRef.current.setPolygonEnabled(0, showCrosshair && crosshairSnapToLines);
     }
 
     // Share X coordinate with other canvas in dual mode
