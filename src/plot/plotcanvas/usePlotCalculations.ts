@@ -1,7 +1,8 @@
 import { useState, RefObject } from "react";
 import { ResultType } from "eecircuit-engine";
-import { LineConfig, WebglLineThick, WebglLinePlot, WebglPolygonPlot, WebglPlot } from "webgl-plot";
+import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanvas } from "webgl-plot";
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
+import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
 import { BRACKET_PLOT_STYLES } from "../bracketPlotStyles";
 import type { AggregatedResult } from "../../simulation/resultAggregator";
@@ -40,8 +41,8 @@ interface AxisScales {
 }
 
 interface UsePlotCalculationsProps {
-  plotLineRef: RefObject<WebglLineThick | null>;
-  wglpRef: RefObject<WebglPlot | null>;
+  plotLineRef: RefObject<UnifiedLinePlot | null>;
+  glRef: RefObject<WebGL2RenderingContext | null>;
   crosshairRef: RefObject<WebglLinePlot | null>;
   snapCircleRef: RefObject<WebglPolygonPlot | null>;
   zoomLinesRef: RefObject<WebglLinePlot | null>;
@@ -68,7 +69,7 @@ interface UsePlotCalculationsReturn {
 
 export const usePlotCalculations = ({
   plotLineRef,
-  wglpRef,
+  glRef,
   crosshairRef,
   snapCircleRef,
   zoomLinesRef,
@@ -138,7 +139,7 @@ export const usePlotCalculations = ({
               xMax = Math.max(xMax, x);
             }
           }
-          
+
           // CRITICAL: Set original data bounds in zoom controller to prevent empty axis areas bug
           // This constrains panning to stay within the original data range, preventing users
           // from panning into areas with no data points (which would show empty axis tick marks)
@@ -198,7 +199,7 @@ export const usePlotCalculations = ({
       // Add padding to avoid edge cases and ensure constant values are visible
       // For constant values (zero range), use minimum padding to create visual separation
       const yPadding = yRange > 0 ? yRange * 0.05 : Math.abs(yMin) * 0.1 || 1;
-      
+
       if (!customXBounds) {
         // Normal view: add padding to both X and Y
         const xPadding = xRange > 0 ? xRange * 0.05 : Math.abs(xMin) * 0.1 || 1;
@@ -206,7 +207,7 @@ export const usePlotCalculations = ({
         xMax += xPadding;
       }
       // For zoomed view: NO X padding (respect exact zoom bounds)
-      
+
       // Always add Y padding
       yMin -= yPadding;
       yMax += yPadding;
@@ -223,7 +224,7 @@ export const usePlotCalculations = ({
       // Transform from data space to [-1, 1] space
       const offsetX = -1 - xMin * scaleX;
       const offsetY = -1 - yMin * scaleY;
-      
+
       // No need to apply pan offset here since we're already using bounds with pan offset
 
       plotLineRef.current.setGlobalTransform(
@@ -246,13 +247,13 @@ export const usePlotCalculations = ({
 
   // Update plot visibility and colors
   const updatePlot = () => {
-    if (!wglpRef.current || !plotLineRef.current || results.length === 0)
+    if (!glRef.current || !plotLineRef.current || results.length === 0)
       return;
 
-    wglpRef.current.clear();
+    clearCanvas(glRef.current);
 
     if (selectedVariables.length === 0) {
-      wglpRef.current.update();
+      // No need to call update() with new API - just clear and return
       return;
     }
 
@@ -286,22 +287,22 @@ export const usePlotCalculations = ({
         const parameterIndex = bracketOperationResults.parameterValues?.findIndex(
           (paramValue) => paramValue === extendedLineData.parameterValue
         ) ?? -1;
-        
+
         const isEmphasized = parameterIndex === emphasizedPlotIndex;
-        
+
         // Apply emphasis styling
-        thickness = isEmphasized 
+        thickness = isEmphasized
           ? BRACKET_PLOT_STYLES.EMPHASIZED_LINE_THICKNESS
           : BRACKET_PLOT_STYLES.NORMAL_LINE_THICKNESS;
-          
+
         // Apply transparency to color
-        const alpha = isEmphasized 
+        const alpha = isEmphasized
           ? BRACKET_PLOT_STYLES.EMPHASIZED_TRANSPARENCY
           : BRACKET_PLOT_STYLES.NORMAL_TRANSPARENCY;
         currentColor = [currentColor[0], currentColor[1], currentColor[2], alpha];
       } else {
         // Regular plot behavior
-        thickness = isSelected && isHovered ? 10 : 5;
+        thickness = isSelected && isHovered ? LINE_THICKNESS.HOVERED : LINE_THICKNESS.NORMAL;
       }
 
       // Update line properties using the new API methods
@@ -320,6 +321,11 @@ export const usePlotCalculations = ({
 
     // Calculate and apply auto-scaling for visible lines
     calculateAndApplyScaling();
+
+    //plotLineRef.current.setLogAxis(true, false);
+    //const dataBounds = plotLineRef.current.getDataBounds();
+    //plotLineRef.current.autoScaleToLogSpace(dataBounds);
+
 
     plotLineRef.current.draw();
 

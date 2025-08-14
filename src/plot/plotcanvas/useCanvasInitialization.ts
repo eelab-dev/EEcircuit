@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { ResultType } from "eecircuit-engine";
 import {
   LineConfig,
-  WebglLineThick,
+  UnifiedLinePlot,
   WebglLinePlot,
-  WebglPlot,
   WebglPolygonPlot,
+  setupCanvasAndWebGL,
 } from "webgl-plot";
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
+import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
 import { useAppStore } from "../../store/appStore";
 import { getPlotBackgroundColor } from "./styling/plotBackgroundColors";
@@ -32,8 +33,8 @@ export const useCanvasInitialization = ({
 }: UseCanvasInitializationProps) => {
   const isDarkMode = useAppStore((state) => state.isDarkMode);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const wglpRef = useRef<WebglPlot | null>(null);
-  const plotLineRef = useRef<WebglLineThick | null>(null);
+  const glRef = useRef<WebGL2RenderingContext | null>(null);
+  const plotLineRef = useRef<UnifiedLinePlot | null>(null);
   const crosshairRef = useRef<WebglLinePlot | null>(null);
   const snapCircleRef = useRef<WebglPolygonPlot | null>(null);
   const zoomController = useRef<ZoomController>(new ZoomController());
@@ -45,7 +46,7 @@ export const useCanvasInitialization = ({
 
   // Create the snap circle (fixed size, aspect ratio handled by transform scaling)
   const createSnapCircle = () => {
-    if (!snapCircleRef.current || !wglpRef.current) return;
+    if (!snapCircleRef.current || !glRef.current) return;
 
     // Create circle with fixed radius in NDC space
     const baseRadius = 0.04; // Base radius in NDC coordinates
@@ -56,7 +57,7 @@ export const useCanvasInitialization = ({
       segments: 20,
       fillColor: [0, 0, 0, 0], // Transparent fill (hollow)
       strokeColor: [1, 0.9, 0.1, 0.8], // Yellow stroke border
-      strokeWeight: 3, // Thicker border for better visibility
+      strokeWeight: LINE_THICKNESS.SNAP_CIRCLE_STROKE, // Thicker border for better visibility
       isFilled: false, // No fill - hollow
       isStroked: true, // Only stroke border
       enabled: false, // Initially disabled, enabled only in snap mode
@@ -88,39 +89,41 @@ export const useCanvasInitialization = ({
       // Get theme-aware background color (CSS string works for both canvas and webgl-plot)
       const backgroundColor = getPlotBackgroundColor(isDarkMode);
 
-      // Initialize WebGL plot with theme-aware background
-      wglpRef.current = new WebglPlot(canvas, {
+      // Initialize WebGL2 context with theme-aware background
+      glRef.current = setupCanvasAndWebGL(canvas, {
         backgroundColor: backgroundColor,
+        antialias: true,
+        powerPerformance: 'high-performance',
       });
 
       // Initialize crosshair (thin lines) - start with no lines, useCrosshair hook will manage them
-      crosshairRef.current = wglpRef.current.newThinLinePlotter(2);
-      
+      crosshairRef.current = new WebglLinePlot(glRef.current, 2);
+
       // Initialize with empty lines array - useCrosshair hook will add/remove lines as needed
       crosshairRef.current.initLines([]);
 
       // Initialize snap circle (polygon plot)
-      snapCircleRef.current = new WebglPolygonPlot(wglpRef.current);
+      snapCircleRef.current = new WebglPolygonPlot(glRef.current);
 
       // Create the initial circle
       createSnapCircle();
 
       // Initialize zoom components
-      zoomLinesRef.current = wglpRef.current.newThinLinePlotter(2);
-      zoomRegionRef.current = new WebglPolygonPlot(wglpRef.current);
+      zoomLinesRef.current = new WebglLinePlot(glRef.current, 2);
+      zoomRegionRef.current = new WebglPolygonPlot(glRef.current);
 
       // Create zoom lines data (2 vertical lines for zoom selection)
       const zoomLines: LineConfig[] = [
         {
           points: new Float32Array([0, -1, 0, 1]), // First vertical line
           color: [1, 0.9, 0.1, 0.9], // Yellow with high opacity
-          thickness: 2,
+          thickness: LINE_THICKNESS.ZOOM_LINES,
           enabled: false, // Initially disabled
         },
         {
           points: new Float32Array([0, -1, 0, 1]), // Second vertical line
           color: [1, 0.9, 0.1, 0.9], // Yellow with high opacity
-          thickness: 2,
+          thickness: LINE_THICKNESS.ZOOM_LINES,
           enabled: false, // Initially disabled
         },
       ];
@@ -177,10 +180,9 @@ export const useCanvasInitialization = ({
         totalLines = numVariables - 1;
       }
 
-      // Create plot line with the correct number of lines
-
-      plotLineRef.current = new WebglLineThick(
-        { gl: wglpRef.current.gl },
+      // Create plot line with the correct number of lines using UnifiedLinePlot
+      plotLineRef.current = new UnifiedLinePlot(
+        glRef.current,
         totalLines
       );
 
@@ -251,7 +253,7 @@ export const useCanvasInitialization = ({
             allLineData.push({
               points: new Float32Array(array),
               color: baseColor, // Use same color for all parameter sweeps of this variable
-              thickness: 5,
+              thickness: LINE_THICKNESS.NORMAL,
               scale: [1, 1],
               offset: [0, 0],
               enabled: true,
@@ -301,7 +303,7 @@ export const useCanvasInitialization = ({
               isDarkMode,
               colorMapRef.current
             ),
-            thickness: 5,
+            thickness: LINE_THICKNESS.NORMAL,
             scale: [1, 1],
             offset: [0, 0],
             enabled: true,
@@ -330,16 +332,16 @@ export const useCanvasInitialization = ({
 
   // Handle theme changes after canvas is initialized
   useEffect(() => {
-    if (isCanvasInitialized && wglpRef.current) {
-      const backgroundColor = getPlotBackgroundColor(isDarkMode);
-      wglpRef.current.setBackgroundColor(backgroundColor);
-      updatePlot(); // Redraw to apply the background color change
+    if (isCanvasInitialized && glRef.current) {
+      // Note: Background color changes need to be handled differently with new API
+      // The background is set during context creation, theme changes will require recreation
+      updatePlot(); // Redraw to apply any color changes
     }
   }, [isDarkMode, isCanvasInitialized]);
 
   return {
     canvasRef,
-    wglpRef,
+    glRef,
     plotLineRef,
     crosshairRef,
     snapCircleRef,

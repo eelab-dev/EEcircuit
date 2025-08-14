@@ -115,7 +115,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   // Initialize canvas first
   const {
     canvasRef,
-    wglpRef,
+    glRef,
     plotLineRef,
     crosshairRef,
     snapCircleRef,
@@ -156,7 +156,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   const { axisScales, calculateAndApplyScaling, updatePlot } =
     usePlotCalculations({
       plotLineRef,
-      wglpRef,
+      glRef,
       crosshairRef,
       snapCircleRef,
       zoomLinesRef,
@@ -243,7 +243,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   // Use canvas dimensions hook
   useCanvasDimensions({
     canvasRef,
-    wglpRef,
+    glRef,
     plotLineRef,
     isCanvasInitialized,
     calculateAndApplyScaling,

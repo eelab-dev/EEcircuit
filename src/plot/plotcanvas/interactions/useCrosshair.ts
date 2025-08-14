@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, RefObject } from "react";
 import { ResultType } from "eecircuit-engine";
 import { LineConfig, WebglLinePlot, WebglPolygonPlot } from "webgl-plot";
+import { LINE_THICKNESS } from "../styling/lineThickness";
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -124,13 +125,13 @@ export const useCrosshair = ({
           {
             points: new Float32Array([-1, 0, 1, 0]), // Horizontal line
             color: [0, 1, 0, 0.8], // Green with transparency
-            thickness: 1,
+            thickness: LINE_THICKNESS.CROSSHAIR,
             enabled: true,
           },
           {
             points: new Float32Array([0, -1, 0, 1]), // Vertical line
             color: [0, 1, 0, 0.8], // Green with transparency
-            thickness: 1,
+            thickness: LINE_THICKNESS.CROSSHAIR,
             enabled: true,
           },
         ];

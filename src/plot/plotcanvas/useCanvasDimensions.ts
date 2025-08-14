@@ -1,17 +1,17 @@
 import { useEffect, RefObject } from "react";
-import { WebglPlot, WebglLineThick } from "webgl-plot";
+import { UnifiedLinePlot, updateViewport } from "webgl-plot";
 
 interface UseCanvasDimensionsProps {
   canvasRef: RefObject<HTMLCanvasElement | null>;
-  wglpRef: RefObject<WebglPlot | null>;
-  plotLineRef: RefObject<WebglLineThick | null>;
+  glRef: RefObject<WebGL2RenderingContext | null>;
+  plotLineRef: RefObject<UnifiedLinePlot | null>;
   isCanvasInitialized: boolean;
   calculateAndApplyScaling: () => void;
 }
 
 export const useCanvasDimensions = ({
   canvasRef,
-  wglpRef,
+  glRef,
   plotLineRef,
   isCanvasInitialized,
   calculateAndApplyScaling,
@@ -50,13 +50,15 @@ export const useCanvasDimensions = ({
           canvas.height = newCanvasHeight;
 
           // Update WebGL viewport to match new canvas size
-          if (wglpRef.current) {
-            wglpRef.current.viewport(0, 0, newCanvasWidth, newCanvasHeight);
+          if (glRef.current) {
+            updateViewport(glRef.current, canvas);
           }
 
           // Force recalculation of scaling and redraw with new aspect ratio
-          if (wglpRef.current && plotLineRef.current) {
+          if (glRef.current && plotLineRef.current) {
             calculateAndApplyScaling();
+
+            console.log("I am here 4 !")
             plotLineRef.current.draw();
           }
         }
@@ -89,8 +91,10 @@ export const useCanvasDimensions = ({
         // Page became visible again - redraw plot
         console.log("Page became visible, redrawing plot");
         requestAnimationFrame(() => {
-          if (wglpRef.current && plotLineRef.current) {
+          if (glRef.current && plotLineRef.current) {
             calculateAndApplyScaling();
+
+            console.log("I am here 3 !")
             plotLineRef.current.draw();
           }
         });
