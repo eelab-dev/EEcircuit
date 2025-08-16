@@ -103,27 +103,24 @@ export const usePlotCalculations = ({
   useEffect(() => {
     if (!plotLineRef.current || !glRef.current) return;
 
-    // Get current view bounds with coordinate space information for view preservation
-    const currentBounds = plotLineRef.current.getDataBounds();
     
     if (isLogX || isLogY) {
-      // Use the simple pattern from webgl-plot documentation
+      // Option B: Coordinate Transformation (with coordinate space fix)
+      // Using this approach because autoScale() has issues with log axes in current webgl-plot version
       plotLineRef.current.setLogAxis(isLogX, isLogY);
-      const bounds = plotLineRef.current.autoScale(); // Smart filtering for log compatibility
-      console.log("Log axis useEffect - autoScale returned:", bounds);
-      if (bounds && bounds !== undefined) {
-        console.log("Calling transformToLogSpace with autoScale bounds");
-        console.log("Bounds coordinate space:", bounds.coordinateSpace);
-        
-        // Force the coordinate space to be linear since autoScale gives us linear bounds
+      const bounds = plotLineRef.current.getAllDataBounds();
+      console.log("Log axis - getAllDataBounds:", bounds);
+      
+      if (bounds) {
+        // Fix coordinate space metadata issue (workaround for webgl-plot bug)
         const correctedBounds: DataBounds = {
           ...bounds,
           coordinateSpace: { x: "linear" as const, y: "linear" as const }
         };
-        console.log("Using corrected bounds:", correctedBounds);
+        console.log("Using corrected bounds for transformToLogSpace");
         plotLineRef.current.transformToLogSpace(correctedBounds);
       } else {
-        console.warn("autoScale returned null/undefined - no valid data for log axes");
+        console.warn("getAllDataBounds returned null - no valid data for log axes");
       }
     } else {
       // Apply linear axis settings first
@@ -142,9 +139,9 @@ export const usePlotCalculations = ({
     
     // Update the plot after log axis changes to ensure proper line visibility and colors
     if (updatePlotRef.current) {
-      console.log("Log axis useEffect - calling updatePlot, selectedVariables:", selectedVariables.length);
+      console.log("Calling updatePlot after log axis changes");
       updatePlotRef.current();
-      console.log("Log axis useEffect - updatePlot completed");
+      console.log("updatePlot completed");
     }
   }, [isLogX, isLogY]);
 
@@ -358,18 +355,9 @@ export const usePlotCalculations = ({
     if (!currentLogX && !currentLogY) {
       calculateAndApplyScaling();
     } else {
-      console.log("updatePlot - in log axis mode, extracting current scales");
       // For log axes, just extract current scales for external components
       const globalScale = plotLineRef.current.getGlobalScale();
       const globalOffset = plotLineRef.current.getGlobalOffset();
-      console.log("updatePlot - log mode scales:", globalScale, "offset:", globalOffset);
-      
-      // Calculate what data range these scales represent
-      const dataXMin = (-1 - globalOffset[0]) / globalScale[0];
-      const dataXMax = (1 - globalOffset[0]) / globalScale[0];
-      const dataYMin = (-1 - globalOffset[1]) / globalScale[1];
-      const dataYMax = (1 - globalOffset[1]) / globalScale[1];
-      console.log("updatePlot - data ranges from scales: X[", dataXMin, ",", dataXMax, "] Y[", dataYMin, ",", dataYMax, "]");
       const newAxisScales = {
         scaleX: globalScale[0],
         scaleY: globalScale[1],
@@ -381,7 +369,6 @@ export const usePlotCalculations = ({
     }
 
     plotLineRef.current.draw();
-    console.log("updatePlot - plot.draw() called");
 
     // Draw crosshair if visible
     if (showCrosshair && crosshairRef.current) {
