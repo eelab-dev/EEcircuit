@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, RefObject } from "react";
 import { ResultType } from "eecircuit-engine";
-import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanvas, DataBounds } from "webgl-plot";
+import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanvas } from "webgl-plot";
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
 import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
@@ -105,47 +105,23 @@ export const usePlotCalculations = ({
 
     
     if (isLogX || isLogY) {
-      // Option B: Coordinate Transformation (with coordinate space fix)
-      // Using this approach because autoScale() has issues with log axes in current webgl-plot version
+      // Option A: Simple Auto-Scaling (now fixed in webgl-plot)
+      // autoScale() now works correctly with coordinate-space awareness
       plotLineRef.current.setLogAxis(isLogX, isLogY);
-      const bounds = plotLineRef.current.getAllDataBounds();
-      console.log("Log axis - getAllDataBounds:", bounds);
-      
-      if (bounds) {
-        // Fix coordinate space metadata issue (workaround for webgl-plot bug)
-        const correctedBounds: DataBounds = {
-          ...bounds,
-          coordinateSpace: { x: "linear" as const, y: "linear" as const }
-        };
-        console.log("Using corrected bounds for transformToLogSpace");
-        plotLineRef.current.transformToLogSpace(correctedBounds);
-      } else {
-        console.warn("getAllDataBounds returned null - no valid data for log axes");
-      }
+      plotLineRef.current.autoScale(); // ✅ Now works correctly!
     } else {
-      // Apply linear axis settings first
+      // Apply linear axis settings and auto-scale
       plotLineRef.current.setLogAxis(false, false);
-      
-      // When switching back to linear, always use fresh data bounds for reliable recovery
-      const allDataBounds = plotLineRef.current.getAllDataBounds();
-      if (allDataBounds) {
-        // Use autoScale instead of transformToLinearSpace for cleaner recovery
-        plotLineRef.current.autoScale();
-      } else {
-        // Fallback to default transform
-        plotLineRef.current.autoScale();
-      }
+      plotLineRef.current.autoScale();
     }
     
     // Update the plot after log axis changes to ensure proper line visibility and colors
     if (updatePlotRef.current) {
-      console.log("Calling updatePlot after log axis changes");
       updatePlotRef.current();
-      console.log("updatePlot completed");
     }
   }, [isLogX, isLogY]);
 
-  // Handle data updates with enhanced coordinate-space aware API
+  // Handle data updates with simplified autoScale (now works correctly for all coordinate spaces)
   useEffect(() => {
     if (!plotLineRef.current || selectedVariables.length === 0) return;
     
@@ -154,15 +130,8 @@ export const usePlotCalculations = ({
       return;
     }
     
-    // Only handle linear space data updates
-    const currentBounds = plotLineRef.current.getDataBounds();
-    if (currentBounds) {
-      // For linear space, use autoScale for more reliable data updates
-      plotLineRef.current.autoScale();
-    } else {
-      // If no current bounds, use autoScale
-      plotLineRef.current.autoScale();
-    }
+    // Use autoScale for data updates in linear space
+    plotLineRef.current.autoScale();
   }, [selectedVariables, results]);
 
   // Calculate and apply scaling using webgl-plot's enhanced API with zoom support
@@ -233,9 +202,8 @@ export const usePlotCalculations = ({
         zoomController.current?.updateAxisScales(newAxisScales);
       }
     } else {
-      // No zoom: use webgl-plot's enhanced auto-scaling with smart filtering
+      // No zoom: use autoScale() which now works correctly for all coordinate spaces
       const allDataBounds = plotLineRef.current.getAllDataBounds();
-      console.log("calculateAndApplyScaling - getAllDataBounds:", allDataBounds, "logX:", isLogX, "logY:", isLogY);
       
       if (allDataBounds) {
         // Set original data bounds for zoom controller (empty axis areas bug prevention)
@@ -243,14 +211,8 @@ export const usePlotCalculations = ({
           zoomController.current.setOriginalDataBounds(allDataBounds.minX, allDataBounds.maxX);
         }
 
-        if (isLogX || isLogY) {
-          // Log axes are handled by the dedicated log axis useEffect
-          // Don't override the transformation here, just extract current scales
-          console.log("calculateAndApplyScaling - skipping transform for log axes (handled by useEffect)");
-        } else {
-          // Use enhanced auto-scale for linear axes
-          plotLineRef.current.autoScale();
-        }
+        // Use autoScale() for both linear and log axes (now works correctly)
+        plotLineRef.current.autoScale();
 
         // Extract axis scales for external components (axes, zoom controller)
         const globalScale = plotLineRef.current.getGlobalScale();
