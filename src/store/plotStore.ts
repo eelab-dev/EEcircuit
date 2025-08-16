@@ -40,6 +40,10 @@ export interface PlotState {
   isBracketOperationPlot: boolean;
   currentParameterValues?: string[];
   emphasizedPlotIndex: number;
+
+  // Log axis state
+  isLogX: boolean;
+  isLogY: boolean;
 }
 
 export interface PlotActions {
@@ -68,6 +72,12 @@ export interface PlotActions {
   setIsBracketOperationPlot: (isBracket: boolean) => void;
   setCurrentParameterValues: (values?: string[]) => void;
   setEmphasizedPlotIndex: (index: number) => void;
+
+  // Log axis actions
+  setIsLogX: (isLog: boolean) => void;
+  setIsLogY: (isLog: boolean) => void;
+  toggleLogX: () => void;
+  toggleLogY: () => void;
 
   // Combined actions for common operations
   handleNewResults: (results: ResultType[]) => void;
@@ -98,6 +108,8 @@ export const createPlotSlice: StateCreator<
   isBracketOperationPlot: false,
   currentParameterValues: undefined,
   emphasizedPlotIndex: 0,
+  isLogX: false,
+  isLogY: false,
 
   // Plot selection actions
   setIsPlotSelectionMode: (mode) => set({ isPlotSelectionMode: mode }),
@@ -144,6 +156,12 @@ export const createPlotSlice: StateCreator<
   setIsBracketOperationPlot: (isBracket) => set({ isBracketOperationPlot: isBracket }),
   setCurrentParameterValues: (values) => set({ currentParameterValues: values }),
   setEmphasizedPlotIndex: (index) => set({ emphasizedPlotIndex: index }),
+
+  // Log axis actions
+  setIsLogX: (isLog) => set({ isLogX: isLog }),
+  setIsLogY: (isLog) => set({ isLogY: isLog }),
+  toggleLogX: () => set((state: PlotSlice & StoreWithTabAndSimulation) => ({ isLogX: !state.isLogX })),
+  toggleLogY: () => set((state: PlotSlice & StoreWithTabAndSimulation) => ({ isLogY: !state.isLogY })),
 
   // Combined actions for common operations
   handleNewResults: (newResults) => {

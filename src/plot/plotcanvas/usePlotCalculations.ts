@@ -1,4 +1,4 @@
-import { useState, RefObject } from "react";
+import { useState, useEffect, useRef, RefObject } from "react";
 import { ResultType } from "eecircuit-engine";
 import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanvas } from "webgl-plot";
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
@@ -87,12 +87,56 @@ export const usePlotCalculations = ({
   emphasizedPlotIndex = 0,
 }: UsePlotCalculationsProps): UsePlotCalculationsReturn => {
   const isDarkMode = useAppStore((state) => state.isDarkMode);
+  const isLogX = useAppStore((state) => state.isLogX);
+  const isLogY = useAppStore((state) => state.isLogY);
   const [axisScales, setAxisScales] = useState<AxisScales>({
     scaleX: 1,
     scaleY: 1,
     offsetX: 0,
     offsetY: 0,
   });
+
+  // Forward declaration for the updatePlot function
+  const updatePlotRef = useRef<(() => void) | null>(null);
+
+  // Handle log axis changes following webgl-plot LOG10.md guidelines
+  useEffect(() => {
+    if (!plotLineRef.current || !glRef.current) return;
+
+    // Apply log axis settings immediately (GPU-accelerated, no reinitialization needed)
+    plotLineRef.current.setLogAxis(isLogX, isLogY);
+    
+    if (isLogX || isLogY) {
+      // Switching to log axes: use autoScale() → transformToLogSpace() pattern
+      const bounds = plotLineRef.current.autoScale(); // Smart filtering for log compatibility
+      if (bounds && bounds !== undefined) {
+        plotLineRef.current.transformToLogSpace(bounds);
+      }
+    } else {
+      // Switching to linear axes: use setLogAxis() → autoScale() pattern  
+      plotLineRef.current.autoScale(); // Calculates bounds and applies linear scaling
+      // No need to call transformToLogSpace() since we're now in linear mode
+    }
+    
+    // Force a draw to show the changes immediately (don't go through updatePlot to avoid conflicts)
+    if (plotLineRef.current) {
+      plotLineRef.current.draw();
+    }
+  }, [isLogX, isLogY]);
+
+  // Handle data updates when already in log space
+  useEffect(() => {
+    if (!plotLineRef.current || selectedVariables.length === 0) return;
+    
+    // Only handle data updates for log space, not axis mode changes
+    if (isLogX || isLogY) {
+      // Data updates when already in log space: use getDataBounds() → transformToLogSpace()
+      const dataBounds = plotLineRef.current.getDataBounds();
+      if (dataBounds) {
+        plotLineRef.current.transformToLogSpace(dataBounds);
+      }
+    }
+  }, [selectedVariables, results, isLogX, isLogY]);
 
   // Calculate and apply auto-scaling transform for visible lines
   const calculateAndApplyScaling = () => {
@@ -215,31 +259,25 @@ export const usePlotCalculations = ({
       const finalXRange = xMax - xMin;
       const finalYRange = yMax - yMin;
 
-      // Calculate scale to fit data to [-1, 1] range
-      // Let the plot fill the entire canvas without aspect ratio constraints
+      // Always use linear scaling calculation for axis synchronization
+      // Log axis transformations are handled separately in the log axis useEffect
       const scaleX = finalXRange > 0 ? 2 / finalXRange : 1;
       const scaleY = finalYRange > 0 ? 2 / finalYRange : 1;
-
-      // Offset: where to position the center of the data
-      // Transform from data space to [-1, 1] space
       const offsetX = -1 - xMin * scaleX;
       const offsetY = -1 - yMin * scaleY;
 
-      // No need to apply pan offset here since we're already using bounds with pan offset
-
-      plotLineRef.current.setGlobalTransform(
-        [scaleX, scaleY],
-        [offsetX, offsetY]
-      );
-
-      // Update axis scales for synchronization
+      // Only apply global transform if not in log mode
+      // Log mode scaling is handled by transformToLogSpace() in the log axis useEffect
+      if (!isLogX && !isLogY) {
+        plotLineRef.current.setGlobalTransform([scaleX, scaleY], [offsetX, offsetY]);
+      }
+      
       const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
       setAxisScales(newAxisScales);
-
-      // Update zoom controller with new axis scales for coordinate conversion
       zoomController.current?.updateAxisScales(newAxisScales);
     } else {
       // Fallback to default transform if no valid data
+      plotLineRef.current.setLogAxis(false, false);
       plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
       setAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
     }
@@ -322,9 +360,7 @@ export const usePlotCalculations = ({
     // Calculate and apply auto-scaling for visible lines
     calculateAndApplyScaling();
 
-    //plotLineRef.current.setLogAxis(true, false);
-    //const dataBounds = plotLineRef.current.getDataBounds();
-    //plotLineRef.current.autoScaleToLogSpace(dataBounds);
+
 
 
     plotLineRef.current.draw();
@@ -349,6 +385,11 @@ export const usePlotCalculations = ({
       zoomRegionRef.current.draw();
     }
   };
+
+  // Set the updatePlot ref so it can be called from the log axis useEffect
+  useEffect(() => {
+    updatePlotRef.current = updatePlot;
+  }, [updatePlot]);
 
   return {
     axisScales,

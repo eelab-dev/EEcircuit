@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ResultType } from "eecircuit-engine";
 import {
+  DebugLogger,
   LineConfig,
   UnifiedLinePlot,
   WebglLinePlot,
@@ -179,6 +180,9 @@ export const useCanvasInitialization = ({
         // For normal simulations: number of variables excluding X-axis
         totalLines = numVariables - 1;
       }
+
+      DebugLogger.setDebugMode(true);
+
 
       // Create plot line with the correct number of lines using UnifiedLinePlot
       plotLineRef.current = new UnifiedLinePlot(
