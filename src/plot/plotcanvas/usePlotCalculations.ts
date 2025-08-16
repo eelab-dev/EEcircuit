@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, RefObject } from "react";
 import { ResultType } from "eecircuit-engine";
-import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanvas } from "webgl-plot";
+import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanvas, DataBounds } from "webgl-plot";
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
 import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
@@ -99,46 +99,76 @@ export const usePlotCalculations = ({
   // Forward declaration for the updatePlot function
   const updatePlotRef = useRef<(() => void) | null>(null);
 
-  // Handle log axis changes following webgl-plot LOG10.md guidelines
+  // Handle log axis changes with enhanced coordinate-space aware API and view preservation
   useEffect(() => {
     if (!plotLineRef.current || !glRef.current) return;
 
-    // Apply log axis settings immediately (GPU-accelerated, no reinitialization needed)
-    plotLineRef.current.setLogAxis(isLogX, isLogY);
+    // Get current view bounds with coordinate space information for view preservation
+    const currentBounds = plotLineRef.current.getDataBounds();
     
     if (isLogX || isLogY) {
-      // Switching to log axes: use autoScale() → transformToLogSpace() pattern
+      // Use the simple pattern from webgl-plot documentation
+      plotLineRef.current.setLogAxis(isLogX, isLogY);
       const bounds = plotLineRef.current.autoScale(); // Smart filtering for log compatibility
+      console.log("Log axis useEffect - autoScale returned:", bounds);
       if (bounds && bounds !== undefined) {
-        plotLineRef.current.transformToLogSpace(bounds);
+        console.log("Calling transformToLogSpace with autoScale bounds");
+        console.log("Bounds coordinate space:", bounds.coordinateSpace);
+        
+        // Force the coordinate space to be linear since autoScale gives us linear bounds
+        const correctedBounds: DataBounds = {
+          ...bounds,
+          coordinateSpace: { x: "linear" as const, y: "linear" as const }
+        };
+        console.log("Using corrected bounds:", correctedBounds);
+        plotLineRef.current.transformToLogSpace(correctedBounds);
+      } else {
+        console.warn("autoScale returned null/undefined - no valid data for log axes");
       }
     } else {
-      // Switching to linear axes: use setLogAxis() → autoScale() pattern  
-      plotLineRef.current.autoScale(); // Calculates bounds and applies linear scaling
-      // No need to call transformToLogSpace() since we're now in linear mode
+      // Apply linear axis settings first
+      plotLineRef.current.setLogAxis(false, false);
+      
+      // When switching back to linear, always use fresh data bounds for reliable recovery
+      const allDataBounds = plotLineRef.current.getAllDataBounds();
+      if (allDataBounds) {
+        // Use autoScale instead of transformToLinearSpace for cleaner recovery
+        plotLineRef.current.autoScale();
+      } else {
+        // Fallback to default transform
+        plotLineRef.current.autoScale();
+      }
     }
     
-    // Force a draw to show the changes immediately (don't go through updatePlot to avoid conflicts)
-    if (plotLineRef.current) {
-      plotLineRef.current.draw();
+    // Update the plot after log axis changes to ensure proper line visibility and colors
+    if (updatePlotRef.current) {
+      console.log("Log axis useEffect - calling updatePlot, selectedVariables:", selectedVariables.length);
+      updatePlotRef.current();
+      console.log("Log axis useEffect - updatePlot completed");
     }
   }, [isLogX, isLogY]);
 
-  // Handle data updates when already in log space
+  // Handle data updates with enhanced coordinate-space aware API
   useEffect(() => {
     if (!plotLineRef.current || selectedVariables.length === 0) return;
     
-    // Only handle data updates for log space, not axis mode changes
+    // Don't interfere with log axis transformations - let the log axis useEffect handle it
     if (isLogX || isLogY) {
-      // Data updates when already in log space: use getDataBounds() → transformToLogSpace()
-      const dataBounds = plotLineRef.current.getDataBounds();
-      if (dataBounds) {
-        plotLineRef.current.transformToLogSpace(dataBounds);
-      }
+      return;
     }
-  }, [selectedVariables, results, isLogX, isLogY]);
+    
+    // Only handle linear space data updates
+    const currentBounds = plotLineRef.current.getDataBounds();
+    if (currentBounds) {
+      // For linear space, use autoScale for more reliable data updates
+      plotLineRef.current.autoScale();
+    } else {
+      // If no current bounds, use autoScale
+      plotLineRef.current.autoScale();
+    }
+  }, [selectedVariables, results]);
 
-  // Calculate and apply auto-scaling transform for visible lines
+  // Calculate and apply scaling using webgl-plot's enhanced API with zoom support
   const calculateAndApplyScaling = () => {
     if (!plotLineRef.current || selectedVariables.length === 0) {
       // Fallback to default transform if no visible lines
@@ -148,143 +178,109 @@ export const usePlotCalculations = ({
       return;
     }
 
-    let xMin = Infinity,
-      xMax = -Infinity;
-    let yMin = Infinity,
-      yMax = -Infinity;
-
-    // Calculate X-axis bounds once (same for all lines)
-    // Use custom bounds if zoom is active, otherwise calculate from data
-    // Use bounds WITH pan offset for axis scaling calculation so axis matches visible area
+    // Check if zoom is active to determine scaling approach
     const customXBounds = zoomController.current?.getZoomBounds();
+    
     if (customXBounds) {
-      xMin = customXBounds.min;
-      xMax = customXBounds.max;
-    } else {
-      const firstVisibleLineIndex = lineDataRef.current?.findIndex(
-        (lineData) => {
-          // Use variableName from line metadata instead of array index
-          // This is crucial for bracket operations where there are multiple lines per variable
-          const extendedLineData = lineData as ExtendedLineConfig;
-          const variableName = extendedLineData.variableName;
-          // Add bounds check before checking selectedVariables
-          return variableName && selectedVariables.includes(variableName);
-        }
-      );
+      // Zoom is active: maintain compatibility with existing zoom system
+      // We still need manual bounds calculation for zoom integration
+      const xMin = customXBounds.min;
+      const xMax = customXBounds.max;
+      let yMin = Infinity;
+      let yMax = -Infinity;
 
-      if (firstVisibleLineIndex !== -1 && lineDataRef.current) {
-        const firstVisibleLine = lineDataRef.current[firstVisibleLineIndex];
-        if (firstVisibleLine) {
-          const points = firstVisibleLine.points;
-          for (let i = 0; i < points.length; i += 2) {
-            const x = points[i];
-            if (x !== undefined) {
-              xMin = Math.min(xMin, x);
-              xMax = Math.max(xMax, x);
-            }
-          }
-
-          // CRITICAL: Set original data bounds in zoom controller to prevent empty axis areas bug
-          // This constrains panning to stay within the original data range, preventing users
-          // from panning into areas with no data points (which would show empty axis tick marks)
-          // Only set once when bounds are first calculated (not on every scaling update)
-          if (isFinite(xMin) && isFinite(xMax) && zoomController.current && !zoomController.current.hasOriginalDataBounds()) {
-            zoomController.current.setOriginalDataBounds(xMin, xMax);
-          }
+      // Set original data bounds for zoom controller (empty axis areas bug prevention)
+      if (!zoomController.current?.hasOriginalDataBounds()) {
+        const allDataBounds = plotLineRef.current.getAllDataBounds();
+        if (allDataBounds) {
+          zoomController.current?.setOriginalDataBounds(allDataBounds.minX, allDataBounds.maxX);
         }
       }
-    }
 
-    // Calculate Y-axis bounds for all visible lines
-    // If zoom is active, only consider Y values within the VISIBLE X range (current view)
-    lineDataRef.current?.forEach((lineData) => {
-      // Use variableName from line metadata instead of array index
-      // This is crucial for bracket operations where there are multiple lines per variable
-      const extendedLineData = lineData as ExtendedLineConfig;
-      const variableName = extendedLineData.variableName;
+      // Calculate Y-axis bounds for visible lines within zoom range
+      lineDataRef.current?.forEach((lineData) => {
+        const extendedLineData = lineData as ExtendedLineConfig;
+        const variableName = extendedLineData.variableName;
+        if (!variableName || !selectedVariables.includes(variableName)) return;
 
-      // Add bounds check before checking selectedVariables
-      if (!variableName) {
-        return; // Skip this iteration
-      }
-
-      const isSelected = selectedVariables.includes(variableName);
-
-      if (isSelected) {
         const points = lineData.points;
         for (let i = 1; i < points.length; i += 2) {
-          const x = points[i - 1]; // X coordinate
-          const y = points[i]; // Y coordinate
-
-          if (x === undefined || y === undefined) continue;
-
-          // If zoom is active, only include Y values within the CURRENT visible X bounds
-          // Use xMin/xMax which already include pan offset for the visible range
-          if (customXBounds) {
-            if (x >= xMin && x <= xMax) {
-              yMin = Math.min(yMin, y);
-              yMax = Math.max(yMax, y);
-            }
-          } else {
+          const x = points[i - 1];
+          const y = points[i];
+          if (x !== undefined && y !== undefined && x >= xMin && x <= xMax) {
             yMin = Math.min(yMin, y);
             yMax = Math.max(yMax, y);
           }
         }
+      });
+
+      if (isFinite(yMin) && isFinite(yMax)) {
+        const yRange = yMax - yMin;
+        const yPadding = yRange > 0 ? yRange * 0.05 : Math.abs(yMin) * 0.1 || 1;
+        yMin -= yPadding;
+        yMax += yPadding;
+
+        const finalXRange = xMax - xMin;
+        const finalYRange = yMax - yMin;
+        const scaleX = finalXRange > 0 ? 2 / finalXRange : 1;
+        const scaleY = finalYRange > 0 ? 2 / finalYRange : 1;
+        const offsetX = -1 - xMin * scaleX;
+        const offsetY = -1 - yMin * scaleY;
+
+        if (!isLogX && !isLogY) {
+          plotLineRef.current.setGlobalTransform([scaleX, scaleY], [offsetX, offsetY]);
+        }
+        
+        const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
+        setAxisScales(newAxisScales);
+        zoomController.current?.updateAxisScales(newAxisScales);
       }
-    });
-
-
-    // Apply auto-scaling if we have valid bounds
-    if (isFinite(xMin) && isFinite(xMax) && isFinite(yMin) && isFinite(yMax)) {
-
-      const xRange = xMax - xMin;
-      const yRange = yMax - yMin;
-
-      // Add padding to avoid edge cases and ensure constant values are visible
-      // For constant values (zero range), use minimum padding to create visual separation
-      const yPadding = yRange > 0 ? yRange * 0.05 : Math.abs(yMin) * 0.1 || 1;
-
-      if (!customXBounds) {
-        // Normal view: add padding to both X and Y
-        const xPadding = xRange > 0 ? xRange * 0.05 : Math.abs(xMin) * 0.1 || 1;
-        xMin -= xPadding;
-        xMax += xPadding;
-      }
-      // For zoomed view: NO X padding (respect exact zoom bounds)
-
-      // Always add Y padding
-      yMin -= yPadding;
-      yMax += yPadding;
-
-      const finalXRange = xMax - xMin;
-      const finalYRange = yMax - yMin;
-
-      // Always use linear scaling calculation for axis synchronization
-      // Log axis transformations are handled separately in the log axis useEffect
-      const scaleX = finalXRange > 0 ? 2 / finalXRange : 1;
-      const scaleY = finalYRange > 0 ? 2 / finalYRange : 1;
-      const offsetX = -1 - xMin * scaleX;
-      const offsetY = -1 - yMin * scaleY;
-
-      // Only apply global transform if not in log mode
-      // Log mode scaling is handled by transformToLogSpace() in the log axis useEffect
-      if (!isLogX && !isLogY) {
-        plotLineRef.current.setGlobalTransform([scaleX, scaleY], [offsetX, offsetY]);
-      }
-      
-      const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
-      setAxisScales(newAxisScales);
-      zoomController.current?.updateAxisScales(newAxisScales);
     } else {
-      // Fallback to default transform if no valid data
-      plotLineRef.current.setLogAxis(false, false);
-      plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
-      setAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
+      // No zoom: use webgl-plot's enhanced auto-scaling with smart filtering
+      const allDataBounds = plotLineRef.current.getAllDataBounds();
+      console.log("calculateAndApplyScaling - getAllDataBounds:", allDataBounds, "logX:", isLogX, "logY:", isLogY);
+      
+      if (allDataBounds) {
+        // Set original data bounds for zoom controller (empty axis areas bug prevention)
+        if (zoomController.current && !zoomController.current.hasOriginalDataBounds()) {
+          zoomController.current.setOriginalDataBounds(allDataBounds.minX, allDataBounds.maxX);
+        }
+
+        if (isLogX || isLogY) {
+          // Log axes are handled by the dedicated log axis useEffect
+          // Don't override the transformation here, just extract current scales
+          console.log("calculateAndApplyScaling - skipping transform for log axes (handled by useEffect)");
+        } else {
+          // Use enhanced auto-scale for linear axes
+          plotLineRef.current.autoScale();
+        }
+
+        // Extract axis scales for external components (axes, zoom controller)
+        const globalScale = plotLineRef.current.getGlobalScale();
+        const globalOffset = plotLineRef.current.getGlobalOffset();
+        const newAxisScales = {
+          scaleX: globalScale[0],
+          scaleY: globalScale[1],
+          offsetX: globalOffset[0],
+          offsetY: globalOffset[1],
+        };
+        setAxisScales(newAxisScales);
+        zoomController.current?.updateAxisScales(newAxisScales);
+      } else {
+        // Fallback to default transform if no valid data
+        plotLineRef.current.setLogAxis(false, false);
+        plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
+        setAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
+      }
     }
   };
 
   // Update plot visibility and colors
   const updatePlot = () => {
+    // Get fresh log axis state to avoid stale closure issues
+    const currentLogX = useAppStore.getState().isLogX;
+    const currentLogY = useAppStore.getState().isLogY;
+    
     if (!glRef.current || !plotLineRef.current || results.length === 0)
       return;
 
@@ -357,8 +353,55 @@ export const usePlotCalculations = ({
       lineData.thickness = thickness;
     });
 
-    // Calculate and apply auto-scaling for visible lines
-    calculateAndApplyScaling();
+    // Calculate and apply auto-scaling for visible lines (skip if log axes are active)
+    // Use fresh state to avoid stale closure issues
+    if (!currentLogX && !currentLogY) {
+      calculateAndApplyScaling();
+    } else {
+      console.log("updatePlot - in log axis mode, extracting current scales");
+      // For log axes, just extract current scales for external components
+      const globalScale = plotLineRef.current.getGlobalScale();
+      const globalOffset = plotLineRef.current.getGlobalOffset();
+      console.log("updatePlot - log mode scales:", globalScale, "offset:", globalOffset);
+      
+      // Calculate what data range these scales represent
+      const dataXMin = (-1 - globalOffset[0]) / globalScale[0];
+      const dataXMax = (1 - globalOffset[0]) / globalScale[0];
+      const dataYMin = (-1 - globalOffset[1]) / globalScale[1];
+      const dataYMax = (1 - globalOffset[1]) / globalScale[1];
+      console.log("updatePlot - data ranges from scales: X[", dataXMin, ",", dataXMax, "] Y[", dataYMin, ",", dataYMax, "]");
+      const newAxisScales = {
+        scaleX: globalScale[0],
+        scaleY: globalScale[1],
+        offsetX: globalOffset[0],
+        offsetY: globalOffset[1],
+      };
+      setAxisScales(newAxisScales);
+      zoomController.current?.updateAxisScales(newAxisScales);
+    }
+
+    plotLineRef.current.draw();
+    console.log("updatePlot - plot.draw() called");
+
+    // Draw crosshair if visible
+    if (showCrosshair && crosshairRef.current) {
+      crosshairRef.current.draw();
+    }
+
+    // Draw snap circle if in snap mode
+    if (showCrosshair && crosshairSnapToLines && snapCircleRef.current) {
+      snapCircleRef.current.draw();
+    }
+
+    // Draw zoom components if zooming
+    if (
+      zoomController.current?.getIsZooming() &&
+      zoomLinesRef.current &&
+      zoomRegionRef.current
+    ) {
+      zoomLinesRef.current.draw();
+      zoomRegionRef.current.draw();
+    }
 
 
 

@@ -175,7 +175,11 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
               <Button
                 size="xs"
                 variant={isLogX ? "solid" : "outline"}
-                onClick={toggleLogX}
+                onClick={() => {
+                  console.log("Log X button clicked - current state:", isLogX);
+                  toggleLogX();
+                  console.log("After toggleLogX called - new state should be:", !isLogX);
+                }}
                 fontSize="xs"
                 flex="1"
                 minW="0"
@@ -185,7 +189,11 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
               <Button
                 size="xs"
                 variant={isLogY ? "solid" : "outline"}
-                onClick={toggleLogY}
+                onClick={() => {
+                  console.log("Log Y button clicked - current state:", isLogY);
+                  toggleLogY();
+                  console.log("After toggleLogY called - new state should be:", !isLogY);
+                }}
                 fontSize="xs"
                 flex="1"
                 minW="0"
@@ -274,7 +282,11 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
               <Button
                 size="xs"
                 variant={isLogX ? "solid" : "outline"}
-                onClick={toggleLogX}
+                onClick={() => {
+                  console.log("Log X button clicked - current state:", isLogX);
+                  toggleLogX();
+                  console.log("After toggleLogX called - new state should be:", !isLogX);
+                }}
                 fontSize="xs"
                 flex="1"
                 minW="0"
@@ -284,7 +296,11 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
               <Button
                 size="xs"
                 variant={isLogY ? "solid" : "outline"}
-                onClick={toggleLogY}
+                onClick={() => {
+                  console.log("Log Y button clicked - current state:", isLogY);
+                  toggleLogY();
+                  console.log("After toggleLogY called - new state should be:", !isLogY);
+                }}
                 fontSize="xs"
                 flex="1"
                 minW="0"
