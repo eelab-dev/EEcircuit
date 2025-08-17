@@ -14,10 +14,12 @@ type CanvasSize = {
 };
 
 const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
-  // Get theme from the app store
+  // Get theme and log axis state from the app store
   const isDarkMode = useAppStore((state) => state.isDarkMode);
-  
-  // console.log(`Axis ${axis} component rendered with:`, { scale, offset });
+  const isLogX = useAppStore((state) => state.isLogX);
+  const isLogY = useAppStore((state) => state.isLogY);
+
+  // Debug: Log axis state and parameters for dual plot debugging
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ctx, setCtx] = useState<CanvasRenderingContext2D>();
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({
@@ -135,6 +137,7 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
     canvasSize.height,
     isDarkMode,
     forceRedraw,
+    isLogX,
   ]);
 
   useEffect(() => {
@@ -149,9 +152,10 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
     canvasSize.height,
     isDarkMode,
     forceRedraw,
+    isLogY,
   ]);
 
-  // Function to generate nice tick intervals
+  // Function to generate nice tick intervals for linear axes
   const getNiceTickInterval = (range: number, maxTicks: number): number => {
     if (range === 0) return 1;
 
@@ -174,6 +178,57 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
     }
 
     return niceInterval * magnitude;
+  };
+
+  // Function to generate log-scale tick values
+  const generateLogTicks = (
+    minValue: number,
+    maxValue: number,
+    maxTicks: number
+  ): number[] => {
+    const ticks: number[] = [];
+
+    // Convert to powers of 10 for log scale calculation
+    const startPower = Math.floor(minValue);
+    const endPower = Math.ceil(maxValue);
+
+    // Generate major ticks at powers of 10
+    for (let power = startPower; power <= endPower; power++) {
+      if (power >= minValue && power <= maxValue) {
+        ticks.push(power);
+      }
+    }
+
+    // If we have room for more ticks and not too many decades, add minor ticks
+    const numDecades = endPower - startPower;
+    if (ticks.length < maxTicks / 2 && numDecades <= 3) {
+      // Add minor ticks at 2, 3, 4, 5, 6, 7, 8, 9 * 10^n
+      const minorMultipliers = [2, 3, 4, 5, 6, 7, 8, 9];
+      const minorTicks: number[] = [];
+
+      for (let power = startPower; power <= endPower; power++) {
+        for (const multiplier of minorMultipliers) {
+          const logValue = power + Math.log10(multiplier);
+          if (
+            logValue >= minValue &&
+            logValue <= maxValue &&
+            minorTicks.length + ticks.length < maxTicks
+          ) {
+            minorTicks.push(logValue);
+          }
+        }
+      }
+
+      ticks.push(...minorTicks);
+      ticks.sort((a, b) => a - b);
+    }
+
+    return ticks;
+  };
+
+  // Function to convert log space value back to linear for display
+  const convertLogToLinearForDisplay = (logValue: number): number => {
+    return Math.pow(10, logValue);
   };
 
   const generateNiceTicks = (
@@ -261,8 +316,13 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
     // Determine how many ticks we can actually fit
     const maxTicks = Math.max(2, Math.floor(width / minSpacing));
 
-    // Generate nice tick values
-    const tickValues = generateNiceTicks(minValue, maxValue, maxTicks);
+    // Generate tick values based on whether X axis is in log scale
+    let tickValues: number[];
+    if (isLogX) {
+      tickValues = generateLogTicks(minValue, maxValue, maxTicks);
+    } else {
+      tickValues = generateNiceTicks(minValue, maxValue, maxTicks);
+    }
 
     // Sort tick values to ensure proper order
     tickValues.sort((a, b) => a - b);
@@ -276,7 +336,11 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
 
       // Draw ticks at exact pixel positions (no tolerance needed for exact alignment)
       if (x >= 0 && x <= width) {
-        const text = unitConvert2string(tickValue, 2);
+        // For log scale, convert back to linear for display
+        const displayValue = isLogX
+          ? convertLogToLinearForDisplay(tickValue)
+          : tickValue;
+        const text = unitConvert2string(displayValue, 2);
         const currentTextMetrics = ctx2d.measureText(text);
         const currentTextWidth = currentTextMetrics.width;
 
@@ -341,8 +405,13 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
     // Determine how many ticks we can actually fit
     const maxTicks = Math.max(2, Math.floor(height / minSpacing));
 
-    // Generate nice tick values
-    const tickValues = generateNiceTicks(minValue, maxValue, maxTicks);
+    // Generate tick values based on whether Y axis is in log scale
+    let tickValues: number[];
+    if (isLogY) {
+      tickValues = generateLogTicks(minValue, maxValue, maxTicks);
+    } else {
+      tickValues = generateNiceTicks(minValue, maxValue, maxTicks);
+    }
 
     // Sort tick values to ensure proper order
     tickValues.sort((a, b) => a - b);
@@ -356,7 +425,11 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
 
       // Draw ticks at exact pixel positions (no tolerance needed for exact alignment)
       if (y >= 0 && y <= height) {
-        const text = unitConvert2string(tickValue, 2);
+        // For log scale, convert back to linear for display
+        const displayValue = isLogY
+          ? convertLogToLinearForDisplay(tickValue)
+          : tickValue;
+        const text = unitConvert2string(displayValue, 2);
 
         ctx2d.fillText(
           text,
