@@ -1,6 +1,7 @@
 import { RefObject, useEffect, useRef } from "react";
 import { LineConfig } from "webgl-plot";
 import { ZoomController } from "./zoomController";
+import { useAppStore } from "../../../store/appStore";
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -63,6 +64,10 @@ export const useZoom = ({
   onWebglRedraw,
 }: UseZoomProps) => {
   const lastSyncedZoomState = useRef<typeof sharedZoomState>(null);
+  
+  // Get log axis state from store
+  const isLogX = useAppStore((state) => state.isLogX);
+  const isLogY = useAppStore((state) => state.isLogY);
 
   // Set up zoom state synchronization callback
   useEffect(() => {
@@ -137,6 +142,7 @@ export const useZoom = ({
       
       // Update axis scales before applying external zoom state
       zoomController.current.updateAxisScales(getAxisScales());
+      zoomController.current.updateLogAxisState({ isLogX, isLogY });
       
       // Apply the external zoom state
       zoomController.current.applyExternalZoomState(sharedZoomState);
@@ -161,6 +167,7 @@ export const useZoom = ({
   const startZoom = (mouseX: number) => {
     // Update zoom controller with current axis scales before starting zoom
     zoomController.current?.updateAxisScales(getAxisScales());
+    zoomController.current?.updateLogAxisState({ isLogX, isLogY });
     zoomController.current?.startZoom(mouseX);
   };
 
@@ -220,9 +227,10 @@ export const useZoom = ({
     // Get current axis scales (important for zoomed state)
     const currentAxisScales = getAxisScales();
 
-    // Convert mouse position to data coordinates
+    // Convert mouse position to data coordinates (matching ZoomController logic)
     const mouseNdcX = (mouseX / rect.width) * 2 - 1;
     const mouseDataX = (mouseNdcX - currentAxisScales.offsetX) / currentAxisScales.scaleX;
+    // Note: Data coordinates are already in log space when log axes are enabled
 
     // Get full data bounds for zoom limits
     const firstVisibleLineIndex = lineDataRef.current?.findIndex((lineData) => {

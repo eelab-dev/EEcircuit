@@ -161,6 +161,17 @@ export const usePlotCalculations = ({
       }
 
       // Calculate Y-axis bounds for visible lines within zoom range
+      // IMPORTANT: Line data points are in linear space, but zoom bounds may be in log space
+      // We need to handle coordinate space conversion properly
+      
+      // Convert zoom bounds to linear space for comparison with line data
+      let xMinLinear = xMin;
+      let xMaxLinear = xMax;
+      if (isLogX) {
+        xMinLinear = Math.pow(10, xMin);
+        xMaxLinear = Math.pow(10, xMax);
+      }
+
       lineDataRef.current?.forEach((lineData) => {
         const extendedLineData = lineData as ExtendedLineConfig;
         const variableName = extendedLineData.variableName;
@@ -170,9 +181,14 @@ export const usePlotCalculations = ({
         for (let i = 1; i < points.length; i += 2) {
           const x = points[i - 1];
           const y = points[i];
-          if (x !== undefined && y !== undefined && x >= xMin && x <= xMax) {
-            yMin = Math.min(yMin, y);
-            yMax = Math.max(yMax, y);
+          if (x !== undefined && y !== undefined && x >= xMinLinear && x <= xMaxLinear) {
+            // Convert Y to log space if needed for bounds calculation
+            let yValue = y;
+            if (isLogY && y > 0) {
+              yValue = Math.log10(y);
+            }
+            yMin = Math.min(yMin, yValue);
+            yMax = Math.max(yMax, yValue);
           }
         }
       });
@@ -190,13 +206,14 @@ export const usePlotCalculations = ({
         const offsetX = -1 - xMin * scaleX;
         const offsetY = -1 - yMin * scaleY;
 
-        if (!isLogX && !isLogY) {
-          plotLineRef.current.setGlobalTransform([scaleX, scaleY], [offsetX, offsetY]);
-        }
+        // Apply transform for zoom bounds in all coordinate spaces
+        // The webgl-plot library handles log space transformations correctly
+        plotLineRef.current.setGlobalTransform([scaleX, scaleY], [offsetX, offsetY]);
         
         const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
         setAxisScales(newAxisScales);
         zoomController.current?.updateAxisScales(newAxisScales);
+        zoomController.current?.updateLogAxisState({ isLogX, isLogY });
       }
     } else {
       // No zoom: use autoScale() which now works correctly for all coordinate spaces
@@ -222,6 +239,7 @@ export const usePlotCalculations = ({
         };
         setAxisScales(newAxisScales);
         zoomController.current?.updateAxisScales(newAxisScales);
+        zoomController.current?.updateLogAxisState({ isLogX, isLogY });
       } else {
         // Fallback to default transform if no valid data
         plotLineRef.current.setLogAxis(false, false);

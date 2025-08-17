@@ -181,7 +181,7 @@ export const useCanvasInitialization = ({
         totalLines = numVariables - 1;
       }
 
-      DebugLogger.setDebugMode(true);
+      DebugLogger.setDebugMode(false);
 
 
       // Create plot line with the correct number of lines using UnifiedLinePlot

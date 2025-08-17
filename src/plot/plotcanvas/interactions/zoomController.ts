@@ -1,5 +1,11 @@
 import type { WebglLinePlot, WebglPolygonPlot } from "webgl-plot";
 
+// Log axis state interface for coordinate space conversion
+interface LogAxisState {
+  isLogX: boolean;
+  isLogY: boolean;
+}
+
 /**
  * HIGH-PERFORMANCE ZOOM CONTROLLER FOR WEBGL PLOT CANVAS
  *
@@ -69,6 +75,12 @@ export class ZoomController {
     offsetY: 0,
   };
 
+  // Log axis state for coordinate space conversion
+  private logAxisState: LogAxisState = {
+    isLogX: false,
+    isLogY: false,
+  };
+
   /**
    * Initialize zoom controller with WebGL components
    * @param zoomLines WebGL line plotter for zoom indicator lines
@@ -106,6 +118,68 @@ export class ZoomController {
   }
 
   /**
+   * Update log axis state for coordinate space conversion
+   * Called when log axis settings change
+   */
+  updateLogAxisState(logState: LogAxisState): void {
+    this.logAxisState = { ...logState };
+  }
+
+  /**
+   * Convert mouse position to data coordinates considering log spaces
+   * Similar to crosshair coordinate conversion logic
+   */
+  private convertMouseToDataCoordinates(mouseNdcX: number, mouseNdcY: number): { dataX: number; dataY: number } {
+    // Convert NDC to data coordinates using current axis scales
+    const dataX = (mouseNdcX - this.axisScales.offsetX) / this.axisScales.scaleX;
+    const dataY = (mouseNdcY - this.axisScales.offsetY) / this.axisScales.scaleY;
+
+    // Note: Data coordinates are already in log space when log axes are enabled
+    // The plot calculations handle the log transformation, so we work with the
+    // log values directly for zoom bounds and operations
+    
+    return { dataX, dataY };
+  }
+
+  /**
+   * Convert data coordinates to display coordinates (linear space)
+   * Used for pan bounds limiting and external communication
+   */
+  private convertDataToDisplayCoordinates(dataX: number, dataY: number): { displayX: number; displayY: number } {
+    let displayX = dataX;
+    let displayY = dataY;
+
+    // Convert from log space back to linear space for display/bounds checking
+    if (this.logAxisState.isLogX && dataX !== undefined && isFinite(dataX)) {
+      displayX = Math.pow(10, dataX);
+    }
+    if (this.logAxisState.isLogY && dataY !== undefined && isFinite(dataY)) {
+      displayY = Math.pow(10, dataY);
+    }
+
+    return { displayX, displayY };
+  }
+
+  /**
+   * Convert display coordinates (linear space) to data coordinates (log space)
+   * Used for setting bounds from external sources
+   */
+  private convertDisplayToDataCoordinates(displayX: number, displayY: number): { dataX: number; dataY: number } {
+    let dataX = displayX;
+    let dataY = displayY;
+
+    // Convert from linear space to log space
+    if (this.logAxisState.isLogX && displayX > 0) {
+      dataX = Math.log10(displayX);
+    }
+    if (this.logAxisState.isLogY && displayY > 0) {
+      dataY = Math.log10(displayY);
+    }
+
+    return { dataX, dataY };
+  }
+
+  /**
    * Check if original data bounds have been set
    * Used to prevent excessive calls to setOriginalDataBounds()
    */
@@ -119,8 +193,13 @@ export class ZoomController {
    * CRITICAL: This method prevents the "empty axis areas" bug by constraining
    * pan operations to stay within the original data range.
    *
-   * @param min Minimum X value of the original data
-   * @param max Maximum X value of the original data
+   * @param min Minimum X value of the original data (in current coordinate space)
+   * @param max Maximum X value of the original data (in current coordinate space)
+   *
+   * NOTE: The bounds should be in the same coordinate space as the current plot data.
+   * When log axis is enabled, the bounds should be in log space (log10 values).
+   * When linear axis is used, the bounds should be in linear space.
+   * This matches how the plot calculations handle coordinate transformations.
    *
    * When to call:
    * - Once when plot data is first loaded/calculated
@@ -281,9 +360,9 @@ export class ZoomController {
     const rect = this.canvasElement.getBoundingClientRect();
     // Convert mouse X to normalized device coordinates [-1, 1]
     const mouseNdcX = (mouseX / rect.width) * 2 - 1;
-    // Convert NDC to data coordinates using current axis scales
-    const dataX =
-      (mouseNdcX - this.axisScales.offsetX) / this.axisScales.scaleX;
+    
+    // Convert mouse position to data coordinates considering log spaces
+    const { dataX } = this.convertMouseToDataCoordinates(mouseNdcX, 0);
 
     this.isZooming = true;
     this.zoomStartX = dataX;
@@ -311,9 +390,9 @@ export class ZoomController {
     const rect = this.canvasElement.getBoundingClientRect();
     // Convert mouse X to normalized device coordinates [-1, 1]
     const mouseNdcX = (mouseX / rect.width) * 2 - 1;
-    // Convert NDC to data coordinates using current axis scales
-    const dataX =
-      (mouseNdcX - this.axisScales.offsetX) / this.axisScales.scaleX;
+    
+    // Convert mouse position to data coordinates considering log spaces
+    const { dataX } = this.convertMouseToDataCoordinates(mouseNdcX, 0);
 
     this.zoomEndX = dataX;
 
@@ -415,9 +494,9 @@ export class ZoomController {
     const rect = this.canvasElement.getBoundingClientRect();
     // Convert mouse X to normalized device coordinates [-1, 1]
     const mouseNdcX = (mouseX / rect.width) * 2 - 1;
-    // Convert NDC to data coordinates using current axis scales
-    const dataX =
-      (mouseNdcX - this.axisScales.offsetX) / this.axisScales.scaleX;
+    
+    // Convert mouse position to data coordinates considering log spaces
+    const { dataX } = this.convertMouseToDataCoordinates(mouseNdcX, 0);
 
     this.isPanning = true;
     this.panStartX = dataX;
@@ -435,9 +514,9 @@ export class ZoomController {
     const rect = this.canvasElement.getBoundingClientRect();
     // Convert mouse X to normalized device coordinates [-1, 1]
     const mouseNdcX = (mouseX / rect.width) * 2 - 1;
-    // Convert NDC to data coordinates using current axis scales
-    const currentDataX =
-      (mouseNdcX - this.axisScales.offsetX) / this.axisScales.scaleX;
+    
+    // Convert mouse position to data coordinates considering log spaces
+    const { dataX: currentDataX } = this.convertMouseToDataCoordinates(mouseNdcX, 0);
 
     // Calculate pan delta (negative because dragging right should move view left)
     let panDelta = -(currentDataX - this.panStartX);
