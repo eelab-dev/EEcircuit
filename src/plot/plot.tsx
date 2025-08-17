@@ -25,6 +25,12 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   const isBracketOperationPlot = useAppStore((state) => state.isBracketOperationPlot);
   const bracketOperationResults = useAppStore((state) => state.bracketOperationResults);
   
+  // Log axis state from store
+  const isLogX = useAppStore((state) => state.isLogX);
+  const isLogY = useAppStore((state) => state.isLogY);
+  const toggleLogX = useAppStore((state) => state.toggleLogX);
+  const toggleLogY = useAppStore((state) => state.toggleLogY);
+  
 
   // IMPORTANT: Checkbox State Management Pattern
   // ==========================================
@@ -193,6 +199,25 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                 onClick={() => setSharedCursorVisible(!sharedCursorVisible)}
               >
                 {sharedCursorVisible ? "Hide" : "Show"}
+              </Button>
+            </HStack>
+            
+            {/* Log axis controls */}
+            <HStack gap={2}>
+              <Text fontSize="sm" color="fg.muted">Log scale:</Text>
+              <Button
+                size="sm"
+                variant={isLogX ? "solid" : "outline"}
+                onClick={toggleLogX}
+              >
+                Log X
+              </Button>
+              <Button
+                size="sm"
+                variant={isLogY ? "solid" : "outline"}
+                onClick={toggleLogY}
+              >
+                Log Y
               </Button>
             </HStack>
           </HStack>

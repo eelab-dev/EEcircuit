@@ -11,7 +11,6 @@ import {
 } from "@chakra-ui/react";
 import { ChevronRight, Settings, Pin, PinOff, Download } from "lucide-react";
 import { dialogTheme } from "../styles/dialogTheme";
-import { useAppStore } from "../store/appStore";
 
 interface PlotSidebarProps {
   variableNames: string[];
@@ -55,11 +54,6 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
   const [isMobile, setIsMobile] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Log axis state from store
-  const isLogX = useAppStore((state) => state.isLogX);
-  const isLogY = useAppStore((state) => state.isLogY);
-  const toggleLogX = useAppStore((state) => state.toggleLogX);
-  const toggleLogY = useAppStore((state) => state.toggleLogY);
 
   // Check if mobile and set default states
   useEffect(() => {
@@ -161,40 +155,6 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             X-axis: {variableNames[0]}
           </Text>
 
-          {/* Log axis toggle buttons */}
-          <Box mb="3">
-            <Text
-              fontSize="xs"
-              mb="2"
-              fontWeight="medium"
-              color={dialogTheme.secondaryText}
-            >
-              Log Scale
-            </Text>
-            <HStack gap="1" w="100%">
-              <Button
-                size="xs"
-                variant={isLogX ? "solid" : "outline"}
-                onClick={toggleLogX}
-                fontSize="xs"
-                flex="1"
-                minW="0"
-              >
-                Log X
-              </Button>
-              <Button
-                size="xs"
-                variant={isLogY ? "solid" : "outline"}
-                onClick={toggleLogY}
-                fontSize="xs"
-                flex="1"
-                minW="0"
-              >
-                Log Y
-              </Button>
-            </HStack>
-          </Box>
-
           <HStack gap="1" w="100%" mb="3">
             <Button
               size="xs"
@@ -253,46 +213,12 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
           {/* X-axis info */}
           <Text
             fontSize="sm"
-            mb="2"
+            mb="3"
             fontWeight="medium"
             color={dialogTheme.secondaryText}
           >
             X-axis: {variableNames[0]}
           </Text>
-
-          {/* Log axis toggle buttons */}
-          <Box mb="3">
-            <Text
-              fontSize="xs"
-              mb="2"
-              fontWeight="medium"
-              color={dialogTheme.secondaryText}
-            >
-              Log Scale
-            </Text>
-            <HStack gap="1" w="100%">
-              <Button
-                size="xs"
-                variant={isLogX ? "solid" : "outline"}
-                onClick={toggleLogX}
-                fontSize="xs"
-                flex="1"
-                minW="0"
-              >
-                Log X
-              </Button>
-              <Button
-                size="xs"
-                variant={isLogY ? "solid" : "outline"}
-                onClick={toggleLogY}
-                fontSize="xs"
-                flex="1"
-                minW="0"
-              >
-                Log Y
-              </Button>
-            </HStack>
-          </Box>
 
           {/* Canvas 1 section */}
           <Box mb="4">
