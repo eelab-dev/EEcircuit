@@ -136,7 +136,6 @@ export const usePlotCalculations = ({
   const calculateAndApplyScaling = () => {
     if (!plotLineRef.current || selectedVariables.length === 0) {
       // Fallback to default transform if no visible lines
-      console.log("Using fallback transform");
       plotLineRef.current?.setGlobalTransform([1, 1], [-1, -1]);
       setAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
       return;
@@ -157,6 +156,8 @@ export const usePlotCalculations = ({
       if (!zoomController.current?.hasOriginalDataBounds()) {
         const allDataBounds = plotLineRef.current.getAllDataBounds();
         if (allDataBounds) {
+          // CRITICAL FIX: Always use linear space bounds, regardless of log axis
+          // The zoom controller will handle coordinate conversion internally
           zoomController.current?.setOriginalDataBounds(allDataBounds.minX, allDataBounds.maxX);
         }
       }
@@ -204,7 +205,7 @@ export const usePlotCalculations = ({
         const scaleY = finalYRange > 0 ? 2 / finalYRange : 1;
         const offsetX = -1 - xMin * scaleX;
         const offsetY = -1 - yMin * scaleY;
-
+        
         // Apply transform for zoom bounds in all coordinate spaces
         // The webgl-plot library handles log space transformations correctly
         plotLineRef.current.setGlobalTransform([scaleX, scaleY], [offsetX, offsetY]);
@@ -221,6 +222,8 @@ export const usePlotCalculations = ({
       if (allDataBounds) {
         // Set original data bounds for zoom controller (empty axis areas bug prevention)
         if (zoomController.current && !zoomController.current.hasOriginalDataBounds()) {
+          // CRITICAL FIX: Always use linear space bounds, regardless of log axis
+          // The zoom controller will handle coordinate conversion internally
           zoomController.current.setOriginalDataBounds(allDataBounds.minX, allDataBounds.maxX);
         }
 

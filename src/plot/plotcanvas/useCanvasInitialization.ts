@@ -152,7 +152,8 @@ export const useCanvasInitialization = ({
           zoomLinesRef.current,
           zoomRegionRef.current,
           canvasRef.current,
-          isDarkMode
+          isDarkMode,
+          plotLineRef.current
         );
       }
 

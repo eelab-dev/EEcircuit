@@ -61,6 +61,9 @@ export class ZoomController {
 
   // Original data bounds for pan limiting
   private originalDataBounds: { min: number; max: number } | null = null;
+  
+  // Reference to plot for getting actual displayed bounds
+  private plotRef: { getAllDataBounds?: () => { minX: number; maxX: number; minY: number; maxY: number } | null } | null = null;
 
   // WebGL references - can be thin or thick lines
   private zoomLinesRef: WebglLinePlot | null = null;
@@ -92,11 +95,13 @@ export class ZoomController {
     zoomLines: WebglLinePlot,
     zoomRegion: WebglPolygonPlot,
     canvas: HTMLCanvasElement,
-    isDarkMode: boolean = true
+    isDarkMode: boolean = true,
+    plotRef?: { getAllDataBounds?: () => { minX: number; maxX: number; minY: number; maxY: number } | null } | null
   ): void {
     this.zoomLinesRef = zoomLines;
     this.zoomRegionRef = zoomRegion;
     this.canvasElement = canvas;
+    this.plotRef = plotRef || null;
 
     // Initialize zoom visual components with theme-appropriate colors
     this.initializeZoomVisuals(isDarkMode);
@@ -123,6 +128,7 @@ export class ZoomController {
    */
   updateLogAxisState(logState: LogAxisState): void {
     this.logAxisState = { ...logState };
+    // No need to reset bounds since we now handle coordinate conversion properly
   }
 
   /**
@@ -157,13 +163,12 @@ export class ZoomController {
    * CRITICAL: This method prevents the "empty axis areas" bug by constraining
    * pan operations to stay within the original data range.
    *
-   * @param min Minimum X value of the original data (in current coordinate space)
-   * @param max Maximum X value of the original data (in current coordinate space)
+   * @param min Minimum X value of the original data (always in linear space)
+   * @param max Maximum X value of the original data (always in linear space)
    *
-   * NOTE: The bounds should be in the same coordinate space as the current plot data.
-   * When log axis is enabled, the bounds should be in log space (log10 values).
-   * When linear axis is used, the bounds should be in linear space.
-   * This matches how the plot calculations handle coordinate transformations.
+   * NOTE: The bounds should always be in linear space, regardless of log axis settings.
+   * The ZoomController handles coordinate space conversion internally when comparing
+   * with zoom bounds (which may be in log space when isLogX = true).
    *
    * When to call:
    * - Once when plot data is first loaded/calculated
@@ -421,7 +426,6 @@ export class ZoomController {
   setZoomBounds(min: number, max: number): void {
     this.customXBounds = { min, max };
     this.panOffsetX = 0; // Reset pan offset when setting new bounds
-    console.log("ZoomController: Set zoom bounds:", { min, max });
 
     // Notify about zoom state change
     this.notifyZoomStateChange();
@@ -484,22 +488,40 @@ export class ZoomController {
 
     // Calculate pan delta (negative because dragging right should move view left)
     let panDelta = -(currentDataX - this.panStartX);
+    
 
-    // Limit panning to prevent moving too far outside original data bounds
+    // Simple bounds limiting: prevent panning when view would go beyond data edges
     if (this.customXBounds && this.originalDataBounds) {
-      // Prevent panning outside original data bounds entirely
-      const minPanBound = this.originalDataBounds.min;
-      const maxPanBound = this.originalDataBounds.max;
-
-      // Calculate what the new bounds would be with this pan offset
-      const newMin = this.customXBounds.min + panDelta;
-      const newMax = this.customXBounds.max + panDelta;
-
-      // Constrain the pan offset to keep view within data bounds
-      if (newMin < minPanBound) {
-        panDelta = minPanBound - this.customXBounds.min;
-      } else if (newMax > maxPanBound) {
-        panDelta = maxPanBound - this.customXBounds.max;
+      const currentViewMin = this.customXBounds.min + this.panOffsetX;
+      const currentViewMax = this.customXBounds.max + this.panOffsetX;
+      const newViewMin = this.customXBounds.min + panDelta;
+      const newViewMax = this.customXBounds.max + panDelta;
+      
+      // Get actual displayed bounds - use webgl-plot's current bounds which handle log space properly
+      let dataMin = this.originalDataBounds.min;
+      let dataMax = this.originalDataBounds.max;
+      
+      // If we have plot reference and log axis, get the actual displayed bounds
+      if (this.logAxisState.isLogX && this.plotRef && this.plotRef.getAllDataBounds) {
+        const currentBounds = this.plotRef.getAllDataBounds();
+        if (currentBounds) {
+          // In log mode, webgl-plot gives us the bounds in the coordinate space it's actually using
+          dataMin = currentBounds.minX;
+          dataMax = currentBounds.maxX;
+        }
+      } else if (this.logAxisState.isLogX) {
+        // Fallback: convert original bounds, but only if they're positive
+        dataMin = dataMin > 0 ? Math.log10(dataMin) : Math.log10(1e-10);
+        dataMax = dataMax > 0 ? Math.log10(dataMax) : Math.log10(1e-10);
+      }
+      
+      // Prevent panning only in the direction that would exceed bounds
+      if (newViewMin < dataMin && newViewMin < currentViewMin) {
+        // Would go left beyond data bound - clamp to data edge
+        panDelta = dataMin - this.customXBounds.min;
+      } else if (newViewMax > dataMax && newViewMax > currentViewMax) {
+        // Would go right beyond data bound - clamp to data edge  
+        panDelta = dataMax - this.customXBounds.max;
       }
     }
 
@@ -531,27 +553,57 @@ export class ZoomController {
 
     // Calculate zoom range to determine appropriate scroll sensitivity
     const zoomRange = this.customXBounds.max - this.customXBounds.min;
-    // Very slow scroll sensitivity - 1% of current view range per scroll unit
-    const scrollSensitivity = zoomRange * 0.01;
+    
+    // Adjust scroll sensitivity based on coordinate space
+    let scrollSensitivity: number;
+    
+    if (this.logAxisState.isLogX) {
+      // For log X axis, use a smaller sensitivity since log space units are different
+      // In log space, the range represents orders of magnitude, so we need finer control
+      scrollSensitivity = zoomRange * 0.005; // 0.5% for log scale (more precise)
+    } else {
+      // For linear X axis, use normal sensitivity
+      scrollSensitivity = zoomRange * 0.01; // 1% for linear scale
+    }
 
     // Calculate new pan offset
     let newPanOffset = this.panOffsetX + deltaX * scrollSensitivity;
+    
 
-    // Limit panning to prevent moving too far outside original data bounds
-    if (this.originalDataBounds) {
-      // Prevent panning outside original data bounds entirely
-      const minPanBound = this.originalDataBounds.min;
-      const maxPanBound = this.originalDataBounds.max;
-
-      // Calculate what the new bounds would be with this pan offset
-      const newMin = this.customXBounds.min + newPanOffset;
-      const newMax = this.customXBounds.max + newPanOffset;
-
-      // Constrain the pan offset to keep view within reasonable bounds
-      if (newMin < minPanBound) {
-        newPanOffset = minPanBound - this.customXBounds.min;
-      } else if (newMax > maxPanBound) {
-        newPanOffset = maxPanBound - this.customXBounds.max;
+    // Simple bounds limiting: prevent panning when view would go beyond data edges
+    if (this.originalDataBounds && this.customXBounds) {
+      const currentViewMin = this.customXBounds.min + this.panOffsetX;
+      const currentViewMax = this.customXBounds.max + this.panOffsetX;
+      const newViewMin = this.customXBounds.min + newPanOffset;
+      const newViewMax = this.customXBounds.max + newPanOffset;
+      
+      // Get actual displayed bounds - use webgl-plot's current bounds which handle log space properly
+      let dataMin = this.originalDataBounds.min;
+      let dataMax = this.originalDataBounds.max;
+      
+      // If we have plot reference and log axis, get the actual displayed bounds
+      if (this.logAxisState.isLogX && this.plotRef && this.plotRef.getAllDataBounds) {
+        const currentBounds = this.plotRef.getAllDataBounds();
+        if (currentBounds) {
+          // In log mode, webgl-plot gives us the bounds in the coordinate space it's actually using
+          dataMin = currentBounds.minX;
+          dataMax = currentBounds.maxX;
+        }
+      } else if (this.logAxisState.isLogX) {
+        // Fallback: convert original bounds, but only if they're positive
+        dataMin = dataMin > 0 ? Math.log10(dataMin) : Math.log10(1e-10);
+        dataMax = dataMax > 0 ? Math.log10(dataMax) : Math.log10(1e-10);
+      }
+      
+      
+      
+      // Prevent panning only in the direction that would exceed bounds
+      if (newViewMin < dataMin && newViewMin < currentViewMin) {
+        // Would go left beyond data bound - clamp to data edge
+        newPanOffset = dataMin - this.customXBounds.min;
+      } else if (newViewMax > dataMax && newViewMax > currentViewMax) {
+        // Would go right beyond data bound - clamp to data edge  
+        newPanOffset = dataMax - this.customXBounds.max;
       }
     }
 
