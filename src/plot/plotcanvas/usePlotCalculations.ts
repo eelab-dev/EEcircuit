@@ -100,6 +100,7 @@ export const usePlotCalculations = ({
   const updatePlotRef = useRef<(() => void) | null>(null);
 
   // Handle log axis changes with enhanced coordinate-space aware API and view preservation
+  // Also re-apply log axis state when plotLineRef changes (canvas mode switching)
   useEffect(() => {
     if (!plotLineRef.current || !glRef.current) return;
 
@@ -119,7 +120,7 @@ export const usePlotCalculations = ({
     if (updatePlotRef.current) {
       updatePlotRef.current();
     }
-  }, [isLogX, isLogY]);
+  }, [isLogX, isLogY, plotLineRef.current]);
 
   // Handle data updates with simplified autoScale (now works correctly for all coordinate spaces)
   useEffect(() => {
