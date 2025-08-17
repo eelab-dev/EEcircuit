@@ -237,6 +237,14 @@ const updateX = (
     // Axis calculation based on scale and offset from plot calculations
     // The scale and offset should now properly reflect the zoom bounds with pan offset
 
+    // CRITICAL VALIDATION: Don't render axis if scale/offset are invalid or uninitialized
+    // This prevents massive tick generation during axis transitions
+    if (!isFinite(scale) || scale === 0 || !isFinite(offset)) {
+      // Clear canvas and show minimal indication
+      ctx2d.fillText("Updating...", 10, 15 * (window.devicePixelRatio || 1));
+      return;
+    }
+
     // Calculate minimum spacing needed for text to avoid overlap
     // Use display values (converted from log space if needed) for proper text width estimation
     const sampleValueForMeasurement = Math.abs(maxValue) > Math.abs(minValue) ? maxValue : minValue;
@@ -269,6 +277,7 @@ const updateX = (
     // CRITICAL SAFEGUARD: Never allow more ticks than maxTicks regardless of what generateNiceTicks returns
     // This prevents performance issues from stale/cached tick arrays during rapid re-renders
     if (tickValues.length > maxTicks) {
+      // Emergency safeguard: truncate excessive ticks to prevent performance issues
       tickValues = tickValues.slice(0, maxTicks);
     }
 

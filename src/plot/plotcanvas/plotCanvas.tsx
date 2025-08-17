@@ -147,6 +147,13 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
   // Direct axis rendering (no React re-render)
   const renderAxes = useCallback((scales: typeof axisScalesRef.current) => {
+    // FINAL DEFENSIVE CHECK: Never render axes with invalid scales
+    if (!isFinite(scales.scaleX) || !isFinite(scales.scaleY) || 
+        !isFinite(scales.offsetX) || !isFinite(scales.offsetY) ||
+        scales.scaleX === 0 || scales.scaleY === 0) {
+      return; // Don't render axes with invalid scales
+    }
+
     const axisParams = {
       scale: scales.scaleX,
       offset: scales.offsetX,

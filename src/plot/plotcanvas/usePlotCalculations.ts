@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, RefObject } from "react";
+import { useState, useEffect, useRef, RefObject, useCallback, startTransition } from "react";
 import { ResultType } from "eecircuit-engine";
 import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanvas } from "webgl-plot";
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
@@ -99,60 +99,93 @@ export const usePlotCalculations = ({
     offsetX: 0,
     offsetY: 0,
   });
+  
 
-  // Helper to update axis scales and trigger rendering
-  const updateAxisScales = (newScales: AxisScales) => {
-    setAxisScales(newScales);
-    onAxisScalesChange?.(newScales);
-  };
+  // Debounced axis scale updates to prevent rapid re-renders
+  const scaleUpdateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  
+  // Helper to update axis scales with comprehensive validation
+  const updateAxisScales = useCallback((newScales: AxisScales) => {
+    // VALIDATION: Check for uninitialized/invalid scale values
+    if (newScales.scaleX === 0 || newScales.scaleY === 0 || !isFinite(newScales.scaleX) || !isFinite(newScales.scaleY)) {
+      // Don't update axes with invalid scales - let the transition complete first
+      return;
+    }
+    
+    // If we're transitioning, store scales in ref and debounce the update
+    if (isTransitioningRef.current) {
+      pendingScalesRef.current = newScales;
+      clearTimeout(scaleUpdateTimeoutRef.current);
+      scaleUpdateTimeoutRef.current = setTimeout(() => {
+        if (pendingScalesRef.current) {
+          // CRITICAL: Re-validate scales before applying from timeout
+          const scales = pendingScalesRef.current;
+          
+          // Use a more robust validation for near-zero values
+          if (scales.scaleX === 0 || scales.scaleY === 0 || !isFinite(scales.scaleX) || !isFinite(scales.scaleY) || 
+              Math.abs(scales.scaleX) < Number.EPSILON || Math.abs(scales.scaleY) < Number.EPSILON) {
+            pendingScalesRef.current = null;
+            return; // Don't apply invalid scales
+          }
+          
+          setAxisScales(scales);
+          onAxisScalesChange?.(scales);
+          pendingScalesRef.current = null;
+        }
+      }, 16); // One frame delay (60fps)
+    } else {
+      // Normal immediate update when not transitioning
+      setAxisScales(newScales);
+      onAxisScalesChange?.(newScales);
+    }
+  }, [onAxisScalesChange]);
 
   // Forward declaration for the updatePlot function
   const updatePlotRef = useRef<(() => void) | null>(null);
   // Forward declaration for calculateAndApplyScaling function
   const calculateAndApplyScalingRef = useRef<(() => void) | null>(null);
 
-  // Handle log axis changes with enhanced coordinate-space aware API and view preservation
-  // Also re-apply log axis state when plotLineRef changes (canvas mode switching)
+  // Refs to track transition state and prevent cascading re-renders
+  const isTransitioningRef = useRef(false);
+  const pendingScalesRef = useRef<AxisScales | null>(null);
+
+  // Batched axis transition handler using React.startTransition
+  const handleAxisTransition = useCallback(() => {
+    if (!plotLineRef.current || !glRef.current || isTransitioningRef.current) return;
+
+    isTransitioningRef.current = true;
+
+    // Batch all axis mode changes in a single React transition
+    startTransition(() => {
+      try {
+        // 1. Apply log axis settings
+        plotLineRef.current!.setLogAxis(isLogX, isLogY);
+        
+        // 2. Auto-scale for the new coordinate space
+        plotLineRef.current!.autoScale();
+        
+        // 3. Reset zoom if transitioning to linear mode
+        if (!isLogX && !isLogY && zoomController.current) {
+          zoomController.current.resetZoom();
+        }
+        
+        // 4. Recalculate and apply scaling immediately (no setTimeout)
+        calculateAndApplyScalingRef.current?.();
+        
+        // 5. Update plot visibility and colors
+        updatePlotRef.current?.();
+      } finally {
+        // Reset transition flag after all operations complete
+        isTransitioningRef.current = false;
+      }
+    });
+  }, [isLogX, isLogY]);
+
+  // Handle log axis changes with batched updates to prevent re-render cascades
   useEffect(() => {
     if (!plotLineRef.current || !glRef.current) return;
-
-    
-    if (isLogX || isLogY) {
-      // Option A: Simple Auto-Scaling (now fixed in webgl-plot)
-      // autoScale() now works correctly with coordinate-space awareness
-      plotLineRef.current.setLogAxis(isLogX, isLogY);
-      plotLineRef.current.autoScale(); // ✅ Now works correctly!
-    } else {
-      // Apply linear axis settings and auto-scale
-      plotLineRef.current.setLogAxis(false, false);
-      plotLineRef.current.autoScale();
-      
-      // CRITICAL: Force complete reset to match initial linear state
-      // Clear any zoom state that might be polluted from log mode
-      if (zoomController.current) {
-        zoomController.current.resetZoom();
-      }
-      
-      // CRITICAL FIX: Force webgl-plot to recalculate using the correct time domain data
-      // The issue is that log mode switched to frequency data, we need to switch back to time data
-      if (selectedVariables.length > 0 && results.length > 0) {
-        // Force a complete data recalculation by triggering the updatePlot logic
-        // This should reload the correct time domain data instead of frequency data
-      }
-    }
-    
-    // CRITICAL: Recalculate axis scales after log/linear mode change
-    // This ensures axis scales match the new coordinate space
-    // Use setTimeout to ensure this runs after the current render cycle
-    setTimeout(() => {
-      calculateAndApplyScalingRef.current?.();
-    }, 0);
-    
-    // Update the plot after log axis changes to ensure proper line visibility and colors
-    if (updatePlotRef.current) {
-      updatePlotRef.current();
-    }
-  }, [isLogX, isLogY, plotLineRef.current]);
+    handleAxisTransition();
+  }, [isLogX, isLogY, plotLineRef.current, handleAxisTransition]);
 
   // Handle data updates with simplified autoScale (now works correctly for all coordinate spaces)
   useEffect(() => {
@@ -164,7 +197,7 @@ export const usePlotCalculations = ({
   }, [selectedVariables, results]);
 
   // Calculate and apply scaling using webgl-plot's enhanced API with zoom support
-  const calculateAndApplyScaling = () => {
+  const calculateAndApplyScaling = useCallback(() => {
     if (!plotLineRef.current || selectedVariables.length === 0) {
       // Fallback to default transform if no visible lines
       plotLineRef.current?.setGlobalTransform([1, 1], [-1, -1]);
@@ -232,8 +265,15 @@ export const usePlotCalculations = ({
 
         const finalXRange = xMax - xMin;
         const finalYRange = yMax - yMin;
-        const scaleX = finalXRange > 0 ? 2 / finalXRange : 1;
-        const scaleY = finalYRange > 0 ? 2 / finalYRange : 1;
+        
+        // Ensure we never generate invalid scales - use meaningful fallbacks
+        const scaleX = finalXRange > 0 && isFinite(finalXRange) ? 2 / finalXRange : 1;
+        const scaleY = finalYRange > 0 && isFinite(finalYRange) ? 2 / finalYRange : 1;
+        
+        // Additional validation to prevent zero or invalid scales
+        if (!isFinite(scaleX) || !isFinite(scaleY) || scaleX === 0 || scaleY === 0) {
+          return; // Skip this calculation cycle
+        }
         const offsetX = -1 - xMin * scaleX;
         const offsetY = -1 - yMin * scaleY;
         
@@ -264,12 +304,19 @@ export const usePlotCalculations = ({
         // Extract axis scales for external components (axes, zoom controller)
         const globalScale = plotLineRef.current.getGlobalScale();
         const globalOffset = plotLineRef.current.getGlobalOffset();
-        const newAxisScales = {
-          scaleX: globalScale[0],
-          scaleY: globalScale[1],
-          offsetX: globalOffset[0],
-          offsetY: globalOffset[1],
-        };
+        
+        // VALIDATION: Ensure webgl-plot returned valid scales before updating axes
+        const scaleX = globalScale[0];
+        const scaleY = globalScale[1];
+        const offsetX = globalOffset[0];
+        const offsetY = globalOffset[1];
+        
+        if (!isFinite(scaleX) || !isFinite(scaleY) || !isFinite(offsetX) || !isFinite(offsetY) || 
+            scaleX === 0 || scaleY === 0) {
+          return; // Skip this update cycle
+        }
+        
+        const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
         updateAxisScales(newAxisScales);
         zoomController.current?.updateAxisScales(newAxisScales);
         zoomController.current?.updateLogAxisState({ isLogX, isLogY });
@@ -280,7 +327,7 @@ export const usePlotCalculations = ({
         updateAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
       }
     }
-  };
+  }, [selectedVariables, isLogX, isLogY, updateAxisScales]);
 
   // Update plot visibility and colors
   const updatePlot = () => {
@@ -413,6 +460,15 @@ export const usePlotCalculations = ({
     updatePlotRef.current = updatePlot;
     calculateAndApplyScalingRef.current = calculateAndApplyScaling;
   }, [updatePlot, calculateAndApplyScaling]);
+
+  // Cleanup timeout on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (scaleUpdateTimeoutRef.current) {
+        clearTimeout(scaleUpdateTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return {
     axisScales,
