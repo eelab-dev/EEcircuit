@@ -140,6 +140,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     crosshairRef,
     snapCircleRef,
     canvasRef,
+    plotLineRef,
     results,
     selectedVariables,
     lineDataRef,

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, RefObject } from "react";
 import { ResultType } from "eecircuit-engine";
-import { LineConfig, WebglLinePlot, WebglPolygonPlot } from "webgl-plot";
+import { LineConfig, WebglLinePlot, WebglPolygonPlot, UnifiedLinePlot } from "webgl-plot";
 import { LINE_THICKNESS } from "../styling/lineThickness";
+import { useAppStore } from "../../../store/appStore";
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -79,6 +80,7 @@ interface UseCrosshairProps {
   crosshairRef: RefObject<WebglLinePlot | null>;
   snapCircleRef: RefObject<WebglPolygonPlot | null>;
   canvasRef: RefObject<HTMLCanvasElement | null>;
+  plotLineRef: RefObject<UnifiedLinePlot | null>;
   results: ResultType[];
   selectedVariables: string[];
   lineDataRef: RefObject<ExtendedLineConfig[]>;
@@ -97,6 +99,7 @@ export const useCrosshair = ({
   crosshairRef,
   snapCircleRef,
   canvasRef,
+  plotLineRef,
   results,
   selectedVariables,
   lineDataRef,
@@ -111,10 +114,70 @@ export const useCrosshair = ({
   const [localShowCrosshair, setLocalShowCrosshair] = useState(false);
   const lastSyncedX = useRef<number | null>(null);
   
+  // Get log axis state from store
+  const isLogX = useAppStore((state) => state.isLogX);
+  const isLogY = useAppStore((state) => state.isLogY);
+  
   // Use shared cursor visibility in dual canvas mode, local state otherwise
   const showCrosshair = sharedCursorVisible !== undefined ? sharedCursorVisible : localShowCrosshair;
   const setShowCrosshair = sharedCursorVisible !== undefined ? onCursorVisibilityChange! : setLocalShowCrosshair;
   const [crosshairSnapToLines, setCrosshairSnapToLines] = useState(false);
+
+  /**
+   * Convert mouse coordinates to data coordinates considering log spaces
+   * Uses webgl-plot's enhanced coordinate-space aware API to handle log transformations
+   */
+  const convertMouseToDataCoordinates = (mouseNdcX: number, mouseNdcY: number) => {
+    if (!plotLineRef.current) {
+      // Fallback to manual calculation if plotLineRef is not available
+      const axisScales = getAxisScales();
+      return {
+        dataX: (mouseNdcX - axisScales.offsetX) / axisScales.scaleX,
+        dataY: (mouseNdcY - axisScales.offsetY) / axisScales.scaleY,
+      };
+    }
+
+    // Get current data bounds with coordinate space information
+    const bounds = plotLineRef.current.getDataBounds();
+    if (!bounds) {
+      // Fallback if bounds not available
+      const axisScales = getAxisScales();
+      return {
+        dataX: (mouseNdcX - axisScales.offsetX) / axisScales.scaleX,
+        dataY: (mouseNdcY - axisScales.offsetY) / axisScales.scaleY,
+      };
+    }
+
+    // Convert NDC coordinates to data space using bounds
+    // NDC coordinates are -1 to +1, convert to 0 to 1 range first
+    const normalizedX = (mouseNdcX + 1) / 2; // Convert from [-1,1] to [0,1]
+    const normalizedY = (mouseNdcY + 1) / 2; // Convert from [-1,1] to [0,1]
+
+    // Interpolate within the data bounds
+    const dataX = bounds.minX + normalizedX * (bounds.maxX - bounds.minX);
+    const dataY = bounds.minY + normalizedY * (bounds.maxY - bounds.minY);
+
+    return { dataX, dataY };
+  };
+
+  /**
+   * Convert data coordinates to display coordinates for coordinate update callback
+   * Handles conversion from log space back to linear space for display
+   */
+  const convertDataToDisplayCoordinates = (dataX: number, dataY: number) => {
+    let displayX = dataX;
+    let displayY = dataY;
+
+    // Convert from log space back to linear space for display
+    if (isLogX && dataX !== undefined && isFinite(dataX)) {
+      displayX = Math.pow(10, dataX);
+    }
+    if (isLogY && dataY !== undefined && isFinite(dataY)) {
+      displayY = Math.pow(10, dataY);
+    }
+
+    return { displayX, displayY };
+  };
 
   // Add/remove crosshair lines from webgl-plot based on showCrosshair state
   useEffect(() => {
@@ -160,8 +223,16 @@ export const useCrosshair = ({
   useEffect(() => {
     if (sharedCursorX !== null && sharedCursorX !== undefined && crosshairRef.current && showCrosshair && sharedCursorX !== lastSyncedX.current) {
       lastSyncedX.current = sharedCursorX;
+      
+      // Convert shared X coordinate from display space to current coordinate space
+      let dataSpaceX = sharedCursorX;
+      if (isLogX && sharedCursorX > 0) {
+        // Convert from linear to log space
+        dataSpaceX = Math.log10(sharedCursorX);
+      }
+      
       const currentAxisScales = getAxisScales();
-      const sharedNdcX = sharedCursorX * currentAxisScales.scaleX + currentAxisScales.offsetX;
+      const sharedNdcX = dataSpaceX * currentAxisScales.scaleX + currentAxisScales.offsetX;
       
       // Update vertical line to shared X position (only if lines exist)
       const verticalPoints = new Float32Array([sharedNdcX, -1, sharedNdcX, 1]);
@@ -172,7 +243,7 @@ export const useCrosshair = ({
         onRedrawNeeded();
       }
     }
-  }, [sharedCursorX, showCrosshair]);
+  }, [sharedCursorX, showCrosshair, isLogX]);
 
   // Update crosshair position - can snap to nearest plot line or move freely
   const updateCrosshair = (mouseX: number, mouseY: number) => {
@@ -193,9 +264,8 @@ export const useCrosshair = ({
       selectedVariables.length > 0
     ) {
       // SNAP TO LINES MODE: Find the closest point on any visible line
-      const axisScales = getAxisScales();
-      const mouseDataX = (mouseNdcX - axisScales.offsetX) / axisScales.scaleX;
-      const mouseDataY = (mouseNdcY - axisScales.offsetY) / axisScales.scaleY;
+      // Use new coordinate conversion that handles log spaces
+      const { dataX: mouseDataX, dataY: mouseDataY } = convertMouseToDataCoordinates(mouseNdcX, mouseNdcY);
 
       let closestPoint = { x: mouseDataX, y: mouseDataY, distance: Infinity };
 
@@ -259,17 +329,19 @@ export const useCrosshair = ({
       finalDataY = closestPoint.y ?? mouseDataY;
     } else {
       // FREE ROAMING MODE: Use mouse position directly
-      const axisScales = getAxisScales();
-      finalDataX = (mouseNdcX - axisScales.offsetX) / axisScales.scaleX;
-      finalDataY = (mouseNdcY - axisScales.offsetY) / axisScales.scaleY;
+      // Use new coordinate conversion that handles log spaces
+      const { dataX: mouseDataX, dataY: mouseDataY } = convertMouseToDataCoordinates(mouseNdcX, mouseNdcY);
+      finalDataX = mouseDataX;
+      finalDataY = mouseDataY;
     }
 
     // Update crosshair coordinates in ref (no React re-render)
     crosshairCoordsRef.current = { x: finalDataX, y: finalDataY };
 
-    // Update coordinate display directly via DOM (no React re-render)
+    // Convert to display coordinates for coordinate callback (handles log to linear conversion)
     if (onCoordinateUpdate) {
-      onCoordinateUpdate(finalDataX, finalDataY);
+      const { displayX, displayY } = convertDataToDisplayCoordinates(finalDataX, finalDataY);
+      onCoordinateUpdate(displayX, displayY);
     }
 
     // Convert to NDC coordinates for rendering
@@ -310,7 +382,9 @@ export const useCrosshair = ({
 
     // Share X coordinate with other canvas in dual mode
     if (onCursorXChange) {
-      onCursorXChange(finalDataX);
+      // For dual canvas sync, share the display coordinate (convert from log space if needed)
+      const { displayX } = convertDataToDisplayCoordinates(finalDataX, finalDataY);
+      onCursorXChange(displayX);
     }
 
     // Force webgl redraw for crosshair updates
