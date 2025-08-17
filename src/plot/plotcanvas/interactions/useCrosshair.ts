@@ -3,6 +3,7 @@ import { ResultType } from "eecircuit-engine";
 import { LineConfig, WebglLinePlot, WebglPolygonPlot, UnifiedLinePlot } from "webgl-plot";
 import { LINE_THICKNESS } from "../styling/lineThickness";
 import { useAppStore } from "../../../store/appStore";
+import { convertDataToDisplayCoordinates, convertXToLogSpace } from "../utils/coordinateUtils";
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -161,24 +162,7 @@ export const useCrosshair = ({
     return { dataX, dataY };
   };
 
-  /**
-   * Convert data coordinates to display coordinates for coordinate update callback
-   * Handles conversion from log space back to linear space for display
-   */
-  const convertDataToDisplayCoordinates = (dataX: number, dataY: number) => {
-    let displayX = dataX;
-    let displayY = dataY;
-
-    // Convert from log space back to linear space for display
-    if (isLogX && dataX !== undefined && isFinite(dataX)) {
-      displayX = Math.pow(10, dataX);
-    }
-    if (isLogY && dataY !== undefined && isFinite(dataY)) {
-      displayY = Math.pow(10, dataY);
-    }
-
-    return { displayX, displayY };
-  };
+  // Note: convertDataToDisplayCoordinates is now imported from coordinateUtils
 
   // Add/remove crosshair lines from webgl-plot based on showCrosshair state
   // Also re-initialize when switching between single/dual canvas modes
@@ -264,11 +248,7 @@ export const useCrosshair = ({
       lastSyncedX.current = sharedCursorX;
       
       // Convert shared X coordinate from display space to current coordinate space
-      let dataSpaceX = sharedCursorX;
-      if (isLogX && sharedCursorX > 0) {
-        // Convert from linear to log space
-        dataSpaceX = Math.log10(sharedCursorX);
-      }
+      const dataSpaceX = convertXToLogSpace(sharedCursorX, isLogX);
       
       const currentAxisScales = getAxisScales();
       const sharedNdcX = dataSpaceX * currentAxisScales.scaleX + currentAxisScales.offsetX;
@@ -379,7 +359,7 @@ export const useCrosshair = ({
 
     // Convert to display coordinates for coordinate callback (handles log to linear conversion)
     if (onCoordinateUpdate) {
-      const { displayX, displayY } = convertDataToDisplayCoordinates(finalDataX, finalDataY);
+      const { displayX, displayY } = convertDataToDisplayCoordinates(finalDataX, finalDataY, isLogX, isLogY);
       onCoordinateUpdate(displayX, displayY);
     }
 
@@ -422,7 +402,7 @@ export const useCrosshair = ({
     // Share X coordinate with other canvas in dual mode
     if (onCursorXChange) {
       // For dual canvas sync, share the display coordinate (convert from log space if needed)
-      const { displayX } = convertDataToDisplayCoordinates(finalDataX, finalDataY);
+      const { displayX } = convertDataToDisplayCoordinates(finalDataX, finalDataY, isLogX, isLogY);
       onCursorXChange(displayX);
     }
 

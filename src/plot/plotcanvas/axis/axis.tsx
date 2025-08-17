@@ -1,6 +1,7 @@
 import React, { JSX, useEffect, useRef, useState } from "react";
 import { unitConvert2string } from "./unitConverter";
 import { useAppStore } from "../../../store/appStore";
+import { convertLogToLinearSpace } from "../utils/coordinateUtils";
 
 type AxisType = {
   scale: number;
@@ -226,10 +227,7 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
     return ticks;
   };
 
-  // Function to convert log space value back to linear for display
-  const convertLogToLinearForDisplay = (logValue: number): number => {
-    return Math.pow(10, logValue);
-  };
+  // Note: convertLogToLinearForDisplay is now imported as convertLogToLinearSpace from coordinateUtils
 
   const generateNiceTicks = (
     min: number,
@@ -337,9 +335,7 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
       // Draw ticks at exact pixel positions (no tolerance needed for exact alignment)
       if (x >= 0 && x <= width) {
         // For log scale, convert back to linear for display
-        const displayValue = isLogX
-          ? convertLogToLinearForDisplay(tickValue)
-          : tickValue;
+        const displayValue = convertLogToLinearSpace(tickValue, isLogX);
         const text = unitConvert2string(displayValue, 2);
         const currentTextMetrics = ctx2d.measureText(text);
         const currentTextWidth = currentTextMetrics.width;
@@ -426,9 +422,7 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
       // Draw ticks at exact pixel positions (no tolerance needed for exact alignment)
       if (y >= 0 && y <= height) {
         // For log scale, convert back to linear for display
-        const displayValue = isLogY
-          ? convertLogToLinearForDisplay(tickValue)
-          : tickValue;
+        const displayValue = convertLogToLinearSpace(tickValue, isLogY);
         const text = unitConvert2string(displayValue, 2);
 
         ctx2d.fillText(

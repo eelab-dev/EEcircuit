@@ -141,43 +141,7 @@ export class ZoomController {
     return { dataX, dataY };
   }
 
-  /**
-   * Convert data coordinates to display coordinates (linear space)
-   * Used for pan bounds limiting and external communication
-   */
-  private convertDataToDisplayCoordinates(dataX: number, dataY: number): { displayX: number; displayY: number } {
-    let displayX = dataX;
-    let displayY = dataY;
-
-    // Convert from log space back to linear space for display/bounds checking
-    if (this.logAxisState.isLogX && dataX !== undefined && isFinite(dataX)) {
-      displayX = Math.pow(10, dataX);
-    }
-    if (this.logAxisState.isLogY && dataY !== undefined && isFinite(dataY)) {
-      displayY = Math.pow(10, dataY);
-    }
-
-    return { displayX, displayY };
-  }
-
-  /**
-   * Convert display coordinates (linear space) to data coordinates (log space)
-   * Used for setting bounds from external sources
-   */
-  private convertDisplayToDataCoordinates(displayX: number, displayY: number): { dataX: number; dataY: number } {
-    let dataX = displayX;
-    let dataY = displayY;
-
-    // Convert from linear space to log space
-    if (this.logAxisState.isLogX && displayX > 0) {
-      dataX = Math.log10(displayX);
-    }
-    if (this.logAxisState.isLogY && displayY > 0) {
-      dataY = Math.log10(displayY);
-    }
-
-    return { dataX, dataY };
-  }
+  // Note: convertDataToDisplayCoordinates and convertDisplayToDataCoordinates are now imported from coordinateUtils
 
   /**
    * Check if original data bounds have been set

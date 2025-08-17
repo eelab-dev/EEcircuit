@@ -7,6 +7,7 @@ import { ZoomController } from "./interactions/zoomController";
 import { BRACKET_PLOT_STYLES } from "../bracketPlotStyles";
 import type { AggregatedResult } from "../../simulation/resultAggregator";
 import { useAppStore } from "../../store/appStore";
+import { convertLinearToLogSpace } from "./utils/coordinateUtils";
 
 /**
  * EMPTY AXIS AREAS BUG PREVENTION:
@@ -165,6 +166,7 @@ export const usePlotCalculations = ({
       // We need to handle coordinate space conversion properly
       
       // Convert zoom bounds to linear space for comparison with line data
+      // Note: Using inverse conversion since we need log->linear here
       let xMinLinear = xMin;
       let xMaxLinear = xMax;
       if (isLogX) {
@@ -183,10 +185,7 @@ export const usePlotCalculations = ({
           const y = points[i];
           if (x !== undefined && y !== undefined && x >= xMinLinear && x <= xMaxLinear) {
             // Convert Y to log space if needed for bounds calculation
-            let yValue = y;
-            if (isLogY && y > 0) {
-              yValue = Math.log10(y);
-            }
+            const yValue = convertLinearToLogSpace(y, isLogY);
             yMin = Math.min(yMin, yValue);
             yMax = Math.max(yMax, yValue);
           }
