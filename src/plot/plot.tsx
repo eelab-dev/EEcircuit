@@ -92,6 +92,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
     return () => clearTimeout(timeoutId);
   }, [isDrawerPinned]);
 
+
   // Initialize variables when results change or canvas mode changes
   React.useEffect(() => {
     if (results.length > 0 && results[0]?.variableNames) {

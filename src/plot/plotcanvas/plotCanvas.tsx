@@ -91,8 +91,37 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     offsetY: 0,
   });
 
-  // Callback for cursor sync redraw
+  // Callback for cursor sync redraw - optimized for crosshair-only updates
   const handleRedrawNeeded = () => {
+    // For crosshair updates in both single and dual canvas modes
+    // Always draw plot lines first to ensure crosshair appears on top
+    if (plotLineRef.current) {
+      plotLineRef.current.draw();
+    }
+    
+    // Draw crosshair if visible
+    if (showCrosshair && crosshairRef.current) {
+      crosshairRef.current.draw();
+    }
+
+    // Draw snap circle if in snap mode
+    if (showCrosshair && crosshairSnapToLines && snapCircleRef.current) {
+      snapCircleRef.current.draw();
+    }
+
+    // Draw zoom components if zooming
+    if (
+      zoomController.current?.getIsZooming() &&
+      zoomLinesRef.current &&
+      zoomRegionRef.current
+    ) {
+      zoomLinesRef.current.draw();
+      zoomRegionRef.current.draw();
+    }
+  };
+
+  // Full plot update callback for when complete redraw is needed
+  const handleFullRedrawNeeded = () => {
     if (updatePlotRef.current) {
       updatePlotRef.current();
     }
@@ -100,9 +129,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
   // Direct webgl redraw callback for zoom/pan operations (no React re-render)
   const handleWebglRedraw = useCallback(() => {
-    if (updatePlotRef.current) {
-      updatePlotRef.current();
-    }
+    handleFullRedrawNeeded();
   }, []);
 
   // Direct DOM update for crosshair coordinates (no React re-render)
