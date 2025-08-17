@@ -126,12 +126,8 @@ export const usePlotCalculations = ({
   useEffect(() => {
     if (!plotLineRef.current || selectedVariables.length === 0) return;
     
-    // Don't interfere with log axis transformations - let the log axis useEffect handle it
-    if (isLogX || isLogY) {
-      return;
-    }
-    
-    // Use autoScale for data updates in linear space
+    // Use autoScale for data updates in both linear and log space
+    // autoScale() now works correctly for all coordinate spaces
     plotLineRef.current.autoScale();
   }, [selectedVariables, results]);
 
@@ -237,10 +233,6 @@ export const usePlotCalculations = ({
 
   // Update plot visibility and colors
   const updatePlot = () => {
-    // Get fresh log axis state to avoid stale closure issues
-    const currentLogX = useAppStore.getState().isLogX;
-    const currentLogY = useAppStore.getState().isLogY;
-    
     if (!glRef.current || !plotLineRef.current || results.length === 0)
       return;
 
@@ -313,23 +305,9 @@ export const usePlotCalculations = ({
       lineData.thickness = thickness;
     });
 
-    // Calculate and apply auto-scaling for visible lines (skip if log axes are active)
+    // Calculate and apply auto-scaling for visible lines in both linear and log modes
     // Use fresh state to avoid stale closure issues
-    if (!currentLogX && !currentLogY) {
-      calculateAndApplyScaling();
-    } else {
-      // For log axes, just extract current scales for external components
-      const globalScale = plotLineRef.current.getGlobalScale();
-      const globalOffset = plotLineRef.current.getGlobalOffset();
-      const newAxisScales = {
-        scaleX: globalScale[0],
-        scaleY: globalScale[1],
-        offsetX: globalOffset[0],
-        offsetY: globalOffset[1],
-      };
-      setAxisScales(newAxisScales);
-      zoomController.current?.updateAxisScales(newAxisScales);
-    }
+    calculateAndApplyScaling();
 
     plotLineRef.current.draw();
 
