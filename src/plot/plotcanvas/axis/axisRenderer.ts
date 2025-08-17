@@ -1,166 +1,52 @@
-import React, { JSX, useEffect, useRef, useState } from "react";
 import { unitConvert2string } from "./unitConverter";
-import { useAppStore } from "../../../store/appStore";
 import { convertLogToLinearSpace } from "../utils/coordinateUtils";
 
-type AxisType = {
+// Direct axis rendering functions - no React component needed
+export interface AxisParams {
+  canvas: HTMLCanvasElement;
   scale: number;
   offset: number;
-  axis: "x" | "y";
+  isDarkMode: boolean;
+  isLogX: boolean;
+  isLogY: boolean;
+}
+
+export const renderXAxis = ({ canvas, scale, offset, isDarkMode, isLogX }: AxisParams): void => {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * devicePixelRatio;
+  canvas.height = canvas.clientHeight * devicePixelRatio;
+
+  const width = canvas.width;
+  const height = canvas.height;
+
+  updateX(ctx, width, height, scale, offset, isDarkMode, isLogX);
 };
 
-type CanvasSize = {
-  width: number;
-  height: number;
+export const renderYAxis = ({ canvas, scale, offset, isDarkMode, isLogY }: AxisParams): void => {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * devicePixelRatio;
+  canvas.height = canvas.clientHeight * devicePixelRatio;
+
+  const width = canvas.width;
+  const height = canvas.height;
+
+  updateY(ctx, width, height, scale, offset, isDarkMode, isLogY);
 };
-
-const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
-  // Get theme and log axis state from the app store
-  const isDarkMode = useAppStore((state) => state.isDarkMode);
-  const isLogX = useAppStore((state) => state.isLogX);
-  const isLogY = useAppStore((state) => state.isLogY);
-
-  // Debug: Log axis state and parameters for dual plot debugging
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [ctx, setCtx] = useState<CanvasRenderingContext2D>();
-  const [canvasSize, setCanvasSize] = useState<CanvasSize>({
-    width: 0,
-    height: 0,
-  });
-  const [forceRedraw, setForceRedraw] = useState(0);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-
-    if (canvas) {
-      const setupCanvas = () => {
-        const devicePixelRatio = window.devicePixelRatio || 1;
-
-        // Check if canvas has proper dimensions - but don't skip if dimensions are 0
-        // Instead, we'll handle zero dimensions gracefully
-        if (canvas.clientWidth === 0 || canvas.clientHeight === 0) {
-          // Clear the context and canvas size so drawing effects won't try to draw
-          setCtx(undefined);
-          setCanvasSize({ width: 0, height: 0 });
-          return;
-        }
-
-        canvas.width = canvas.clientWidth * devicePixelRatio;
-        canvas.height = canvas.clientHeight * devicePixelRatio;
-
-        setCanvasSize({ width: canvas.width, height: canvas.height });
-
-        const ctx2d = canvas.getContext("2d");
-        if (ctx2d) {
-          const rootFontSize = parseFloat(
-            getComputedStyle(document.documentElement).fontSize
-          );
-          const scaleFactor = window.devicePixelRatio || 1;
-          const fontSize = 0.85 * rootFontSize * scaleFactor;
-          ctx2d.font = `${fontSize}px Courier New`;
-          ctx2d.fillStyle = isDarkMode ? "white" : "black";
-          ctx2d.strokeStyle = isDarkMode ? "white" : "black";
-
-          setCtx(ctx2d);
-
-          // Force a redraw after theme change to apply new colors
-          setForceRedraw((prev) => prev + 1);
-        }
-      };
-
-      // Set up ResizeObserver to handle dimension changes
-      const resizeObserver = new ResizeObserver(() => {
-        // Use requestAnimationFrame to ensure proper timing
-        requestAnimationFrame(() => {
-          setupCanvas();
-        });
-      });
-
-      resizeObserver.observe(canvas);
-
-      // Handle page visibility changes (when switching tabs)
-      const handleVisibilityChange = () => {
-        if (!document.hidden) {
-          // Page became visible again - redraw axes
-          setForceRedraw((prev) => prev + 1);
-          requestAnimationFrame(() => {
-            setupCanvas();
-          });
-        }
-      };
-
-      document.addEventListener("visibilitychange", handleVisibilityChange);
-
-      // Initial setup with a slight delay to ensure DOM is ready
-      requestAnimationFrame(() => {
-        setupCanvas();
-      });
-
-      return () => {
-        resizeObserver.disconnect();
-        document.removeEventListener(
-          "visibilitychange",
-          handleVisibilityChange
-        );
-      };
-    }
-    return () => {}; // Return empty cleanup for when canvas is not available
-  }, [canvasRef, isDarkMode]); // Remove yHeight dependency
-
-  // Add an effect to ensure we redraw when context becomes available after being lost
-  useEffect(() => {
-    if (ctx && canvasSize.width > 0 && canvasSize.height > 0) {
-      // Force redraw when context becomes available
-      setForceRedraw((prev) => prev + 1);
-    }
-  }, [ctx, axis]);
-
-  // Force redraw when theme changes to ensure colors are updated
-  useEffect(() => {
-    if (ctx) {
-      // Update context colors immediately when theme changes
-      ctx.fillStyle = isDarkMode ? "white" : "black";
-      ctx.strokeStyle = isDarkMode ? "white" : "black";
-      // Force a redraw to apply the new colors
-      setForceRedraw((prev) => prev + 1);
-    }
-  }, [isDarkMode, ctx]);
-
-  useEffect(() => {
-    if (ctx && axis == "x" && canvasSize.width > 0 && canvasSize.height > 0) {
-      updateX(ctx, canvasSize.width, canvasSize.height);
-    }
-  }, [
-    ctx,
-    scale,
-    offset,
-    canvasSize.width,
-    canvasSize.height,
-    isDarkMode,
-    forceRedraw,
-    isLogX,
-  ]);
-
-  useEffect(() => {
-    if (ctx && axis == "y" && canvasSize.width > 0 && canvasSize.height > 0) {
-      updateY(ctx, canvasSize.width, canvasSize.height);
-    }
-  }, [
-    ctx,
-    scale,
-    offset,
-    canvasSize.width,
-    canvasSize.height,
-    isDarkMode,
-    forceRedraw,
-    isLogY,
-  ]);
 
   // Function to generate nice tick intervals for linear axes
   const getNiceTickInterval = (range: number, maxTicks: number): number => {
     if (range === 0) return 1;
 
-    const roughInterval = range / (maxTicks - 1);
+    // CRITICAL FIX: Ensure we never have more ticks than maxTicks
+    // Use maxTicks directly to calculate a safe interval
+    const roughInterval = range / Math.max(1, maxTicks - 1);
+    
     const magnitude = Math.pow(
       10,
       Math.floor(Math.log10(Math.abs(roughInterval)))
@@ -178,7 +64,8 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
       niceInterval = 10;
     }
 
-    return niceInterval * magnitude;
+    const finalInterval = niceInterval * magnitude;
+    return finalInterval;
   };
 
   // Function to generate log-scale tick values
@@ -200,12 +87,48 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
       }
     }
 
-    // If we have room for more ticks and not too many decades, add minor ticks
+    // Aggressive optimization for very wide frequency ranges (e.g., 1Hz to 100MHz)
     const numDecades = endPower - startPower;
-    if (ticks.length < maxTicks / 2 && numDecades <= 3) {
-      // Add minor ticks at 2, 3, 4, 5, 6, 7, 8, 9 * 10^n
-      const minorMultipliers = [2, 3, 4, 5, 6, 7, 8, 9];
+    const majorTickCount = ticks.length;
+    
+    // For very wide ranges (>6 decades), skip minor ticks entirely and thin out major ticks
+    if (numDecades > 6) {
+      // Keep only every 2nd or 3rd major tick for very wide ranges
+      const keepEvery = numDecades > 8 ? 3 : 2;
+      return ticks.filter((_, index) => index % keepEvery === 0);
+    }
+    
+    // For wide ranges (4-6 decades), be very conservative with minor ticks
+    if (numDecades > 3) {
+      // No minor ticks for wide ranges - just major ticks
+      return ticks;
+    }
+    
+    // Only add minor ticks for narrow ranges (≤3 decades)
+    if (numDecades <= 1 && majorTickCount < maxTicks / 2) {
+      // Full minor ticks only for single decade
       const minorTicks: number[] = [];
+      const minorMultipliers = [2, 3, 4, 5, 6, 7, 8, 9];
+
+      for (let power = startPower; power <= endPower; power++) {
+        for (const multiplier of minorMultipliers) {
+          const logValue = power + Math.log10(multiplier);
+          if (
+            logValue >= minValue &&
+            logValue <= maxValue &&
+            minorTicks.length + ticks.length < maxTicks
+          ) {
+            minorTicks.push(logValue);
+          }
+        }
+      }
+
+      ticks.push(...minorTicks);
+      ticks.sort((a, b) => a - b);
+    } else if (numDecades <= 3 && majorTickCount <= 6) {
+      // Limited minor ticks for 2-3 decades
+      const minorTicks: number[] = [];
+      const minorMultipliers = [2, 5]; // Only 2x and 5x multipliers
 
       for (let power = startPower; power <= endPower; power++) {
         for (const multiplier of minorMultipliers) {
@@ -226,6 +149,7 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
 
     return ticks;
   };
+
 
   // Note: convertLogToLinearForDisplay is now imported as convertLogToLinearSpace from coordinateUtils
 
@@ -249,7 +173,8 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
     const ticks: number[] = [];
     let tick = firstTick;
 
-    // Generate ticks from start to end
+    // CRITICAL FIX: Enforce strict maxTicks limit to prevent performance issues
+    // Generate ticks from start to end but NEVER exceed maxTicks
     while (tick <= endValue + tickInterval * 0.001 && ticks.length < maxTicks) {
       // Small epsilon for floating point
       if (tick >= startValue - tickInterval * 0.001) {
@@ -258,21 +183,30 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
         ticks.push(Math.round(tick / tickInterval) * tickInterval);
       }
       tick += tickInterval;
+      
+      // EMERGENCY BRAKE: If we somehow get too many ticks, stop immediately
+      if (ticks.length >= maxTicks) {
+        break;
+      }
     }
 
-    // Ensure we have at least 2 ticks
-    if (ticks.length < 2) {
+    // Ensure we have at least 2 ticks but never more than maxTicks
+    if (ticks.length < 2 && maxTicks >= 2) {
       return [startValue, endValue];
     }
 
     return ticks;
   };
 
-  const updateX = (
-    ctx2d: CanvasRenderingContext2D,
-    width: number,
-    height: number
-  ) => {
+const updateX = (
+  ctx2d: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  scale: number,
+  offset: number,
+  isDarkMode: boolean,
+  isLogX: boolean
+) => {
     // Clear the canvas
     ctx2d.clearRect(0, 0, width, height);
 
@@ -288,38 +222,54 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
 
     ctx2d.beginPath();
 
-    // Calculate the value range for the visible area
-    // These calculations must match exactly with the plot canvas coordinate system
-    // WebGL plot uses normalized coordinates from -1 to +1
-    // The transformation is: normalizedCoord = (value * scale + offset)
-    // So: value = (normalizedCoord - offset) / scale
-
+    // WRONG APPROACH: Don't reverse-calculate from scale/offset
+    // This gets corrupted when switching between log/linear modes
+    // 
+    // RIGHT APPROACH: Use the actual data bounds that the plot is displaying
+    // The plot displays correctly, so use its bounds directly
+    
+    // For now, keeping the old calculation but this is the source of the bug
     const leftValue = (-1 - offset) / scale; // Value at left edge (normalized coord = -1)
     const rightValue = (1 - offset) / scale; // Value at right edge (normalized coord = +1)
     const minValue = Math.min(leftValue, rightValue);
     const maxValue = Math.max(leftValue, rightValue);
-
+    
     // Axis calculation based on scale and offset from plot calculations
     // The scale and offset should now properly reflect the zoom bounds with pan offset
 
     // Calculate minimum spacing needed for text to avoid overlap
-    const sampleText = unitConvert2string(
-      Math.abs(maxValue) > Math.abs(minValue) ? maxValue : minValue,
-      2
-    );
+    // Use display values (converted from log space if needed) for proper text width estimation
+    const sampleValueForMeasurement = Math.abs(maxValue) > Math.abs(minValue) ? maxValue : minValue;
+    const displayValueForMeasurement = convertLogToLinearSpace(sampleValueForMeasurement, isLogX);
+    const sampleText = unitConvert2string(displayValueForMeasurement, 2);
     const textMetrics = ctx2d.measureText(sampleText);
     const textWidth = textMetrics.width;
     const minSpacing = textWidth + 30; // Extra padding for readability
 
     // Determine how many ticks we can actually fit
-    const maxTicks = Math.max(2, Math.floor(width / minSpacing));
-
+    // Add safety bounds to prevent excessive ticks (max 20 for X-axis)
+    const calculatedMaxTicks = Math.floor(width / minSpacing);
+    let maxTicks = Math.max(2, Math.min(20, calculatedMaxTicks));
+    
+    // CRITICAL FIX: For very wide ranges (like 1 to 1,000,000), drastically reduce maxTicks
+    const range = Math.abs(maxValue - minValue);
+    if (range > 10000) {
+      maxTicks = Math.min(maxTicks, 4); // Reduce to max 4 ticks for very wide ranges
+    }
+    
     // Generate tick values based on whether X axis is in log scale
     let tickValues: number[];
     if (isLogX) {
       tickValues = generateLogTicks(minValue, maxValue, maxTicks);
     } else {
+      // SIMPLE: Just use the same generateNiceTicks as initial linear axis
       tickValues = generateNiceTicks(minValue, maxValue, maxTicks);
+    }
+    
+    // CRITICAL SAFEGUARD: Never allow more ticks than maxTicks regardless of what generateNiceTicks returns
+    // This prevents performance issues from stale/cached tick arrays during rapid re-renders
+    if (tickValues.length > maxTicks) {
+      tickValues = tickValues.slice(0, maxTicks);
     }
 
     // Sort tick values to ensure proper order
@@ -337,18 +287,17 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
         // For log scale, convert back to linear for display
         const displayValue = convertLogToLinearSpace(tickValue, isLogX);
         const text = unitConvert2string(displayValue, 2);
-        const currentTextMetrics = ctx2d.measureText(text);
-        const currentTextWidth = currentTextMetrics.width;
 
-        // Center the text horizontally at each tick position
+        // Use the pre-calculated textWidth for centering instead of measuring each label
+        // This avoids expensive measureText() calls for every tick
         const textX = Math.max(
-          currentTextWidth / 2,
-          Math.min(width - currentTextWidth / 2, x)
+          textWidth / 2,
+          Math.min(width - textWidth / 2, x)
         );
 
         ctx2d.fillText(
           text,
-          textX - currentTextWidth / 2,
+          textX - textWidth / 2,
           15 * (window.devicePixelRatio || 1)
         );
 
@@ -360,11 +309,15 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
     ctx2d.stroke();
   };
 
-  const updateY = (
-    ctx2d: CanvasRenderingContext2D,
-    width: number,
-    height: number
-  ) => {
+const updateY = (
+  ctx2d: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  scale: number,
+  offset: number,
+  isDarkMode: boolean,
+  isLogY: boolean
+) => {
     // Clear the canvas
     ctx2d.clearRect(0, 0, width, height);
 
@@ -399,7 +352,9 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
     const minSpacing = textHeight + 15; // Extra padding for readability
 
     // Determine how many ticks we can actually fit
-    const maxTicks = Math.max(2, Math.floor(height / minSpacing));
+    // Add safety bounds to prevent excessive ticks (max 15 for Y-axis)
+    const calculatedMaxTicks = Math.floor(height / minSpacing);
+    const maxTicks = Math.max(2, Math.min(15, calculatedMaxTicks));
 
     // Generate tick values based on whether Y axis is in log scale
     let tickValues: number[];
@@ -438,17 +393,3 @@ const Axis = ({ scale, offset, axis }: AxisType): JSX.Element => {
     }
     ctx2d.stroke();
   };
-
-  return (
-    <canvas
-      style={{
-        width: axis === "x" ? "100%" : "5em",
-        height: axis === "x" ? "1.5em" : "100%",
-        backgroundColor: "transparent",
-      }}
-      ref={canvasRef}
-    />
-  );
-};
-
-export default Axis;

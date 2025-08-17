@@ -3,7 +3,7 @@ import { ResultType } from "eecircuit-engine";
 import { Box, Grid, GridItem, Button } from "@chakra-ui/react";
 import { clearColorCache } from "./styling/colorUtils";
 import { formatEngineering } from "./formatUtils";
-import Axis from "./axis/axis";
+import AxisCanvas, { type AxisCanvasRef } from "./axis/AxisCanvas";
 import { useAppStore } from "../../store/appStore";
 import { useCanvasInitialization } from "./useCanvasInitialization";
 import { getPlotBackgroundColor } from "./styling/plotBackgroundColors";
@@ -73,6 +73,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   const inputProfile = useAppStore((state) => state.inputProfile);
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
   const isDarkMode = useAppStore((state) => state.isDarkMode);
+  const isLogX = useAppStore((state) => state.isLogX);
+  const isLogY = useAppStore((state) => state.isLogY);
   const [isAxis] = useState(true);
   
   // Theme-aware background color for canvas using single source of truth
@@ -80,6 +82,10 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
   // Ref for direct DOM manipulation of crosshair coordinates (no React re-renders)
   const crosshairDisplayRef = useRef<HTMLDivElement>(null);
+  
+  // Refs for imperative axis rendering (no React re-renders)
+  const xAxisRef = useRef<AxisCanvasRef>(null);
+  const yAxisRef = useRef<AxisCanvasRef>(null);
 
   // We need to use refs to avoid circular dependencies between hooks
   const updatePlotRef = useRef<(() => void) | null>(null);
@@ -138,6 +144,29 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       crosshairDisplayRef.current.textContent = `X: ${formatEngineering(x)}, Y: ${formatEngineering(y)}`;
     }
   }, []);
+
+  // Direct axis rendering (no React re-render)
+  const renderAxes = useCallback((scales: typeof axisScalesRef.current) => {
+    const axisParams = {
+      scale: scales.scaleX,
+      offset: scales.offsetX,
+      isDarkMode,
+      isLogX,
+      isLogY,
+    };
+
+    xAxisRef.current?.renderAxis(axisParams);
+    
+    const yAxisParams = {
+      scale: scales.scaleY,
+      offset: scales.offsetY,
+      isDarkMode,
+      isLogX,
+      isLogY,
+    };
+    
+    yAxisRef.current?.renderAxis(yAxisParams);
+  }, [isDarkMode, isLogX, isLogY]);
 
   // Initialize canvas first
   const {
@@ -200,6 +229,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       isBracketOperationPlot,
       bracketOperationResults,
       emphasizedPlotIndex,
+      onAxisScalesChange: renderAxes, // Call axis rendering when scales change
     });
 
   // Update refs when functions change
@@ -325,11 +355,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     >
       <GridItem rowStart={1} colStart={1} borderRight="solid 2px">
         {isAxis ? (
-          <Axis
-            scale={axisScales.scaleY}
-            offset={axisScales.offsetY}
-            axis="y"
-          />
+          <AxisCanvas ref={yAxisRef} axis="y" />
         ) : (
           <></>
         )}
@@ -579,11 +605,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       />
       <GridItem rowStart={2} colStart={2} borderTop={isAxis ? "solid 2px" : ""}>
         {isAxis ? (
-          <Axis
-            scale={axisScales.scaleX}
-            offset={axisScales.offsetX}
-            axis="x"
-          />
+          <AxisCanvas ref={xAxisRef} axis="x" />
         ) : (
           <></>
         )}

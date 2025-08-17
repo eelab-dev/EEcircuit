@@ -11,13 +11,12 @@ export const unitConvert2string = (n: number, fractDigits?: number): string => {
   const nLog10 = Math.log10(Math.abs(n));
 
   let nLog10Near = 0;
-  //const nLog10Rem3 = nLog10 % 3;
-  if (nLog10 < -1) {
+  if (nLog10 >= 3) {
     nLog10Near = Math.floor(nLog10 / 3) * 3;
-  } else if (nLog10 > -1 || nLog10 < 1) {
+  } else if (nLog10 >= 0) {
     nLog10Near = 0;
-  } else if (nLog10 > 1) {
-    nLog10Near = Math.floor(nLog10 / 3 - 1) * 3;
+  } else {
+    nLog10Near = Math.floor(nLog10 / 3) * 3;
   }
 
   let unit: string;

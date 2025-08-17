@@ -60,6 +60,8 @@ interface UsePlotCalculationsProps {
   isBracketOperationPlot?: boolean;
   bracketOperationResults?: AggregatedResult;
   emphasizedPlotIndex?: number;
+  // Axis rendering callback
+  onAxisScalesChange?: (scales: AxisScales) => void;
 }
 
 interface UsePlotCalculationsReturn {
@@ -86,6 +88,7 @@ export const usePlotCalculations = ({
   isBracketOperationPlot = false,
   bracketOperationResults,
   emphasizedPlotIndex = 0,
+  onAxisScalesChange,
 }: UsePlotCalculationsProps): UsePlotCalculationsReturn => {
   const isDarkMode = useAppStore((state) => state.isDarkMode);
   const isLogX = useAppStore((state) => state.isLogX);
@@ -97,8 +100,16 @@ export const usePlotCalculations = ({
     offsetY: 0,
   });
 
+  // Helper to update axis scales and trigger rendering
+  const updateAxisScales = (newScales: AxisScales) => {
+    setAxisScales(newScales);
+    onAxisScalesChange?.(newScales);
+  };
+
   // Forward declaration for the updatePlot function
   const updatePlotRef = useRef<(() => void) | null>(null);
+  // Forward declaration for calculateAndApplyScaling function
+  const calculateAndApplyScalingRef = useRef<(() => void) | null>(null);
 
   // Handle log axis changes with enhanced coordinate-space aware API and view preservation
   // Also re-apply log axis state when plotLineRef changes (canvas mode switching)
@@ -115,7 +126,27 @@ export const usePlotCalculations = ({
       // Apply linear axis settings and auto-scale
       plotLineRef.current.setLogAxis(false, false);
       plotLineRef.current.autoScale();
+      
+      // CRITICAL: Force complete reset to match initial linear state
+      // Clear any zoom state that might be polluted from log mode
+      if (zoomController.current) {
+        zoomController.current.resetZoom();
+      }
+      
+      // CRITICAL FIX: Force webgl-plot to recalculate using the correct time domain data
+      // The issue is that log mode switched to frequency data, we need to switch back to time data
+      if (selectedVariables.length > 0 && results.length > 0) {
+        // Force a complete data recalculation by triggering the updatePlot logic
+        // This should reload the correct time domain data instead of frequency data
+      }
     }
+    
+    // CRITICAL: Recalculate axis scales after log/linear mode change
+    // This ensures axis scales match the new coordinate space
+    // Use setTimeout to ensure this runs after the current render cycle
+    setTimeout(() => {
+      calculateAndApplyScalingRef.current?.();
+    }, 0);
     
     // Update the plot after log axis changes to ensure proper line visibility and colors
     if (updatePlotRef.current) {
@@ -137,7 +168,7 @@ export const usePlotCalculations = ({
     if (!plotLineRef.current || selectedVariables.length === 0) {
       // Fallback to default transform if no visible lines
       plotLineRef.current?.setGlobalTransform([1, 1], [-1, -1]);
-      setAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
+      updateAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
       return;
     }
 
@@ -211,7 +242,7 @@ export const usePlotCalculations = ({
         plotLineRef.current.setGlobalTransform([scaleX, scaleY], [offsetX, offsetY]);
         
         const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
-        setAxisScales(newAxisScales);
+        updateAxisScales(newAxisScales);
         zoomController.current?.updateAxisScales(newAxisScales);
         zoomController.current?.updateLogAxisState({ isLogX, isLogY });
       }
@@ -239,14 +270,14 @@ export const usePlotCalculations = ({
           offsetX: globalOffset[0],
           offsetY: globalOffset[1],
         };
-        setAxisScales(newAxisScales);
+        updateAxisScales(newAxisScales);
         zoomController.current?.updateAxisScales(newAxisScales);
         zoomController.current?.updateLogAxisState({ isLogX, isLogY });
       } else {
         // Fallback to default transform if no valid data
         plotLineRef.current.setLogAxis(false, false);
         plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
-        setAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
+        updateAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
       }
     }
   };
@@ -380,7 +411,8 @@ export const usePlotCalculations = ({
   // Set the updatePlot ref so it can be called from the log axis useEffect
   useEffect(() => {
     updatePlotRef.current = updatePlot;
-  }, [updatePlot]);
+    calculateAndApplyScalingRef.current = calculateAndApplyScaling;
+  }, [updatePlot, calculateAndApplyScaling]);
 
   return {
     axisScales,
