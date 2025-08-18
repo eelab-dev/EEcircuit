@@ -31,11 +31,6 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   const toggleLogX = useAppStore((state) => state.toggleLogX);
   const toggleLogY = useAppStore((state) => state.toggleLogY);
   
-  // Canvas-specific LogY state from store
-  const canvas1IsLogY = useAppStore((state) => state.canvas1IsLogY);
-  const canvas2IsLogY = useAppStore((state) => state.canvas2IsLogY);
-  const toggleCanvas1LogY = useAppStore((state) => state.toggleCanvas1LogY);
-  const toggleCanvas2LogY = useAppStore((state) => state.toggleCanvas2LogY);
   
 
   // IMPORTANT: Checkbox State Management Pattern
@@ -230,15 +225,15 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                 <>
                   <Button
                     size="sm"
-                    variant={canvas1IsLogY ? "solid" : "outline"}
-                    onClick={toggleCanvas1LogY}
+                    variant={isLogY ? "solid" : "outline"}
+                    onClick={toggleLogY}
                   >
                     Log Y1
                   </Button>
                   <Button
                     size="sm"
-                    variant={canvas2IsLogY ? "solid" : "outline"}
-                    onClick={toggleCanvas2LogY}
+                    variant={isLogY ? "solid" : "outline"}
+                    onClick={toggleLogY}
                   >
                     Log Y2
                   </Button>
@@ -254,7 +249,6 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                 results={results}
                 selectedVariables={selectedVariables}
                 hoveredVariable={hoveredVariable}
-                isLogY={isLogY}
                 isBracketOperationPlot={isBracketOperationPlot}
                 bracketOperationResults={bracketOperationResults}
                 sharedCursorVisible={sharedCursorVisible}
@@ -276,7 +270,6 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     results={results}
                     selectedVariables={localCanvas1SelectedVariables}
                     hoveredVariable={localCanvas1HoveredVariable}
-                    isLogY={canvas1IsLogY}
                     isBracketOperationPlot={isBracketOperationPlot}
                     bracketOperationResults={bracketOperationResults}
                     sharedCursorX={sharedCursorX}
@@ -305,7 +298,6 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     results={results}
                     selectedVariables={localCanvas2SelectedVariables}
                     hoveredVariable={localCanvas2HoveredVariable}
-                    isLogY={canvas2IsLogY}
                     isBracketOperationPlot={isBracketOperationPlot}
                     bracketOperationResults={bracketOperationResults}
                     sharedCursorX={sharedCursorX}

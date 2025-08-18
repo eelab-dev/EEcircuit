@@ -20,8 +20,6 @@ interface PlotCanvasProps {
   results: ResultType[];
   selectedVariables: string[];
   hoveredVariable: string | null;
-  // Log axis prop (overrides store state for dual canvas mode)
-  isLogY?: boolean;
   // Bracket operation props
   isBracketOperationPlot?: boolean;
   bracketOperationResults?: AggregatedResult;
@@ -57,7 +55,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   results,
   selectedVariables,
   hoveredVariable,
-  isLogY: propIsLogY,
   isBracketOperationPlot = false,
   bracketOperationResults,
   sharedCursorX,
@@ -157,7 +154,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
     // CRITICAL FIX: Always get fresh log axis state from store to avoid stale closures
     const currentIsLogX = useAppStore.getState().isLogX;
-    const currentIsLogY = propIsLogY ?? useAppStore.getState().isLogY;
+    const currentIsLogY = useAppStore.getState().isLogY;
+    
 
     const axisParams = {
       scale: scales.scaleX,
@@ -178,7 +176,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     };
     
     yAxisRef.current?.renderAxis(yAxisParams);
-  }, [isDarkMode]); // Removed isLogX, isLogY since we get them fresh from store
+  }, [isDarkMode]); // Fresh values fetched inside effect to avoid stale closures
 
   // Initialize canvas first
   const {
@@ -217,7 +215,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     onCursorXChange,
     sharedCursorVisible,
     onCursorVisibilityChange,
-    isLogY: propIsLogY,
     onRedrawNeeded: handleRedrawNeeded,
     onCoordinateUpdate: updateCrosshairDisplay,
   });
@@ -239,8 +236,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       hoveredVariable,
       showCrosshair,
       crosshairSnapToLines,
-      isLogY: propIsLogY,
-      isBracketOperationPlot,
+        isBracketOperationPlot,
       bracketOperationResults,
       emphasizedPlotIndex,
       onAxisScalesChange: renderAxes, // Call axis rendering when scales change
@@ -297,7 +293,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     otherCanvasUpdatePlot,
     otherCanvasCalcScaling,
     getAxisScales: () => axisScalesRef.current,
-    isLogY: propIsLogY,
     onWebglRedraw: handleWebglRedraw,
   });
 
