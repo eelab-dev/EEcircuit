@@ -28,8 +28,12 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   // Log axis state from store
   const isLogX = useAppStore((state) => state.isLogX);
   const isLogY = useAppStore((state) => state.isLogY);
+  const isLogY1 = useAppStore((state) => state.isLogY1);
+  const isLogY2 = useAppStore((state) => state.isLogY2);
   const toggleLogX = useAppStore((state) => state.toggleLogX);
   const toggleLogY = useAppStore((state) => state.toggleLogY);
+  const toggleLogY1 = useAppStore((state) => state.toggleLogY1);
+  const toggleLogY2 = useAppStore((state) => state.toggleLogY2);
   
   
 
@@ -225,15 +229,15 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                 <>
                   <Button
                     size="sm"
-                    variant={isLogY ? "solid" : "outline"}
-                    onClick={toggleLogY}
+                    variant={isLogY1 ? "solid" : "outline"}
+                    onClick={toggleLogY1}
                   >
                     Log Y1
                   </Button>
                   <Button
                     size="sm"
-                    variant={isLogY ? "solid" : "outline"}
-                    onClick={toggleLogY}
+                    variant={isLogY2 ? "solid" : "outline"}
+                    onClick={toggleLogY2}
                   >
                     Log Y2
                   </Button>
@@ -284,6 +288,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     plotScalingRef={canvas1PlotScalingRef}
                     otherCanvasUpdatePlot={canvas2PlotUpdateRef}
                     otherCanvasCalcScaling={canvas2PlotScalingRef}
+                    canvasId={1}
                   />
                 </Box>
               </VStack>
@@ -312,6 +317,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     plotScalingRef={canvas2PlotScalingRef}
                     otherCanvasUpdatePlot={canvas1PlotUpdateRef}
                     otherCanvasCalcScaling={canvas1PlotScalingRef}
+                    canvasId={2}
                   />
                 </Box>
               </VStack>

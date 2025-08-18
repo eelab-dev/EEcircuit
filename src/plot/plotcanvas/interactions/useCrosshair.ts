@@ -94,6 +94,8 @@ interface UseCrosshairProps {
   onRedrawNeeded?: () => void;
   // Direct DOM update callback for crosshair display
   onCoordinateUpdate?: (x: number, y: number) => void;
+  // Canvas identification for dual mode
+  canvasId?: 1 | 2;
 }
 
 export const useCrosshair = ({
@@ -111,6 +113,7 @@ export const useCrosshair = ({
   onCursorVisibilityChange,
   onRedrawNeeded,
   onCoordinateUpdate,
+  canvasId,
 }: UseCrosshairProps) => {
   const [localShowCrosshair, setLocalShowCrosshair] = useState(false);
   const lastSyncedX = useRef<number | null>(null);
@@ -118,7 +121,15 @@ export const useCrosshair = ({
   
   // Get log axis state from store
   const isLogX = useAppStore((state) => state.isLogX);
-  const isLogY = useAppStore((state) => state.isLogY);
+  const isLogY = useAppStore((state) => {
+    if (canvasId === 1) {
+      return state.isLogY1;
+    } else if (canvasId === 2) {
+      return state.isLogY2;
+    } else {
+      return state.isLogY; // Single canvas mode
+    }
+  });
   
   // Use shared cursor visibility in both single and dual canvas modes
   const showCrosshair = sharedCursorVisible !== undefined ? sharedCursorVisible : localShowCrosshair;

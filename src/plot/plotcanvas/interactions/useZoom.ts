@@ -44,6 +44,8 @@ interface UseZoomProps {
   getAxisScales: () => AxisScales;
   // Direct webgl redraw callback (no React re-render)
   onWebglRedraw?: () => void;
+  // Canvas identification for dual mode
+  canvasId?: 1 | 2;
 }
 
 export const useZoom = ({
@@ -62,12 +64,21 @@ export const useZoom = ({
   otherCanvasCalcScaling,
   getAxisScales,
   onWebglRedraw,
+  canvasId,
 }: UseZoomProps) => {
   const lastSyncedZoomState = useRef<typeof sharedZoomState>(null);
   
   // Get log axis state from store
   const isLogX = useAppStore((state) => state.isLogX);
-  const isLogY = useAppStore((state) => state.isLogY);
+  const isLogY = useAppStore((state) => {
+    if (canvasId === 1) {
+      return state.isLogY1;
+    } else if (canvasId === 2) {
+      return state.isLogY2;
+    } else {
+      return state.isLogY; // Single canvas mode
+    }
+  });
 
   // Set up zoom state synchronization callback
   useEffect(() => {

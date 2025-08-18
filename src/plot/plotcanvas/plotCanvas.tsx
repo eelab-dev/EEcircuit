@@ -49,6 +49,8 @@ interface PlotCanvasProps {
   plotScalingRef?: React.RefObject<(() => void) | null>;
   otherCanvasUpdatePlot?: React.RefObject<(() => void) | null>;
   otherCanvasCalcScaling?: React.RefObject<(() => void) | null>;
+  // Canvas identification for dual mode
+  canvasId?: 1 | 2;
 }
 
 const PlotCanvas: React.FC<PlotCanvasProps> = ({
@@ -69,6 +71,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   plotScalingRef,
   otherCanvasUpdatePlot,
   otherCanvasCalcScaling,
+  canvasId,
 }) => {
   const inputProfile = useAppStore((state) => state.inputProfile);
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
@@ -154,7 +157,14 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
     // CRITICAL FIX: Always get fresh log axis state from store to avoid stale closures
     const currentIsLogX = useAppStore.getState().isLogX;
-    const currentIsLogY = useAppStore.getState().isLogY;
+    let currentIsLogY: boolean;
+    if (canvasId === 1) {
+      currentIsLogY = useAppStore.getState().isLogY1;
+    } else if (canvasId === 2) {
+      currentIsLogY = useAppStore.getState().isLogY2;
+    } else {
+      currentIsLogY = useAppStore.getState().isLogY; // Single canvas mode
+    }
     
 
     const axisParams = {
@@ -217,6 +227,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     onCursorVisibilityChange,
     onRedrawNeeded: handleRedrawNeeded,
     onCoordinateUpdate: updateCrosshairDisplay,
+    canvasId,
   });
 
   // Initialize plot calculations
@@ -240,6 +251,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       bracketOperationResults,
       emphasizedPlotIndex,
       onAxisScalesChange: renderAxes, // Call axis rendering when scales change
+      canvasId,
     });
 
   // Update refs when functions change
@@ -294,6 +306,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     otherCanvasCalcScaling,
     getAxisScales: () => axisScalesRef.current,
     onWebglRedraw: handleWebglRedraw,
+    canvasId,
   });
 
   // Initialize event handlers

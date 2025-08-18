@@ -62,6 +62,8 @@ interface UsePlotCalculationsProps {
   emphasizedPlotIndex?: number;
   // Axis rendering callback
   onAxisScalesChange?: (scales: AxisScales) => void;
+  // Canvas identification for dual mode
+  canvasId?: 1 | 2;
 }
 
 interface UsePlotCalculationsReturn {
@@ -89,10 +91,19 @@ export const usePlotCalculations = ({
   bracketOperationResults,
   emphasizedPlotIndex = 0,
   onAxisScalesChange,
+  canvasId,
 }: UsePlotCalculationsProps): UsePlotCalculationsReturn => {
   const isDarkMode = useAppStore((state) => state.isDarkMode);
   const isLogX = useAppStore((state) => state.isLogX);
-  const isLogY = useAppStore((state) => state.isLogY);
+  const isLogY = useAppStore((state) => {
+    if (canvasId === 1) {
+      return state.isLogY1;
+    } else if (canvasId === 2) {
+      return state.isLogY2;
+    } else {
+      return state.isLogY; // Single canvas mode
+    }
+  });
   const [axisScales, setAxisScales] = useState<AxisScales>({
     scaleX: 1,
     scaleY: 1,
