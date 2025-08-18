@@ -56,6 +56,8 @@ interface UsePlotCalculationsProps {
   hoveredVariable: string | null;
   showCrosshair: boolean;
   crosshairSnapToLines: boolean;
+  // Log axis prop (overrides store state for dual canvas mode)
+  isLogY?: boolean;
   // Bracket operation props
   isBracketOperationPlot?: boolean;
   bracketOperationResults?: AggregatedResult;
@@ -85,6 +87,7 @@ export const usePlotCalculations = ({
   hoveredVariable,
   showCrosshair,
   crosshairSnapToLines,
+  isLogY: propIsLogY,
   isBracketOperationPlot = false,
   bracketOperationResults,
   emphasizedPlotIndex = 0,
@@ -92,7 +95,7 @@ export const usePlotCalculations = ({
 }: UsePlotCalculationsProps): UsePlotCalculationsReturn => {
   const isDarkMode = useAppStore((state) => state.isDarkMode);
   const isLogX = useAppStore((state) => state.isLogX);
-  const isLogY = useAppStore((state) => state.isLogY);
+  const isLogY = propIsLogY ?? useAppStore((state) => state.isLogY);
   const [axisScales, setAxisScales] = useState<AxisScales>({
     scaleX: 1,
     scaleY: 1,

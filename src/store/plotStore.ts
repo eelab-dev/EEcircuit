@@ -44,6 +44,9 @@ export interface PlotState {
   // Log axis state
   isLogX: boolean;
   isLogY: boolean;
+  // Canvas-specific log Y state
+  canvas1IsLogY: boolean;
+  canvas2IsLogY: boolean;
 }
 
 export interface PlotActions {
@@ -78,6 +81,11 @@ export interface PlotActions {
   setIsLogY: (isLog: boolean) => void;
   toggleLogX: () => void;
   toggleLogY: () => void;
+  // Canvas-specific log Y actions
+  setCanvas1IsLogY: (isLog: boolean) => void;
+  setCanvas2IsLogY: (isLog: boolean) => void;
+  toggleCanvas1LogY: () => void;
+  toggleCanvas2LogY: () => void;
 
   // Combined actions for common operations
   handleNewResults: (results: ResultType[]) => void;
@@ -110,6 +118,8 @@ export const createPlotSlice: StateCreator<
   emphasizedPlotIndex: 0,
   isLogX: false,
   isLogY: false,
+  canvas1IsLogY: false,
+  canvas2IsLogY: false,
 
   // Plot selection actions
   setIsPlotSelectionMode: (mode) => set({ isPlotSelectionMode: mode }),
@@ -162,6 +172,11 @@ export const createPlotSlice: StateCreator<
   setIsLogY: (isLog) => set({ isLogY: isLog }),
   toggleLogX: () => set((state: PlotSlice & StoreWithTabAndSimulation) => ({ isLogX: !state.isLogX })),
   toggleLogY: () => set((state: PlotSlice & StoreWithTabAndSimulation) => ({ isLogY: !state.isLogY })),
+  // Canvas-specific log Y actions
+  setCanvas1IsLogY: (isLog) => set({ canvas1IsLogY: isLog }),
+  setCanvas2IsLogY: (isLog) => set({ canvas2IsLogY: isLog }),
+  toggleCanvas1LogY: () => set((state: PlotSlice & StoreWithTabAndSimulation) => ({ canvas1IsLogY: !state.canvas1IsLogY })),
+  toggleCanvas2LogY: () => set((state: PlotSlice & StoreWithTabAndSimulation) => ({ canvas2IsLogY: !state.canvas2IsLogY })),
 
   // Combined actions for common operations
   handleNewResults: (newResults) => {

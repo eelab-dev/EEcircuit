@@ -42,6 +42,8 @@ interface UseZoomProps {
   otherCanvasUpdatePlot?: React.RefObject<(() => void) | null>;
   otherCanvasCalcScaling?: React.RefObject<(() => void) | null>;
   getAxisScales: () => AxisScales;
+  // Log axis prop (overrides store state for dual canvas mode)
+  isLogY?: boolean;
   // Direct webgl redraw callback (no React re-render)
   onWebglRedraw?: () => void;
 }
@@ -61,13 +63,14 @@ export const useZoom = ({
   otherCanvasUpdatePlot,
   otherCanvasCalcScaling,
   getAxisScales,
+  isLogY: propIsLogY,
   onWebglRedraw,
 }: UseZoomProps) => {
   const lastSyncedZoomState = useRef<typeof sharedZoomState>(null);
   
   // Get log axis state from store
   const isLogX = useAppStore((state) => state.isLogX);
-  const isLogY = useAppStore((state) => state.isLogY);
+  const isLogY = propIsLogY ?? useAppStore((state) => state.isLogY);
 
   // Set up zoom state synchronization callback
   useEffect(() => {

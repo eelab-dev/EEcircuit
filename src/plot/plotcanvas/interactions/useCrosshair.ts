@@ -90,6 +90,8 @@ interface UseCrosshairProps {
   onCursorXChange?: (x: number) => void;
   sharedCursorVisible?: boolean;
   onCursorVisibilityChange?: (visible: boolean) => void;
+  // Log axis prop (overrides store state for dual canvas mode)
+  isLogY?: boolean;
   // Add canvas redraw callback
   onRedrawNeeded?: () => void;
   // Direct DOM update callback for crosshair display
@@ -109,6 +111,7 @@ export const useCrosshair = ({
   onCursorXChange,
   sharedCursorVisible,
   onCursorVisibilityChange,
+  isLogY: propIsLogY,
   onRedrawNeeded,
   onCoordinateUpdate,
 }: UseCrosshairProps) => {
@@ -118,7 +121,7 @@ export const useCrosshair = ({
   
   // Get log axis state from store
   const isLogX = useAppStore((state) => state.isLogX);
-  const isLogY = useAppStore((state) => state.isLogY);
+  const isLogY = propIsLogY ?? useAppStore((state) => state.isLogY);
   
   // Use shared cursor visibility in both single and dual canvas modes
   const showCrosshair = sharedCursorVisible !== undefined ? sharedCursorVisible : localShowCrosshair;
