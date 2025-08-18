@@ -73,8 +73,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   const inputProfile = useAppStore((state) => state.inputProfile);
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
   const isDarkMode = useAppStore((state) => state.isDarkMode);
-  const isLogX = useAppStore((state) => state.isLogX);
-  const isLogY = useAppStore((state) => state.isLogY);
   const [isAxis] = useState(true);
   
   // Theme-aware background color for canvas using single source of truth
@@ -154,12 +152,16 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       return; // Don't render axes with invalid scales
     }
 
+    // CRITICAL FIX: Always get fresh log axis state from store to avoid stale closures
+    const currentIsLogX = useAppStore.getState().isLogX;
+    const currentIsLogY = useAppStore.getState().isLogY;
+
     const axisParams = {
       scale: scales.scaleX,
       offset: scales.offsetX,
       isDarkMode,
-      isLogX,
-      isLogY,
+      isLogX: currentIsLogX,
+      isLogY: currentIsLogY,
     };
 
     xAxisRef.current?.renderAxis(axisParams);
@@ -168,12 +170,12 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       scale: scales.scaleY,
       offset: scales.offsetY,
       isDarkMode,
-      isLogX,
-      isLogY,
+      isLogX: currentIsLogX,
+      isLogY: currentIsLogY,
     };
     
     yAxisRef.current?.renderAxis(yAxisParams);
-  }, [isDarkMode, isLogX, isLogY]);
+  }, [isDarkMode]); // Removed isLogX, isLogY since we get them fresh from store
 
   // Initialize canvas first
   const {

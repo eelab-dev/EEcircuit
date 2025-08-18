@@ -228,7 +228,7 @@ const updateX = (
     // RIGHT APPROACH: Use the actual data bounds that the plot is displaying
     // The plot displays correctly, so use its bounds directly
     
-    // For now, keeping the old calculation but this is the source of the bug
+    // Calculate the data bounds by reverse-transforming from normalized coordinates
     const leftValue = (-1 - offset) / scale; // Value at left edge (normalized coord = -1)
     const rightValue = (1 - offset) / scale; // Value at right edge (normalized coord = +1)
     const minValue = Math.min(leftValue, rightValue);
