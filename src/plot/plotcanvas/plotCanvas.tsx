@@ -77,13 +77,13 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
   const isDarkMode = useAppStore((state) => state.isDarkMode);
   const [isAxis] = useState(true);
-  
+
   // Theme-aware background color for canvas using single source of truth
   const canvasBackgroundColor = getPlotBackgroundColor(isDarkMode);
 
   // Ref for direct DOM manipulation of crosshair coordinates (no React re-renders)
   const crosshairDisplayRef = useRef<HTMLDivElement>(null);
-  
+
   // Refs for imperative axis rendering (no React re-renders)
   const xAxisRef = useRef<AxisCanvasRef>(null);
   const yAxisRef = useRef<AxisCanvasRef>(null);
@@ -105,7 +105,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     if (plotLineRef.current) {
       plotLineRef.current.draw();
     }
-    
+
     // Draw crosshair if visible
     if (showCrosshair && crosshairRef.current) {
       crosshairRef.current.draw();
@@ -147,46 +147,53 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   }, []);
 
   // Direct axis rendering (no React re-render)
-  const renderAxes = useCallback((scales: typeof axisScalesRef.current) => {
-    // FINAL DEFENSIVE CHECK: Never render axes with invalid scales
-    if (!isFinite(scales.scaleX) || !isFinite(scales.scaleY) || 
-        !isFinite(scales.offsetX) || !isFinite(scales.offsetY) ||
-        scales.scaleX === 0 || scales.scaleY === 0) {
-      return; // Don't render axes with invalid scales
-    }
+  const renderAxes = useCallback(
+    (scales: typeof axisScalesRef.current) => {
+      // FINAL DEFENSIVE CHECK: Never render axes with invalid scales
+      if (
+        !isFinite(scales.scaleX) ||
+        !isFinite(scales.scaleY) ||
+        !isFinite(scales.offsetX) ||
+        !isFinite(scales.offsetY) ||
+        scales.scaleX === 0 ||
+        scales.scaleY === 0
+      ) {
+        return; // Don't render axes with invalid scales
+      }
 
-    // CRITICAL FIX: Always get fresh log axis state from store to avoid stale closures
-    const currentIsLogX = useAppStore.getState().isLogX;
-    let currentIsLogY: boolean;
-    if (canvasId === 1) {
-      currentIsLogY = useAppStore.getState().isLogY1;
-    } else if (canvasId === 2) {
-      currentIsLogY = useAppStore.getState().isLogY2;
-    } else {
-      currentIsLogY = useAppStore.getState().isLogY; // Single canvas mode
-    }
-    
+      // CRITICAL FIX: Always get fresh log axis state from store to avoid stale closures
+      const currentIsLogX = useAppStore.getState().isLogX;
+      let currentIsLogY: boolean;
+      if (canvasId === 1) {
+        currentIsLogY = useAppStore.getState().isLogY1;
+      } else if (canvasId === 2) {
+        currentIsLogY = useAppStore.getState().isLogY2;
+      } else {
+        currentIsLogY = useAppStore.getState().isLogY; // Single canvas mode
+      }
 
-    const axisParams = {
-      scale: scales.scaleX,
-      offset: scales.offsetX,
-      isDarkMode,
-      isLogX: currentIsLogX,
-      isLogY: currentIsLogY,
-    };
+      const axisParams = {
+        scale: scales.scaleX,
+        offset: scales.offsetX,
+        isDarkMode,
+        isLogX: currentIsLogX,
+        isLogY: currentIsLogY,
+      };
 
-    xAxisRef.current?.renderAxis(axisParams);
-    
-    const yAxisParams = {
-      scale: scales.scaleY,
-      offset: scales.offsetY,
-      isDarkMode,
-      isLogX: currentIsLogX,
-      isLogY: currentIsLogY,
-    };
-    
-    yAxisRef.current?.renderAxis(yAxisParams);
-  }, [isDarkMode]); // Fresh values fetched inside effect to avoid stale closures
+      xAxisRef.current?.renderAxis(axisParams);
+
+      const yAxisParams = {
+        scale: scales.scaleY,
+        offset: scales.offsetY,
+        isDarkMode,
+        isLogX: currentIsLogX,
+        isLogY: currentIsLogY,
+      };
+
+      yAxisRef.current?.renderAxis(yAxisParams);
+    },
+    [isDarkMode]
+  ); // Fresh values fetched inside effect to avoid stale closures
 
   // Initialize canvas first
   const {
@@ -203,7 +210,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     isCanvasInitialized,
   } = useCanvasInitialization({
     results,
-    updatePlot: () => updatePlotRef.current?.(),
   });
 
   // Initialize crosshair
@@ -247,7 +253,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       hoveredVariable,
       showCrosshair,
       crosshairSnapToLines,
-        isBracketOperationPlot,
+      isBracketOperationPlot,
       bracketOperationResults,
       emphasizedPlotIndex,
       onAxisScalesChange: renderAxes, // Call axis rendering when scales change
@@ -351,7 +357,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     if (isCanvasInitialized) {
       updatePlot();
     }
-  }, [selectedVariables, isCanvasInitialized]);
+  }, [selectedVariables, isCanvasInitialized, canvasId]);
 
   // Update plot when hover state changes
   useEffect(() => {
@@ -377,11 +383,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       minHeight={0}
     >
       <GridItem rowStart={1} colStart={1} borderRight="solid 2px">
-        {isAxis ? (
-          <AxisCanvas ref={yAxisRef} axis="y" />
-        ) : (
-          <></>
-        )}
+        {isAxis ? <AxisCanvas ref={yAxisRef} axis="y" /> : <></>}
       </GridItem>
       <GridItem rowStart={1} colStart={2} minW="0" minH="0" overflow="hidden">
         <Box
@@ -627,11 +629,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
         borderRight="solid 2px"
       />
       <GridItem rowStart={2} colStart={2} borderTop={isAxis ? "solid 2px" : ""}>
-        {isAxis ? (
-          <AxisCanvas ref={xAxisRef} axis="x" />
-        ) : (
-          <></>
-        )}
+        {isAxis ? <AxisCanvas ref={xAxisRef} axis="x" /> : <></>}
       </GridItem>
     </Grid>
   );

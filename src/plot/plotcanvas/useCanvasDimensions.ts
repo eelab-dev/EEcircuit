@@ -57,8 +57,6 @@ export const useCanvasDimensions = ({
           // Force recalculation of scaling and redraw with new aspect ratio
           if (glRef.current && plotLineRef.current) {
             calculateAndApplyScaling();
-
-            console.log("I am here 4 !")
             plotLineRef.current.draw();
           }
         }

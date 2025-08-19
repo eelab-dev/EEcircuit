@@ -22,9 +22,13 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   const setNumCanvases = useAppStore((state) => state.setNumCanvases);
 
   // Bracket operation state from store
-  const isBracketOperationPlot = useAppStore((state) => state.isBracketOperationPlot);
-  const bracketOperationResults = useAppStore((state) => state.bracketOperationResults);
-  
+  const isBracketOperationPlot = useAppStore(
+    (state) => state.isBracketOperationPlot
+  );
+  const bracketOperationResults = useAppStore(
+    (state) => state.bracketOperationResults
+  );
+
   // Log axis state from store
   const isLogX = useAppStore((state) => state.isLogX);
   const isLogY = useAppStore((state) => state.isLogY);
@@ -34,18 +38,16 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   const toggleLogY = useAppStore((state) => state.toggleLogY);
   const toggleLogY1 = useAppStore((state) => state.toggleLogY1);
   const toggleLogY2 = useAppStore((state) => state.toggleLogY2);
-  
-  
 
   // IMPORTANT: Checkbox State Management Pattern
   // ==========================================
   // Use LOCAL React state for all checkbox selections - NOT Zustand store state!
-  // 
+  //
   // Problem: Chakra UI's CheckboxGroup has synchronization issues with Zustand store state.
-  // When selectedVariables comes from a Zustand store, checkboxes don't update their visual 
+  // When selectedVariables comes from a Zustand store, checkboxes don't update their visual
   // state properly when clicked, even though the store state changes correctly.
   //
-  // Solution: Always use React's useState for checkbox management. This pattern was 
+  // Solution: Always use React's useState for checkbox management. This pattern was
   // discovered in commit 0f72fe2 and must be maintained for all checkbox functionality.
   //
   // For future developers: If you need to add more checkbox groups, always use local
@@ -59,17 +61,21 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   const [hoveredVariable, setHoveredVariable] = React.useState<string | null>(
     null
   );
-  
+
   // Dual canvas mode - separate local state for each canvas (avoids Zustand sync issues)
-  const [localCanvas1SelectedVariables, setLocalCanvas1SelectedVariables] = React.useState<string[]>([]);
-  const [localCanvas1HoveredVariable, setLocalCanvas1HoveredVariable] = React.useState<string | null>(null);
-  const [localCanvas2SelectedVariables, setLocalCanvas2SelectedVariables] = React.useState<string[]>([]);
-  const [localCanvas2HoveredVariable, setLocalCanvas2HoveredVariable] = React.useState<string | null>(null);
-  
+  const [localCanvas1SelectedVariables, setLocalCanvas1SelectedVariables] =
+    React.useState<string[]>([]);
+  const [localCanvas1HoveredVariable, setLocalCanvas1HoveredVariable] =
+    React.useState<string | null>(null);
+  const [localCanvas2SelectedVariables, setLocalCanvas2SelectedVariables] =
+    React.useState<string[]>([]);
+  const [localCanvas2HoveredVariable, setLocalCanvas2HoveredVariable] =
+    React.useState<string | null>(null);
+
   // Shared cursor state for dual canvas synchronization - only X coordinate matters
   const [sharedCursorX, setSharedCursorX] = React.useState<number | null>(null);
   const [sharedCursorVisible, setSharedCursorVisible] = React.useState(false);
-  
+
   // Shared zoom state for dual canvas synchronization
   const [sharedZoomState, setSharedZoomState] = React.useState<{
     isZooming: boolean;
@@ -77,11 +83,11 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
     zoomEndX: number | null;
     zoomBounds: { min: number; max: number } | null;
   } | null>(null);
-  
+
   // Refs for direct pan synchronization without React state
   const canvas1ZoomControllerRef = React.useRef<ZoomController | null>(null);
   const canvas2ZoomControllerRef = React.useRef<ZoomController | null>(null);
-  
+
   // Refs for direct plot update functions
   const canvas1PlotUpdateRef = React.useRef<(() => void) | null>(null);
   const canvas2PlotUpdateRef = React.useRef<(() => void) | null>(null);
@@ -98,17 +104,16 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   React.useEffect(() => {
     // Small delay to ensure layout has updated before triggering resize
     const timeoutId = setTimeout(() => {
-      window.dispatchEvent(new Event('resize'));
+      window.dispatchEvent(new Event("resize"));
     }, 50);
     return () => clearTimeout(timeoutId);
   }, [isDrawerPinned]);
-
 
   // Initialize variables when results change or canvas mode changes
   React.useEffect(() => {
     if (results.length > 0 && results[0]?.variableNames) {
       const allVariables = results[0].variableNames.slice(1); // Skip first variable (time/frequency)
-      
+
       if (numCanvases === 1) {
         // Single canvas mode - select all variables
         setSelectedVariables(allVariables);
@@ -118,8 +123,10 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
       } else if (numCanvases === 2) {
         if (isACModeActive) {
           // AC mode - separate magnitude and phase
-          const magVariables = allVariables.filter(v => v.includes('[mag]'));
-          const phaseVariables = allVariables.filter(v => v.includes('[phase]'));
+          const magVariables = allVariables.filter((v) => v.includes("[mag]"));
+          const phaseVariables = allVariables.filter((v) =>
+            v.includes("[phase]")
+          );
           setLocalCanvas1SelectedVariables(magVariables);
           setLocalCanvas2SelectedVariables(phaseVariables);
         } else {
@@ -140,7 +147,6 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
     exportResultsToCSV(results);
   };
 
-
   return (
     <Flex
       direction="column"
@@ -155,7 +161,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
           bracketOperationResults={bracketOperationResults}
         />
       )}
-      
+
       <Flex
         direction="row"
         w="100%"
@@ -165,7 +171,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
         overflow="hidden"
         position="relative"
       >
-        <VStack 
+        <VStack
           flex="1"
           minW="0"
           minHeight={0}
@@ -177,7 +183,9 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
           <HStack gap={4} alignSelf="flex-start">
             {!isACModeActive && (
               <HStack gap={2}>
-                <Text fontSize="sm" color="fg.muted">Canvas mode:</Text>
+                <Text fontSize="sm" color="fg.muted">
+                  Canvas mode:
+                </Text>
                 <Button
                   size="sm"
                   variant={numCanvases === 1 ? "solid" : "outline"}
@@ -194,10 +202,12 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                 </Button>
               </HStack>
             )}
-            
+
             {/* Cursor toggle control */}
             <HStack gap={2}>
-              <Text fontSize="sm" color="fg.muted">Cursor:</Text>
+              <Text fontSize="sm" color="fg.muted">
+                Cursor:
+              </Text>
               <Button
                 size="sm"
                 variant={sharedCursorVisible ? "solid" : "outline"}
@@ -206,10 +216,12 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                 {sharedCursorVisible ? "Hide" : "Show"}
               </Button>
             </HStack>
-            
+
             {/* Log axis controls */}
             <HStack gap={2}>
-              <Text fontSize="sm" color="fg.muted">Log scale:</Text>
+              <Text fontSize="sm" color="fg.muted">
+                Log scale:
+              </Text>
               <Button
                 size="sm"
                 variant={isLogX ? "solid" : "outline"}
@@ -245,7 +257,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
               )}
             </HStack>
           </HStack>
-          
+
           {/* Single canvas mode */}
           {numCanvases === 1 && (
             <Box flex="1" w="100%" minH="0">
@@ -260,13 +272,18 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
               />
             </Box>
           )}
-          
+
           {/* Dual canvas mode */}
           {numCanvases === 2 && (
             <VStack flex="1" w="100%" minH="0" gap={4}>
               {/* Canvas 1 */}
               <VStack flex="1" w="100%" minH="0" gap={1}>
-                <Text fontSize="sm" fontWeight="medium" alignSelf="flex-start" color="fg.muted">
+                <Text
+                  fontSize="sm"
+                  fontWeight="medium"
+                  alignSelf="flex-start"
+                  color="fg.muted"
+                >
                   {isACModeActive ? "Magnitude" : "Plot 1"}
                 </Text>
                 <Box flex="1" w="100%" minH="0">
@@ -292,10 +309,15 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                   />
                 </Box>
               </VStack>
-              
+
               {/* Canvas 2 */}
               <VStack flex="1" w="100%" minH="0" gap={1}>
-                <Text fontSize="sm" fontWeight="medium" alignSelf="flex-start" color="fg.muted">
+                <Text
+                  fontSize="sm"
+                  fontWeight="medium"
+                  alignSelf="flex-start"
+                  color="fg.muted"
+                >
                   {isACModeActive ? "Phase" : "Plot 2"}
                 </Text>
                 <Box flex="1" w="100%" minH="0">
@@ -329,10 +351,24 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
             variableNames={
               results.length > 0 ? results[0]?.variableNames || [] : []
             }
-            selectedVariables={numCanvases === 1 ? selectedVariables : localCanvas1SelectedVariables}
-            onSelectedVariablesChange={numCanvases === 1 ? setSelectedVariables : setLocalCanvas1SelectedVariables}
-            hoveredVariable={numCanvases === 1 ? hoveredVariable : localCanvas1HoveredVariable}
-            onVariableHover={numCanvases === 1 ? setHoveredVariable : setLocalCanvas1HoveredVariable}
+            selectedVariables={
+              numCanvases === 1
+                ? selectedVariables
+                : localCanvas1SelectedVariables
+            }
+            onSelectedVariablesChange={
+              numCanvases === 1
+                ? setSelectedVariables
+                : setLocalCanvas1SelectedVariables
+            }
+            hoveredVariable={
+              numCanvases === 1 ? hoveredVariable : localCanvas1HoveredVariable
+            }
+            onVariableHover={
+              numCanvases === 1
+                ? setHoveredVariable
+                : setLocalCanvas1HoveredVariable
+            }
             onPinnedChange={setIsDrawerPinned}
             onExportCSV={handleExportCSV}
             // Multi-canvas support

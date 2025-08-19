@@ -1,22 +1,22 @@
 import { ResultType, ComplexNumber } from "eecircuit-engine";
 import type { SimulationWorkerResult } from "./parallelSimulation";
 import type { BracketOperation } from "../utils/bracketParser";
-import { 
-  processComplexArray, 
+import {
+  processComplexArray,
   isComplexDataType
 } from "../utils/complexUtils";
 
 export interface AggregatedResult extends Omit<ResultType, 'data'> {
   // Extended result data for bracket operations
   data: Array<{ values: number[]; name: string }>;
-  
+
   // Additional metadata for bracket operations
   bracketOperation?: BracketOperation;
   parameterValues?: string[];
   parameterCount?: number;
   successfulResults?: number;
   failedResults?: number;
-  
+
   // Bracket operation specific plotting data
   // Each element represents one parameter sweep as a separate line
   bracketPlotData?: Array<{
@@ -47,7 +47,7 @@ export function aggregateParallelResults(
 
   // Filter successful results
   const successfulResults = results.filter(r => r.success && r.result);
-  
+
   if (successfulResults.length === 0) {
     console.warn('No successful results to aggregate');
     return null;
@@ -65,10 +65,26 @@ export function aggregateParallelResults(
 
   // Use the first result as the base structure
   const baseResult = successfulResults[0]!.result!;
-  
-  // For bracket operations, keep original variable names (transformation happens elsewhere)
-  const expandedVariableNames = baseResult.variableNames;
-  
+
+  // For complex data, we need to expand variable names to include magnitude and phase
+  const isComplex = isComplexDataType(baseResult.dataType);
+  const expandedVariableNames: string[] = [];
+
+  if (isComplex) {
+    // First variable (frequency) stays as is
+    expandedVariableNames.push(baseResult.variableNames[0]!);
+
+    // Remaining variables get expanded to magnitude and phase
+    for (let i = 1; i < baseResult.variableNames.length; i++) {
+      const varName = baseResult.variableNames[i]!;
+      expandedVariableNames.push(`${varName}[mag]`);
+      expandedVariableNames.push(`${varName}[phase]`);
+    }
+  } else {
+    // For non-complex data, use original variable names
+    expandedVariableNames.push(...baseResult.variableNames);
+  }
+
   const aggregated: AggregatedResult = {
     header: baseResult.header,
     numVariables: expandedVariableNames.length,
@@ -87,8 +103,7 @@ export function aggregateParallelResults(
   // Aggregate data from all successful results
   // Each variable will have data from all parameter sweeps concatenated
   const originalNumberOfVariables = baseResult.variableNames.length;
-  const isComplex = isComplexDataType(baseResult.dataType);
-  
+
   // Initialize data arrays for each expanded variable (includes mag/phase for complex data)
   for (let varIndex = 0; varIndex < expandedVariableNames.length; varIndex++) {
     aggregated.data[varIndex] = {
@@ -103,7 +118,7 @@ export function aggregateParallelResults(
   // Combine data from all results
   for (const workerResult of successfulResults) {
     const result = workerResult.result!;
-    
+
     // Verify structure compatibility
     if (result.variableNames.length !== originalNumberOfVariables) {
       console.warn(`Result structure mismatch for parameter ${workerResult.parameterValue}`);
@@ -119,31 +134,51 @@ export function aggregateParallelResults(
 
     // Process each original variable
     let expandedVarIndex = 0;
-    
+
     for (let originalVarIndex = 0; originalVarIndex < originalNumberOfVariables; originalVarIndex++) {
       if (result.data[originalVarIndex] && result.data[originalVarIndex]!.values) {
         const values = result.data[originalVarIndex]!.values;
-        
+
         if (originalVarIndex === 0) {
-          // First variable (frequency/time) - keep as is, no expansion
-          const processedValues = values as number[];
-          
+          // CRITICAL: First variable (frequency/time) data consistency fix
+          //
+          // Issue: AC simulation frequency data comes from ngspice as complex numbers {real: 1, img: 0}
+          // but needs to be converted to simple numbers for consistent data structure.
+          //
+          // Data flow comparison:
+          // - Single AC: transformResultForComplexData() extracts frequency.real values
+          // - Bracket AC: aggregateParallelResults() must also extract frequency.real values  
+          // - Transient: time data is already simple numbers, no conversion needed
+          //
+          // This ensures consistent X-axis data format across all simulation modes,
+          // preventing downstream plotting issues where complex objects would be cast
+          // to NaN when expecting numbers.
+          let processedValues: number[];
+
+          if (isComplex && typeof values[0] === 'object' && values[0] !== null && 'real' in values[0]) {
+            // AC frequency data - extract real parts from complex numbers
+            processedValues = (values as ComplexNumber[]).map(v => v.real);
+          } else {
+            // Already real numbers (transient time data or pre-processed frequency)
+            processedValues = values as number[];
+          }
+
           // Add to concatenated data
           aggregated.data[expandedVarIndex]!.values.push(...processedValues);
-          
+
           // Add to separate parameter plot data
           parameterPlotData.data[expandedVarIndex] = {
             values: [...processedValues],
             name: expandedVariableNames[expandedVarIndex]!
           };
           expandedVarIndex++;
-          
+
         } else if (isComplex && typeof values[0] !== 'number') {
           // Complex data - expand to magnitude and phase
           const { magnitudes, phases } = processComplexArray(
             values as (number | ComplexNumber)[]
           );
-          
+
           // Add magnitude data
           aggregated.data[expandedVarIndex]!.values.push(...magnitudes);
           parameterPlotData.data[expandedVarIndex] = {
@@ -151,7 +186,7 @@ export function aggregateParallelResults(
             name: expandedVariableNames[expandedVarIndex]!
           };
           expandedVarIndex++;
-          
+
           // Add phase data  
           aggregated.data[expandedVarIndex]!.values.push(...phases);
           parameterPlotData.data[expandedVarIndex] = {
@@ -159,11 +194,11 @@ export function aggregateParallelResults(
             name: expandedVariableNames[expandedVarIndex]!
           };
           expandedVarIndex++;
-          
+
         } else {
           // Real data or complex data that's already been processed as numbers
           let processedValues: number[];
-          
+
           if (typeof values[0] === 'number') {
             processedValues = values as number[];
           } else {
@@ -173,10 +208,10 @@ export function aggregateParallelResults(
             );
             processedValues = magnitudes;
           }
-          
+
           // Add to concatenated data
           aggregated.data[expandedVarIndex]!.values.push(...processedValues);
-          
+
           // Add to separate parameter plot data
           parameterPlotData.data[expandedVarIndex] = {
             values: [...processedValues],
@@ -198,7 +233,7 @@ export function aggregateParallelResults(
   if (successfulResults.length > 10) {
     console.log(`Aggregated ${successfulResults.length} results with ${aggregated.numPoints} total data points`);
   }
-  
+
   return aggregated;
 }
 
@@ -210,7 +245,7 @@ export class ProgressiveResultAggregator {
   private currentResults: SimulationWorkerResult[] = [];
   private bracketOperation?: BracketOperation;
   private onUpdate?: (aggregatedResult: AggregatedResult | null) => void;
-  
+
   constructor(
     bracketOperation?: BracketOperation,
     onUpdate?: (aggregatedResult: AggregatedResult | null) => void
@@ -224,14 +259,14 @@ export class ProgressiveResultAggregator {
    */
   addResult(result: SimulationWorkerResult): void {
     this.currentResults.push(result);
-    
+
     // Aggregate current results and notify
     const aggregated = aggregateParallelResults(
       this.currentResults,
       this.bracketOperation,
       { preserveParameterInfo: true, sortByParameter: true }
     );
-    
+
     if (this.onUpdate) {
       this.onUpdate(aggregated);
     }
@@ -267,7 +302,7 @@ export class ProgressiveResultAggregator {
     const total = this.currentResults.length;
     const successful = this.currentResults.filter(r => r.success).length;
     const failed = total - successful;
-    
+
     return {
       total,
       successful,
@@ -287,7 +322,7 @@ export function createPartialAggregation(
   bracketOperation?: BracketOperation
 ): AggregatedResult | null {
   const aggregated = aggregateParallelResults(results, bracketOperation);
-  
+
   if (!aggregated) {
     return null;
   }
@@ -315,7 +350,7 @@ export function canAggregateResults(results: SimulationWorkerResult[]): {
   reason?: string;
 } {
   const successfulResults = results.filter(r => r.success && r.result);
-  
+
   if (successfulResults.length === 0) {
     return {
       canAggregate: false,
@@ -329,7 +364,7 @@ export function canAggregateResults(results: SimulationWorkerResult[]): {
 
   for (let i = 1; i < successfulResults.length; i++) {
     const result = successfulResults[i]!.result!;
-    
+
     if (result.variableNames.length !== baseVariableCount) {
       return {
         canAggregate: false,

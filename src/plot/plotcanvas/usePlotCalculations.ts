@@ -110,11 +110,11 @@ export const usePlotCalculations = ({
     offsetX: 0,
     offsetY: 0,
   });
-  
+
 
   // Debounced axis scale updates to prevent rapid re-renders
   const scaleUpdateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  
+
   // Helper to update axis scales with comprehensive validation
   const updateAxisScales = useCallback((newScales: AxisScales) => {
     // VALIDATION: Check for uninitialized/invalid scale values
@@ -122,7 +122,7 @@ export const usePlotCalculations = ({
       // Don't update axes with invalid scales - let the transition complete first
       return;
     }
-    
+
     // If we're transitioning, store scales in ref and debounce the update
     if (isTransitioningRef.current) {
       pendingScalesRef.current = newScales;
@@ -131,14 +131,14 @@ export const usePlotCalculations = ({
         if (pendingScalesRef.current) {
           // CRITICAL: Re-validate scales before applying from timeout
           const scales = pendingScalesRef.current;
-          
+
           // Use a more robust validation for near-zero values
-          if (scales.scaleX === 0 || scales.scaleY === 0 || !isFinite(scales.scaleX) || !isFinite(scales.scaleY) || 
-              Math.abs(scales.scaleX) < Number.EPSILON || Math.abs(scales.scaleY) < Number.EPSILON) {
+          if (scales.scaleX === 0 || scales.scaleY === 0 || !isFinite(scales.scaleX) || !isFinite(scales.scaleY) ||
+            Math.abs(scales.scaleX) < Number.EPSILON || Math.abs(scales.scaleY) < Number.EPSILON) {
             pendingScalesRef.current = null;
             return; // Don't apply invalid scales
           }
-          
+
           setAxisScales(scales);
           onAxisScalesChange?.(scales);
           pendingScalesRef.current = null;
@@ -171,20 +171,20 @@ export const usePlotCalculations = ({
       try {
         // 1. Apply log axis settings
         plotLineRef.current!.setLogAxis(isLogX, isLogY);
-        
+
         // 2. Auto-scale for the new coordinate space
         plotLineRef.current!.autoScale();
-        
+
         // 3. Reset zoom if transitioning to linear mode
         if (!isLogX && !isLogY && zoomController.current) {
           zoomController.current.resetZoom();
         }
-        
-        // 4. Recalculate and apply scaling immediately (no setTimeout)
-        calculateAndApplyScalingRef.current?.();
-        
-        // 5. Update plot visibility and colors
+
+        // 4. Update plot visibility and colors first
         updatePlotRef.current?.();
+
+        // 5. Recalculate and apply scaling after lines are enabled (no setTimeout)
+        calculateAndApplyScalingRef.current?.();
       } finally {
         // Reset transition flag after all operations complete
         isTransitioningRef.current = false;
@@ -201,7 +201,7 @@ export const usePlotCalculations = ({
   // Handle data updates with simplified autoScale (now works correctly for all coordinate spaces)
   useEffect(() => {
     if (!plotLineRef.current || selectedVariables.length === 0) return;
-    
+
     // Use autoScale for data updates in both linear and log space
     // autoScale() now works correctly for all coordinate spaces
     plotLineRef.current.autoScale();
@@ -218,7 +218,7 @@ export const usePlotCalculations = ({
 
     // Check if zoom is active to determine scaling approach
     const customXBounds = zoomController.current?.getZoomBounds();
-    
+
     if (customXBounds) {
       // Zoom is active: maintain compatibility with existing zoom system
       // We still need manual bounds calculation for zoom integration
@@ -240,7 +240,7 @@ export const usePlotCalculations = ({
       // Calculate Y-axis bounds for visible lines within zoom range
       // IMPORTANT: Line data points are in linear space, but zoom bounds may be in log space
       // We need to handle coordinate space conversion properly
-      
+
       // Convert zoom bounds to linear space for comparison with line data
       // Note: Using inverse conversion since we need log->linear here
       let xMinLinear = xMin;
@@ -276,22 +276,22 @@ export const usePlotCalculations = ({
 
         const finalXRange = xMax - xMin;
         const finalYRange = yMax - yMin;
-        
+
         // Ensure we never generate invalid scales - use meaningful fallbacks
         const scaleX = finalXRange > 0 && isFinite(finalXRange) ? 2 / finalXRange : 1;
         const scaleY = finalYRange > 0 && isFinite(finalYRange) ? 2 / finalYRange : 1;
-        
+
         // Additional validation to prevent zero or invalid scales
         if (!isFinite(scaleX) || !isFinite(scaleY) || scaleX === 0 || scaleY === 0) {
           return; // Skip this calculation cycle
         }
         const offsetX = -1 - xMin * scaleX;
         const offsetY = -1 - yMin * scaleY;
-        
+
         // Apply transform for zoom bounds in all coordinate spaces
         // The webgl-plot library handles log space transformations correctly
         plotLineRef.current.setGlobalTransform([scaleX, scaleY], [offsetX, offsetY]);
-        
+
         const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
         updateAxisScales(newAxisScales);
         zoomController.current?.updateAxisScales(newAxisScales);
@@ -300,7 +300,7 @@ export const usePlotCalculations = ({
     } else {
       // No zoom: use autoScale() which now works correctly for all coordinate spaces
       const allDataBounds = plotLineRef.current.getAllDataBounds();
-      
+
       if (allDataBounds) {
         // Set original data bounds for zoom controller (empty axis areas bug prevention)
         if (zoomController.current && !zoomController.current.hasOriginalDataBounds()) {
@@ -315,23 +315,51 @@ export const usePlotCalculations = ({
         // Extract axis scales for external components (axes, zoom controller)
         const globalScale = plotLineRef.current.getGlobalScale();
         const globalOffset = plotLineRef.current.getGlobalOffset();
-        
+
         // VALIDATION: Ensure webgl-plot returned valid scales before updating axes
         const scaleX = globalScale[0];
         const scaleY = globalScale[1];
         const offsetX = globalOffset[0];
         const offsetY = globalOffset[1];
-        
-        if (!isFinite(scaleX) || !isFinite(scaleY) || !isFinite(offsetX) || !isFinite(offsetY) || 
-            scaleX === 0 || scaleY === 0) {
+
+        if (!isFinite(scaleX) || !isFinite(scaleY) || !isFinite(offsetX) || !isFinite(offsetY) ||
+          scaleX === 0 || scaleY === 0) {
           return; // Skip this update cycle
         }
-        
+
         const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
         updateAxisScales(newAxisScales);
         zoomController.current?.updateAxisScales(newAxisScales);
         zoomController.current?.updateLogAxisState({ isLogX, isLogY });
       } else {
+        // getAllDataBounds() returned null - try direct autoScale for AC bracket mode
+        if (canvasId && results.length > 0 && results[0]?.dataType === 'complex') {
+          console.warn(`Canvas ${canvasId}: getAllDataBounds() returned null, trying direct autoScale()`);
+
+          // Try direct autoScale - this might work even when getAllDataBounds fails
+          plotLineRef.current.autoScale();
+
+          // Extract axis scales after autoScale
+          const globalScale = plotLineRef.current.getGlobalScale();
+          const globalOffset = plotLineRef.current.getGlobalOffset();
+
+          const scaleX = globalScale[0];
+          const scaleY = globalScale[1];
+          const offsetX = globalOffset[0];
+          const offsetY = globalOffset[1];
+
+          if (isFinite(scaleX) && isFinite(scaleY) && isFinite(offsetX) && isFinite(offsetY) &&
+            scaleX !== 0 && scaleY !== 0) {
+            console.log(`Canvas ${canvasId}: Direct autoScale() worked - scales: [${scaleX}, ${scaleY}], offsets: [${offsetX}, ${offsetY}]`);
+
+            const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
+            updateAxisScales(newAxisScales);
+            zoomController.current?.updateAxisScales(newAxisScales);
+            zoomController.current?.updateLogAxisState({ isLogX, isLogY });
+            return; // Skip fallback
+          }
+        }
+
         // Fallback to default transform if no valid data
         plotLineRef.current.setLogAxis(false, false);
         plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
@@ -341,14 +369,13 @@ export const usePlotCalculations = ({
   }, [selectedVariables, isLogX, isLogY, updateAxisScales]);
 
   // Update plot visibility and colors
-  const updatePlot = () => {
+  const updatePlot = useCallback(() => {
     if (!glRef.current || !plotLineRef.current || results.length === 0)
       return;
 
     clearCanvas(glRef.current);
 
     if (selectedVariables.length === 0) {
-      // No need to call update() with new API - just clear and return
       return;
     }
 
@@ -464,7 +491,27 @@ export const usePlotCalculations = ({
       zoomLinesRef.current.draw();
       zoomRegionRef.current.draw();
     }
-  };
+  }, [
+    glRef,
+    plotLineRef,
+    results,
+    selectedVariables,
+    lineDataRef,
+    colorMapRef,
+    hoveredVariable,
+    isDarkMode,
+    isBracketOperationPlot,
+    bracketOperationResults,
+    emphasizedPlotIndex,
+    showCrosshair,
+    crosshairRef,
+    snapCircleRef,
+    crosshairSnapToLines,
+    zoomController,
+    zoomLinesRef,
+    zoomRegionRef,
+    calculateAndApplyScaling
+  ]);
 
   // Set the updatePlot ref so it can be called from the log axis useEffect
   useEffect(() => {

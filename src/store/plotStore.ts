@@ -26,7 +26,7 @@ export interface PlotState {
   // Multi-canvas support
   numCanvases: number;
   isACModeActive: boolean; // Auto-dual mode for AC simulations
-  
+
   // Plot variable management (per canvas)
   selectedVariables: string[];
   hoveredVariable: string | null;
@@ -65,7 +65,7 @@ export interface PlotActions {
   // Plot variable actions (legacy - for single canvas mode)
   setSelectedVariables: (variables: string[]) => void;
   setHoveredVariable: (variable: string | null) => void;
-  
+
   // Per-canvas variable actions
   setCanvas1SelectedVariables: (variables: string[]) => void;
   setCanvas2SelectedVariables: (variables: string[]) => void;
@@ -162,7 +162,7 @@ export const createPlotSlice: StateCreator<
   // Plot variable actions (legacy - for single canvas mode)
   setSelectedVariables: (variables) => set({ selectedVariables: variables }),
   setHoveredVariable: (variable) => set({ hoveredVariable: variable }),
-  
+
   // Per-canvas variable actions
   setCanvas1SelectedVariables: (variables) => set({ canvas1SelectedVariables: variables }),
   setCanvas2SelectedVariables: (variables) => set({ canvas2SelectedVariables: variables }),
@@ -212,19 +212,22 @@ export const createPlotSlice: StateCreator<
     if (hasValidResults && hasDataPoints) {
       const currentState = get();
       let firstResult = newResults[0]!;
-      
+
       // Check if this is a bracket operation result
       const isBracketResult = 'bracketOperation' in firstResult && 'parameterValues' in firstResult;
       const aggregatedResult = isBracketResult ? firstResult as AggregatedResult : undefined;
-      
+
       // Transform single simulation results to handle complex data
       let isACSimulation = false;
       if (!isBracketResult && firstResult.dataType === 'complex') {
         isACSimulation = true;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         firstResult = transformResultForComplexData(firstResult) as any;
+      } else if (isBracketResult && firstResult.dataType === 'complex') {
+        // Bracket operation with complex data - already transformed in aggregation
+        isACSimulation = true;
       }
-      
+
       const newVariableNames = firstResult.variableNames.slice(1); // Skip first variable (frequency/time)
 
       // Determine which variables to select based on previous user selections
@@ -238,15 +241,15 @@ export const createPlotSlice: StateCreator<
         // AC simulation - automatically set up dual canvas mode
         numCanvases = 2;
         isACModeActive = true;
-        
+
         // Separate magnitude and phase variables
         const magVariables = newVariableNames.filter(name => name.includes('[mag]'));
         const phaseVariables = newVariableNames.filter(name => name.includes('[phase]'));
-        
+
         canvas1Variables = magVariables; // Magnitude canvas
         canvas2Variables = phaseVariables; // Phase canvas
         variablesToSelect = [...magVariables, ...phaseVariables]; // For legacy compatibility
-        
+
         console.log("AC simulation detected, setting up dual canvas mode:", {
           magnitudeVariables: magVariables.length,
           phaseVariables: phaseVariables.length,
@@ -289,7 +292,7 @@ export const createPlotSlice: StateCreator<
             );
           }
         }
-        
+
         // For single canvas, use the same selection for canvas1 (canvas2 remains empty)
         canvas1Variables = variablesToSelect;
       }
@@ -305,7 +308,7 @@ export const createPlotSlice: StateCreator<
       }
 
       set({
-        results: isBracketResult ? newResults : [firstResult],
+        results: [firstResult], // Always use firstResult which has been processed correctly
         isPlotTabEnabled: true,
         mainTabValue: "plot",
         selectedVariables: variablesToSelect,

@@ -25,12 +25,10 @@ import type { AggregatedResult } from "../../simulation/resultAggregator";
 
 interface UseCanvasInitializationProps {
   results: ResultType[];
-  updatePlot: () => void;
 }
 
 export const useCanvasInitialization = ({
   results,
-  updatePlot,
 }: UseCanvasInitializationProps) => {
   const isDarkMode = useAppStore((state) => state.isDarkMode);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -249,13 +247,12 @@ export const useCanvasInitialization = ({
 
             // Fill array with x,y data for this parameter sweep
             for (let i = 0; i < numPoints; i++) {
-              array[i * 2] = paramData.data[0]?.values?.[i] as number; // X-axis data
-              array[i * 2 + 1] = paramData.data[lineIndex]?.values?.[
-                i
-              ] as number; // Y-axis data
-            }
+              const xVal = paramData.data[0]?.values?.[i] as number; // X-axis data (frequency/time)
+              const yVal = paramData.data[lineIndex]?.values?.[i] as number; // Y-axis data (mag/phase)
 
-            allLineData.push({
+              array[i * 2] = xVal;
+              array[i * 2 + 1] = yVal;
+            } allLineData.push({
               points: new Float32Array(array),
               color: baseColor, // Use same color for all parameter sweeps of this variable
               thickness: LINE_THICKNESS.NORMAL,
@@ -295,10 +292,11 @@ export const useCanvasInitialization = ({
 
           // Fill array with x,y data
           for (let i = 0; i < numX; i++) {
-            array[i * 2] = firstResult.data[0]?.values?.[i] as number; // X-axis data (frequency)
-            array[i * 2 + 1] = firstResult.data[lineIndex]?.values?.[
-              i
-            ] as number; // Y-axis data (mag/phase)
+            const xVal = firstResult.data[0]?.values?.[i] as number; // X-axis data (frequency)
+            const yVal = firstResult.data[lineIndex]?.values?.[i] as number; // Y-axis data (mag/phase)
+
+            array[i * 2] = xVal;
+            array[i * 2 + 1] = yVal;
           }
 
           allLineData.push({
@@ -325,8 +323,9 @@ export const useCanvasInitialization = ({
 
       setIsCanvasInitialized(true);
 
-      // Initial draw with all variables selected
-      updatePlot();
+      // Don't call updatePlot here - let the parent component handle it
+      // after variables are properly selected
+      // updatePlot();
     });
 
     // Cleanup function to cancel the animation frame if component unmounts
@@ -340,7 +339,7 @@ export const useCanvasInitialization = ({
     if (isCanvasInitialized && glRef.current) {
       // Note: Background color changes need to be handled differently with new API
       // The background is set during context creation, theme changes will require recreation
-      updatePlot(); // Redraw to apply any color changes
+      // updatePlot(); // Redraw to apply any color changes - handled by parent component
     }
   }, [isDarkMode, isCanvasInitialized]);
 
