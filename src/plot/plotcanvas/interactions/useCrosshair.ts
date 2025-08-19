@@ -262,7 +262,27 @@ export const useCrosshair = ({
       const dataSpaceX = convertXToLogSpace(sharedCursorX, isLogX);
       
       const currentAxisScales = getAxisScales();
-      const sharedNdcX = dataSpaceX * currentAxisScales.scaleX + currentAxisScales.offsetX;
+      
+      // CRITICAL FIX: Handle invalid axis scales during sync (same as main crosshair logic)
+      const hasValidScales = !(currentAxisScales.scaleX === 1 && currentAxisScales.scaleY === 1 && 
+                              currentAxisScales.offsetX === -1 && currentAxisScales.offsetY === -1);
+
+      let sharedNdcX: number;
+      if (hasValidScales) {
+        // Use normal coordinate conversion when scales are valid
+        sharedNdcX = dataSpaceX * currentAxisScales.scaleX + currentAxisScales.offsetX;
+      } else {
+        // When axis scales are invalid, estimate NDC position based on canvas bounds
+        // This provides approximate positioning until valid scales are available
+        if (canvasRef.current) {
+          const rect = canvasRef.current.getBoundingClientRect();
+          // Estimate mouse position for the shared X coordinate (approximate center)
+          const estimatedMouseX = rect.width * 0.5; // Use center as fallback
+          sharedNdcX = (estimatedMouseX / rect.width) * 2 - 1;
+        } else {
+          sharedNdcX = 0; // Fallback to center
+        }
+      }
       
       // Update vertical line to shared X position (lines are guaranteed to be initialized)
       const verticalPoints = new Float32Array([sharedNdcX, -1, sharedNdcX, 1]);
