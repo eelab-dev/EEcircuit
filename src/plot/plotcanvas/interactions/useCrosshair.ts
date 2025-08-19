@@ -286,6 +286,50 @@ export const useCrosshair = ({
     const mouseNdcX = (mouseX / rect.width) * 2 - 1;
     const mouseNdcY = -((mouseY / rect.height) * 2 - 1); // Flip Y coordinate
 
+    // CRITICAL FIX: Check if axis scales are valid/meaningful
+    // Default/invalid scales have offsetX=-1, offsetY=-1 which breaks coordinate conversion
+    const currentAxisScales = getAxisScales();
+    const hasValidScales = !(currentAxisScales.scaleX === 1 && currentAxisScales.scaleY === 1 && 
+                            currentAxisScales.offsetX === -1 && currentAxisScales.offsetY === -1);
+
+    if (!hasValidScales) {
+      // Use direct NDC coordinates for positioning when axis scales are invalid
+      const horizontalPoints = new Float32Array([-1, mouseNdcY, 1, mouseNdcY]);
+      const verticalPoints = new Float32Array([mouseNdcX, -1, mouseNdcX, 1]);
+      
+      crosshairRef.current.updateLinePoints(0, horizontalPoints);
+      crosshairRef.current.updateLinePoints(1, verticalPoints);
+      
+      // Update snap circle if in snap mode
+      if (snapCircleRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const aspectRatio = rect.width / rect.height;
+        
+        let scaleX = 1;
+        let scaleY = 1;
+        
+        if (aspectRatio > 1) {
+          scaleX = 1 / aspectRatio;
+        } else {
+          scaleY = aspectRatio;
+        }
+        
+        snapCircleRef.current.updatePolygonTransform(
+          0,
+          [scaleX, scaleY],
+          [mouseNdcX, mouseNdcY]
+        );
+        
+        snapCircleRef.current.setPolygonEnabled(0, showCrosshair && crosshairSnapToLines);
+      }
+
+      // Use lightweight redraw for crosshair movement
+      if (onRedrawNeeded) {
+        onRedrawNeeded();
+      }
+      return;
+    }
+
     let finalDataX, finalDataY;
 
     if (
