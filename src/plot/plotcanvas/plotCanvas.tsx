@@ -237,7 +237,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   });
 
   // Initialize plot calculations
-  const { axisScales, calculateAndApplyScaling, updatePlot, updateHover } =
+  const { axisScales, calculateAndApplyScaling, updatePlot, updateHover, updateBracketEmphasis } =
     usePlotCalculations({
       plotLineRef,
       glRef,
@@ -367,11 +367,12 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   }, [hoveredVariable, isCanvasInitialized, updateHover]);
 
   // Update plot when emphasized plot index changes for bracket operations
+  // Use optimized updateBracketEmphasis instead of full updatePlot for better performance
   useEffect(() => {
     if (isCanvasInitialized && isBracketOperationPlot) {
-      updatePlot();
+      updateBracketEmphasis();
     }
-  }, [emphasizedPlotIndex, isCanvasInitialized, isBracketOperationPlot]);
+  }, [emphasizedPlotIndex, isCanvasInitialized, isBracketOperationPlot, updateBracketEmphasis]);
 
   return (
     <Grid

@@ -71,6 +71,7 @@ interface UsePlotCalculationsReturn {
   calculateAndApplyScaling: () => void;
   updatePlot: () => void;
   updateHover: () => void;
+  updateBracketEmphasis: () => void;
 }
 
 export const usePlotCalculations = ({
@@ -583,10 +584,85 @@ export const usePlotCalculations = ({
     zoomRegionRef
   ]);
 
+  // Optimized bracket emphasis update - only updates line thickness and color without full redraw
+  const updateBracketEmphasis = useCallback(() => {
+    if (!plotLineRef.current || !lineDataRef.current || !isBracketOperationPlot || !bracketOperationResults) return;
+
+    // Only update emphasis for bracket operation lines
+    lineDataRef.current.forEach((lineData, index) => {
+      const extendedLineData = lineData as ExtendedLineConfig;
+      const variableName = extendedLineData.variableName;
+      
+      if (!variableName || !extendedLineData.isBracketLine) return;
+
+      const isSelected = selectedVariables.includes(variableName);
+      if (!isSelected) return; // Skip non-selected lines
+
+      // Determine if this line should be emphasized
+      const parameterIndex = bracketOperationResults.parameterValues?.findIndex(
+        (paramValue) => paramValue === extendedLineData.parameterValue
+      ) ?? -1;
+
+      const isEmphasized = parameterIndex === emphasizedPlotIndex;
+
+      // Apply emphasis styling - thickness and color
+      const thickness = isEmphasized
+        ? BRACKET_PLOT_STYLES.EMPHASIZED_LINE_THICKNESS
+        : BRACKET_PLOT_STYLES.NORMAL_LINE_THICKNESS;
+
+      // Apply transparency to existing color
+      const currentColor = lineData.color || [1, 1, 1, 1]; // Fallback to white
+      const alpha = isEmphasized
+        ? BRACKET_PLOT_STYLES.EMPHASIZED_TRANSPARENCY
+        : BRACKET_PLOT_STYLES.NORMAL_TRANSPARENCY;
+      const updatedColor: [number, number, number, number] = [currentColor[0], currentColor[1], currentColor[2], alpha];
+
+      // Update line properties using webgl-plot API
+      plotLineRef.current!.updateLineThickness(index, thickness);
+      plotLineRef.current!.updateLineColor(index, updatedColor);
+
+      // Update local cache for consistency
+      lineData.thickness = thickness;
+      lineData.color = updatedColor;
+    });
+
+    // Single draw call to update the visual changes
+    plotLineRef.current.draw();
+
+    // Redraw crosshair and other overlays if visible
+    if (showCrosshair && crosshairRef.current) {
+      crosshairRef.current.draw();
+    }
+
+    if (showCrosshair && crosshairSnapToLines && snapCircleRef.current) {
+      snapCircleRef.current.draw();
+    }
+
+    if (zoomController.current?.getIsZooming() && zoomLinesRef.current && zoomRegionRef.current) {
+      zoomLinesRef.current.draw();
+      zoomRegionRef.current.draw();
+    }
+  }, [
+    plotLineRef,
+    lineDataRef,
+    selectedVariables,
+    isBracketOperationPlot,
+    bracketOperationResults,
+    emphasizedPlotIndex,
+    showCrosshair,
+    crosshairRef,
+    snapCircleRef,
+    crosshairSnapToLines,
+    zoomController,
+    zoomLinesRef,
+    zoomRegionRef
+  ]);
+
   return {
     axisScales,
     calculateAndApplyScaling,
     updatePlot,
     updateHover,
+    updateBracketEmphasis,
   };
 };
