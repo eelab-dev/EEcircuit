@@ -181,11 +181,13 @@ export const usePlotCalculations = ({
           zoomController.current.resetZoom();
         }
 
-        // 4. Update plot visibility and colors first
-        updatePlotRef.current?.();
-
-        // 5. Recalculate and apply scaling after lines are enabled (no setTimeout)
+        // 4. OPTIMIZED: Only recalculate axis scales, avoid full plot redraw
+        // The log conversion happens internally in webgl-plot, so we only need
+        // to get new data bounds and calculate new axis scales
         calculateAndApplyScalingRef.current?.();
+
+        // 5. Single draw call to apply the log transformation visually
+        plotLineRef.current!.draw();
       } finally {
         // Reset transition flag after all operations complete
         isTransitioningRef.current = false;
