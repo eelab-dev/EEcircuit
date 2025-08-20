@@ -255,6 +255,11 @@ export const useCrosshair = ({
 
   // Dual canvas cursor synchronization: sync vertical crosshair to shared X coordinate
   useEffect(() => {
+    // PROTECTION: Skip sync if no variables are selected - prevents invalid axis scale issues
+    if (selectedVariables.length === 0) {
+      return;
+    }
+    
     if (sharedCursorX !== null && sharedCursorX !== undefined && crosshairRef.current && showCrosshair && crosshairLinesInitialized.current && sharedCursorX !== lastSyncedX.current) {
       lastSyncedX.current = sharedCursorX;
       
@@ -293,7 +298,7 @@ export const useCrosshair = ({
         onRedrawNeeded();
       }
     }
-  }, [sharedCursorX, showCrosshair, isLogX]);
+  }, [sharedCursorX, showCrosshair, isLogX, selectedVariables.length]);
 
   // Update crosshair position - can snap to nearest plot line or move freely
   const updateCrosshair = (mouseX: number, mouseY: number) => {
@@ -475,7 +480,8 @@ export const useCrosshair = ({
     }
 
     // Share X coordinate with other canvas in dual mode
-    if (onCursorXChange) {
+    // PROTECTION: Only share coordinates if this canvas has selected variables
+    if (onCursorXChange && selectedVariables.length > 0) {
       // For dual canvas sync, share the display coordinate (convert from log space if needed)
       const { displayX } = convertDataToDisplayCoordinates(finalDataX, finalDataY, isLogX, isLogY);
       onCursorXChange(displayX);
