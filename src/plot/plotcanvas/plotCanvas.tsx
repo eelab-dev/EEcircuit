@@ -237,7 +237,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   });
 
   // Initialize plot calculations
-  const { axisScales, calculateAndApplyScaling, updatePlot } =
+  const { axisScales, calculateAndApplyScaling, updatePlot, updateHover } =
     usePlotCalculations({
       plotLineRef,
       glRef,
@@ -359,12 +359,12 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     }
   }, [selectedVariables, isCanvasInitialized, canvasId]);
 
-  // Update plot when hover state changes
+  // Update hover state with optimized line thickness changes only
   useEffect(() => {
     if (isCanvasInitialized) {
-      updatePlot();
+      updateHover();
     }
-  }, [hoveredVariable, isCanvasInitialized]);
+  }, [hoveredVariable, isCanvasInitialized, updateHover]);
 
   // Update plot when emphasized plot index changes for bracket operations
   useEffect(() => {

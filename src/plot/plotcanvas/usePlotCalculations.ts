@@ -70,6 +70,7 @@ interface UsePlotCalculationsReturn {
   axisScales: AxisScales;
   calculateAndApplyScaling: () => void;
   updatePlot: () => void;
+  updateHover: () => void;
 }
 
 export const usePlotCalculations = ({
@@ -498,7 +499,6 @@ export const usePlotCalculations = ({
     selectedVariables,
     lineDataRef,
     colorMapRef,
-    hoveredVariable,
     isDarkMode,
     isBracketOperationPlot,
     bracketOperationResults,
@@ -528,9 +528,63 @@ export const usePlotCalculations = ({
     };
   }, []);
 
+  // Optimized hover update - only updates line thickness without full redraw
+  const updateHover = useCallback(() => {
+    if (!plotLineRef.current || !lineDataRef.current) return;
+
+    // Only update thickness for lines that need it
+    lineDataRef.current.forEach((lineData, index) => {
+      const extendedLineData = lineData as ExtendedLineConfig;
+      const variableName = extendedLineData.variableName;
+      
+      if (!variableName) return;
+
+      const isSelected = selectedVariables.includes(variableName);
+      const isHovered = hoveredVariable === variableName;
+
+      // Only update thickness if this is a regular plot (not bracket operation)
+      if (!isBracketOperationPlot) {
+        const thickness = isSelected && isHovered ? LINE_THICKNESS.HOVERED : LINE_THICKNESS.NORMAL;
+        plotLineRef.current!.updateLineThickness(index, thickness);
+        lineData.thickness = thickness;
+      }
+    });
+
+    // Single draw call to update the visual changes
+    plotLineRef.current.draw();
+
+    // Redraw crosshair and other overlays if visible
+    if (showCrosshair && crosshairRef.current) {
+      crosshairRef.current.draw();
+    }
+
+    if (showCrosshair && crosshairSnapToLines && snapCircleRef.current) {
+      snapCircleRef.current.draw();
+    }
+
+    if (zoomController.current?.getIsZooming() && zoomLinesRef.current && zoomRegionRef.current) {
+      zoomLinesRef.current.draw();
+      zoomRegionRef.current.draw();
+    }
+  }, [
+    plotLineRef,
+    lineDataRef,
+    selectedVariables,
+    hoveredVariable,
+    isBracketOperationPlot,
+    showCrosshair,
+    crosshairRef,
+    snapCircleRef,
+    crosshairSnapToLines,
+    zoomController,
+    zoomLinesRef,
+    zoomRegionRef
+  ]);
+
   return {
     axisScales,
     calculateAndApplyScaling,
     updatePlot,
+    updateHover,
   };
 };
