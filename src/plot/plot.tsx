@@ -132,7 +132,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
         } else {
           // Manual dual mode - start with all variables in canvas 1, none in canvas 2
           setLocalCanvas1SelectedVariables(allVariables);
-          setLocalCanvas2SelectedVariables([]);
+          setLocalCanvas2SelectedVariables(allVariables);
         }
         // Clear single canvas state when going to dual mode
         setSelectedVariables([]);
