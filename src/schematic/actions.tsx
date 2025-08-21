@@ -1,7 +1,6 @@
 import React from "react";
 import { IconButton, Separator } from "@chakra-ui/react";
 import { Tooltip } from "../components/ui/tooltip";
-import ClearSchematicDialog from "./ClearSchematicDialog";
 import AddComponentPopover from "./AddComponentPopover";
 import debounce from "lodash.debounce";
 
@@ -14,7 +13,6 @@ import {
   ImageDown,
   MousePointer,
   Move,
-  Trash2,
   Keyboard,
 } from "lucide-react";
 import { AvailableComponent, sendCommand } from "eecircuit-schematic";
@@ -32,12 +30,8 @@ const Actions: React.FC<ActionsProps> = ({
   onShowShortcuts,
 }) => {
   const [isCompact, setIsCompact] = React.useState(false);
-  const [showClearDialog, setShowClearDialog] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const handleCloseClearDialog = React.useCallback(() => {
-    setShowClearDialog(false);
-  }, []);
 
   React.useEffect(() => {
     // Debounce the resize handler to reduce excessive logging during resize operations
@@ -103,14 +97,6 @@ const Actions: React.FC<ActionsProps> = ({
           <Eraser />
         </IconButton>
       </Tooltip>
-      <Tooltip content="Clear Schematic" showArrow openDelay={300}>
-        <IconButton
-          bg={dialogTheme.buttonIconBg}
-          onClick={() => setShowClearDialog(true)}
-        >
-          <Trash2 />
-        </IconButton>
-      </Tooltip>
       <Separator display={isCompact ? "none" : "block"} />
       <Tooltip content="Hand Tool" showArrow openDelay={300}>
         <IconButton bg={dialogTheme.buttonIconBg}>
@@ -147,11 +133,6 @@ const Actions: React.FC<ActionsProps> = ({
         </IconButton>
       </Tooltip>
 
-      {/* Clear Schematic Confirmation Dialog */}
-      <ClearSchematicDialog
-        isOpen={showClearDialog}
-        onClose={handleCloseClearDialog}
-      />
     </div>
   );
 };

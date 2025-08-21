@@ -38,11 +38,13 @@ import {
   Github,
   Expand,
   SquareX,
+  RotateCw,
 } from "lucide-react";
 import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
 import { dialogTheme } from "./styles/dialogTheme.ts";
 import { handleFullscreen } from "./utils/fullscreenUtils.tsx";
+import ClearSchematicDialog from "./schematic/ClearSchematicDialog";
 
 type MainTabsValue = "schematic" | "simulate" | "plot";
 
@@ -53,6 +55,9 @@ const EEcircuit: React.FC = () => {
 
   // Fullscreen state
   const [fullscreen, setFullscreen] = React.useState(false);
+
+  // Clear schematic dialog state
+  const [showClearDialog, setShowClearDialog] = React.useState(false);
 
   // Listen for fullscreen changes from browser/keyboard
   React.useEffect(() => {
@@ -434,6 +439,11 @@ const EEcircuit: React.FC = () => {
     await handleFullscreen(fullscreen);
   }, [fullscreen]);
 
+  // Clear schematic dialog handlers
+  const handleCloseClearDialog = React.useCallback(() => {
+    setShowClearDialog(false);
+  }, []);
+
   return (
     <Box
       border="solid 0px"
@@ -509,6 +519,22 @@ const EEcircuit: React.FC = () => {
                 onClick={handleSaveFile}
               >
                 <Download size={16} />
+              </IconButton>
+            </Tooltip>
+
+            {/* Clear Schematic Button */}
+            <Tooltip
+              showArrow
+              content="Clear schematic"
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label="Clear schematic"
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowClearDialog(true)}
+              >
+                <RotateCw size={16} />
               </IconButton>
             </Tooltip>
 
@@ -696,6 +722,13 @@ const EEcircuit: React.FC = () => {
             /> */}
         </Tabs.Content>
       </Tabs.Root>
+      
+      {/* Clear Schematic Confirmation Dialog */}
+      <ClearSchematicDialog
+        isOpen={showClearDialog}
+        onClose={handleCloseClearDialog}
+      />
+      
       <Toaster />
     </Box>
   );
