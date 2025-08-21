@@ -27,25 +27,27 @@ interface LogAxisState {
  * 2. Pan limiting automatically constrains view to stay within original data bounds
  * 3. This prevents users from panning into areas with no data points
  *
- * CRITICAL: Dual Canvas Coordinate System Management
- * ================================================
- * In dual canvas mode, each canvas may have different axis scales due to different Y-axis 
- * data ranges (e.g., magnitude vs phase plots). This creates a coordinate system mismatch
- * that breaks zoom synchronization.
+ * DEFENSIVE: Dual Canvas Coordinate System Management
+ * ==================================================
+ * In dual canvas mode, both canvases now have identical X-axis scales due to the consistent 
+ * scaling fix in usePlotCalculations.ts. However, NDC coordinate normalization is maintained
+ * as a defensive measure against potential future axis scale inconsistencies.
  * 
- * Problem: Canvas 1 might have scaleX=200 while Canvas 2 has scaleX=1. When Canvas 1 
- * shares zoom coordinates, Canvas 2 interprets them in its own scale, causing massive 
- * coordinate misalignment.
+ * Historical Context (Fixed):
+ * - Previously, Canvas 1 and Canvas 2 could have different scaleX values (e.g., 200 vs 1)
+ * - This was caused by timing issues where canvases used different scaling code paths
+ * - Root cause resolved: Both canvases now use consistent autoScale() approach
  * 
- * Solution: Coordinate normalization via NDC space
+ * Current Implementation (Safety Measure):
+ * - NDC coordinate normalization remains active as a defensive programming practice
  * - Sending canvas: Convert data coordinates to NDC coordinates before sharing
  * - Receiving canvas: Convert NDC coordinates back to data coordinates using its own scales
- * - This ensures both canvases work in their own coordinate systems while sharing consistent zoom state
+ * - This ensures zoom synchronization works correctly even if future changes introduce scale differences
  * 
  * Key methods involved:
- * - notifyZoomStateChange(): Normalizes coordinates before sending
- * - applyExternalZoomState(): Denormalizes coordinates after receiving
- * - zoomStartAxisScales: Captured at zoom start to prevent coordinate drift
+ * - notifyZoomStateChange(): Normalizes coordinates before sending (safety measure)
+ * - applyExternalZoomState(): Denormalizes coordinates after receiving (safety measure)
+ * - zoomStartAxisScales: Captured at zoom start to ensure coordinate consistency
  *
  * Independent of React lifecycle for maximum performance during user interactions.
  */

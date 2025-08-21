@@ -10,21 +10,32 @@ import { useAppStore } from "../../store/appStore";
 import { convertLinearToLogSpace } from "./utils/coordinateUtils";
 
 /**
- * EMPTY AXIS AREAS BUG PREVENTION:
+ * CRITICAL FIXES FOR DUAL CANVAS MODE:
  * 
- * This hook includes critical code to prevent the "empty axis areas" bug that occurs
- * when users pan outside the original data bounds after zooming in.
+ * This hook includes two critical fixes to ensure proper dual canvas operation:
  * 
- * The prevention mechanism:
- * 1. When calculating full data bounds (no zoom), this hook calls setOriginalDataBounds()
- *    on the ZoomController with the full X-axis data range
- * 2. ZoomController then constrains all pan operations (drag and scroll) to keep the 
- *    zoomed view within the original data bounds
- * 3. This prevents users from panning into areas with no data points, which would
- *    show confusing empty axis tick marks
+ * 1. EMPTY AXIS AREAS BUG PREVENTION:
+ *    - When calculating full data bounds (no zoom), this hook calls setOriginalDataBounds()
+ *      on the ZoomController with the full X-axis data range
+ *    - ZoomController then constrains all pan operations (drag and scroll) to keep the 
+ *      zoomed view within the original data bounds
+ *    - This prevents users from panning into areas with no data points, which would
+ *      show confusing empty axis tick marks
  * 
- * IMPORTANT: If you modify the data bounds calculation logic, ensure that
- * setOriginalDataBounds() is still called with the correct full data range.
+ * 2. CONSISTENT AXIS SCALING FIX:
+ *    - Previously, Canvas 1 and Canvas 2 could end up with different axis scales 
+ *      (e.g., Canvas 1: scaleX=200, Canvas 2: scaleX=1) due to timing issues
+ *    - This occurred when calculateAndApplyScaling() was called at different times:
+ *      - From canvas resize events (before lines enabled) → getAllDataBounds() fails → fallback path
+ *      - From updatePlot() (after lines enabled) → getAllDataBounds() works → normal path
+ *    - FIX: Always use consistent autoScale() approach instead of unreliable getAllDataBounds()
+ *    - This ensures both canvases have identical scaleX values for the same X-axis data
+ *    - Eliminates the need for complex NDC coordinate normalization in zoom synchronization
+ * 
+ * IMPORTANT: If you modify the scaling calculation logic, ensure that:
+ * - Both canvases use the same code path (avoid getAllDataBounds() inconsistencies)
+ * - setOriginalDataBounds() is still called with the correct full data range
+ * - The hasEnabledLines guard prevents premature scaling calculations
  */
 
 // Extended LineConfig with metadata for variable tracking
@@ -219,6 +230,17 @@ export const usePlotCalculations = ({
       updateAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
       return;
     }
+    
+    // CRITICAL FIX: Guard against premature scaling when no lines match selected variables
+    // This prevents the inconsistent axis scaling issue between dual canvases
+    const hasEnabledLines = lineDataRef.current?.some(line => {
+      const extendedLine = line as ExtendedLineConfig;
+      return extendedLine.variableName && selectedVariables.includes(extendedLine.variableName);
+    });
+    
+    if (!hasEnabledLines) {
+      return; // Skip scaling calculation until lines are properly selected
+    }
 
     // Check if zoom is active to determine scaling approach
     const customXBounds = zoomController.current?.getZoomBounds();
@@ -302,69 +324,56 @@ export const usePlotCalculations = ({
         zoomController.current?.updateLogAxisState({ isLogX, isLogY });
       }
     } else {
-      // No zoom: use autoScale() which now works correctly for all coordinate spaces
-      const allDataBounds = plotLineRef.current.getAllDataBounds();
-
-      if (allDataBounds) {
-        // Set original data bounds for zoom controller (empty axis areas bug prevention)
-        if (zoomController.current && !zoomController.current.hasOriginalDataBounds()) {
-          // CRITICAL FIX: Always use linear space bounds, regardless of log axis
-          // The zoom controller will handle coordinate conversion internally
-          zoomController.current.setOriginalDataBounds(allDataBounds.minX, allDataBounds.maxX);
+      // ENHANCED FIX: Use consistent autoScale() approach for all canvases
+      // This ensures identical axis scaling between dual canvases since they process the same X-axis data
+      
+      // Set original data bounds for zoom controller by calculating from line data
+      if (zoomController.current && !zoomController.current.hasOriginalDataBounds() && lineDataRef.current) {
+        // Calculate bounds manually from line data for consistency
+        let dataMinX = Infinity;
+        let dataMaxX = -Infinity;
+        
+        lineDataRef.current.forEach(line => {
+          const extendedLine = line as ExtendedLineConfig;
+          if (extendedLine.variableName && selectedVariables.includes(extendedLine.variableName)) {
+            const points = line.points;
+            for (let i = 0; i < points.length; i += 2) {
+              const x = points[i];
+              if (x !== undefined && isFinite(x)) {
+                dataMinX = Math.min(dataMinX, x);
+                dataMaxX = Math.max(dataMaxX, x);
+              }
+            }
+          }
+        });
+        
+        if (isFinite(dataMinX) && isFinite(dataMaxX)) {
+          zoomController.current.setOriginalDataBounds(dataMinX, dataMaxX);
         }
-
-        // Use autoScale() for both linear and log axes (now works correctly)
-        plotLineRef.current.autoScale();
-
-        // Extract axis scales for external components (axes, zoom controller)
-        const globalScale = plotLineRef.current.getGlobalScale();
-        const globalOffset = plotLineRef.current.getGlobalOffset();
-
-        // VALIDATION: Ensure webgl-plot returned valid scales before updating axes
-        const scaleX = globalScale[0];
-        const scaleY = globalScale[1];
-        const offsetX = globalOffset[0];
-        const offsetY = globalOffset[1];
-
-        if (!isFinite(scaleX) || !isFinite(scaleY) || !isFinite(offsetX) || !isFinite(offsetY) ||
-          scaleX === 0 || scaleY === 0) {
-          return; // Skip this update cycle
-        }
-
+      }
+      
+      // Use autoScale() directly for consistent behavior across all canvases
+      plotLineRef.current.autoScale();
+      
+      // Extract axis scales after autoScale
+      const globalScale = plotLineRef.current.getGlobalScale();
+      const globalOffset = plotLineRef.current.getGlobalOffset();
+      
+      const scaleX = globalScale[0];
+      const scaleY = globalScale[1];
+      const offsetX = globalOffset[0];
+      const offsetY = globalOffset[1];
+      
+      if (isFinite(scaleX) && isFinite(scaleY) && isFinite(offsetX) && isFinite(offsetY) &&
+        scaleX !== 0 && scaleY !== 0) {
+        
         const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
         updateAxisScales(newAxisScales);
         zoomController.current?.updateAxisScales(newAxisScales);
         zoomController.current?.updateLogAxisState({ isLogX, isLogY });
+        
       } else {
-        // getAllDataBounds() returned null - try direct autoScale for AC bracket mode
-        if (canvasId && results.length > 0 && results[0]?.dataType === 'complex') {
-          console.warn(`Canvas ${canvasId}: getAllDataBounds() returned null, trying direct autoScale()`);
-
-          // Try direct autoScale - this might work even when getAllDataBounds fails
-          plotLineRef.current.autoScale();
-
-          // Extract axis scales after autoScale
-          const globalScale = plotLineRef.current.getGlobalScale();
-          const globalOffset = plotLineRef.current.getGlobalOffset();
-
-          const scaleX = globalScale[0];
-          const scaleY = globalScale[1];
-          const offsetX = globalOffset[0];
-          const offsetY = globalOffset[1];
-
-          if (isFinite(scaleX) && isFinite(scaleY) && isFinite(offsetX) && isFinite(offsetY) &&
-            scaleX !== 0 && scaleY !== 0) {
-            console.log(`Canvas ${canvasId}: Direct autoScale() worked - scales: [${scaleX}, ${scaleY}], offsets: [${offsetX}, ${offsetY}]`);
-
-            const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
-            updateAxisScales(newAxisScales);
-            zoomController.current?.updateAxisScales(newAxisScales);
-            zoomController.current?.updateLogAxisState({ isLogX, isLogY });
-            return; // Skip fallback
-          }
-        }
-
-        // Fallback to default transform if no valid data
+        // Fallback to default transform if autoScale fails
         plotLineRef.current.setLogAxis(false, false);
         plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
         updateAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
