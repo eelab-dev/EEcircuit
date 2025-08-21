@@ -27,6 +27,26 @@ interface LogAxisState {
  * 2. Pan limiting automatically constrains view to stay within original data bounds
  * 3. This prevents users from panning into areas with no data points
  *
+ * CRITICAL: Dual Canvas Coordinate System Management
+ * ================================================
+ * In dual canvas mode, each canvas may have different axis scales due to different Y-axis 
+ * data ranges (e.g., magnitude vs phase plots). This creates a coordinate system mismatch
+ * that breaks zoom synchronization.
+ * 
+ * Problem: Canvas 1 might have scaleX=200 while Canvas 2 has scaleX=1. When Canvas 1 
+ * shares zoom coordinates, Canvas 2 interprets them in its own scale, causing massive 
+ * coordinate misalignment.
+ * 
+ * Solution: Coordinate normalization via NDC space
+ * - Sending canvas: Convert data coordinates to NDC coordinates before sharing
+ * - Receiving canvas: Convert NDC coordinates back to data coordinates using its own scales
+ * - This ensures both canvases work in their own coordinate systems while sharing consistent zoom state
+ * 
+ * Key methods involved:
+ * - notifyZoomStateChange(): Normalizes coordinates before sending
+ * - applyExternalZoomState(): Denormalizes coordinates after receiving
+ * - zoomStartAxisScales: Captured at zoom start to prevent coordinate drift
+ *
  * Independent of React lifecycle for maximum performance during user interactions.
  */
 export class ZoomController {
@@ -72,6 +92,17 @@ export class ZoomController {
 
   // Axis scaling information needed for coordinate conversion
   private axisScales = {
+    scaleX: 1,
+    scaleY: 1,
+    offsetX: 0,
+    offsetY: 0,
+  };
+
+  // Captured axis scales at zoom start to prevent coordinate drift
+  // CRITICAL: These scales are frozen at zoom start to ensure consistent coordinate
+  // conversion throughout the entire zoom operation, preventing axis scale updates
+  // from corrupting zoom coordinates mid-operation
+  private zoomStartAxisScales = {
     scaleX: 1,
     scaleY: 1,
     offsetX: 0,
@@ -147,6 +178,22 @@ export class ZoomController {
     return { dataX, dataY };
   }
 
+  /**
+   * Convert mouse position to data coordinates using specific axis scales
+   * Used during zoom operations to prevent coordinate drift
+   */
+  private convertMouseToDataCoordinatesWithScales(
+    mouseNdcX: number, 
+    mouseNdcY: number, 
+    scales: { scaleX: number; scaleY: number; offsetX: number; offsetY: number }
+  ): { dataX: number; dataY: number } {
+    // Convert NDC to data coordinates using specified axis scales
+    const dataX = (mouseNdcX - scales.offsetX) / scales.scaleX;
+    const dataY = (mouseNdcY - scales.offsetY) / scales.scaleY;
+    
+    return { dataX, dataY };
+  }
+
   // Note: convertDataToDisplayCoordinates and convertDisplayToDataCoordinates are now imported from coordinateUtils
 
   /**
@@ -216,13 +263,33 @@ export class ZoomController {
 
   /**
    * Notify about zoom state changes for synchronization
+   * 
+   * CRITICAL: Dual Canvas Coordinate System Normalization
+   * =================================================== 
+   * In dual canvas mode, each canvas may have different axis scales (e.g., Canvas 1: scaleX=200, Canvas 2: scaleX=1).
+   * When sharing zoom coordinates between canvases, we must normalize them to a common coordinate space.
+   * 
+   * Solution: Convert data coordinates to NDC coordinates before sharing, then convert back using 
+   * the receiving canvas's axis scales. This prevents coordinate system mismatches that cause
+   * zoom selection visuals to appear incorrectly or not at all.
    */
   private notifyZoomStateChange(): void {
     if (this.onZoomStateChangeCb) {
+      // Convert data coordinates to normalized NDC coordinates for sharing
+      // This ensures consistent coordinates across canvases with different axis scales
+      let normalizedStartX = this.zoomStartX;
+      let normalizedEndX = this.zoomEndX;
+      
+      if (this.zoomStartX !== null && this.zoomEndX !== null) {
+        // Convert to NDC coordinates using zoom start axis scales
+        normalizedStartX = this.zoomStartX * this.zoomStartAxisScales.scaleX + this.zoomStartAxisScales.offsetX;
+        normalizedEndX = this.zoomEndX * this.zoomStartAxisScales.scaleX + this.zoomStartAxisScales.offsetX;
+      }
+      
       this.onZoomStateChangeCb({
         isZooming: this.isZooming,
-        zoomStartX: this.zoomStartX,
-        zoomEndX: this.zoomEndX,
+        zoomStartX: normalizedStartX,
+        zoomEndX: normalizedEndX,
         zoomBounds: this.customXBounds ? { ...this.customXBounds } : null,
       });
     }
@@ -249,6 +316,10 @@ export class ZoomController {
 
   /**
    * Apply external zoom state for synchronization
+   * 
+   * This method receives normalized NDC coordinates from another canvas and converts them
+   * back to data coordinates using this canvas's axis scales. See notifyZoomStateChange()
+   * for the corresponding normalization logic.
    */
   applyExternalZoomState(zoomState: {
     isZooming: boolean;
@@ -256,12 +327,27 @@ export class ZoomController {
     zoomEndX: number | null;
     zoomBounds: { min: number; max: number } | null;
   }): void {
+    // When receiving external zoom state, capture current axis scales 
+    // as zoom start scales to ensure consistent coordinate conversion
+    if (zoomState.isZooming) {
+      this.zoomStartAxisScales = { ...this.axisScales };
+    }
+
     this.isZooming = zoomState.isZooming;
-    this.zoomStartX = zoomState.zoomStartX;
-    this.zoomEndX = zoomState.zoomEndX;
     this.customXBounds = zoomState.zoomBounds
       ? { ...zoomState.zoomBounds }
       : null;
+
+    // Convert received normalized NDC coordinates back to data coordinates
+    // using this canvas's axis scales
+    if (zoomState.zoomStartX !== null && zoomState.zoomEndX !== null) {
+      // The incoming coordinates are normalized NDC coordinates, convert to data coordinates
+      this.zoomStartX = (zoomState.zoomStartX - this.axisScales.offsetX) / this.axisScales.scaleX;
+      this.zoomEndX = (zoomState.zoomEndX - this.axisScales.offsetX) / this.axisScales.scaleX;
+    } else {
+      this.zoomStartX = zoomState.zoomStartX;
+      this.zoomEndX = zoomState.zoomEndX;
+    }
 
     // Update visual feedback if zooming
     if (this.isZooming && this.zoomStartX !== null && this.zoomEndX !== null) {
@@ -326,12 +412,15 @@ export class ZoomController {
       return;
     }
 
+    // CRITICAL FIX: Capture axis scales at zoom start to prevent coordinate drift
+    this.zoomStartAxisScales = { ...this.axisScales };
+
     const rect = this.canvasElement.getBoundingClientRect();
     // Convert mouse X to normalized device coordinates [-1, 1]
     const mouseNdcX = (mouseX / rect.width) * 2 - 1;
     
-    // Convert mouse position to data coordinates considering log spaces
-    const { dataX } = this.convertMouseToDataCoordinates(mouseNdcX, 0);
+    // Convert mouse position to data coordinates using captured scales
+    const { dataX } = this.convertMouseToDataCoordinatesWithScales(mouseNdcX, 0, this.zoomStartAxisScales);
 
     this.isZooming = true;
     this.zoomStartX = dataX;
@@ -360,8 +449,9 @@ export class ZoomController {
     // Convert mouse X to normalized device coordinates [-1, 1]
     const mouseNdcX = (mouseX / rect.width) * 2 - 1;
     
-    // Convert mouse position to data coordinates considering log spaces
-    const { dataX } = this.convertMouseToDataCoordinates(mouseNdcX, 0);
+    // CRITICAL: Use the same axis scales as zoom start to prevent coordinate drift
+    // This ensures consistent coordinate conversion throughout the zoom operation
+    const { dataX } = this.convertMouseToDataCoordinatesWithScales(mouseNdcX, 0, this.zoomStartAxisScales);
 
     this.zoomEndX = dataX;
 
@@ -720,10 +810,14 @@ export class ZoomController {
       this.zoomRegionRef.setPolygonEnabled(0, true);
 
       // Convert data coordinates back to NDC for rendering
+      // CRITICAL FIX: During zoom operations, use the captured zoom start axis scales
+      // This ensures consistent coordinate conversion between dual canvases
+      const useScales = this.isZooming ? this.zoomStartAxisScales : this.axisScales;
       const startNdcX =
-        startDataX * this.axisScales.scaleX + this.axisScales.offsetX;
+        startDataX * useScales.scaleX + useScales.offsetX;
       const endNdcX =
-        endDataX * this.axisScales.scaleX + this.axisScales.offsetX;
+        endDataX * useScales.scaleX + useScales.offsetX;
+
 
       // Create vertical lines at start and end positions (full height)
       const startLinePoints = new Float32Array([startNdcX, -1, startNdcX, 1]);
@@ -734,8 +828,17 @@ export class ZoomController {
       this.zoomLinesRef.updateLinePoints(1, endLinePoints);
 
       // Create yellow semi-transparent region between the lines
+      // CRITICAL FIX: Always ensure proper left/right ordering for zoom region
       const leftX = Math.min(startNdcX, endNdcX);
       const rightX = Math.max(startNdcX, endNdcX);
+
+      // Ensure we have a valid region (prevent zero-width or inverted rectangles)
+      const regionWidth = rightX - leftX;
+      if (regionWidth < 0.001) {
+        // For very small selections, show a thin line instead of trying to render invalid rectangle
+        this.zoomRegionRef.setPolygonEnabled(0, false);
+        return;
+      }
 
       // Create rectangle using two triangles to form a solid box
       // IMPORTANT: Must use exactly 6 points to match initialization (WebGL requirement)
