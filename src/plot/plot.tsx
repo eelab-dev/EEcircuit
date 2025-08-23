@@ -217,6 +217,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
               </Button>
             </HStack>
 
+
             {/* Log axis controls */}
             <HStack gap={2}>
               <Text fontSize="sm" color="fg.muted">

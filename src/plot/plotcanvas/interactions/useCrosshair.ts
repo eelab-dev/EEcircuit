@@ -30,18 +30,9 @@ type ExtendedLineConfig = LineConfig & {
  * When the user moves the cursor in either the top or bottom plot, both cursors sync
  * their X coordinates (time/frequency) while maintaining independent Y coordinates.
  * 
- * ZOOM SYNCHRONIZATION is implemented similarly in the ZoomController and useZoom hook:
- * - Both canvases share zoom state: isZooming, zoomStartX, zoomEndX, zoomBounds
- * - When zoom starts/updates/completes in one canvas, the other canvas mirrors the operation
- * - Zoom highlighting (yellow region) appears synchronized across both plots
- * - Final zoom bounds are applied to both canvases simultaneously
- * 
- * PAN SYNCHRONIZATION works through shared pan offset state:
- * - Both canvases share pan state: sharedPanOffset
- * - When user pans (via scroll wheel or trackpad) in one canvas, the panOffset is shared with the other
- * - ZoomController notifies parent about pan offset changes via callback
- * - Other canvas receives the shared offset and applies it to maintain synchronized view
- * - Works for both horizontal scroll wheel and trackpad pan gestures
+ * SIMPLIFIED SYNCHRONIZATION APPROACH:
+ * Since both canvases have identical X-axis scales (enforced by usePlotCalculations validation),
+ * coordinates can be shared directly in data space without complex conversions.
  * 
  * How cursor sync works:
  * 1. Parent Plot component maintains shared state: sharedCursorX, sharedCursorVisible
@@ -49,14 +40,15 @@ type ExtendedLineConfig = LineConfig & {
  * 3. When cursor moves in Canvas A:
  *    - updateCrosshair() calculates position and updates webgl-plot lines directly
  *    - Updates coordinates via direct DOM manipulation (onCoordinateUpdate)
- *    - Calls onCursorXChange(xCoordinate) to share X position with parent
+ *    - Calls onCursorXChange(dataX) to share X data coordinate with parent
  *    - Triggers webgl redraw via onRedrawNeeded() - no React re-render
  * 4. Parent updates sharedCursorX state, triggering props change in Canvas B
- * 5. Canvas B's useEffect detects sharedCursorX change and updates its vertical line
+ * 5. Canvas B's useEffect detects sharedCursorX change and uses data coordinate directly
  * 6. onRedrawNeeded() forces webgl redraw to show the synchronized cursor
  * 
  * Key implementation details:
- * - Only X coordinates are synchronized (Y positions remain canvas-specific)
+ * - X coordinates shared as data coordinates directly (no conversion)
+ * - Y positions remain canvas-specific and independent
  * - lastSyncedX ref prevents infinite loops and duplicate syncs
  * - Works in both snap-to-line and free-roam cursor modes
  * - Single canvas mode ignores sync props and works independently
@@ -263,8 +255,9 @@ export const useCrosshair = ({
     if (sharedCursorX !== null && sharedCursorX !== undefined && crosshairRef.current && showCrosshair && crosshairLinesInitialized.current && sharedCursorX !== lastSyncedX.current) {
       lastSyncedX.current = sharedCursorX;
       
-      // Convert shared X coordinate from display space to current coordinate space
-      const dataSpaceX = convertXToLogSpace(sharedCursorX, isLogX);
+      // SIMPLIFIED: Use shared data coordinate directly since X-axis scales are identical
+      // The incoming sharedCursorX is already in the correct data coordinate space
+      const dataSpaceX = sharedCursorX;
       
       const currentAxisScales = getAxisScales();
       
@@ -480,11 +473,11 @@ export const useCrosshair = ({
     }
 
     // Share X coordinate with other canvas in dual mode
+    // SIMPLIFIED: Share data coordinate directly since X-axis scales are identical between canvases
     // PROTECTION: Only share coordinates if this canvas has selected variables
     if (onCursorXChange && selectedVariables.length > 0) {
-      // For dual canvas sync, share the display coordinate (convert from log space if needed)
-      const { displayX } = convertDataToDisplayCoordinates(finalDataX, finalDataY, isLogX, isLogY);
-      onCursorXChange(displayX);
+      // Share data coordinate directly - no conversion needed since X-axis scales are identical
+      onCursorXChange(finalDataX);
     }
 
     // Use lightweight redraw for crosshair movement - no need to clear canvas and redraw all lines

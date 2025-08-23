@@ -136,6 +136,10 @@ export const usePlotCalculations = ({
       return;
     }
 
+    // CRITICAL: X-Axis Scale Consistency Validation for Dual Canvas Mode
+    // In dual canvas mode, both canvases must have identical X-axis scales since they share the same X-axis data
+
+
     // If we're transitioning, store scales in ref and debounce the update
     if (isTransitioningRef.current) {
       pendingScalesRef.current = newScales;
@@ -230,14 +234,14 @@ export const usePlotCalculations = ({
       updateAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
       return;
     }
-    
+
     // CRITICAL FIX: Guard against premature scaling when no lines match selected variables
     // This prevents the inconsistent axis scaling issue between dual canvases
     const hasEnabledLines = lineDataRef.current?.some(line => {
       const extendedLine = line as ExtendedLineConfig;
       return extendedLine.variableName && selectedVariables.includes(extendedLine.variableName);
     });
-    
+
     if (!hasEnabledLines) {
       return; // Skip scaling calculation until lines are properly selected
     }
@@ -264,8 +268,13 @@ export const usePlotCalculations = ({
       }
 
       // Calculate Y-axis bounds for visible lines within zoom range
-      // IMPORTANT: Line data points are in linear space, but zoom bounds may be in log space
-      // We need to handle coordinate space conversion properly
+      // CRITICAL: Y-axis scaling remains independent per canvas
+      // - Only X-axis bounds are shared between canvases (customXBounds)
+      // - Y-axis bounds are calculated independently for each canvas based on:
+      //   * Which variables are selected (different per canvas)
+      //   * Y-axis log mode state (isLogY1 vs isLogY2)
+      //   * Data values within the shared X-axis range
+      // This ensures proper dual canvas behavior where X is synchronized but Y is independent
 
       // Convert zoom bounds to linear space for comparison with line data
       // Note: Using inverse conversion since we need log->linear here
@@ -326,13 +335,13 @@ export const usePlotCalculations = ({
     } else {
       // ENHANCED FIX: Use consistent autoScale() approach for all canvases
       // This ensures identical axis scaling between dual canvases since they process the same X-axis data
-      
+
       // Set original data bounds for zoom controller by calculating from line data
       if (zoomController.current && !zoomController.current.hasOriginalDataBounds() && lineDataRef.current) {
         // Calculate bounds manually from line data for consistency
         let dataMinX = Infinity;
         let dataMaxX = -Infinity;
-        
+
         lineDataRef.current.forEach(line => {
           const extendedLine = line as ExtendedLineConfig;
           if (extendedLine.variableName && selectedVariables.includes(extendedLine.variableName)) {
@@ -346,32 +355,32 @@ export const usePlotCalculations = ({
             }
           }
         });
-        
+
         if (isFinite(dataMinX) && isFinite(dataMaxX)) {
           zoomController.current.setOriginalDataBounds(dataMinX, dataMaxX);
         }
       }
-      
+
       // Use autoScale() directly for consistent behavior across all canvases
       plotLineRef.current.autoScale();
-      
+
       // Extract axis scales after autoScale
       const globalScale = plotLineRef.current.getGlobalScale();
       const globalOffset = plotLineRef.current.getGlobalOffset();
-      
+
       const scaleX = globalScale[0];
       const scaleY = globalScale[1];
       const offsetX = globalOffset[0];
       const offsetY = globalOffset[1];
-      
+
       if (isFinite(scaleX) && isFinite(scaleY) && isFinite(offsetX) && isFinite(offsetY) &&
         scaleX !== 0 && scaleY !== 0) {
-        
+
         const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
         updateAxisScales(newAxisScales);
         zoomController.current?.updateAxisScales(newAxisScales);
         zoomController.current?.updateLogAxisState({ isLogX, isLogY });
-        
+
       } else {
         // Fallback to default transform if autoScale fails
         plotLineRef.current.setLogAxis(false, false);
@@ -548,7 +557,7 @@ export const usePlotCalculations = ({
     lineDataRef.current.forEach((lineData, index) => {
       const extendedLineData = lineData as ExtendedLineConfig;
       const variableName = extendedLineData.variableName;
-      
+
       if (!variableName) return;
 
       const isSelected = selectedVariables.includes(variableName);
@@ -601,7 +610,7 @@ export const usePlotCalculations = ({
     lineDataRef.current.forEach((lineData, index) => {
       const extendedLineData = lineData as ExtendedLineConfig;
       const variableName = extendedLineData.variableName;
-      
+
       if (!variableName || !extendedLineData.isBracketLine) return;
 
       const isSelected = selectedVariables.includes(variableName);

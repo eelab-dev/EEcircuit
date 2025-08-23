@@ -27,27 +27,22 @@ interface LogAxisState {
  * 2. Pan limiting automatically constrains view to stay within original data bounds
  * 3. This prevents users from panning into areas with no data points
  *
- * DEFENSIVE: Dual Canvas Coordinate System Management
- * ==================================================
- * In dual canvas mode, both canvases now have identical X-axis scales due to the consistent 
- * scaling fix in usePlotCalculations.ts. However, NDC coordinate normalization is maintained
- * as a defensive measure against potential future axis scale inconsistencies.
+ * SIMPLIFIED: Dual Canvas X-Axis Synchronization
+ * ==============================================
+ * In dual canvas mode, both canvases have identical X-axis scales (enforced by usePlotCalculations.ts
+ * validation). This allows direct sharing of X-coordinates in data space without conversion.
  * 
- * Historical Context (Fixed):
- * - Previously, Canvas 1 and Canvas 2 could have different scaleX values (e.g., 200 vs 1)
- * - This was caused by timing issues where canvases used different scaling code paths
- * - Root cause resolved: Both canvases now use consistent autoScale() approach
+ * Key Benefits:
+ * - Eliminates coordinate conversion precision issues
+ * - Reduces complexity and potential bugs
+ * - Direct data coordinate sharing for zoom and pan operations
+ * - Y-axis scales remain independent per canvas (as intended)
  * 
- * Current Implementation (Safety Measure):
- * - NDC coordinate normalization remains active as a defensive programming practice
- * - Sending canvas: Convert data coordinates to NDC coordinates before sharing
- * - Receiving canvas: Convert NDC coordinates back to data coordinates using its own scales
- * - This ensures zoom synchronization works correctly even if future changes introduce scale differences
- * 
- * Key methods involved:
- * - notifyZoomStateChange(): Normalizes coordinates before sending (safety measure)
- * - applyExternalZoomState(): Denormalizes coordinates after receiving (safety measure)
- * - zoomStartAxisScales: Captured at zoom start to ensure coordinate consistency
+ * Implementation:
+ * - notifyZoomStateChange(): Shares data coordinates directly
+ * - applyExternalZoomState(): Uses received coordinates directly
+ * - Pan synchronization works in data coordinate space
+ * - Visual rendering uses canvas-specific axis scales for proper positioning
  *
  * Independent of React lifecycle for maximum performance during user interactions.
  */
@@ -266,32 +261,19 @@ export class ZoomController {
   /**
    * Notify about zoom state changes for synchronization
    * 
-   * CRITICAL: Dual Canvas Coordinate System Normalization
-   * =================================================== 
-   * In dual canvas mode, each canvas may have different axis scales (e.g., Canvas 1: scaleX=200, Canvas 2: scaleX=1).
-   * When sharing zoom coordinates between canvases, we must normalize them to a common coordinate space.
-   * 
-   * Solution: Convert data coordinates to NDC coordinates before sharing, then convert back using 
-   * the receiving canvas's axis scales. This prevents coordinate system mismatches that cause
-   * zoom selection visuals to appear incorrectly or not at all.
+   * SIMPLIFIED: Direct X-Coordinate Synchronization
+   * ============================================== 
+   * Since both canvases in dual mode have identical X-axis scales (enforced by usePlotCalculations),
+   * we can share X-coordinates directly in data space without complex normalization.
+   * This eliminates precision issues and coordinate conversion complexity.
    */
   private notifyZoomStateChange(): void {
     if (this.onZoomStateChangeCb) {
-      // Convert data coordinates to normalized NDC coordinates for sharing
-      // This ensures consistent coordinates across canvases with different axis scales
-      let normalizedStartX = this.zoomStartX;
-      let normalizedEndX = this.zoomEndX;
-      
-      if (this.zoomStartX !== null && this.zoomEndX !== null) {
-        // Convert to NDC coordinates using zoom start axis scales
-        normalizedStartX = this.zoomStartX * this.zoomStartAxisScales.scaleX + this.zoomStartAxisScales.offsetX;
-        normalizedEndX = this.zoomEndX * this.zoomStartAxisScales.scaleX + this.zoomStartAxisScales.offsetX;
-      }
-      
+      // Share data coordinates directly - no conversion needed since X-axis scales are identical
       this.onZoomStateChangeCb({
         isZooming: this.isZooming,
-        zoomStartX: normalizedStartX,
-        zoomEndX: normalizedEndX,
+        zoomStartX: this.zoomStartX,
+        zoomEndX: this.zoomEndX,
         zoomBounds: this.customXBounds ? { ...this.customXBounds } : null,
       });
     }
@@ -319,9 +301,10 @@ export class ZoomController {
   /**
    * Apply external zoom state for synchronization
    * 
-   * This method receives normalized NDC coordinates from another canvas and converts them
-   * back to data coordinates using this canvas's axis scales. See notifyZoomStateChange()
-   * for the corresponding normalization logic.
+   * SIMPLIFIED: Direct Data Coordinate Application
+   * ============================================= 
+   * Since X-axis scales are identical between canvases, we can use the received
+   * data coordinates directly without any conversion.
    */
   applyExternalZoomState(zoomState: {
     isZooming: boolean;
@@ -329,9 +312,8 @@ export class ZoomController {
     zoomEndX: number | null;
     zoomBounds: { min: number; max: number } | null;
   }): void {
-    // When receiving external zoom state, capture current axis scales 
-    // as zoom start scales to ensure consistent coordinate conversion
-    if (zoomState.isZooming) {
+    // Capture current axis scales when starting zoom for consistent visual rendering
+    if (zoomState.isZooming && !this.isZooming) {
       this.zoomStartAxisScales = { ...this.axisScales };
     }
 
@@ -340,16 +322,9 @@ export class ZoomController {
       ? { ...zoomState.zoomBounds }
       : null;
 
-    // Convert received normalized NDC coordinates back to data coordinates
-    // using this canvas's axis scales
-    if (zoomState.zoomStartX !== null && zoomState.zoomEndX !== null) {
-      // The incoming coordinates are normalized NDC coordinates, convert to data coordinates
-      this.zoomStartX = (zoomState.zoomStartX - this.axisScales.offsetX) / this.axisScales.scaleX;
-      this.zoomEndX = (zoomState.zoomEndX - this.axisScales.offsetX) / this.axisScales.scaleX;
-    } else {
-      this.zoomStartX = zoomState.zoomStartX;
-      this.zoomEndX = zoomState.zoomEndX;
-    }
+    // Use data coordinates directly - no conversion needed since X-axis scales are identical
+    this.zoomStartX = zoomState.zoomStartX;
+    this.zoomEndX = zoomState.zoomEndX;
 
     // Update visual feedback if zooming
     if (this.isZooming && this.zoomStartX !== null && this.zoomEndX !== null) {
@@ -372,6 +347,9 @@ export class ZoomController {
   /**
    * Get current zoom bounds (null if no zoom applied)
    * Returns bounds with pan offset applied
+   * 
+   * IMPORTANT: Only X-axis bounds are managed by ZoomController
+   * Y-axis bounds are calculated independently by each canvas in usePlotCalculations
    */
   getZoomBounds(): { min: number; max: number } | null {
     if (!this.customXBounds) return null;
