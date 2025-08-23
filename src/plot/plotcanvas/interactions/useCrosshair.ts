@@ -3,7 +3,7 @@ import { ResultType } from "eecircuit-engine";
 import { LineConfig, WebglLinePlot, WebglPolygonPlot, UnifiedLinePlot } from "webgl-plot";
 import { LINE_THICKNESS } from "../styling/lineThickness";
 import { useAppStore } from "../../../store/appStore";
-import { convertDataToDisplayCoordinates, convertXToLogSpace } from "../utils/coordinateUtils";
+import { convertDataToDisplayCoordinates } from "../utils/coordinateUtils";
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {

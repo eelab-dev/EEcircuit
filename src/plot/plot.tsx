@@ -76,6 +76,15 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   const [sharedCursorX, setSharedCursorX] = React.useState<number | null>(null);
   const [sharedCursorVisible, setSharedCursorVisible] = React.useState(false);
 
+  // Shared X-axis scale state for dual canvas synchronization
+  // Both canvases can update this, ensuring they stay synchronized
+  const [sharedXAxisScale, setSharedXAxisScale] = React.useState<{
+    scaleX: number;
+    offsetX: number;
+    sourceCanvas: 1 | 2; // Track which canvas provided the scale
+    timestamp: number; // Prevent infinite loops
+  } | null>(null);
+
   // Shared zoom state for dual canvas synchronization
   const [sharedZoomState, setSharedZoomState] = React.useState<{
     isZooming: boolean;
@@ -146,6 +155,29 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   const handleExportCSV = () => {
     exportResultsToCSV(results);
   };
+
+  // X-axis scale update handlers for bidirectional sync
+  const handleCanvas1XAxisScaleChange = React.useCallback(
+    (scale: { scaleX: number; offsetX: number }) => {
+      setSharedXAxisScale({
+        ...scale,
+        sourceCanvas: 1,
+        timestamp: Date.now(),
+      });
+    },
+    []
+  );
+
+  const handleCanvas2XAxisScaleChange = React.useCallback(
+    (scale: { scaleX: number; offsetX: number }) => {
+      setSharedXAxisScale({
+        ...scale,
+        sourceCanvas: 2,
+        timestamp: Date.now(),
+      });
+    },
+    []
+  );
 
   return (
     <Flex
@@ -306,6 +338,8 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     plotScalingRef={canvas1PlotScalingRef}
                     otherCanvasUpdatePlot={canvas2PlotUpdateRef}
                     otherCanvasCalcScaling={canvas2PlotScalingRef}
+                    sharedXAxisScale={sharedXAxisScale?.sourceCanvas === 2 ? sharedXAxisScale : null}
+                    onXAxisScaleChange={handleCanvas1XAxisScaleChange}
                     canvasId={1}
                   />
                 </Box>
@@ -340,6 +374,8 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     plotScalingRef={canvas2PlotScalingRef}
                     otherCanvasUpdatePlot={canvas1PlotUpdateRef}
                     otherCanvasCalcScaling={canvas1PlotScalingRef}
+                    sharedXAxisScale={sharedXAxisScale?.sourceCanvas === 1 ? sharedXAxisScale : null}
+                    onXAxisScaleChange={handleCanvas2XAxisScaleChange}
                     canvasId={2}
                   />
                 </Box>

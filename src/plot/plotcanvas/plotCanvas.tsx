@@ -49,6 +49,9 @@ interface PlotCanvasProps {
   plotScalingRef?: React.RefObject<(() => void) | null>;
   otherCanvasUpdatePlot?: React.RefObject<(() => void) | null>;
   otherCanvasCalcScaling?: React.RefObject<(() => void) | null>;
+  // X-axis scale synchronization props
+  sharedXAxisScale?: { scaleX: number; offsetX: number; sourceCanvas: 1 | 2; timestamp: number } | null;
+  onXAxisScaleChange?: ((scale: { scaleX: number; offsetX: number }) => void) | null;
   // Canvas identification for dual mode
   canvasId?: 1 | 2;
 }
@@ -71,6 +74,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   plotScalingRef,
   otherCanvasUpdatePlot,
   otherCanvasCalcScaling,
+  sharedXAxisScale,
+  onXAxisScaleChange,
   canvasId,
 }) => {
   const inputProfile = useAppStore((state) => state.inputProfile);
@@ -257,6 +262,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       bracketOperationResults,
       emphasizedPlotIndex,
       onAxisScalesChange: renderAxes, // Call axis rendering when scales change
+      sharedXAxisScale,
+      onXAxisScaleChange,
       canvasId,
     });
 

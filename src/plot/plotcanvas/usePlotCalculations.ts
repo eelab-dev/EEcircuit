@@ -73,6 +73,9 @@ interface UsePlotCalculationsProps {
   emphasizedPlotIndex?: number;
   // Axis rendering callback
   onAxisScalesChange?: (scales: AxisScales) => void;
+  // X-axis scale synchronization props
+  sharedXAxisScale?: { scaleX: number; offsetX: number; sourceCanvas: 1 | 2; timestamp: number } | null;
+  onXAxisScaleChange?: ((scale: { scaleX: number; offsetX: number }) => void) | null;
   // Canvas identification for dual mode
   canvasId?: 1 | 2;
 }
@@ -104,6 +107,8 @@ export const usePlotCalculations = ({
   bracketOperationResults,
   emphasizedPlotIndex = 0,
   onAxisScalesChange,
+  sharedXAxisScale,
+  onXAxisScaleChange,
   canvasId,
 }: UsePlotCalculationsProps): UsePlotCalculationsReturn => {
   const isDarkMode = useAppStore((state) => state.isDarkMode);
@@ -138,6 +143,17 @@ export const usePlotCalculations = ({
 
     // CRITICAL: X-Axis Scale Consistency Validation for Dual Canvas Mode
     // In dual canvas mode, both canvases must have identical X-axis scales since they share the same X-axis data
+    // This validation helps identify if the bidirectional synchronization is working correctly
+    if (canvasId && process.env.NODE_ENV === 'development') {
+      // Enhanced logging for bidirectional sync pattern validation
+      console.debug(`Canvas ${canvasId} X-axis scales:`, {
+        scaleX: newScales.scaleX.toFixed(6),
+        offsetX: newScales.offsetX.toFixed(6),
+        source: sharedXAxisScale && sharedXAxisScale.sourceCanvas !== canvasId ? 
+          `inherited from Canvas ${sharedXAxisScale.sourceCanvas}` : 'calculated',
+        timestamp: sharedXAxisScale?.timestamp
+      });
+    }
 
 
     // If we're transitioning, store scales in ref and debounce the update
@@ -166,7 +182,7 @@ export const usePlotCalculations = ({
       setAxisScales(newScales);
       onAxisScalesChange?.(newScales);
     }
-  }, [onAxisScalesChange]);
+  }, [onAxisScalesChange, canvasId, sharedXAxisScale]);
 
   // Forward declaration for the updatePlot function
   const updatePlotRef = useRef<(() => void) | null>(null);
@@ -361,34 +377,81 @@ export const usePlotCalculations = ({
         }
       }
 
-      // Use autoScale() directly for consistent behavior across all canvases
-      plotLineRef.current.autoScale();
+      // BIDIRECTIONAL X-AXIS SYNCHRONIZATION: Both canvases can provide X-axis scales
+      
+      // Check if we should use shared X-axis scales from the other canvas
+      const shouldUseSharedXAxis = sharedXAxisScale && 
+        sharedXAxisScale.sourceCanvas !== canvasId &&
+        // Add timestamp check to prevent infinite loops
+        Date.now() - sharedXAxisScale.timestamp < 1000;
 
-      // Extract axis scales after autoScale
-      const globalScale = plotLineRef.current.getGlobalScale();
-      const globalOffset = plotLineRef.current.getGlobalOffset();
-
-      const scaleX = globalScale[0];
-      const scaleY = globalScale[1];
-      const offsetX = globalOffset[0];
-      const offsetY = globalOffset[1];
-
-      if (isFinite(scaleX) && isFinite(scaleY) && isFinite(offsetX) && isFinite(offsetY) &&
-        scaleX !== 0 && scaleY !== 0) {
-
-        const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
-        updateAxisScales(newAxisScales);
-        zoomController.current?.updateAxisScales(newAxisScales);
-        zoomController.current?.updateLogAxisState({ isLogX, isLogY });
-
+      if (shouldUseSharedXAxis) {
+        // Use X-axis scales from other canvas, calculate own Y-axis
+        plotLineRef.current.autoScale();
+        
+        // Extract only Y-axis scales from autoScale
+        const globalScale = plotLineRef.current.getGlobalScale();
+        const globalOffset = plotLineRef.current.getGlobalOffset();
+        
+        const scaleY = globalScale[1];
+        const offsetY = globalOffset[1];
+        
+        // Use shared X-axis scales
+        const scaleX = sharedXAxisScale.scaleX;
+        const offsetX = sharedXAxisScale.offsetX;
+        
+        if (isFinite(scaleX) && isFinite(scaleY) && isFinite(offsetX) && isFinite(offsetY) &&
+          scaleX !== 0 && scaleY !== 0) {
+          
+          // Apply the mixed scales (shared X, calculated Y)
+          plotLineRef.current.setGlobalTransform([scaleX, scaleY], [offsetX, offsetY]);
+          
+          const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
+          updateAxisScales(newAxisScales);
+          zoomController.current?.updateAxisScales(newAxisScales);
+          zoomController.current?.updateLogAxisState({ isLogX, isLogY });
+          
+        } else {
+          // Fallback to default transform if scales are invalid
+          plotLineRef.current.setLogAxis(false, false);
+          plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
+          updateAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
+        }
       } else {
-        // Fallback to default transform if autoScale fails
-        plotLineRef.current.setLogAxis(false, false);
-        plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
-        updateAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
+        // Calculate own X and Y axis scales, potentially share X-axis with other canvas
+        plotLineRef.current.autoScale();
+        
+        // Extract axis scales after autoScale
+        const globalScale = plotLineRef.current.getGlobalScale();
+        const globalOffset = plotLineRef.current.getGlobalOffset();
+        
+        const scaleX = globalScale[0];
+        const scaleY = globalScale[1];
+        const offsetX = globalOffset[0];
+        const offsetY = globalOffset[1];
+        
+        if (isFinite(scaleX) && isFinite(scaleY) && isFinite(offsetX) && isFinite(offsetY) &&
+          scaleX !== 0 && scaleY !== 0) {
+          
+          const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
+          updateAxisScales(newAxisScales);
+          zoomController.current?.updateAxisScales(newAxisScales);
+          zoomController.current?.updateLogAxisState({ isLogX, isLogY });
+          
+          // Share X-axis scales with other canvas (if in dual canvas mode)
+          if (onXAxisScaleChange && canvasId) {
+            onXAxisScaleChange({ scaleX, offsetX });
+          }
+          
+        } else {
+          // Fallback to default transform if autoScale fails
+          plotLineRef.current.setLogAxis(false, false);
+          plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
+          updateAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
+        }
       }
     }
-  }, [selectedVariables, isLogX, isLogY, updateAxisScales]);
+  }, [selectedVariables, isLogX, isLogY, updateAxisScales, sharedXAxisScale, onXAxisScaleChange, canvasId]);
 
   // Update plot visibility and colors
   const updatePlot = useCallback(() => {
