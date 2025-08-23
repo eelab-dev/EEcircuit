@@ -3,6 +3,7 @@ import { ResultType } from "eecircuit-engine";
 import { SimulationType } from "../types/commonTypes";
 import type { BracketOperation } from "../utils/bracketParser";
 import type { ParallelSimulationResult } from "../simulation/parallelSimulation";
+import { saveSimulationConfigs, loadSimulationConfigs } from "../utils/localStorageUtils";
 
 // Define the store interface that includes both simulation and tab slices
 interface StoreWithTab {
@@ -100,7 +101,7 @@ export const createSimulationSlice: StateCreator<
   results: [],
   selectedSimType: "None",
   simulationConfig: undefined,
-  allSimulationConfigs: [],
+  allSimulationConfigs: loadSimulationConfigs(),
   bracketOperation: undefined,
   isParallelSimulationRunning: false,
   parallelSimulationProgress: {
@@ -119,26 +120,35 @@ export const createSimulationSlice: StateCreator<
   // Simulation configuration actions
   setSelectedSimType: (type) => set({ selectedSimType: type }),
   setSimulationConfig: (config) => set({ simulationConfig: config }),
-  setAllSimulationConfigs: (configs) => set({ allSimulationConfigs: configs }),
+  setAllSimulationConfigs: (configs) => {
+    set({ allSimulationConfigs: configs });
+    saveSimulationConfigs(configs);
+  },
 
   addSimulationConfig: (config) =>
-    set((state: SimulationSlice) => ({
-      allSimulationConfigs: [...state.allSimulationConfigs, config],
-    })),
+    set((state: SimulationSlice) => {
+      const newConfigs = [...state.allSimulationConfigs, config];
+      saveSimulationConfigs(newConfigs);
+      return { allSimulationConfigs: newConfigs };
+    }),
 
   updateSimulationConfig: (index, config) =>
-    set((state: SimulationSlice) => ({
-      allSimulationConfigs: state.allSimulationConfigs.map((c, i) =>
+    set((state: SimulationSlice) => {
+      const newConfigs = state.allSimulationConfigs.map((c, i) =>
         i === index ? config : c
-      ),
-    })),
+      );
+      saveSimulationConfigs(newConfigs);
+      return { allSimulationConfigs: newConfigs };
+    }),
 
   deleteSimulationConfig: (index) =>
-    set((state: SimulationSlice) => ({
-      allSimulationConfigs: state.allSimulationConfigs.filter(
+    set((state: SimulationSlice) => {
+      const newConfigs = state.allSimulationConfigs.filter(
         (_, i) => i !== index
-      ),
-    })),
+      );
+      saveSimulationConfigs(newConfigs);
+      return { allSimulationConfigs: newConfigs };
+    }),
 
   // Bracket operation actions
   setBracketOperation: (bracketOp) => set({ bracketOperation: bracketOp }),
