@@ -317,6 +317,12 @@ export const createPlotSlice: StateCreator<
         isACModeActive,
         canvas1SelectedVariables: canvas1Variables,
         canvas2SelectedVariables: canvas2Variables,
+        // Log scaling configuration for AC simulations
+        ...(isACSimulation && {
+          isLogX: true,    // Frequency axis should be logarithmic
+          isLogY1: true,   // Magnitude plot should be logarithmic
+          isLogY2: false,  // Phase plot should be linear
+        }),
         // Set bracket operation specific state
         bracketOperationResults: aggregatedResult,
         isBracketOperationPlot: isBracketResult,
