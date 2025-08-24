@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, RefObject, useCallback, startTransition } from "react";
 import { ResultType } from "eecircuit-engine";
-import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanvas } from "webgl-plot";
+import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanvas, setBackgroundColor } from "webgl-plot";
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
 import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
@@ -8,6 +8,7 @@ import { BRACKET_PLOT_STYLES } from "../bracketPlotStyles";
 import type { AggregatedResult } from "../../simulation/resultAggregator";
 import { useAppStore } from "../../store/appStore";
 import { convertLinearToLogSpace } from "./utils/coordinateUtils";
+import { getPlotBackgroundColor } from "./styling/plotBackgroundColors";
 
 /**
  * CRITICAL FIXES FOR DUAL CANVAS MODE:
@@ -232,6 +233,19 @@ export const usePlotCalculations = ({
     if (!plotLineRef.current || !glRef.current) return;
     handleAxisTransition();
   }, [isLogX, isLogY, plotLineRef.current, handleAxisTransition]);
+
+  // Handle theme changes - update WebGL background color immediately  
+  useEffect(() => {
+    if (!glRef.current || !plotLineRef.current) return;
+    
+    // Get new theme-aware background color
+    const newBackgroundColor = getPlotBackgroundColor(isDarkMode);
+    
+    // Follow webgl-plot procedure: setBackgroundColor → clearCanvas → draw
+    setBackgroundColor(glRef.current, newBackgroundColor);
+    clearCanvas(glRef.current);
+    plotLineRef.current.draw();
+  }, [isDarkMode]);
 
   // Handle data updates with simplified autoScale (now works correctly for all coordinate spaces)
   useEffect(() => {

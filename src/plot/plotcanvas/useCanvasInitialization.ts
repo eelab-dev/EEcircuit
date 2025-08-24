@@ -332,16 +332,8 @@ export const useCanvasInitialization = ({
     return () => {
       cancelAnimationFrame(rafId);
     };
-  }, [results, isDarkMode]);
+  }, [results]);
 
-  // Handle theme changes after canvas is initialized
-  useEffect(() => {
-    if (isCanvasInitialized && glRef.current) {
-      // Note: Background color changes need to be handled differently with new API
-      // The background is set during context creation, theme changes will require recreation
-      // updatePlot(); // Redraw to apply any color changes - handled by parent component
-    }
-  }, [isDarkMode, isCanvasInitialized]);
 
   return {
     canvasRef,
