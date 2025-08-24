@@ -10,7 +10,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { ChevronRight, Settings, Pin, PinOff, Download } from "lucide-react";
-import { dialogTheme } from "../styles/dialogTheme";
+import { dialogTheme } from "../styles/uiThemes";
 
 interface PlotSidebarProps {
   variableNames: string[];
@@ -53,7 +53,6 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
   const [isPinned, setIsPinned] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
-
 
   // Check if mobile and set default states
   useEffect(() => {
@@ -205,9 +204,13 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
       // Dual canvas mode - separate sections for each canvas
       // Filter variables for AC mode
       const allVariables = variableNames.slice(1);
-      const canvas1Variables = isACModeActive ? allVariables.filter(v => v.includes('[mag]')) : allVariables;
-      const canvas2Variables = isACModeActive ? allVariables.filter(v => v.includes('[phase]')) : allVariables;
-      
+      const canvas1Variables = isACModeActive
+        ? allVariables.filter((v) => v.includes("[mag]"))
+        : allVariables;
+      const canvas2Variables = isACModeActive
+        ? allVariables.filter((v) => v.includes("[phase]"))
+        : allVariables;
+
       return (
         <Box>
           {/* X-axis info */}
@@ -230,14 +233,19 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             >
               {isACModeActive ? "Magnitude" : "Plot 1"}
             </Text>
-            
+
             <HStack gap="1" w="100%" mb="2">
               <Button
                 size="xs"
                 variant="outline"
                 onClick={() => {
-                  const otherVariables = selectedVariables.filter(v => !canvas1Variables.includes(v));
-                  onSelectedVariablesChange([...canvas1Variables, ...otherVariables]);
+                  const otherVariables = selectedVariables.filter(
+                    (v) => !canvas1Variables.includes(v)
+                  );
+                  onSelectedVariablesChange([
+                    ...canvas1Variables,
+                    ...otherVariables,
+                  ]);
                 }}
                 fontSize="xs"
                 flex="1"
@@ -249,7 +257,9 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
                 size="xs"
                 variant="outline"
                 onClick={() => {
-                  const otherVariables = selectedVariables.filter(v => !canvas1Variables.includes(v));
+                  const otherVariables = selectedVariables.filter(
+                    (v) => !canvas1Variables.includes(v)
+                  );
                   onSelectedVariablesChange(otherVariables);
                 }}
                 fontSize="xs"
@@ -261,10 +271,14 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             </HStack>
 
             <CheckboxGroup
-              value={selectedVariables.filter(v => canvas1Variables.includes(v))}
+              value={selectedVariables.filter((v) =>
+                canvas1Variables.includes(v)
+              )}
               onValueChange={(newValues) => {
                 // Merge the new canvas1 selection with unchanged variables from other canvases
-                const otherVariables = selectedVariables.filter(v => !canvas1Variables.includes(v));
+                const otherVariables = selectedVariables.filter(
+                  (v) => !canvas1Variables.includes(v)
+                );
                 onSelectedVariablesChange([...newValues, ...otherVariables]);
               }}
               name="canvas1-variables"
@@ -281,7 +295,9 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
                     <Checkbox.HiddenInput />
                     <Checkbox.Control />
                     <Checkbox.Label
-                      fontWeight={hoveredVariable === value ? "semibold" : "normal"}
+                      fontWeight={
+                        hoveredVariable === value ? "semibold" : "normal"
+                      }
                       transition="font-weight 0.1s ease"
                       fontSize="sm"
                     >
@@ -303,12 +319,14 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             >
               {isACModeActive ? "Phase" : "Plot 2"}
             </Text>
-            
+
             <HStack gap="1" w="100%" mb="2">
               <Button
                 size="xs"
                 variant="outline"
-                onClick={() => onCanvas2SelectedVariablesChange?.(canvas2Variables)}
+                onClick={() =>
+                  onCanvas2SelectedVariablesChange?.(canvas2Variables)
+                }
                 fontSize="xs"
                 flex="1"
                 minW="0"
@@ -328,7 +346,9 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             </HStack>
 
             <CheckboxGroup
-              value={canvas2SelectedVariables.filter(v => canvas2Variables.includes(v))}
+              value={canvas2SelectedVariables.filter((v) =>
+                canvas2Variables.includes(v)
+              )}
               onValueChange={(newValues) => {
                 onCanvas2SelectedVariablesChange?.(newValues);
               }}
@@ -346,7 +366,9 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
                     <Checkbox.HiddenInput />
                     <Checkbox.Control />
                     <Checkbox.Label
-                      fontWeight={canvas2HoveredVariable === value ? "semibold" : "normal"}
+                      fontWeight={
+                        canvas2HoveredVariable === value ? "semibold" : "normal"
+                      }
                       transition="font-weight 0.1s ease"
                       fontSize="sm"
                     >

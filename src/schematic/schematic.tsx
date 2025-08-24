@@ -14,19 +14,20 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import * as eeSch from "eecircuit-schematic";
 import { Schematic as SchematicType } from "eecircuit-schematic";
-import { Box, Flex, Float, Button } from "@chakra-ui/react";
-import { ArrowBigRight } from "lucide-react";
+import { Box, Float } from "@chakra-ui/react";
 import debounce from "lodash.debounce";
 
 import Actions from "./actions";
 import Properties from "./properties";
-import Status from "./status";
+import BottomBar from "./bottombar";
+import StatusIcon from "./statusIcon";
+import NetlistButton from "./netlistButton";
 import ExportImageDialog from "./ExportImageDialog";
 import ShortcutsDialog from "./ShortcutsDialog";
 import { ToBePlotted } from "src/types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import { getRecommendedInputProfile } from "../utils/deviceDetection";
-import { dialogTheme } from "../styles/dialogTheme";
+import { dialogTheme } from "../styles/uiThemes";
 
 type SchematicProps = {
   onNetlistExported: (netlist: string) => void;
@@ -84,7 +85,7 @@ const Schematic: React.FC<SchematicProps> = ({
   // Tab visibility is handled via CSS display, same as simulate and plot tabs
 
   const [coord, setCoord] = useState({ x: 0, y: 0 });
-  const [pointerInfo, setPointerInfo] = useState<string>("");
+  const [pointerInfo, setPointerInfo] = useState<eeSch.PointerInfo>(null);
   const [selectedItem, setSelectedItem] = useState<eeSch.SelectedItem>({
     type: "none",
   } as eeSch.SelectedItem);
@@ -355,33 +356,42 @@ const Schematic: React.FC<SchematicProps> = ({
             const currentWidth = Math.round(rect.width);
             const currentHeight = Math.round(rect.height);
             const lastSize = lastContainerSizeRef.current;
-            
+
             // Check if size changed significantly while tab was hidden
             const widthDiff = Math.abs(currentWidth - lastSize.width);
             const heightDiff = Math.abs(currentHeight - lastSize.height);
             const RESIZE_THRESHOLD = 5;
-            
-            if (widthDiff >= RESIZE_THRESHOLD || heightDiff >= RESIZE_THRESHOLD) {
+
+            if (
+              widthDiff >= RESIZE_THRESHOLD ||
+              heightDiff >= RESIZE_THRESHOLD
+            ) {
               console.log(
                 `Tab became visible with different container size (${currentWidth}x${currentHeight} vs ${lastSize.width}x${lastSize.height}), forcing canvas recreation`
               );
-              
+
               // Update the last known size
               lastContainerSizeRef.current = {
                 width: currentWidth,
                 height: currentHeight,
               };
-              
+
               // Remove existing canvas
-              if (canvasRef.current && containerRef.current && canvasRef.current.parentNode === containerRef.current) {
-                console.log("Removing existing canvas for size change recreation");
+              if (
+                canvasRef.current &&
+                containerRef.current &&
+                canvasRef.current.parentNode === containerRef.current
+              ) {
+                console.log(
+                  "Removing existing canvas for size change recreation"
+                );
                 containerRef.current.removeChild(canvasRef.current);
                 // Reset refs
                 initializedCanvasRef.current = null;
                 initializingCanvasRef.current = null;
                 canvasRef.current = null;
               }
-              
+
               // Create new canvas with current container dimensions
               console.log("Creating new canvas for size change");
               const newCanvas = document.createElement("canvas");
@@ -390,12 +400,12 @@ const Schematic: React.FC<SchematicProps> = ({
               newCanvas.style.height = "100%";
               newCanvas.style.display = "block";
               newCanvas.style.border = "solid 1px gray";
-              
+
               // Add to container and update ref
               if (containerRef.current) {
                 containerRef.current.appendChild(newCanvas);
                 canvasRef.current = newCanvas;
-                
+
                 // Initialize the new canvas
                 safeInitCanvas(newCanvas);
               }
@@ -678,7 +688,6 @@ const Schematic: React.FC<SchematicProps> = ({
     eeSch.sendCommand({ command: "export", exportType: "netList" });
   }, []);
 
-
   const propertiesCallBack = React.useCallback(() => {
     setPropertiesOpen(false);
   }, []);
@@ -704,13 +713,12 @@ const Schematic: React.FC<SchematicProps> = ({
   };
 
   return (
-    <Flex direction="column" height={"100%"}>
+    <Box position="relative" height={"100%"}>
       <Box
         position="relative"
-        flex="1"
+        height="100%"
         ref={containerRef}
         id="canvas-container"
-        minHeight={0} // Prevent flex item from growing beyond container
         tabIndex={0} // Make container focusable for keyboard shortcuts
         outline="none" // Remove default focus outline
       >
@@ -807,60 +815,16 @@ const Schematic: React.FC<SchematicProps> = ({
             )}
           </Box>
         )}
+
+        {/* Bottom Bar - Floating */}
+        <BottomBar coord={coord} pointerInfo={pointerInfo} />
+
+        {/* Netlist Button - Bottom Right Floating */}
+        <NetlistButton onSendToNetlist={sendToNetListButtonHandler} />
+
+        {/* Status Icon - Top Right Floating */}
+        <StatusIcon info={info} />
       </Box>
-      <Flex
-        spaceX={2}
-        direction={{ base: "column", md: "row" }}
-        p={2}
-        align="center"
-        minHeight={{ base: "auto", md: "60px" }}
-        flexShrink={0}
-        gap={2}
-      >
-        {/* Top row on mobile, left section on desktop */}
-        <Flex
-          direction="row"
-          gap={2}
-          align="center"
-          flexWrap="wrap"
-          justifyContent={{ base: "center", md: "flex-start" }}
-        >
-          <Button size="sm">{`X:${coord.x}, Y:${coord.y}`}</Button>
-          <Button size="sm">{pointerInfo || "Info"}</Button>
-          <Button size="sm">{"none"}</Button>
-        </Flex>
-
-        {/* Center section - only on desktop */}
-        <Box flex="1" display={{ base: "none", md: "block" }} />
-        <Box display={{ base: "none", md: "block" }}>
-          <Status info={info} />
-        </Box>
-        <Box flex="1" display={{ base: "none", md: "block" }} />
-
-        {/* Bottom row on mobile, right section on desktop */}
-        <Flex
-          direction="row"
-          gap={2}
-          align="center"
-          justifyContent="center"
-          width={{ base: "100%", md: "auto" }}
-        >
-          {/* Status on mobile */}
-          <Box display={{ base: "block", md: "none" }}>
-            <Status info={info} />
-          </Box>
-
-          {/* Simulate button - always visible */}
-          <Button
-            size="sm"
-            onClick={sendToNetListButtonHandler}
-            flexShrink={0}
-            minWidth="fit-content"
-          >
-            Simulate (Netlist) <ArrowBigRight size={16} />
-          </Button>
-        </Flex>
-      </Flex>
       <ExportImageDialog
         isOpen={showExportImageDialog}
         onClose={() => setShowExportImageDialog(false)}
@@ -871,7 +835,7 @@ const Schematic: React.FC<SchematicProps> = ({
         isOpen={showShortcutsDialog}
         onClose={() => setShowShortcutsDialog(false)}
       />
-    </Flex>
+    </Box>
   );
 };
 

@@ -2,7 +2,7 @@ import React from "react";
 import { Dialog, Button, Flex, IconButton, Portal } from "@chakra-ui/react";
 import { X } from "lucide-react";
 import { sendCommand, loadDemoSchematic } from "eecircuit-schematic";
-import { dialogTheme } from "../styles/dialogTheme";
+import { dialogTheme } from "../styles/uiThemes";
 
 type ClearSchematicDialogProps = {
   isOpen: boolean;

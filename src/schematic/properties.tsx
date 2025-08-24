@@ -19,7 +19,7 @@ import {
   getPropertiesFromSelectedItem,
   applyPropertiesToSelectedItem,
 } from "../types/componentTypes";
-import { dialogTheme } from "../styles/dialogTheme";
+import { dialogTheme } from "../styles/uiThemes";
 
 type PropertiesProps = {
   onCloseButtonClick: () => void;
@@ -221,7 +221,9 @@ const Properties: React.FC<PropertiesProps> = ({
                     <Field.Label>Name</Field.Label>
                     {isFixedInstance ? (
                       // Display fixed instance net name (VDD/GND) as non-editable text
-                      <Span color={dialogTheme.secondaryText}>{selectedItem.typeName}</Span>
+                      <Span color={dialogTheme.secondaryText}>
+                        {selectedItem.typeName}
+                      </Span>
                     ) : (
                       <Input
                         placeholder="Component name (e.g., R1, C1)"

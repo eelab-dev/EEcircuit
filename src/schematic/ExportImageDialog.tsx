@@ -11,7 +11,7 @@ import {
 } from "@chakra-ui/react";
 import { X, ZoomIn, ZoomOut, Download, ChevronDown } from "lucide-react";
 import { convertSvgToPdf } from "../utils/svgToPdf";
-import { dialogTheme } from "../styles/dialogTheme";
+import { dialogTheme } from "../styles/uiThemes";
 
 type ExportImageDialogProps = {
   isOpen: boolean;

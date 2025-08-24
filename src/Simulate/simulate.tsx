@@ -7,7 +7,7 @@ import { X, Play, Square, Settings } from "lucide-react";
 import { SimulationType, ToBePlotted } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import SimulationConfigPanel from "./SimulationConfigPanel";
-import { dialogTheme } from "src/styles/dialogTheme";
+import { dialogTheme } from "src/styles/uiThemes";
 import SimulationGlobalConfigDialog from "./SimulationGlobalConfigDialog";
 
 type SimulationEditorProps = {

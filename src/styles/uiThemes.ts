@@ -29,3 +29,11 @@ export const dialogTheme = {
 } as const;
 
 export type DialogTheme = typeof dialogTheme;
+
+export const bottomBarTheme = {
+  bg: "gray.subtle/40",
+  borderColor: "gray.muted/50",
+  borderRadius: "xl",
+  backdropFilter: "blur(3px)",
+  primaryText: "gray.fg/95",
+} 

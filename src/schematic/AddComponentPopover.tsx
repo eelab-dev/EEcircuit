@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { Tooltip } from "../components/ui/tooltip";
 import { CopyPlus, X } from "lucide-react";
 import { AvailableComponent, sendCommand } from "eecircuit-schematic";
-import { dialogTheme } from "../styles/dialogTheme";
+import { dialogTheme } from "../styles/uiThemes";
 import { useAppStore } from "../store/appStore";
 
 type ComponentCategory = AvailableComponent["category"];

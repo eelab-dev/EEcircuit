@@ -13,7 +13,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useAppStore } from "../store/appStore";
-import { dialogTheme } from "../styles/dialogTheme";
+import { dialogTheme } from "../styles/uiThemes";
 
 interface SimulationConfigDialogProps {
   open: boolean;

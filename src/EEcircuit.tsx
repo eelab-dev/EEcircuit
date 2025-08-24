@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
-import { dialogTheme } from "./styles/dialogTheme.ts";
+import { dialogTheme } from "./styles/uiThemes.ts";
 import { handleFullscreen } from "./utils/fullscreenUtils.tsx";
 import ClearSchematicDialog from "./schematic/ClearSchematicDialog";
 
@@ -65,9 +65,9 @@ const EEcircuit: React.FC = () => {
       setFullscreen(!!document.fullscreenElement);
     };
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, []);
 
@@ -558,11 +558,11 @@ const EEcircuit: React.FC = () => {
             <Tooltip
               showArrow
               content={
-                inputProfile === "mouse" 
+                inputProfile === "mouse"
                   ? "Mouse: Shift+wheel zoom, wheel pan when zoomed"
                   : inputProfile === "trackpad"
-                  ? "Trackpad: Ctrl+scroll zoom, scroll pan when zoomed"  
-                  : "Touchscreen: Pinch zoom, single-finger drag pan when zoomed"
+                    ? "Trackpad: Ctrl+scroll zoom, scroll pan when zoomed"
+                    : "Touchscreen: Pinch zoom, single-finger drag pan when zoomed"
               }
               positioning={{ placement: "bottom" }}
             >
@@ -722,13 +722,13 @@ const EEcircuit: React.FC = () => {
             /> */}
         </Tabs.Content>
       </Tabs.Root>
-      
+
       {/* Clear Schematic Confirmation Dialog */}
       <ClearSchematicDialog
         isOpen={showClearDialog}
         onClose={handleCloseClearDialog}
       />
-      
+
       <Toaster />
     </Box>
   );

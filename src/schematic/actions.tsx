@@ -16,7 +16,7 @@ import {
   Keyboard,
 } from "lucide-react";
 import { AvailableComponent, sendCommand } from "eecircuit-schematic";
-import { dialogTheme } from "src/styles/dialogTheme";
+import { dialogTheme } from "src/styles/uiThemes";
 
 type ActionsProps = {
   availableComponents: AvailableComponent[];
@@ -31,7 +31,6 @@ const Actions: React.FC<ActionsProps> = ({
 }) => {
   const [isCompact, setIsCompact] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
-
 
   React.useEffect(() => {
     // Debounce the resize handler to reduce excessive logging during resize operations
@@ -132,7 +131,6 @@ const Actions: React.FC<ActionsProps> = ({
           <Keyboard />
         </IconButton>
       </Tooltip>
-
     </div>
   );
 };

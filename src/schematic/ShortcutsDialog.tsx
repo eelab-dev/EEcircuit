@@ -11,7 +11,7 @@ import {
 } from "@chakra-ui/react";
 import { X, Keyboard } from "lucide-react";
 import { useAppStore } from "../store/appStore";
-import { dialogTheme } from "../styles/dialogTheme";
+import { dialogTheme } from "../styles/uiThemes";
 
 type ShortcutsDialogProps = {
   isOpen: boolean;
