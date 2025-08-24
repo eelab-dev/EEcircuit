@@ -1,12 +1,13 @@
 import React from "react";
-import { Button } from "@chakra-ui/react";
-import { LayoutDashboard, Cable, CirclePlus, Square } from "lucide-react";
+import { Button, Flex } from "@chakra-ui/react";
+import { LayoutDashboard, Cable, CirclePlus, Square, ArrowBigRight } from "lucide-react";
 import { bottomBarTheme, dialogTheme } from "../styles/uiThemes";
 import { PointerInfo } from "eecircuit-schematic";
 
 type BottomBarProps = {
   coord: { x: number; y: number };
   pointerInfo: PointerInfo | null;
+  onSendToNetlist: () => void;
 };
 
 const getPointerIcon = (pointerInfo: PointerInfo | null) => {
@@ -27,7 +28,7 @@ const getPointerIcon = (pointerInfo: PointerInfo | null) => {
   }
 };
 
-const BottomBar: React.FC<BottomBarProps> = ({ coord, pointerInfo }) => {
+const BottomBar: React.FC<BottomBarProps> = ({ coord, pointerInfo, onSendToNetlist }) => {
   const formatCoord = (value: number) => {
     return value >= 0
       ? ` ${value.toString().padStart(3, " ")}`
@@ -35,13 +36,19 @@ const BottomBar: React.FC<BottomBarProps> = ({ coord, pointerInfo }) => {
   };
 
   return (
-    <>
+    <Flex
+      position="absolute"
+      bottom="1rem"
+      left="1rem"
+      right="1rem"
+      zIndex={100}
+      alignItems="center"
+      justifyContent="space-between"
+      gap={4}
+      pointerEvents="none"
+    >
+      {/* Left: Coordinate Display */}
       <Button
-        position="absolute"
-        bottom="1rem"
-        left="50%"
-        transform="translateX(-50%)"
-        zIndex={100}
         size="sm"
         variant="outline"
         color={bottomBarTheme.primaryText}
@@ -53,16 +60,15 @@ const BottomBar: React.FC<BottomBarProps> = ({ coord, pointerInfo }) => {
         _hover={{}}
         _active={{}}
         fontFamily="mono"
+        pointerEvents="auto"
+        flexShrink={0}
       >
         {`X:${formatCoord(coord.x)}, Y:${formatCoord(coord.y)}`}
       </Button>
+
+      {/* Center: Pointer Info */}
       {pointerInfo && (
         <Button
-          position="absolute"
-          bottom="1rem"
-          left="50%"
-          transform="translateX(calc(-50% + 140px))"
-          zIndex={100}
           size="sm"
           variant="outline"
           color={bottomBarTheme.primaryText}
@@ -74,12 +80,33 @@ const BottomBar: React.FC<BottomBarProps> = ({ coord, pointerInfo }) => {
           _hover={{}}
           _active={{}}
           gap={2}
+          pointerEvents="auto"
+          flexShrink={0}
         >
           {getPointerIcon(pointerInfo)}
           {pointerInfo.name}
         </Button>
       )}
-    </>
+
+      {/* Right: Simulate Button */}
+      <Button
+        size="sm"
+        onClick={onSendToNetlist}
+        bg="blue.focusRing/60"
+        color="gray.fg/90"
+        _hover={{
+          bg: "blue.emphasized/70",
+          color: "gray.fg/95",
+        }}
+        backdropFilter="blur(5px)"
+        borderRadius="lg"
+        flexShrink={0}
+        minWidth="fit-content"
+        pointerEvents="auto"
+      >
+        Simulate <ArrowBigRight size={16} />
+      </Button>
+    </Flex>
   );
 };
 

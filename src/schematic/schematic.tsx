@@ -21,7 +21,6 @@ import Actions from "./actions";
 import Properties from "./properties";
 import BottomBar from "./bottombar";
 import StatusIcon from "./statusIcon";
-import NetlistButton from "./netlistButton";
 import ExportImageDialog from "./ExportImageDialog";
 import ShortcutsDialog from "./ShortcutsDialog";
 import { ToBePlotted } from "src/types/commonTypes";
@@ -817,10 +816,7 @@ const Schematic: React.FC<SchematicProps> = ({
         )}
 
         {/* Bottom Bar - Floating */}
-        <BottomBar coord={coord} pointerInfo={pointerInfo} />
-
-        {/* Netlist Button - Bottom Right Floating */}
-        <NetlistButton onSendToNetlist={sendToNetListButtonHandler} />
+        <BottomBar coord={coord} pointerInfo={pointerInfo} onSendToNetlist={sendToNetListButtonHandler} />
 
         {/* Status Icon - Top Right Floating */}
         <StatusIcon info={info} />

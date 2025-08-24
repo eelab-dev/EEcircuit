@@ -465,13 +465,15 @@ const EEcircuit: React.FC = () => {
         minHeight={0}
         position="relative"
       >
-        {/* Header row with Logo, Tabs, and Buttons */}
+        {/* Header - Responsive Layout */}
+        {/* Desktop Layout: Logo | Tabs | Buttons */}
         <Flex
           direction="row"
           alignItems="center"
           justifyContent="space-between"
           flexShrink={0}
           p={2}
+          display={{ base: "none", md: "flex" }}
         >
           <Logo />
 
@@ -629,6 +631,161 @@ const EEcircuit: React.FC = () => {
             </Tooltip>
           </Flex>
         </Flex>
+
+        {/* Mobile Layout: Stacked */}
+        <Box display={{ base: "block", md: "none" }} flexShrink={0} p={2}>
+          {/* Top row: Buttons */}
+          <Flex
+            alignItems="center"
+            justifyContent="center"
+            gap={1}
+            mb={3}
+            flexWrap="wrap"
+          >
+            {/* Save File Button */}
+            <Tooltip
+              showArrow
+              content="Save complete EEcircuit file with schematic and simulation configurations"
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label="Save EEcircuit file"
+                size="sm"
+                variant="ghost"
+                onClick={handleSaveFile}
+              >
+                <Download size={16} />
+              </IconButton>
+            </Tooltip>
+
+            {/* Clear Schematic Button */}
+            <Tooltip
+              showArrow
+              content="Clear schematic"
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label="Clear schematic"
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowClearDialog(true)}
+              >
+                <RotateCw size={16} />
+              </IconButton>
+            </Tooltip>
+
+            {/* Dark Mode Toggle Button */}
+            <Tooltip
+              showArrow
+              content="Toggle light/dark mode"
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label="Toggle color mode"
+                size="sm"
+                variant="ghost"
+                onClick={toggleTheme}
+              >
+                {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+              </IconButton>
+            </Tooltip>
+
+            {/* Input Profile Toggle Button */}
+            <Tooltip
+              showArrow
+              content={
+                inputProfile === "mouse"
+                  ? "Mouse: Shift+wheel zoom, wheel pan when zoomed"
+                  : inputProfile === "trackpad"
+                    ? "Trackpad: Ctrl+scroll zoom, scroll pan when zoomed"
+                    : "Touchscreen: Pinch zoom, single-finger drag pan when zoomed"
+              }
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label={`Current input profile: ${inputProfile} - Click to cycle`}
+                size="sm"
+                variant="ghost"
+                onClick={toggleInputProfile}
+              >
+                {inputProfile === "mouse" ? (
+                  <Mouse size={16} />
+                ) : inputProfile === "trackpad" ? (
+                  <Touchpad size={16} />
+                ) : (
+                  <Smartphone size={16} />
+                )}
+              </IconButton>
+            </Tooltip>
+
+            {/* Fullscreen Button */}
+            <Tooltip
+              showArrow
+              content={fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label="Fullscreen"
+                size="sm"
+                variant="ghost"
+                onClick={fullscreenHandler}
+              >
+                {!fullscreen ? <Expand size={16} /> : <SquareX size={16} />}
+              </IconButton>
+            </Tooltip>
+
+            {/* GitHub Button */}
+            <Tooltip
+              showArrow
+              content="Visit EEcircuit on GitHub"
+              positioning={{ placement: "bottom" }}
+            >
+              <IconButton
+                aria-label="Visit EEcircuit on GitHub"
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  window.open(
+                    "https://github.com/eelab-dev/EEcircuit",
+                    "_blank"
+                  )
+                }
+              >
+                <Github size={16} />
+              </IconButton>
+            </Tooltip>
+          </Flex>
+
+          {/* Bottom row: Logo and Tabs */}
+          <Flex alignItems="center" justifyContent="center" gap={4}>
+            <Logo />
+            <Flex alignItems="center" gap={2}>
+              <Tabs.Trigger value="schematic">
+                Schematic
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                value="simulate"
+                disabled={!isSimulateTabEnabled}
+                style={{
+                  opacity: isSimulateTabEnabled ? 1 : 0.5,
+                  cursor: isSimulateTabEnabled ? "pointer" : "not-allowed",
+                }}
+              >
+                Simulate
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                value="plot"
+                disabled={!isPlotTabEnabled}
+                style={{
+                  opacity: isPlotTabEnabled ? 1 : 0.5,
+                  cursor: isPlotTabEnabled ? "pointer" : "not-allowed",
+                }}
+              >
+                Plot
+              </Tabs.Trigger>
+            </Flex>
+          </Flex>
+        </Box>
         {dragBox ? (
           <Box
             bg="blue.focusRing/80"

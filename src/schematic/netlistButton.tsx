@@ -25,7 +25,7 @@ const NetlistButton: React.FC<NetlistButtonProps> = ({ onSendToNetlist }) => {
         flexShrink={0}
         minWidth="fit-content"
       >
-        Simulate (Netlist) <ArrowBigRight size={16} />
+        Simulate <ArrowBigRight size={16} />
       </Button>
     </Box>
   );
