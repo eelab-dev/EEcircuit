@@ -15,6 +15,7 @@ import { useEventHandlers } from "./interactions/useEventHandlers";
 import PlotProgressOverlay from "../../components/PlotProgressOverlay";
 import type { AggregatedResult } from "../../simulation/resultAggregator";
 import type { ZoomController } from "./interactions/zoomController";
+import type { UnifiedLinePlot } from "webgl-plot";
 
 interface PlotCanvasProps {
   results: ResultType[];
@@ -54,6 +55,8 @@ interface PlotCanvasProps {
   onXAxisScaleChange?: ((scale: { scaleX: number; offsetX: number }) => void) | null;
   // Canvas identification for dual mode
   canvasId?: 1 | 2;
+  // Direct plotLine ref access for external control
+  plotLineRef?: React.RefObject<UnifiedLinePlot | null>;
 }
 
 const PlotCanvas: React.FC<PlotCanvasProps> = ({
@@ -77,6 +80,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   sharedXAxisScale,
   onXAxisScaleChange,
   canvasId,
+  plotLineRef: externalPlotLineRef,
 }) => {
   const inputProfile = useAppStore((state) => state.inputProfile);
   const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
@@ -285,6 +289,11 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     if (plotScalingRef) {
       plotScalingRef.current = calculateAndApplyScaling;
     }
+
+    // Set external plotLine ref for direct access from parent
+    if (externalPlotLineRef) {
+      externalPlotLineRef.current = plotLineRef.current;
+    }
   }, [
     updatePlot,
     calculateAndApplyScaling,
@@ -293,6 +302,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     zoomControllerRef,
     plotUpdateRef,
     plotScalingRef,
+    externalPlotLineRef,
   ]);
 
   // Initialize zoom

@@ -7,6 +7,7 @@ import BracketOperationSlider from "./BracketOperationSlider";
 import { useAppStore } from "../store/appStore";
 import { exportResultsToCSV } from "../utils/csvExport";
 import type { ZoomController } from "./plotcanvas/interactions/zoomController";
+import type { UnifiedLinePlot } from "webgl-plot";
 
 interface PlotProps {
   results?: ResultType[]; // Make optional since we can get it from store
@@ -84,6 +85,10 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
     sourceCanvas: 1 | 2; // Track which canvas provided the scale
     timestamp: number; // Prevent infinite loops
   } | null>(null);
+
+  // Direct refs for plotLine access in dual canvas mode
+  const canvas1PlotLineRef = React.useRef<UnifiedLinePlot | null>(null);
+  const canvas2PlotLineRef = React.useRef<UnifiedLinePlot | null>(null);
 
   // Shared zoom state for dual canvas synchronization
   const [sharedZoomState, setSharedZoomState] = React.useState<{
@@ -179,6 +184,45 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
     []
   );
 
+  // Simple direct logX toggle that updates both canvases immediately
+  const handleLogXToggle = React.useCallback(() => {
+    // Toggle the store state first
+    toggleLogX();
+    
+    // Get the new state that will be applied
+    const newIsLogX = !isLogX;
+    
+    // In dual canvas mode, directly call setLogAxis on both canvases
+    if (numCanvases === 2) {
+      if (canvas1PlotLineRef.current) {
+        try {
+          canvas1PlotLineRef.current.setLogAxis(newIsLogX, isLogY1);
+          // autoScale() is the correct procedure per webgl-plot documentation:
+          // "Auto-scale to fit all enabled lines in the current coordinate space"
+          // "Already works in the current coordinate space (linear or log)"
+          canvas1PlotLineRef.current.autoScale();
+          canvas1PlotLineRef.current.draw();
+        } catch (error) {
+          console.error('Canvas 1 logX toggle error:', error);
+        }
+      }
+      
+      if (canvas2PlotLineRef.current) {
+        try {
+          canvas2PlotLineRef.current.setLogAxis(newIsLogX, isLogY2);
+          // autoScale() is the correct procedure per webgl-plot documentation:
+          // "Auto-scale to fit all enabled lines in the current coordinate space"
+          // "Already works in the current coordinate space (linear or log)"
+          canvas2PlotLineRef.current.autoScale();
+          canvas2PlotLineRef.current.draw();
+        } catch (error) {
+          console.error('Canvas 2 logX toggle error:', error);
+        }
+      }
+    }
+    // For single canvas mode, the useEffect in usePlotCalculations will handle it
+  }, [toggleLogX, isLogX, isLogY1, isLogY2, numCanvases]);
+
   return (
     <Flex
       direction="column"
@@ -258,7 +302,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
               <Button
                 size="sm"
                 variant={isLogX ? "solid" : "outline"}
-                onClick={toggleLogX}
+                onClick={handleLogXToggle}
               >
                 Log X
               </Button>
@@ -340,6 +384,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     otherCanvasCalcScaling={canvas2PlotScalingRef}
                     sharedXAxisScale={sharedXAxisScale?.sourceCanvas === 2 ? sharedXAxisScale : null}
                     onXAxisScaleChange={handleCanvas1XAxisScaleChange}
+                    plotLineRef={canvas1PlotLineRef}
                     canvasId={1}
                   />
                 </Box>
@@ -376,6 +421,7 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
                     otherCanvasCalcScaling={canvas1PlotScalingRef}
                     sharedXAxisScale={sharedXAxisScale?.sourceCanvas === 1 ? sharedXAxisScale : null}
                     onXAxisScaleChange={handleCanvas2XAxisScaleChange}
+                    plotLineRef={canvas2PlotLineRef}
                     canvasId={2}
                   />
                 </Box>

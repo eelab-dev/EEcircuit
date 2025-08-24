@@ -194,6 +194,7 @@ export const usePlotCalculations = ({
   const isTransitioningRef = useRef(false);
   const pendingScalesRef = useRef<AxisScales | null>(null);
 
+
   // Batched axis transition handler using React.startTransition
   const handleAxisTransition = useCallback(() => {
     if (!plotLineRef.current || !glRef.current || isTransitioningRef.current) return;
@@ -233,6 +234,7 @@ export const usePlotCalculations = ({
     if (!plotLineRef.current || !glRef.current) return;
     handleAxisTransition();
   }, [isLogX, isLogY, plotLineRef.current, handleAxisTransition]);
+
 
   // Handle theme changes - update WebGL background color immediately  
   useEffect(() => {
