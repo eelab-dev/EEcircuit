@@ -203,26 +203,21 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                   justifyContent={isFullScale ? "unset" : "center"}
                   alignItems={isFullScale ? "unset" : "center"}
                 >
-                  {isFullScale ? (
-                    <div
-                      dangerouslySetInnerHTML={{ __html: svgContent }}
-                      style={{
-                        minWidth: "max-content",
-                        minHeight: "max-content",
-                      }}
-                    />
-                  ) : (
-                    <img
-                      src={svgDataUrl}
-                      alt="Schematic"
-                      style={{
-                        maxWidth: "100%",
-                        maxHeight: "100%",
-                        objectFit: "contain",
-                        display: "block",
-                      }}
-                    />
-                  )}
+                  {/* Use img element for both modes to ensure consistent SVG text rendering.
+                      dangerouslySetInnerHTML causes text scaling issues due to DOM/CSS inheritance. */}
+                  <img
+                    src={svgDataUrl}
+                    alt="Schematic"
+                    style={{
+                      maxWidth: isFullScale ? "none" : "100%",
+                      maxHeight: isFullScale ? "none" : "100%",
+                      objectFit: isFullScale ? "none" : "contain",
+                      display: "block",
+                      // For 1:1 scale, ensure image displays at its natural size
+                      width: isFullScale ? "auto" : undefined,
+                      height: isFullScale ? "auto" : undefined,
+                    }}
+                  />
                 </Box>
               )}
             </Dialog.Body>
