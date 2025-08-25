@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Button, Flex } from "@chakra-ui/react";
-import { LayoutDashboard, Cable, CirclePlus, Square, ArrowBigRight } from "lucide-react";
+import {
+  LayoutDashboard,
+  Cable,
+  CirclePlus,
+  Square,
+  ArrowBigRight,
+} from "lucide-react";
 import { bottomBarTheme } from "../styles/uiThemes";
 import { PointerInfo } from "eecircuit-schematic";
 
@@ -28,7 +34,11 @@ const getPointerIcon = (pointerInfo: PointerInfo | null) => {
   }
 };
 
-const BottomBar: React.FC<BottomBarProps> = ({ coord, pointerInfo, onSendToNetlist }) => {
+const BottomBar: React.FC<BottomBarProps> = ({
+  coord,
+  pointerInfo,
+  onSendToNetlist,
+}) => {
   const [isWideView, setIsWideView] = useState(window.innerWidth >= 768);
 
   useEffect(() => {
@@ -36,8 +46,8 @@ const BottomBar: React.FC<BottomBarProps> = ({ coord, pointerInfo, onSendToNetli
       setIsWideView(window.innerWidth >= 768);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const formatCoord = (value: number) => {
@@ -63,31 +73,30 @@ const BottomBar: React.FC<BottomBarProps> = ({ coord, pointerInfo, onSendToNetli
   };
 
   // Coordinate button component
-  const CoordButton = ({ additionalStyles = {} }: { additionalStyles?: Record<string, unknown> }) => (
-    <Button
-      {...baseButtonStyles}
-      fontFamily="mono"
-      {...additionalStyles}
-    >
+  const CoordButton = ({
+    additionalStyles = {},
+  }: {
+    additionalStyles?: Record<string, unknown>;
+  }) => (
+    <Button {...baseButtonStyles} fontFamily="mono" {...additionalStyles}>
       {`X:${formatCoord(coord.x)}, Y:${formatCoord(coord.y)}`}
     </Button>
   );
 
   // Pointer info button component
-  const PointerInfoButton = ({ additionalStyles = {} }: { additionalStyles?: Record<string, unknown> }) => (
+  const PointerInfoButton = ({
+    additionalStyles = {},
+  }: {
+    additionalStyles?: Record<string, unknown>;
+  }) =>
     pointerInfo ? (
-      <Button
-        {...baseButtonStyles}
-        gap={2}
-        {...additionalStyles}
-      >
+      <Button {...baseButtonStyles} gap={2} {...additionalStyles}>
         {getPointerIcon(pointerInfo)}
         {pointerInfo.name}
       </Button>
-    ) : null
-  );
+    ) : null;
 
-  // Simulate button component
+  // Simulate Netlist button component
   const SimulateButton = () => (
     <Button
       size="sm"
@@ -104,7 +113,8 @@ const BottomBar: React.FC<BottomBarProps> = ({ coord, pointerInfo, onSendToNetli
       minWidth="fit-content"
       pointerEvents="auto"
     >
-      Simulate <ArrowBigRight size={16} />
+      {isWideView ? "Simulate (Netlist)" : "Simulate"}
+      <ArrowBigRight size={16} />
     </Button>
   );
 
@@ -123,23 +133,23 @@ const BottomBar: React.FC<BottomBarProps> = ({ coord, pointerInfo, onSendToNetli
       {isWideView ? (
         <>
           {/* Wide view: Centered coordinate label */}
-          <CoordButton 
+          <CoordButton
             additionalStyles={{
               position: "absolute",
               left: "50%",
               transform: "translateX(-50%)",
             }}
           />
-          
+
           {/* Pointer info to the right of coord label */}
-          <PointerInfoButton 
+          <PointerInfoButton
             additionalStyles={{
               position: "absolute",
               left: "50%",
               transform: "translateX(calc(-50% + 10rem))",
             }}
           />
-          
+
           {/* Simulate button on right */}
           <SimulateButton />
         </>
@@ -147,10 +157,10 @@ const BottomBar: React.FC<BottomBarProps> = ({ coord, pointerInfo, onSendToNetli
         <>
           {/* Narrow view: Coord on left */}
           <CoordButton />
-          
+
           {/* Pointer info in center */}
           <PointerInfoButton />
-          
+
           {/* Simulate button on right */}
           <SimulateButton />
         </>
