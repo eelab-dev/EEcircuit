@@ -10,7 +10,10 @@ import {
   Menu,
 } from "@chakra-ui/react";
 import { X, ZoomIn, ZoomOut, Download, ChevronDown } from "lucide-react";
-import { convertSvgToPdf } from "../utils/svgToPdf";
+import {
+  convertSvgToPdfFromSimpleStructure,
+  type SimpleSvgElement,
+} from "svg-to-pdf";
 import { dialogTheme } from "../styles/uiThemes";
 
 type ExportImageDialogProps = {
@@ -101,17 +104,64 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
     img.src = svgDataUrl;
   };
 
+  // Function to adapt a DOM Element to the SimpleSvgElement structure
+  const adaptDomToSimpleSvgStructure = (element: Element): SimpleSvgElement => {
+    const attributes: { [key: string]: string } = {};
+    for (const attr of Array.from(element.attributes)) {
+      attributes[attr.name] = attr.value;
+    }
+
+    const children: SimpleSvgElement[] = [];
+    for (const childNode of Array.from(element.children)) {
+      children.push(adaptDomToSimpleSvgStructure(childNode as Element));
+    }
+
+    // Helper to get attribute, mirroring SimpleSvgElement's getAttribute
+    const getAttribute = (name: string): string | null => {
+      return element.getAttribute(name);
+    };
+
+    return {
+      tagName: element.tagName,
+      attributes,
+      children,
+      textContent: element.textContent,
+      getAttribute, // Provide the getAttribute method
+    };
+  };
+
   const handleDownloadPDF = async () => {
     if (!svgContent) return;
 
     try {
-      console.log("Starting PDF generation...");
+      console.log("Starting PDF generation using svg-to-pdf library...");
 
-      // Use the new utility function to convert SVG to PDF
-      const pdfBytes = await convertSvgToPdf(svgContent, {
+      // Parse SVG string using browser's DOMParser
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgContent, "image/svg+xml");
+      const svgElementFromDom = doc.documentElement;
+
+      if (
+        !svgElementFromDom ||
+        svgElementFromDom.tagName.toLowerCase() !== "svg"
+      ) {
+        throw new Error(
+          "Could not find SVG root element in parsed DOM document."
+        );
+      }
+
+      // Adapt the DOM structure to SimpleSvgElement structure
+      console.log("Adapting DOM SVG structure to simple structure...");
+      const simpleSvg = adaptDomToSimpleSvgStructure(svgElementFromDom);
+      console.log("Adaptation complete.");
+
+      // DOM cleanup is handled automatically by browser's garbage collection
+
+      console.log("Converting SVG to PDF using simple structure...");
+      const pdfBytes = await convertSvgToPdfFromSimpleStructure(simpleSvg, {
         backgroundColor: "white",
-        scale: 1,
       });
+      console.log("SVG to PDF conversion successful.");
 
       // Download the PDF
       const blob = new Blob([new Uint8Array(pdfBytes)], {
