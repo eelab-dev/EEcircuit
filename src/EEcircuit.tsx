@@ -297,8 +297,6 @@ const EEcircuit: React.FC = () => {
 
         // Restore simulation configurations if they exist
         if (parsedContent.simulations && parsedContent.simulations.length > 0) {
-          // For now, load the first simulation configuration as the active one
-          // In the future, this could be enhanced to load all configurations
           const firstSimConfig = parsedContent.simulations[0];
           if (firstSimConfig) {
             // Use the store actions to update simulation state
@@ -307,14 +305,22 @@ const EEcircuit: React.FC = () => {
               setSimulationConfig,
               setAllSimulationConfigs,
             } = useAppStore.getState();
+            
+            // First load all configurations
+            setAllSimulationConfigs(parsedContent.simulations);
+            
+            // Then select the first one as active
             setSelectedSimType(firstSimConfig.type);
             setSimulationConfig(firstSimConfig);
-            setAllSimulationConfigs(parsedContent.simulations);
           }
         } else {
           // Reset simulation config if no simulation data in file
-          const { setSelectedSimType, setSimulationConfig } =
-            useAppStore.getState();
+          const { 
+            setSelectedSimType, 
+            setSimulationConfig,
+            setAllSimulationConfigs
+          } = useAppStore.getState();
+          setAllSimulationConfigs([]);
           setSimulationConfig(undefined);
           setSelectedSimType("None");
         }

@@ -162,22 +162,19 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
     }
   }, [initialData, getInitialFormData]);
 
-  // Send initial configuration on mount if data exists
+  // Send configuration when formData changes (mount + initialData updates)
   useEffect(() => {
-    if (validateConfig(formData)) {
-      const configString = generateConfigString(formData);
-      onConfigChange(configString);
+    // Always generate config string (like handleInputChange does)
+    const configString = generateConfigString(formData);
+    onConfigChange(configString);
 
-      if (onFullConfigChange) {
-        const name = initialData && 'name' in initialData ? initialData.name : undefined;
-        const fullConfig = generateFullConfig(formData, name);
-        onFullConfigChange(fullConfig);
-      }
-    } else {
-      // Send empty string if config is invalid
-      onConfigChange("");
+    // Only send full config when valid (like handleInputChange does)
+    if (onFullConfigChange && validateConfig(formData)) {
+      const name = initialData && 'name' in initialData ? initialData.name : undefined;
+      const fullConfig = generateFullConfig(formData, name);
+      onFullConfigChange(fullConfig);
     }
-  }, []); // Only run on mount
+  }, [formData]); // Run when formData changes
 
   return {
     formData,

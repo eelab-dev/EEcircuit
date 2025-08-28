@@ -37,6 +37,7 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
 }) => {
   // Get state and actions from Zustand store
   const selectedSimType = useAppStore((state) => state.selectedSimType);
+  const simulationConfig = useAppStore((state) => state.simulationConfig);
   const allSimulationConfigs = useAppStore(
     (state) => state.allSimulationConfigs
   );
@@ -103,6 +104,36 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
         return false;
     }
   };
+
+  // Synchronize selectedConfigIndex with store state when configs are loaded from file
+  React.useEffect(() => {
+    if (allSimulationConfigs.length > 0 && simulationConfig && selectedConfigIndex === -1) {
+      // Find the index of the currently selected config in the store
+      const currentConfigIndex = allSimulationConfigs.findIndex((config) => {
+        if (config.type === "None" || simulationConfig.type === "None") return false;
+        if (config.type !== simulationConfig.type) return false;
+        
+        // For more robust matching, check if this is the same config object
+        if (config === simulationConfig) return true;
+        
+        // Fallback: match by name and type
+        if ("name" in config && "name" in simulationConfig) {
+          return config.name === simulationConfig.name;
+        }
+        
+        return false;
+      });
+      
+      if (currentConfigIndex >= 0) {
+        setSelectedConfigIndex(currentConfigIndex);
+        // Trigger config string update
+        onFullConfigChange(simulationConfig);
+      }
+    } else if (selectedSimType === "None") {
+      // Reset to -1 when "None" is selected
+      setSelectedConfigIndex(-1);
+    }
+  }, [allSimulationConfigs, simulationConfig, selectedConfigIndex, selectedSimType, onFullConfigChange]);
 
   // Function to handle config selection from dropdown
   const handleConfigSelection = (configIndex: number) => {
