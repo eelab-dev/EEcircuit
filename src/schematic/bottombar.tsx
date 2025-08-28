@@ -92,7 +92,7 @@ const BottomBar: React.FC<BottomBarProps> = ({
     pointerInfo ? (
       <Button {...baseButtonStyles} gap={2} {...additionalStyles}>
         {getPointerIcon(pointerInfo)}
-        {pointerInfo.name}
+        {`${pointerInfo.name} - ${pointerInfo.uid}`}
       </Button>
     ) : null;
 
