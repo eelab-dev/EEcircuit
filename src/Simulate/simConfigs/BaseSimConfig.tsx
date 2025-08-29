@@ -133,20 +133,23 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
 
   // Handle input changes with real-time updates
   const handleInputChange = useCallback((field: string, value: string | boolean | number) => {
-    const newFormData = { ...formData, [field]: value };
-    setFormData(newFormData);
+    setFormData(currentFormData => {
+      const newFormData = { ...currentFormData, [field]: value };
 
-    // Generate and send configuration string immediately
-    const configString = generateConfigString(newFormData);
-    onConfigChange(configString);
+      // Generate and send configuration string immediately
+      const configString = generateConfigString(newFormData);
+      onConfigChange(configString);
 
-    // Send full configuration if valid and callback provided
-    if (onFullConfigChange && validateConfig(newFormData)) {
-      const name = initialData && 'name' in initialData ? initialData.name : undefined;
-      const fullConfig = generateFullConfig(newFormData, name);
-      onFullConfigChange(fullConfig);
-    }
-  }, [formData, generateConfigString, generateFullConfig, validateConfig, onConfigChange, onFullConfigChange, initialData]);
+      // Send full configuration if callback provided (regardless of validation for AC parameter addition)
+      if (onFullConfigChange) {
+        const name = initialData && 'name' in initialData ? initialData.name : undefined;
+        const fullConfig = generateFullConfig(newFormData, name);
+        onFullConfigChange(fullConfig);
+      }
+
+      return newFormData;
+    });
+  }, [generateConfigString, generateFullConfig, onConfigChange, onFullConfigChange, initialData]);
 
   // Update form data when initialData changes (config switching)
   useEffect(() => {
@@ -163,30 +166,15 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
         }
       }
       
-      // Only update if data actually changed to avoid unnecessary re-renders
-      const isDataDifferent = Object.keys(newFormData).some(
-        key => newFormData[key] !== formData[key]
-      );
-      
-      if (isDataDifferent) {
-        setFormData(newFormData);
-      }
+      setFormData(newFormData);
     }
   }, [initialData, netlist, getInitialFormData]);
 
-  // Send configuration when formData changes (mount + initialData updates)
+  // Send config string whenever formData changes
   useEffect(() => {
-    // Always generate config string (like handleInputChange does)
     const configString = generateConfigString(formData);
     onConfigChange(configString);
-
-    // Only send full config when valid (like handleInputChange does)
-    if (onFullConfigChange && validateConfig(formData)) {
-      const name = initialData && 'name' in initialData ? initialData.name : undefined;
-      const fullConfig = generateFullConfig(formData, name);
-      onFullConfigChange(fullConfig);
-    }
-  }, [formData]); // Run when formData changes
+  }, [formData, generateConfigString, onConfigChange]);
 
   // Detect sources from netlist
   const detectedSources = netlist ? detectSourcesFromNetlist(netlist) : [];

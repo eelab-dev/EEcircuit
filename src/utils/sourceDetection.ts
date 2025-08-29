@@ -93,3 +93,50 @@ export function getDefaultSource(netlist: string | undefined): string {
   const voltageSource = sources.find(source => /^[Vv]/.test(source));
   return voltageSource || sources[0] || '';
 }
+
+/**
+ * Adds "AC 1" parameter to a specific source in the netlist for AC analysis
+ * 
+ * @param netlist - The SPICE netlist string
+ * @param sourceName - The specific source to modify (e.g., "Vin", "V1")
+ * @returns Modified netlist with "AC 1" added to the specified source
+ */
+export function addAcParameterToSource(netlist: string | undefined, sourceName: string): string {
+  if (!netlist || typeof netlist !== 'string' || !sourceName) {
+    return netlist || '';
+  }
+
+  const lines = netlist.split('\n');
+  const modifiedLines = lines.map(line => {
+    const trimmedLine = line.trim();
+    
+    // Skip empty lines and comments
+    if (!trimmedLine || trimmedLine.startsWith('*') || trimmedLine.startsWith('.')) {
+      return line;
+    }
+
+    // Split line into components (space-separated)
+    const parts = trimmedLine.split(/\s+/);
+    if (parts.length === 0) {
+      return line;
+    }
+
+    const componentName = parts[0];
+    
+    // Only modify the specified source
+    if (componentName && componentName.toLowerCase() === sourceName.toLowerCase()) {
+      // Check if AC parameter already exists (case-insensitive)
+      const hasAcParam = parts.some(part => part.toLowerCase() === 'ac');
+      
+      if (!hasAcParam) {
+        // Preserve original indentation by finding the start of content
+        const originalIndent = line.substring(0, line.indexOf(trimmedLine));
+        return originalIndent + trimmedLine + ' AC 1';
+      }
+    }
+
+    return line;
+  });
+
+  return modifiedLines.join('\n');
+}
