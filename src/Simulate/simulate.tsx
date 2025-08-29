@@ -61,11 +61,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     // This regex matches numbers (including decimals) followed by "M" at word boundaries
     const correctedValue = value.replace(/(\d+(?:\.\d+)?)\s*M\b/g, "$1Meg");
 
-    // Debug logging to track corrections being made
-    if (correctedValue !== value) {
-      console.log(`[ngspice correction] "${value}" → "${correctedValue}"`);
-    }
-
     return correctedValue;
   };
 
@@ -90,19 +85,24 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
   // Update netlist when simulation type or configuration changes
   useEffect(() => {
-    
     if (selectedSimType === "None") {
       setNetListToSim(netList);
       return;
     } else {
       const saveCommand = saveCommandConfig(toBePlotted);
-      
+
       // For AC simulations, add "AC 1" to the selected source
       let baseNetList = netList;
-      if (selectedSimType === "AC" && simulationConfig && simulationConfig.type === "AC" && 'source' in simulationConfig && simulationConfig.source) {
+      if (
+        selectedSimType === "AC" &&
+        simulationConfig &&
+        simulationConfig.type === "AC" &&
+        "source" in simulationConfig &&
+        simulationConfig.source
+      ) {
         baseNetList = addAcParameterToSource(netList, simulationConfig.source);
       }
-      
+
       const newNetList =
         baseNetList +
         "\n\n" +
@@ -113,7 +113,13 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         ".end";
       setNetListToSim(newNetList);
     }
-  }, [netList, simCommandString, selectedSimType, simulationConfig, toBePlotted]);
+  }, [
+    netList,
+    simCommandString,
+    selectedSimType,
+    simulationConfig,
+    toBePlotted,
+  ]);
 
   // Handler for string-based config changes from config components
   const handleStringConfigChange = React.useCallback((configString: string) => {
@@ -129,7 +135,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     const { setSimulationConfig } = useAppStore.getState();
     setSimulationConfig(config);
   }, []);
-
 
   const handleSimRun = async () => {
     try {

@@ -136,16 +136,27 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
     setFormData(currentFormData => {
       const newFormData = { ...currentFormData, [field]: value };
 
-      // Generate and send configuration string immediately
-      const configString = generateConfigString(newFormData);
-      onConfigChange(configString);
+      // CRITICAL: Defer callback execution to prevent React warning
+      // 
+      // React Rule: Cannot update parent component state while child is rendering
+      // Problem: handleInputChange can be called during user interactions that happen
+      //          while the component is still in its render cycle
+      // Solution: setTimeout(0) pushes callbacks to next event loop tick, ensuring
+      //          they execute AFTER the current render phase is complete
+      // 
+      // This is the correct use of setTimeout for React - not as an initialization hack,
+      // but to properly defer callback execution until render is finished
+      setTimeout(() => {
+        const configString = generateConfigString(newFormData);
+        onConfigChange(configString);
 
-      // Send full configuration if callback provided (regardless of validation for AC parameter addition)
-      if (onFullConfigChange) {
-        const name = initialData && 'name' in initialData ? initialData.name : undefined;
-        const fullConfig = generateFullConfig(newFormData, name);
-        onFullConfigChange(fullConfig);
-      }
+        // Send full configuration if callback provided (regardless of validation for AC parameter addition)
+        if (onFullConfigChange) {
+          const name = initialData && 'name' in initialData ? initialData.name : undefined;
+          const fullConfig = generateFullConfig(newFormData, name);
+          onFullConfigChange(fullConfig);
+        }
+      }, 0);
 
       return newFormData;
     });
@@ -167,14 +178,13 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
       }
       
       setFormData(newFormData);
+      
+      // Send config string when parent changes initialData (config loading/switching)
+      // No setTimeout needed here - useEffect already runs after render phase
+      const configString = generateConfigString(newFormData);
+      onConfigChange(configString);
     }
-  }, [initialData, netlist, getInitialFormData]);
-
-  // Send config string whenever formData changes
-  useEffect(() => {
-    const configString = generateConfigString(formData);
-    onConfigChange(configString);
-  }, [formData, generateConfigString, onConfigChange]);
+  }, [initialData, netlist, getInitialFormData, generateConfigString, onConfigChange]);
 
   // Detect sources from netlist
   const detectedSources = netlist ? detectSourcesFromNetlist(netlist) : [];

@@ -128,7 +128,6 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
         
         if (currentConfigIndex >= 0) {
           setSelectedConfigIndex(currentConfigIndex);
-          // Trigger config string update
           onFullConfigChange(simulationConfig);
         }
       } else if (!simulationConfig && selectedSimType === "None") {
