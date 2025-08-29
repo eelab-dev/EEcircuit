@@ -10,13 +10,11 @@ import {
   Flex,
   Tabs,
   Text,
-  IconButton,
   TabsValueChangeDetails,
   Spinner,
 } from "@chakra-ui/react";
 
 import { Toaster } from "./components/ui/toaster.tsx";
-import { Tooltip } from "./components/ui/tooltip.tsx";
 
 import Schematic from "./schematic/schematic.tsx";
 import SimulationEditor from "./Simulate/simulate.tsx";
@@ -28,23 +26,12 @@ import {
   Schematic as SchematicType,
 } from "eecircuit-schematic";
 import { EEcircuitFile } from "./types/commonTypes.ts";
-import {
-  Mouse,
-  Touchpad,
-  Download,
-  Smartphone,
-  Sun,
-  Moon,
-  Github,
-  Expand,
-  SquareX,
-  RotateCw,
-} from "lucide-react";
 import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
 import { dialogTheme } from "./styles/uiThemes.ts";
 import { handleFullscreen } from "./utils/fullscreenUtils.tsx";
 import ClearSchematicDialog from "./schematic/ClearSchematicDialog";
+import HeaderButtons from "./components/HeaderButtons";
 
 type MainTabsValue = "schematic" | "simulate" | "plot";
 
@@ -305,20 +292,20 @@ const EEcircuit: React.FC = () => {
               setSimulationConfig,
               setAllSimulationConfigs,
             } = useAppStore.getState();
-            
+
             // First load all configurations
             setAllSimulationConfigs(parsedContent.simulations);
-            
+
             // Then select the first one as active
             setSelectedSimType(firstSimConfig.type);
             setSimulationConfig(firstSimConfig);
           }
         } else {
           // Reset simulation config if no simulation data in file
-          const { 
-            setSelectedSimType, 
+          const {
+            setSelectedSimType,
             setSimulationConfig,
-            setAllSimulationConfigs
+            setAllSimulationConfigs,
           } = useAppStore.getState();
           setAllSimulationConfigs([]);
           setSimulationConfig(undefined);
@@ -513,129 +500,16 @@ const EEcircuit: React.FC = () => {
           </Flex>
 
           {/* Buttons on the right */}
-          <Flex alignItems="center" gap={2}>
-            {/* Save File Button */}
-            <Tooltip
-              showArrow
-              content="Save complete EEcircuit file with schematic and simulation configurations"
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label="Save EEcircuit file"
-                size="sm"
-                variant="ghost"
-                onClick={handleSaveFile}
-              >
-                <Download size={16} />
-              </IconButton>
-            </Tooltip>
-
-            {/* Clear Schematic Button */}
-            <Tooltip
-              showArrow
-              content="Clear schematic"
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label="Clear schematic"
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowClearDialog(true)}
-              >
-                <RotateCw size={16} />
-              </IconButton>
-            </Tooltip>
-
-            {/* Dark Mode Toggle Button */}
-            <Tooltip
-              showArrow
-              content="Toggle light/dark mode"
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label="Toggle color mode"
-                size="sm"
-                variant="ghost"
-                onClick={toggleTheme}
-              >
-                {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
-              </IconButton>
-            </Tooltip>
-
-            {/* Input Profile Toggle Button */}
-            <Tooltip
-              showArrow
-              content={
-                inputProfile === "mouse"
-                  ? "Mouse: Shift+wheel zoom, wheel pan when zoomed"
-                  : inputProfile === "trackpad"
-                    ? "Trackpad: Ctrl+scroll zoom, scroll pan when zoomed"
-                    : "Touchscreen: Pinch zoom, single-finger drag pan when zoomed"
-              }
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label={`Current input profile: ${inputProfile} - Click to cycle`}
-                size="sm"
-                variant="ghost"
-                onClick={toggleInputProfile}
-              >
-                {inputProfile === "mouse" ? (
-                  <Mouse size={16} />
-                ) : inputProfile === "trackpad" ? (
-                  <Touchpad size={16} />
-                ) : (
-                  <Smartphone size={16} />
-                )}
-              </IconButton>
-            </Tooltip>
-
-            {/* Fullscreen Button */}
-            <Tooltip
-              showArrow
-              content={fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label="Fullscreen"
-                size="sm"
-                variant="ghost"
-                onClick={fullscreenHandler}
-              >
-                {!fullscreen ? <Expand size={16} /> : <SquareX size={16} />}
-              </IconButton>
-            </Tooltip>
-
-            {/* Subtle divider */}
-            <Box
-              width="1px"
-              height="20px"
-              bg="gray.300"
-              _dark={{ bg: "gray.600" }}
-              mx={1}
-            />
-
-            {/* GitHub Button */}
-            <Tooltip
-              showArrow
-              content="Visit EEcircuit on GitHub"
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label="Visit EEcircuit on GitHub"
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  window.open(
-                    "https://github.com/eelab-dev/EEcircuit",
-                    "_blank"
-                  )
-                }
-              >
-                <Github size={16} />
-              </IconButton>
-            </Tooltip>
-          </Flex>
+          <HeaderButtons
+            handleSaveFile={handleSaveFile}
+            setShowClearDialog={setShowClearDialog}
+            isDarkMode={isDarkMode}
+            toggleTheme={toggleTheme}
+            inputProfile={inputProfile}
+            toggleInputProfile={toggleInputProfile}
+            fullscreen={fullscreen}
+            fullscreenHandler={fullscreenHandler}
+          />
         </Flex>
 
         {/* Mobile Layout: Stacked */}
@@ -648,127 +522,23 @@ const EEcircuit: React.FC = () => {
             mb={3}
             flexWrap="wrap"
           >
-            {/* Save File Button */}
-            <Tooltip
-              showArrow
-              content="Save complete EEcircuit file with schematic and simulation configurations"
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label="Save EEcircuit file"
-                size="sm"
-                variant="ghost"
-                onClick={handleSaveFile}
-              >
-                <Download size={16} />
-              </IconButton>
-            </Tooltip>
-
-            {/* Clear Schematic Button */}
-            <Tooltip
-              showArrow
-              content="Clear schematic"
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label="Clear schematic"
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowClearDialog(true)}
-              >
-                <RotateCw size={16} />
-              </IconButton>
-            </Tooltip>
-
-            {/* Dark Mode Toggle Button */}
-            <Tooltip
-              showArrow
-              content="Toggle light/dark mode"
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label="Toggle color mode"
-                size="sm"
-                variant="ghost"
-                onClick={toggleTheme}
-              >
-                {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
-              </IconButton>
-            </Tooltip>
-
-            {/* Input Profile Toggle Button */}
-            <Tooltip
-              showArrow
-              content={
-                inputProfile === "mouse"
-                  ? "Mouse: Shift+wheel zoom, wheel pan when zoomed"
-                  : inputProfile === "trackpad"
-                    ? "Trackpad: Ctrl+scroll zoom, scroll pan when zoomed"
-                    : "Touchscreen: Pinch zoom, single-finger drag pan when zoomed"
-              }
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label={`Current input profile: ${inputProfile} - Click to cycle`}
-                size="sm"
-                variant="ghost"
-                onClick={toggleInputProfile}
-              >
-                {inputProfile === "mouse" ? (
-                  <Mouse size={16} />
-                ) : inputProfile === "trackpad" ? (
-                  <Touchpad size={16} />
-                ) : (
-                  <Smartphone size={16} />
-                )}
-              </IconButton>
-            </Tooltip>
-
-            {/* Fullscreen Button */}
-            <Tooltip
-              showArrow
-              content={fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label="Fullscreen"
-                size="sm"
-                variant="ghost"
-                onClick={fullscreenHandler}
-              >
-                {!fullscreen ? <Expand size={16} /> : <SquareX size={16} />}
-              </IconButton>
-            </Tooltip>
-
-            {/* GitHub Button */}
-            <Tooltip
-              showArrow
-              content="Visit EEcircuit on GitHub"
-              positioning={{ placement: "bottom" }}
-            >
-              <IconButton
-                aria-label="Visit EEcircuit on GitHub"
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  window.open(
-                    "https://github.com/eelab-dev/EEcircuit",
-                    "_blank"
-                  )
-                }
-              >
-                <Github size={16} />
-              </IconButton>
-            </Tooltip>
+            <HeaderButtons
+              handleSaveFile={handleSaveFile}
+              setShowClearDialog={setShowClearDialog}
+              isDarkMode={isDarkMode}
+              toggleTheme={toggleTheme}
+              inputProfile={inputProfile}
+              toggleInputProfile={toggleInputProfile}
+              fullscreen={fullscreen}
+              fullscreenHandler={fullscreenHandler}
+            />
           </Flex>
 
           {/* Bottom row: Logo and Tabs */}
           <Flex alignItems="center" justifyContent="center" gap={4}>
             <Logo />
             <Flex alignItems="center" gap={2}>
-              <Tabs.Trigger value="schematic">
-                Schematic
-              </Tabs.Trigger>
+              <Tabs.Trigger value="schematic">Schematic</Tabs.Trigger>
               <Tabs.Trigger
                 value="simulate"
                 disabled={!isSimulateTabEnabled}
@@ -873,16 +643,6 @@ const EEcircuit: React.FC = () => {
 
         <Tabs.Content value="plot" flex={1} minHeight={0}>
           <Plot results={useAppStore.getState().results} />
-          {/* <PlotArray
-              resultArray={resultArray}
-              displayData={displayData}
-              colorMode={colorMode}
-              sweep={sweep}
-              info={info}
-              progress={progress}
-              threadCount={threadCount}
-              setThreadCount={setThreadCountNew}
-            /> */}
         </Tabs.Content>
       </Tabs.Root>
 
