@@ -1,9 +1,17 @@
 import { useState, useEffect, useRef, RefObject } from "react";
 import { ResultType } from "eecircuit-engine";
-import { LineConfig, WebglLinePlot, WebglPolygonPlot, UnifiedLinePlot } from "webgl-plot";
+import {
+  LineConfig,
+  WebglLinePlot,
+  WebglPolygonPlot,
+  UnifiedLinePlot,
+} from "webgl-plot";
 import { LINE_THICKNESS } from "../styling/lineThickness";
 import { useAppStore } from "../../../store/appStore";
-import { convertDataToDisplayCoordinates } from "../utils/coordinateUtils";
+import {
+  convertDataToDisplayCoordinates,
+  convertLinearToLogSpace,
+} from "../utils/coordinateUtils";
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -14,26 +22,26 @@ type ExtendedLineConfig = LineConfig & {
 
 /**
  * HIGH-PERFORMANCE CROSSHAIR SYSTEM WITH DUAL CANVAS SYNCHRONIZATION
- * 
+ *
  * This module implements a high-performance crosshair system optimized for real-time
  * mouse tracking at maximum FPS. The crosshair uses webgl-plot lines for efficient
  * rendering with minimal React overhead.
- * 
+ *
  * PERFORMANCE OPTIMIZATIONS:
  * - webgl-plot lines updated directly via updateLinePoints() - no React re-renders
  * - Crosshair coordinates stored in ref to avoid React state updates
  * - Direct DOM manipulation for coordinate display (no React state changes)
  * - Mouse move events bypass React updatePlot() calls for crosshair-only updates
  * - Optimized for smooth 60+ FPS crosshair movement without throttling
- * 
+ *
  * DUAL CANVAS CURSOR SYNCHRONIZATION:
  * When the user moves the cursor in either the top or bottom plot, both cursors sync
  * their X coordinates (time/frequency) while maintaining independent Y coordinates.
- * 
+ *
  * SIMPLIFIED SYNCHRONIZATION APPROACH:
  * Since both canvases have identical X-axis scales (enforced by usePlotCalculations validation),
  * coordinates can be shared directly in data space without complex conversions.
- * 
+ *
  * How cursor sync works:
  * 1. Parent Plot component maintains shared state: sharedCursorX, sharedCursorVisible
  * 2. Each PlotCanvas receives sync props: sharedCursorX, onCursorXChange, sharedCursorVisible, onCursorVisibilityChange
@@ -45,7 +53,7 @@ type ExtendedLineConfig = LineConfig & {
  * 4. Parent updates sharedCursorX state, triggering props change in Canvas B
  * 5. Canvas B's useEffect detects sharedCursorX change and uses data coordinate directly
  * 6. onRedrawNeeded() forces webgl redraw to show the synchronized cursor
- * 
+ *
  * Key implementation details:
  * - X coordinates shared as data coordinates directly (no conversion)
  * - Y positions remain canvas-specific and independent
@@ -54,7 +62,7 @@ type ExtendedLineConfig = LineConfig & {
  * - Single canvas mode ignores sync props and works independently
  * - Crosshair coordinates stored in crosshairCoordsRef to avoid React state
  * - Coordinate display updated via direct textContent manipulation
- * 
+ *
  * Future developers: If modifying this behavior, ensure that:
  * - Cursor visibility is shared between canvases (both show/hide together)
  * - X coordinate sharing doesn't interfere with individual canvas scaling
@@ -110,7 +118,7 @@ export const useCrosshair = ({
   const [localShowCrosshair, setLocalShowCrosshair] = useState(false);
   const lastSyncedX = useRef<number | null>(null);
   const crosshairLinesInitialized = useRef<boolean>(false);
-  
+
   // Get log axis state from store
   const isLogX = useAppStore((state) => state.isLogX);
   const isLogY = useAppStore((state) => {
@@ -122,17 +130,26 @@ export const useCrosshair = ({
       return state.isLogY; // Single canvas mode
     }
   });
-  
+
   // Use shared cursor visibility in both single and dual canvas modes
-  const showCrosshair = sharedCursorVisible !== undefined ? sharedCursorVisible : localShowCrosshair;
-  const setShowCrosshair = sharedCursorVisible !== undefined ? onCursorVisibilityChange! : setLocalShowCrosshair;
+  const showCrosshair =
+    sharedCursorVisible !== undefined
+      ? sharedCursorVisible
+      : localShowCrosshair;
+  const setShowCrosshair =
+    sharedCursorVisible !== undefined
+      ? onCursorVisibilityChange!
+      : setLocalShowCrosshair;
   const [crosshairSnapToLines, setCrosshairSnapToLines] = useState(false);
 
   /**
    * Convert mouse coordinates to data coordinates considering log spaces
    * Uses webgl-plot's enhanced coordinate-space aware API to handle log transformations
    */
-  const convertMouseToDataCoordinates = (mouseNdcX: number, mouseNdcY: number) => {
+  const convertMouseToDataCoordinates = (
+    mouseNdcX: number,
+    mouseNdcY: number
+  ) => {
     if (!plotLineRef.current) {
       // Fallback to manual calculation if plotLineRef is not available
       const axisScales = getAxisScales();
@@ -194,12 +211,15 @@ export const useCrosshair = ({
         crosshairRef.current.initLines([]);
         crosshairLinesInitialized.current = false;
       }
-      
+
       // Also disable snap circle when crosshair is hidden
       if (snapCircleRef.current) {
-        snapCircleRef.current.setPolygonEnabled(0, showCrosshair && crosshairSnapToLines);
+        snapCircleRef.current.setPolygonEnabled(
+          0,
+          showCrosshair && crosshairSnapToLines
+        );
       }
-      
+
       // Use lightweight redraw for crosshair visibility changes
       if (onRedrawNeeded) {
         onRedrawNeeded();
@@ -211,7 +231,7 @@ export const useCrosshair = ({
   // and trigger re-initialization if crosshair should be visible
   useEffect(() => {
     crosshairLinesInitialized.current = false;
-    
+
     // If crosshair should be visible, trigger re-initialization
     if (showCrosshair && crosshairRef.current) {
       // Use a microtask to ensure the reset happens first
@@ -233,7 +253,7 @@ export const useCrosshair = ({
           ];
           crosshairRef.current.initLines(crosshairLines);
           crosshairLinesInitialized.current = true;
-          
+
           if (onRedrawNeeded) {
             onRedrawNeeded();
           }
@@ -241,7 +261,7 @@ export const useCrosshair = ({
       });
     }
   }, [crosshairRef.current]);
-  
+
   // Store crosshair coordinates in ref to avoid React re-renders
   const crosshairCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
@@ -251,24 +271,36 @@ export const useCrosshair = ({
     if (selectedVariables.length === 0) {
       return;
     }
-    
-    if (sharedCursorX !== null && sharedCursorX !== undefined && crosshairRef.current && showCrosshair && crosshairLinesInitialized.current && sharedCursorX !== lastSyncedX.current) {
+
+    if (
+      sharedCursorX !== null &&
+      sharedCursorX !== undefined &&
+      crosshairRef.current &&
+      showCrosshair &&
+      crosshairLinesInitialized.current &&
+      sharedCursorX !== lastSyncedX.current
+    ) {
       lastSyncedX.current = sharedCursorX;
-      
+
       // SIMPLIFIED: Use shared data coordinate directly since X-axis scales are identical
       // The incoming sharedCursorX is already in the correct data coordinate space
       const dataSpaceX = sharedCursorX;
-      
+
       const currentAxisScales = getAxisScales();
-      
+
       // CRITICAL FIX: Handle invalid axis scales during sync (same as main crosshair logic)
-      const hasValidScales = !(currentAxisScales.scaleX === 1 && currentAxisScales.scaleY === 1 && 
-                              currentAxisScales.offsetX === -1 && currentAxisScales.offsetY === -1);
+      const hasValidScales = !(
+        currentAxisScales.scaleX === 1 &&
+        currentAxisScales.scaleY === 1 &&
+        currentAxisScales.offsetX === -1 &&
+        currentAxisScales.offsetY === -1
+      );
 
       let sharedNdcX: number;
       if (hasValidScales) {
         // Use normal coordinate conversion when scales are valid
-        sharedNdcX = dataSpaceX * currentAxisScales.scaleX + currentAxisScales.offsetX;
+        sharedNdcX =
+          dataSpaceX * currentAxisScales.scaleX + currentAxisScales.offsetX;
       } else {
         // When axis scales are invalid, estimate NDC position based on canvas bounds
         // This provides approximate positioning until valid scales are available
@@ -281,11 +313,11 @@ export const useCrosshair = ({
           sharedNdcX = 0; // Fallback to center
         }
       }
-      
+
       // Update vertical line to shared X position (lines are guaranteed to be initialized)
       const verticalPoints = new Float32Array([sharedNdcX, -1, sharedNdcX, 1]);
       crosshairRef.current.updateLinePoints(1, verticalPoints);
-      
+
       // Use lightweight redraw for cursor sync
       if (onRedrawNeeded) {
         onRedrawNeeded();
@@ -295,7 +327,13 @@ export const useCrosshair = ({
 
   // Update crosshair position - can snap to nearest plot line or move freely
   const updateCrosshair = (mouseX: number, mouseY: number) => {
-    if (!crosshairRef.current || !canvasRef.current || !showCrosshair || !crosshairLinesInitialized.current) return;
+    if (
+      !crosshairRef.current ||
+      !canvasRef.current ||
+      !showCrosshair ||
+      !crosshairLinesInitialized.current
+    )
+      return;
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -307,38 +345,45 @@ export const useCrosshair = ({
     // CRITICAL FIX: Check if axis scales are valid/meaningful
     // Default/invalid scales have offsetX=-1, offsetY=-1 which breaks coordinate conversion
     const currentAxisScales = getAxisScales();
-    const hasValidScales = !(currentAxisScales.scaleX === 1 && currentAxisScales.scaleY === 1 && 
-                            currentAxisScales.offsetX === -1 && currentAxisScales.offsetY === -1);
+    const hasValidScales = !(
+      currentAxisScales.scaleX === 1 &&
+      currentAxisScales.scaleY === 1 &&
+      currentAxisScales.offsetX === -1 &&
+      currentAxisScales.offsetY === -1
+    );
 
     if (!hasValidScales) {
       // Use direct NDC coordinates for positioning when axis scales are invalid
       const horizontalPoints = new Float32Array([-1, mouseNdcY, 1, mouseNdcY]);
       const verticalPoints = new Float32Array([mouseNdcX, -1, mouseNdcX, 1]);
-      
+
       crosshairRef.current.updateLinePoints(0, horizontalPoints);
       crosshairRef.current.updateLinePoints(1, verticalPoints);
-      
+
       // Update snap circle if in snap mode
       if (snapCircleRef.current) {
         const rect = canvasRef.current.getBoundingClientRect();
         const aspectRatio = rect.width / rect.height;
-        
+
         let scaleX = 1;
         let scaleY = 1;
-        
+
         if (aspectRatio > 1) {
           scaleX = 1 / aspectRatio;
         } else {
           scaleY = aspectRatio;
         }
-        
+
         snapCircleRef.current.updatePolygonTransform(
           0,
           [scaleX, scaleY],
           [mouseNdcX, mouseNdcY]
         );
-        
-        snapCircleRef.current.setPolygonEnabled(0, showCrosshair && crosshairSnapToLines);
+
+        snapCircleRef.current.setPolygonEnabled(
+          0,
+          showCrosshair && crosshairSnapToLines
+        );
       }
 
       // Use lightweight redraw for crosshair movement
@@ -357,7 +402,8 @@ export const useCrosshair = ({
     ) {
       // SNAP TO LINES MODE: Find the closest point on any visible line
       // Use new coordinate conversion that handles log spaces
-      const { dataX: mouseDataX, dataY: mouseDataY } = convertMouseToDataCoordinates(mouseNdcX, mouseNdcY);
+      const { dataX: mouseDataX, dataY: mouseDataY } =
+        convertMouseToDataCoordinates(mouseNdcX, mouseNdcY);
 
       let closestPoint = { x: mouseDataX, y: mouseDataY, distance: Infinity };
 
@@ -379,13 +425,18 @@ export const useCrosshair = ({
         const points = lineData.points;
 
         // Find the closest X value in the data
+        // CRITICAL: Convert line data from linear space to log space for accurate comparison
         let closestXIndex = 0;
         let minXDiff = Infinity;
 
         for (let i = 0; i < points.length; i += 2) {
           const x = points[i];
           if (x === undefined) continue;
-          const xDiff = Math.abs(x - mouseDataX);
+
+          // Convert line data X coordinate to same space as mouse coordinate
+          const xInDataSpace = convertLinearToLogSpace(x, isLogX);
+          const xDiff = Math.abs(xInDataSpace - mouseDataX);
+
           if (xDiff < minXDiff) {
             minXDiff = xDiff;
             closestXIndex = i;
@@ -405,24 +456,41 @@ export const useCrosshair = ({
 
             if (x === undefined || y === undefined) continue;
 
+            // Convert line data coordinates to same space as mouse coordinates
+            const xInDataSpace = convertLinearToLogSpace(x, isLogX);
+            const yInDataSpace = convertLinearToLogSpace(y, isLogY);
+
             // Calculate distance to mouse position (weighted more towards Y difference)
-            const xDiff = Math.abs(x - mouseDataX);
-            const yDiff = Math.abs(y - mouseDataY);
+            const xDiff = Math.abs(xInDataSpace - mouseDataX);
+            const yDiff = Math.abs(yInDataSpace - mouseDataY);
             const distance = xDiff * 0.3 + yDiff * 0.7; // Prioritize Y proximity
 
             if (distance < closestPoint.distance) {
+              // Store original linear space coordinates for final positioning
               closestPoint = { x, y, distance };
             }
           }
         }
       });
 
-      finalDataX = closestPoint.x ?? mouseDataX;
-      finalDataY = closestPoint.y ?? mouseDataY;
+      // Convert the closest point from linear space to data space for final positioning
+      if (
+        closestPoint.x !== undefined &&
+        closestPoint.y !== undefined &&
+        closestPoint.distance !== Infinity
+      ) {
+        finalDataX = convertLinearToLogSpace(closestPoint.x, isLogX);
+        finalDataY = convertLinearToLogSpace(closestPoint.y, isLogY);
+      } else {
+        // Fallback to mouse position if no valid point was found
+        finalDataX = mouseDataX;
+        finalDataY = mouseDataY;
+      }
     } else {
       // FREE ROAMING MODE: Use mouse position directly
       // Use new coordinate conversion that handles log spaces
-      const { dataX: mouseDataX, dataY: mouseDataY } = convertMouseToDataCoordinates(mouseNdcX, mouseNdcY);
+      const { dataX: mouseDataX, dataY: mouseDataY } =
+        convertMouseToDataCoordinates(mouseNdcX, mouseNdcY);
       finalDataX = mouseDataX;
       finalDataY = mouseDataY;
     }
@@ -432,7 +500,12 @@ export const useCrosshair = ({
 
     // Convert to display coordinates for coordinate callback (handles log to linear conversion)
     if (onCoordinateUpdate) {
-      const { displayX, displayY } = convertDataToDisplayCoordinates(finalDataX, finalDataY, isLogX, isLogY);
+      const { displayX, displayY } = convertDataToDisplayCoordinates(
+        finalDataX,
+        finalDataY,
+        isLogX,
+        isLogY
+      );
       onCoordinateUpdate(displayX, displayY);
     }
 
@@ -453,23 +526,26 @@ export const useCrosshair = ({
     if (snapCircleRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
       const aspectRatio = rect.width / rect.height;
-      
+
       let scaleX = 1;
       let scaleY = 1;
-      
+
       if (aspectRatio > 1) {
         scaleX = 1 / aspectRatio;
       } else {
         scaleY = aspectRatio;
       }
-      
+
       snapCircleRef.current.updatePolygonTransform(
         0,
         [scaleX, scaleY],
         [finalNdcX, finalNdcY]
       );
-      
-      snapCircleRef.current.setPolygonEnabled(0, showCrosshair && crosshairSnapToLines);
+
+      snapCircleRef.current.setPolygonEnabled(
+        0,
+        showCrosshair && crosshairSnapToLines
+      );
     }
 
     // Share X coordinate with other canvas in dual mode
