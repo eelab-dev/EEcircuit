@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { SimulationType } from "../../types/commonTypes";
+import { detectSourcesFromNetlist, validateSourceInNetlist, getDefaultSource } from "../../utils/sourceDetection";
 
 export interface BaseSimConfigProps<T extends SimulationType> {
   onConfigChange: (configString: string) => void;
   onFullConfigChange?: (config: T) => void;
   initialData?: T;
+  netlist?: string;
 }
 
 export interface BaseSimConfigState {
@@ -121,7 +123,7 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
   props: BaseSimConfigProps<T>,
   methods: BaseSimConfigMethods<T, F>
 ) {
-  const { onConfigChange, onFullConfigChange, initialData } = props;
+  const { onConfigChange, onFullConfigChange, initialData, netlist } = props;
   const { generateConfigString, generateFullConfig, validateConfig, getInitialFormData } = methods;
 
   // Initialize form data from initial data or defaults
@@ -151,6 +153,16 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
     if (initialData) {
       const newFormData = getInitialFormData(initialData);
       
+      // Revalidate source if it exists and netlist is available
+      if ('source' in newFormData && newFormData.source && netlist) {
+        const isValidSource = validateSourceInNetlist(netlist, newFormData.source as string);
+        if (!isValidSource) {
+          // Reset invalid source to default or empty
+          const defaultSource = getDefaultSource(netlist);
+          (newFormData as Record<string, string>).source = defaultSource;
+        }
+      }
+      
       // Only update if data actually changed to avoid unnecessary re-renders
       const isDataDifferent = Object.keys(newFormData).some(
         key => newFormData[key] !== formData[key]
@@ -160,7 +172,7 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
         setFormData(newFormData);
       }
     }
-  }, [initialData, getInitialFormData]);
+  }, [initialData, netlist, getInitialFormData]);
 
   // Send configuration when formData changes (mount + initialData updates)
   useEffect(() => {
@@ -176,10 +188,14 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
     }
   }, [formData]); // Run when formData changes
 
+  // Detect sources from netlist
+  const detectedSources = netlist ? detectSourcesFromNetlist(netlist) : [];
+
   return {
     formData,
     handleInputChange,
     configString: generateConfigString(formData),
-    isValid: validateConfig(formData)
+    isValid: validateConfig(formData),
+    detectedSources
   };
 }

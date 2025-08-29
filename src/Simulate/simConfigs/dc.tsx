@@ -1,4 +1,4 @@
-import { Field, Fieldset, Input, Stack, Text } from "@chakra-ui/react";
+import { Field, Fieldset, Input, Stack, Text, NativeSelectRoot, NativeSelectField } from "@chakra-ui/react";
 import React from "react";
 import { SimulationDC } from "../../types/commonTypes";
 import { useBaseSimConfig, BaseSimConfigProps, BaseSimConfigState, BaseSimConfigMethods } from "./BaseSimConfig";
@@ -46,7 +46,7 @@ const dcConfigMethods: BaseSimConfigMethods<SimulationDC, DcFormData> = {
 };
 
 const DcConfig: React.FC<BaseSimConfigProps<SimulationDC>> = (props) => {
-  const { formData, handleInputChange, configString } = useBaseSimConfig<SimulationDC, DcFormData>(props, dcConfigMethods);
+  const { formData, handleInputChange, configString, detectedSources } = useBaseSimConfig<SimulationDC, DcFormData>(props, dcConfigMethods);
   const dcFormData = formData;
 
   return (
@@ -68,13 +68,29 @@ const DcConfig: React.FC<BaseSimConfigProps<SimulationDC>> = (props) => {
         <Fieldset.Content gap={2}>
           <Field.Root>
             <Field.Label fontSize="sm">Sweep Source</Field.Label>
-            <Input
-              size="sm"
-              name="source"
-              value={dcFormData.source}
-              onChange={(e) => handleInputChange("source", e.target.value)}
-              placeholder="e.g., V1, I1"
-            />
+            {detectedSources.length > 0 ? (
+              <NativeSelectRoot size="sm">
+                <NativeSelectField
+                  value={dcFormData.source}
+                  onChange={(e) => handleInputChange("source", e.target.value)}
+                >
+                  <option value="">Select a source...</option>
+                  {detectedSources.map((source) => (
+                    <option key={source} value={source}>
+                      {source}
+                    </option>
+                  ))}
+                </NativeSelectField>
+              </NativeSelectRoot>
+            ) : (
+              <Input
+                size="sm"
+                name="source"
+                value={dcFormData.source}
+                onChange={(e) => handleInputChange("source", e.target.value)}
+                placeholder="e.g., V1, I1 (no sources detected in netlist)"
+              />
+            )}
           </Field.Root>
 
           <Field.Root>

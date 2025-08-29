@@ -57,7 +57,7 @@ const acConfigMethods: BaseSimConfigMethods<SimulationAC, AcFormData> = {
 };
 
 const AcConfig: React.FC<BaseSimConfigProps<SimulationAC>> = (props) => {
-  const { formData, handleInputChange, configString } = useBaseSimConfig<SimulationAC, AcFormData>(props, acConfigMethods);
+  const { formData, handleInputChange, configString, detectedSources } = useBaseSimConfig<SimulationAC, AcFormData>(props, acConfigMethods);
   const acFormData = formData;
 
   return (
@@ -79,13 +79,29 @@ const AcConfig: React.FC<BaseSimConfigProps<SimulationAC>> = (props) => {
         <Fieldset.Content gap={2}>
           <Field.Root>
             <Field.Label fontSize="sm">Source</Field.Label>
-            <Input
-              size="sm"
-              name="source"
-              value={acFormData.source}
-              onChange={(e) => handleInputChange("source", e.target.value)}
-              placeholder="e.g., V1, I1"
-            />
+            {detectedSources.length > 0 ? (
+              <NativeSelectRoot size="sm">
+                <NativeSelectField
+                  value={acFormData.source}
+                  onChange={(e) => handleInputChange("source", e.target.value)}
+                >
+                  <option value="">Select a source...</option>
+                  {detectedSources.map((source) => (
+                    <option key={source} value={source}>
+                      {source}
+                    </option>
+                  ))}
+                </NativeSelectField>
+              </NativeSelectRoot>
+            ) : (
+              <Input
+                size="sm"
+                name="source"
+                value={acFormData.source}
+                onChange={(e) => handleInputChange("source", e.target.value)}
+                placeholder="e.g., V1, I1 (no sources detected in netlist)"
+              />
+            )}
           </Field.Root>
 
           <Field.Root>

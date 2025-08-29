@@ -41,6 +41,7 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
   const allSimulationConfigs = useAppStore(
     (state) => state.allSimulationConfigs
   );
+  const netList = useAppStore((state) => state.netList);
   const setSelectedSimType = useAppStore((state) => state.setSelectedSimType);
   const setAllSimulationConfigs = useAppStore(
     (state) => state.setAllSimulationConfigs
@@ -555,6 +556,7 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
                     initialData={
                       currentConfig?.type === "DC" ? (currentConfig as SimulationDC) : undefined
                     }
+                    netlist={netList}
                   />
                 );
               case "AC":
@@ -565,6 +567,7 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
                     initialData={
                       currentConfig?.type === "AC" ? (currentConfig as SimulationAC) : undefined
                     }
+                    netlist={netList}
                   />
                 );
               case "Transient":
