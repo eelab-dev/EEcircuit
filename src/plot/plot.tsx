@@ -126,33 +126,40 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
   // Initialize variables when results change or canvas mode changes
   React.useEffect(() => {
     if (results.length > 0 && results[0]?.variableNames) {
-      const allVariables = results[0].variableNames.slice(1); // Skip first variable (time/frequency)
-
+      const allVariables = results[0].variableNames.slice(1);
+      
       if (numCanvases === 1) {
-        // Single canvas mode - select all variables
-        setSelectedVariables(allVariables);
-        // Clear local canvas states when going to single mode
+        // Single canvas - use store selection or default to all
+        const storeSelected = useAppStore.getState().selectedVariables;
+        const validStoreSelected = storeSelected.filter(v => allVariables.includes(v));
+        setSelectedVariables(validStoreSelected.length > 0 ? validStoreSelected : allVariables);
         setLocalCanvas1SelectedVariables([]);
         setLocalCanvas2SelectedVariables([]);
       } else if (numCanvases === 2) {
         if (isACModeActive) {
-          // AC mode - separate magnitude and phase
-          const magVariables = allVariables.filter((v) => v.includes("[mag]"));
-          const phaseVariables = allVariables.filter((v) =>
-            v.includes("[phase]")
-          );
-          setLocalCanvas1SelectedVariables(magVariables);
-          setLocalCanvas2SelectedVariables(phaseVariables);
+          // AC mode - magnitude and phase split
+          const magVars = allVariables.filter(v => v.includes("[mag]"));
+          const phaseVars = allVariables.filter(v => v.includes("[phase]"));
+          const storeCanvas1 = useAppStore.getState().canvas1SelectedVariables;
+          const storeCanvas2 = useAppStore.getState().canvas2SelectedVariables;
+          const validCanvas1 = storeCanvas1.filter(v => magVars.includes(v));
+          const validCanvas2 = storeCanvas2.filter(v => phaseVars.includes(v));
+          setLocalCanvas1SelectedVariables(validCanvas1.length > 0 ? validCanvas1 : magVars);
+          setLocalCanvas2SelectedVariables(validCanvas2.length > 0 ? validCanvas2 : phaseVars);
         } else {
-          // Manual dual mode - start with all variables in canvas 1, none in canvas 2
-          setLocalCanvas1SelectedVariables(allVariables);
-          setLocalCanvas2SelectedVariables(allVariables);
+          // Manual dual mode
+          const storeCanvas1 = useAppStore.getState().canvas1SelectedVariables;
+          const storeCanvas2 = useAppStore.getState().canvas2SelectedVariables;
+          const validCanvas1 = storeCanvas1.filter(v => allVariables.includes(v));
+          const validCanvas2 = storeCanvas2.filter(v => allVariables.includes(v));
+          setLocalCanvas1SelectedVariables(validCanvas1.length > 0 ? validCanvas1 : allVariables);
+          setLocalCanvas2SelectedVariables(validCanvas2.length > 0 ? validCanvas2 : allVariables);
         }
-        // Clear single canvas state when going to dual mode
         setSelectedVariables([]);
       }
     }
   }, [results, numCanvases, isACModeActive]);
+
 
   // Variable selection initialization: select all variables except first (time/frequency)
   // by default when new results arrive. This matches the original behavior.
@@ -441,8 +448,14 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
             }
             onSelectedVariablesChange={
               numCanvases === 1
-                ? setSelectedVariables
-                : setLocalCanvas1SelectedVariables
+                ? (vars) => {
+                    setSelectedVariables(vars);
+                    useAppStore.getState().setSelectedVariables(vars);
+                  }
+                : (vars) => {
+                    setLocalCanvas1SelectedVariables(vars);
+                    useAppStore.getState().setCanvas1SelectedVariables(vars);
+                  }
             }
             hoveredVariable={
               numCanvases === 1 ? hoveredVariable : localCanvas1HoveredVariable
@@ -458,7 +471,10 @@ const Plot: React.FC<PlotProps> = ({ results: propsResults }) => {
             numCanvases={numCanvases}
             isACModeActive={isACModeActive}
             canvas2SelectedVariables={localCanvas2SelectedVariables}
-            onCanvas2SelectedVariablesChange={setLocalCanvas2SelectedVariables}
+            onCanvas2SelectedVariablesChange={(vars) => {
+              setLocalCanvas2SelectedVariables(vars);
+              useAppStore.getState().setCanvas2SelectedVariables(vars);
+            }}
             canvas2HoveredVariable={localCanvas2HoveredVariable}
             onCanvas2VariableHover={setLocalCanvas2HoveredVariable}
           />

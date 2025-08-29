@@ -11,6 +11,8 @@ export interface UiState {
   schematicLoadingMessage: string;
   isDarkMode: boolean;
   maxWebWorkers: number;
+  resetVariableSelectionsOnNewSim: boolean;
+  resetPlotStateOnNewSim: boolean;
 }
 
 export interface UiActions {
@@ -23,6 +25,8 @@ export interface UiActions {
   setIsDarkMode: (isDark: boolean) => void;
   toggleTheme: () => void;
   setMaxWebWorkers: (count: number) => void;
+  setResetVariableSelectionsOnNewSim: (reset: boolean) => void;
+  setResetPlotStateOnNewSim: (reset: boolean) => void;
 }
 
 export type UiSlice = UiState & UiActions;
@@ -78,6 +82,8 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
     schematicLoadingMessage: "Loading schematic...",
     isDarkMode: initialTheme,
     maxWebWorkers: Math.min(4, navigator.hardwareConcurrency || 4),
+    resetVariableSelectionsOnNewSim: false,
+    resetPlotStateOnNewSim: false,
 
     // Actions
     setInputProfile: (profile) => set({ inputProfile: profile }),
@@ -123,5 +129,9 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
       const clampedCount = Math.max(1, Math.min(count, navigator.hardwareConcurrency || 8));
       set({ maxWebWorkers: clampedCount });
     },
+
+    // Plot reset configuration actions
+    setResetVariableSelectionsOnNewSim: (reset) => set({ resetVariableSelectionsOnNewSim: reset }),
+    setResetPlotStateOnNewSim: (reset) => set({ resetPlotStateOnNewSim: reset }),
   };
 };

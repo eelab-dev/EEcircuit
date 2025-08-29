@@ -11,7 +11,10 @@ import {
   Flex,
   Input,
   Text,
+  IconButton,
 } from "@chakra-ui/react";
+import { RotateCcw } from "lucide-react";
+import { CustomCheckbox as Checkbox } from "../components/ui/checkbox";
 import { useAppStore } from "../store/appStore";
 import { dialogTheme } from "../styles/uiThemes";
 
@@ -26,23 +29,35 @@ const SimulationGlobalConfigDialog: React.FC<SimulationConfigDialogProps> = ({
 }) => {
   const maxWebWorkers = useAppStore((state) => state.maxWebWorkers);
   const setMaxWebWorkers = useAppStore((state) => state.setMaxWebWorkers);
+  const resetVariableSelectionsOnNewSim = useAppStore((state) => state.resetVariableSelectionsOnNewSim);
+  const setResetVariableSelectionsOnNewSim = useAppStore((state) => state.setResetVariableSelectionsOnNewSim);
+  const resetPlotStateOnNewSim = useAppStore((state) => state.resetPlotStateOnNewSim);
+  const setResetPlotStateOnNewSim = useAppStore((state) => state.setResetPlotStateOnNewSim);
 
   const [tempMaxWorkers, setTempMaxWorkers] = React.useState(maxWebWorkers);
+  const [tempResetVariableSelections, setTempResetVariableSelections] = React.useState(resetVariableSelectionsOnNewSim);
+  const [tempResetPlotState, setTempResetPlotState] = React.useState(resetPlotStateOnNewSim);
 
-  // Reset temp value when dialog opens
+  // Reset temp values when dialog opens
   React.useEffect(() => {
     if (open) {
       setTempMaxWorkers(maxWebWorkers);
+      setTempResetVariableSelections(resetVariableSelectionsOnNewSim);
+      setTempResetPlotState(resetPlotStateOnNewSim);
     }
-  }, [open, maxWebWorkers]);
+  }, [open, maxWebWorkers, resetVariableSelectionsOnNewSim, resetPlotStateOnNewSim]);
 
   const handleSave = () => {
     setMaxWebWorkers(tempMaxWorkers);
+    setResetVariableSelectionsOnNewSim(tempResetVariableSelections);
+    setResetPlotStateOnNewSim(tempResetPlotState);
     onClose();
   };
 
   const handleCancel = () => {
     setTempMaxWorkers(maxWebWorkers);
+    setTempResetVariableSelections(resetVariableSelectionsOnNewSim);
+    setTempResetPlotState(resetPlotStateOnNewSim);
     onClose();
   };
 
@@ -98,6 +113,57 @@ const SimulationGlobalConfigDialog: React.FC<SimulationConfigDialogProps> = ({
                 <Text fontSize="xs" color="fg.muted">
                   (max: {maxPossibleWorkers} based on your system)
                 </Text>
+              </Flex>
+            </Flex>
+
+            <Flex flexDirection="column" gap="3">
+              <Text fontSize="sm" fontWeight="medium">
+                Plot Reset Options
+              </Text>
+              <Text fontSize="xs" color="fg.muted">
+                Configure what happens when starting new simulations:
+              </Text>
+              
+              <Flex alignItems="center" justifyContent="space-between">
+                <Checkbox
+                  checked={tempResetVariableSelections}
+                  onCheckedChange={(details) => setTempResetVariableSelections(details.checked)}
+                  size="sm"
+                >
+                  <Text fontSize="xs">Clear variable selections on each simulation run</Text>
+                </Checkbox>
+                <IconButton
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => {
+                    const { resetVariableSelections } = useAppStore.getState();
+                    resetVariableSelections();
+                  }}
+                  title="Reset variable selections to default (select all)"
+                >
+                  <RotateCcw size={12} />
+                </IconButton>
+              </Flex>
+              
+              <Flex alignItems="center" justifyContent="space-between">
+                <Checkbox
+                  checked={tempResetPlotState}
+                  onCheckedChange={(details) => setTempResetPlotState(details.checked)}
+                  size="sm"
+                >
+                  <Text fontSize="xs">Clear plot settings on each simulation run</Text>
+                </Checkbox>
+                <IconButton
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => {
+                    const { resetPlotState } = useAppStore.getState();
+                    resetPlotState();
+                  }}
+                  title="Reset plot settings to default (single canvas, linear scales)"
+                >
+                  <RotateCcw size={12} />
+                </IconButton>
               </Flex>
             </Flex>
           </Flex>

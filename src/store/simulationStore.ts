@@ -243,6 +243,26 @@ export const createSimulationSlice: StateCreator<
       // Reset previous state
       const actions = get() as SimulationSlice & StoreWithTab;
       actions.resetParallelSimulation();
+      
+      // Always clear previous results, optionally reset selections and plot state
+      const allActions = get() as SimulationSlice & 
+        StoreWithTab & {
+          clearResults: () => void;
+          resetVariableSelections: () => void;
+          resetPlotState: () => void;
+          resetVariableSelectionsOnNewSim: boolean;
+          resetPlotStateOnNewSim: boolean;
+        };
+      
+      allActions.clearResults(); // Always clear previous results
+      
+      if (allActions.resetVariableSelectionsOnNewSim) {
+        allActions.resetVariableSelections();
+      }
+      
+      if (allActions.resetPlotStateOnNewSim) {
+        allActions.resetPlotState();
+      }
 
       // Find bracket operation
       const bracketOp = findFirstBracketOperation(netlist);

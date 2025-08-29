@@ -93,6 +93,11 @@ export interface PlotActions {
   toggleCanvas1LogY: () => void;
   toggleCanvas2LogY: () => void;
 
+  // Clear/reset actions
+  clearResults: () => void;
+  resetVariableSelections: () => void;
+  resetPlotState: () => void;
+
   // Combined actions for common operations
   handleNewResults: (results: ResultType[]) => void;
   enterPlotSelectionMode: () => void;
@@ -190,6 +195,35 @@ export const createPlotSlice: StateCreator<
   toggleCanvas1LogY: () => set((state: PlotSlice & StoreWithTabAndSimulation) => ({ canvas1IsLogY: !state.canvas1IsLogY })),
   toggleCanvas2LogY: () => set((state: PlotSlice & StoreWithTabAndSimulation) => ({ canvas2IsLogY: !state.canvas2IsLogY })),
 
+  // Clear/reset actions
+  clearResults: () => set({
+    results: [],
+    bracketOperationResults: undefined,
+    isBracketOperationPlot: false,
+    currentParameterValues: undefined,
+    emphasizedPlotIndex: 0,
+  }),
+
+  resetVariableSelections: () => set({
+    selectedVariables: [],
+    hoveredVariable: null,
+    canvas1SelectedVariables: [],
+    canvas2SelectedVariables: [],
+    canvas1HoveredVariable: null,
+    canvas2HoveredVariable: null,
+  }),
+
+  resetPlotState: () => set({
+    numCanvases: 1,
+    isACModeActive: false,
+    isLogX: false,
+    isLogY: false,
+    isLogY1: false,
+    isLogY2: false,
+    canvas1IsLogY: false,
+    canvas2IsLogY: false,
+  }),
+
   // Combined actions for common operations
   handleNewResults: (newResults) => {
     // Double-check that we have valid results before enabling plot tab
@@ -234,7 +268,7 @@ export const createPlotSlice: StateCreator<
       let variablesToSelect: string[];
       let canvas1Variables: string[] = [];
       let canvas2Variables: string[] = [];
-      let numCanvases = 1;
+      let numCanvases = currentState.numCanvases; // Preserve existing canvas mode
       let isACModeActive = false;
 
       if (isACSimulation) {
@@ -250,73 +284,63 @@ export const createPlotSlice: StateCreator<
         canvas2Variables = phaseVariables; // Phase canvas
         variablesToSelect = [...magVariables, ...phaseVariables]; // For legacy compatibility
 
-        console.log("AC simulation detected, setting up dual canvas mode:", {
-          magnitudeVariables: magVariables.length,
-          phaseVariables: phaseVariables.length,
-          allVariables: newVariableNames
-        });
       } else {
-        // Non-AC simulation - use single canvas mode with existing logic
-        if (currentState.selectedVariables.length === 0) {
-          // No previous selection - select all variables by default
-          variablesToSelect = newVariableNames;
-          console.log("No previous selection found, selecting all variables");
-        } else {
-          // Preserve previously selected variables that still exist in new results
-          variablesToSelect = currentState.selectedVariables.filter(
+        // Non-AC simulation - preserve existing canvas configuration
+        if (numCanvases === 2) {
+          // User has dual canvas mode - distribute variables based on existing selections
+          const existingCanvas1 = currentState.canvas1SelectedVariables.filter(
+            (variable: string) => newVariableNames.includes(variable)
+          );
+          const existingCanvas2 = currentState.canvas2SelectedVariables.filter(
             (variable: string) => newVariableNames.includes(variable)
           );
 
-          // Log which variables were preserved vs removed
-          const removedVariables = currentState.selectedVariables.filter(
-            (variable: string) => !newVariableNames.includes(variable)
-          );
-
-          if (removedVariables.length > 0) {
-            console.log(
-              "Variables removed from selection (no longer in results):",
-              removedVariables
-            );
-          }
-
-          if (variablesToSelect.length > 0) {
-            console.log(
-              "Variables preserved from previous selection:",
-              variablesToSelect
-            );
-          } else {
-            // All previously selected variables are gone, select all new ones
+          canvas1Variables = existingCanvas1.length > 0 ? existingCanvas1 : newVariableNames;
+          canvas2Variables = existingCanvas2;
+          variablesToSelect = [...canvas1Variables, ...canvas2Variables];
+        } else {
+          // Single canvas mode
+          if (currentState.selectedVariables.length === 0) {
+            // No previous selection - select all variables by default
             variablesToSelect = newVariableNames;
-            console.log(
-              "All previous variables removed, selecting all new variables"
+          } else {
+            // Preserve previously selected variables that still exist in new results
+            variablesToSelect = currentState.selectedVariables.filter(
+              (variable: string) => newVariableNames.includes(variable)
             );
+
+            if (variablesToSelect.length === 0) {
+              // All previously selected variables are gone, select all new ones
+              variablesToSelect = newVariableNames;
+            }
           }
+          canvas1Variables = variablesToSelect;
         }
-
-        // For single canvas, use the same selection for canvas1 (canvas2 remains empty)
-        canvas1Variables = variablesToSelect;
       }
 
-      // Log bracket operation info (only once when complete)
-      if (isBracketResult && aggregatedResult && aggregatedResult.successfulResults === aggregatedResult.parameterCount) {
-        console.log("Bracket operation completed:", {
-          parameterValues: aggregatedResult.parameterValues?.length,
-          successfulResults: aggregatedResult.successfulResults,
-          failedResults: aggregatedResult.failedResults,
-          totalDataPoints: firstResult.data[0]?.values?.length || 0
-        });
-      }
+
+      // Simple logic: check if we have valid existing selections to preserve
+      const hasExistingValidSelections = currentState.selectedVariables.length > 0 || 
+                                        currentState.canvas1SelectedVariables.length > 0 || 
+                                        currentState.canvas2SelectedVariables.length > 0;
+      
 
       set({
         results: [firstResult], // Always use firstResult which has been processed correctly
         isPlotTabEnabled: true,
         mainTabValue: "plot",
-        selectedVariables: variablesToSelect,
-        // Multi-canvas state
+        
+        // Canvas mode - AC simulations always need dual canvas
         numCanvases: numCanvases as 1 | 2,
         isACModeActive,
-        canvas1SelectedVariables: canvas1Variables,
-        canvas2SelectedVariables: canvas2Variables,
+        
+        // Variable selections - only update if no valid existing selections
+        ...(hasExistingValidSelections ? {} : {
+          selectedVariables: variablesToSelect,
+          canvas1SelectedVariables: canvas1Variables,
+          canvas2SelectedVariables: canvas2Variables,
+        }),
+        
         // Log scaling configuration for AC simulations
         ...(isACSimulation && {
           isLogX: true,    // Frequency axis should be logarithmic

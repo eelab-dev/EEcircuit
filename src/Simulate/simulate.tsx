@@ -138,6 +138,25 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
   const handleSimRun = async () => {
     try {
+      // Always clear previous results, optionally reset selections and plot state
+      const { 
+        clearResults, 
+        resetVariableSelections, 
+        resetPlotState,
+        resetVariableSelectionsOnNewSim,
+        resetPlotStateOnNewSim
+      } = useAppStore.getState();
+      
+      clearResults(); // Always clear previous results
+      
+      if (resetVariableSelectionsOnNewSim) {
+        resetVariableSelections();
+      }
+      
+      if (resetPlotStateOnNewSim) {
+        resetPlotState();
+      }
+
       // First check if netlist contains bracket operations
       const { findFirstBracketOperation } = await import(
         "../utils/bracketParser"
