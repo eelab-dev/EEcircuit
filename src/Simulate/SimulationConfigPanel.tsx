@@ -108,33 +108,43 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
 
   // Synchronize selectedConfigIndex with store state when configs are loaded from file
   React.useEffect(() => {
-    if (allSimulationConfigs.length > 0 && simulationConfig && selectedConfigIndex === -1) {
-      // Find the index of the currently selected config in the store
-      const currentConfigIndex = allSimulationConfigs.findIndex((config) => {
-        if (config.type === "None" || simulationConfig.type === "None") return false;
-        if (config.type !== simulationConfig.type) return false;
+    if (allSimulationConfigs.length > 0) {
+      if (simulationConfig && selectedConfigIndex === -1) {
+        // Existing logic: sync with existing store selection
+        const currentConfigIndex = allSimulationConfigs.findIndex((config) => {
+          if (config.type === "None" || simulationConfig.type === "None") return false;
+          if (config.type !== simulationConfig.type) return false;
+          
+          // For more robust matching, check if this is the same config object
+          if (config === simulationConfig) return true;
+          
+          // Fallback: match by name and type
+          if ("name" in config && "name" in simulationConfig) {
+            return config.name === simulationConfig.name;
+          }
+          
+          return false;
+        });
         
-        // For more robust matching, check if this is the same config object
-        if (config === simulationConfig) return true;
-        
-        // Fallback: match by name and type
-        if ("name" in config && "name" in simulationConfig) {
-          return config.name === simulationConfig.name;
+        if (currentConfigIndex >= 0) {
+          setSelectedConfigIndex(currentConfigIndex);
+          // Trigger config string update
+          onFullConfigChange(simulationConfig);
         }
-        
-        return false;
-      });
-      
-      if (currentConfigIndex >= 0) {
-        setSelectedConfigIndex(currentConfigIndex);
-        // Trigger config string update
-        onFullConfigChange(simulationConfig);
+      } else if (!simulationConfig && selectedSimType === "None") {
+        // NEW logic: auto-select first config when configs are available but none is selected
+        const firstConfig = allSimulationConfigs[0];
+        if (firstConfig) {
+          setSelectedConfigIndex(0);
+          setSelectedSimType(firstConfig.type);
+          onFullConfigChange(firstConfig);
+        }
       }
     } else if (selectedSimType === "None") {
-      // Reset to -1 when "None" is selected
+      // Reset to -1 when "None" is selected or no configs available
       setSelectedConfigIndex(-1);
     }
-  }, [allSimulationConfigs, simulationConfig, selectedConfigIndex, selectedSimType, onFullConfigChange]);
+  }, [allSimulationConfigs, simulationConfig, selectedConfigIndex, selectedSimType, onFullConfigChange, setSelectedSimType]);
 
   // Function to handle config selection from dropdown
   const handleConfigSelection = (configIndex: number) => {
