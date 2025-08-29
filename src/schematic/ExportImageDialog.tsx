@@ -16,6 +16,8 @@ import {
 } from "svg-to-pdf";
 import { dialogTheme } from "../styles/uiThemes";
 
+const PDF_MULTIPLIER = 4;
+
 type ExportImageDialogProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -160,6 +162,7 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
       console.log("Converting SVG to PDF using simple structure...");
       const pdfBytes = await convertSvgToPdfFromSimpleStructure(simpleSvg, {
         backgroundColor: "white",
+        multiplier: PDF_MULTIPLIER,
       });
       console.log("SVG to PDF conversion successful.");
 
