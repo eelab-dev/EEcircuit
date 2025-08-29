@@ -39,20 +39,34 @@ const DEFAULT_MAX_WORKERS = 4;
 const DEFAULT_TIMEOUT = 30000; // 30 seconds per simulation
 
 /**
- * Worker pool for managing parallel simulations
+ * Global worker pool for managing persistent parallel simulation workers
  */
-class SimulationWorkerPool {
+class GlobalSimulationWorkerPool {
+  private static instance: GlobalSimulationWorkerPool | null = null;
   private workers: Worker[] = [];
   private availableWorkers: Worker[] = [];
   private busyWorkers: Set<Worker> = new Set();
   private workerToThreadId: Map<Worker, number> = new Map();
+  private isInitialized: boolean = false;
   private maxWorkers: number;
 
-  constructor(maxWorkers: number = DEFAULT_MAX_WORKERS) {
+  private constructor(maxWorkers: number = DEFAULT_MAX_WORKERS) {
     this.maxWorkers = Math.min(maxWorkers, navigator.hardwareConcurrency || 4);
   }
 
+  static getInstance(maxWorkers?: number): GlobalSimulationWorkerPool {
+    if (!GlobalSimulationWorkerPool.instance) {
+      GlobalSimulationWorkerPool.instance = new GlobalSimulationWorkerPool(maxWorkers);
+    }
+    return GlobalSimulationWorkerPool.instance;
+  }
+
   async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      console.log(`✓ Reusing ${this.workers.length} persistent simulation workers (startup overhead avoided)`);
+      return;
+    }
+
     // Create workers
     for (let i = 0; i < this.maxWorkers; i++) {
       try {
@@ -74,7 +88,8 @@ class SimulationWorkerPool {
       throw new Error("Failed to create any simulation workers");
     }
 
-    console.log(`Initialized ${this.workers.length} simulation workers`);
+    this.isInitialized = true;
+    console.log(`🚀 Initialized ${this.workers.length} persistent simulation workers (first-time setup)`);
   }
 
   getAvailableWorker(): Worker | null {
@@ -92,6 +107,14 @@ class SimulationWorkerPool {
     }
   }
 
+  resetForNewSession(): void {
+    // Move all busy workers back to available (in case of interruption)
+    this.busyWorkers.forEach(worker => {
+      this.availableWorkers.push(worker);
+    });
+    this.busyWorkers.clear();
+  }
+
   terminate(): void {
     this.workers.forEach((worker) => {
       worker.terminate();
@@ -100,6 +123,8 @@ class SimulationWorkerPool {
     this.availableWorkers = [];
     this.busyWorkers.clear();
     this.workerToThreadId.clear();
+    this.isInitialized = false;
+    GlobalSimulationWorkerPool.instance = null;
   }
 
   getThreadId(worker: Worker): number {
@@ -113,6 +138,29 @@ class SimulationWorkerPool {
   get totalCount(): number {
     return this.workers.length;
   }
+
+  get initialized(): boolean {
+    return this.isInitialized;
+  }
+}
+
+// Add cleanup on page unload to properly terminate workers
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    const pool = GlobalSimulationWorkerPool.getInstance();
+    if (pool.initialized) {
+      pool.terminate();
+    }
+  });
+
+  // Make debugging functions available globally for testing
+  (window as unknown as { _workerPoolDebug: { 
+    getStatus: () => { initialized: boolean; totalWorkers: number; availableWorkers: number; busyWorkers: number }; 
+    cleanup: () => void 
+  } })._workerPoolDebug = {
+    getStatus: getWorkerPoolStatus,
+    cleanup: cleanupPersistentWorkers
+  };
 }
 
 /**
@@ -223,9 +271,12 @@ export async function runParallelSimulation(
     const { expandedNetlists } = expansionResult;
     const totalSimulations = expandedNetlists.length;
 
-    // Initialize worker pool
-    const workerPool = new SimulationWorkerPool(maxWorkers);
+    // Get global worker pool instance
+    const workerPool = GlobalSimulationWorkerPool.getInstance(maxWorkers);
     await workerPool.initialize();
+    
+    // Reset pool state for new simulation session
+    workerPool.resetForNewSession();
 
     console.log(
       `Starting ${totalSimulations} parallel simulations with ${workerPool.totalCount} workers`
@@ -308,8 +359,7 @@ export async function runParallelSimulation(
 
     await processNext();
 
-    // Clean up worker pool
-    workerPool.terminate();
+    // Workers remain persistent - do not terminate
 
     const successfulSimulations = results.filter((r) => r.success).length;
     const failedSimulations = results.length - successfulSimulations;
@@ -351,4 +401,33 @@ export async function runParallelSimulation(
  */
 export function isParallelSimulationSupported(): boolean {
   return typeof Worker !== "undefined" && typeof navigator !== "undefined";
+}
+
+/**
+ * Manually cleanup all persistent workers (for testing or forced cleanup)
+ */
+export function cleanupPersistentWorkers(): void {
+  const pool = GlobalSimulationWorkerPool.getInstance();
+  if (pool.initialized) {
+    console.log('Manually terminating persistent simulation workers');
+    pool.terminate();
+  }
+}
+
+/**
+ * Get information about the persistent worker pool status (for debugging)
+ */
+export function getWorkerPoolStatus(): {
+  initialized: boolean;
+  totalWorkers: number;
+  availableWorkers: number;
+  busyWorkers: number;
+} {
+  const pool = GlobalSimulationWorkerPool.getInstance();
+  return {
+    initialized: pool.initialized,
+    totalWorkers: pool.totalCount,
+    availableWorkers: pool.availableCount,
+    busyWorkers: pool.totalCount - pool.availableCount,
+  };
 }
