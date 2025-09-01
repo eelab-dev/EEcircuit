@@ -12,6 +12,7 @@ import {
   Expand,
   SquareX,
   RotateCw,
+  Settings,
 } from "lucide-react";
 
 interface HeaderButtonsProps {
@@ -23,6 +24,7 @@ interface HeaderButtonsProps {
   toggleInputProfile: () => void;
   fullscreen: boolean;
   fullscreenHandler: () => void;
+  setShowConfigDialog: (show: boolean) => void;
 }
 
 const HeaderButtons: React.FC<HeaderButtonsProps> = ({
@@ -34,6 +36,7 @@ const HeaderButtons: React.FC<HeaderButtonsProps> = ({
   toggleInputProfile,
   fullscreen,
   fullscreenHandler,
+  setShowConfigDialog,
 }) => {
   return (
     <Flex alignItems="center" gap={2}>
@@ -126,6 +129,22 @@ const HeaderButtons: React.FC<HeaderButtonsProps> = ({
           onClick={fullscreenHandler}
         >
           {!fullscreen ? <Expand size={16} /> : <SquareX size={16} />}
+        </IconButton>
+      </Tooltip>
+
+      {/* Simulation Settings Button */}
+      <Tooltip
+        showArrow
+        content="Simulation Settings"
+        positioning={{ placement: "bottom" }}
+      >
+        <IconButton
+          aria-label="Simulation Settings"
+          size="sm"
+          variant="ghost"
+          onClick={() => setShowConfigDialog(true)}
+        >
+          <Settings size={16} />
         </IconButton>
       </Tooltip>
 

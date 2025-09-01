@@ -31,6 +31,7 @@ import { SimulationType } from "./types/commonTypes";
 import { dialogTheme } from "./styles/uiThemes.ts";
 import { handleFullscreen } from "./utils/fullscreenUtils.tsx";
 import ClearSchematicDialog from "./schematic/ClearSchematicDialog";
+import SimulationGlobalConfigDialog from "./Simulate/SimulationGlobalConfigDialog";
 import HeaderButtons from "./components/HeaderButtons";
 
 type MainTabsValue = "schematic" | "simulate" | "plot";
@@ -45,6 +46,9 @@ const EEcircuit: React.FC = () => {
 
   // Clear schematic dialog state
   const [showClearDialog, setShowClearDialog] = React.useState(false);
+
+  // Simulation config dialog state
+  const [showConfigDialog, setShowConfigDialog] = React.useState(false);
 
   // Listen for fullscreen changes from browser/keyboard
   React.useEffect(() => {
@@ -509,6 +513,7 @@ const EEcircuit: React.FC = () => {
             toggleInputProfile={toggleInputProfile}
             fullscreen={fullscreen}
             fullscreenHandler={fullscreenHandler}
+            setShowConfigDialog={setShowConfigDialog}
           />
         </Flex>
 
@@ -531,6 +536,7 @@ const EEcircuit: React.FC = () => {
               toggleInputProfile={toggleInputProfile}
               fullscreen={fullscreen}
               fullscreenHandler={fullscreenHandler}
+              setShowConfigDialog={setShowConfigDialog}
             />
           </Flex>
 
@@ -650,6 +656,12 @@ const EEcircuit: React.FC = () => {
       <ClearSchematicDialog
         isOpen={showClearDialog}
         onClose={handleCloseClearDialog}
+      />
+
+      {/* Simulation Configuration Dialog */}
+      <SimulationGlobalConfigDialog
+        open={showConfigDialog}
+        onClose={() => setShowConfigDialog(false)}
       />
 
       <Toaster />
