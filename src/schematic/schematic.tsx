@@ -182,7 +182,9 @@ const Schematic: React.FC<SchematicProps> = ({
                 setHasSchematicErrors?: (hasErrors: boolean) => void;
               };
               if (typeof setHasSchematicErrors === "function") {
-                const hasErrors = next.some((i) => i.message.startsWith("error:"));
+                const hasErrors = next.some((i) =>
+                  i.message.startsWith("error:")
+                );
                 setHasSchematicErrors(!!hasErrors);
               }
             } catch {
@@ -499,6 +501,37 @@ const Schematic: React.FC<SchematicProps> = ({
     document.addEventListener("keydown", handleKeyDown, true);
     return () => {
       document.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, []);
+
+  // Handle Escape to reset all modes while in Schematic tab
+  // Do not call preventDefault to avoid interfering with fullscreen ESC behavior
+  useEffect(() => {
+    const handleEscReset = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+
+      // pay attention if esc is being handled in other places
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Only when this tab is visible and focus is within the schematic container
+      if (!isTabVisibleRef.current) return;
+      const canvasContainer = containerRef.current;
+      if (!canvasContainer || !document.activeElement) return;
+      const isFocusInCanvas =
+        canvasContainer.contains(document.activeElement) ||
+        document.activeElement === canvasRef.current;
+      if (!isFocusInCanvas) return;
+
+      // Skip when plot selection mode is active (that flow has its own ESC handler)
+      if (isPlotSelectionModeRef.current) return;
+
+      eeSch.resetAllModes();
+    };
+
+    document.addEventListener("keydown", handleEscReset);
+    return () => {
+      document.removeEventListener("keydown", handleEscReset);
     };
   }, []);
 
@@ -839,9 +872,13 @@ const Schematic: React.FC<SchematicProps> = ({
             try {
               const { setOverrideSimulateOnNetlistErrorsOnce } =
                 useAppStore.getState() as {
-                  setOverrideSimulateOnNetlistErrorsOnce?: (override: boolean) => void;
+                  setOverrideSimulateOnNetlistErrorsOnce?: (
+                    override: boolean
+                  ) => void;
                 };
-              if (typeof setOverrideSimulateOnNetlistErrorsOnce === "function") {
+              if (
+                typeof setOverrideSimulateOnNetlistErrorsOnce === "function"
+              ) {
                 setOverrideSimulateOnNetlistErrorsOnce(!!shift);
               }
             } catch {
