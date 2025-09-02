@@ -10,6 +10,9 @@ type ToggleActionButtonProps = {
   // Optional initial pressed state. `defaultState` is an alias for convenience.
   defaultPressed?: boolean;
   defaultState?: boolean;
+  // Optional controlled state
+  pressed?: boolean;
+  onToggle?: (next: boolean) => void;
   children: React.ReactNode;
 };
 
@@ -19,20 +22,28 @@ const ToggleActionButton: React.FC<ToggleActionButtonProps> = ({
   onDisable,
   defaultPressed,
   defaultState,
+  pressed: controlledPressed,
+  onToggle,
   children,
 }) => {
   const initial = (defaultState ?? defaultPressed) ?? false;
-  const [pressed, setPressed] = React.useState<boolean>(initial);
+  const [internalPressed, setInternalPressed] = React.useState<boolean>(initial);
+  const isControlled = typeof controlledPressed === "boolean";
+  const pressed = isControlled ? controlledPressed! : internalPressed;
 
   const handleClick = React.useCallback(() => {
     const next = !pressed;
-    setPressed(next);
+    if (isControlled) {
+      onToggle?.(next);
+    } else {
+      setInternalPressed(next);
+    }
     if (next) {
       onEnable();
     } else {
       onDisable();
     }
-  }, [pressed, onEnable, onDisable]);
+  }, [pressed, isControlled, onToggle, onEnable, onDisable]);
 
   return (
     <Tooltip content={tooltip} showArrow openDelay={300}>

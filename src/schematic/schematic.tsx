@@ -447,7 +447,7 @@ const Schematic: React.FC<SchematicProps> = ({
     eeSch.sendCommand({ command: "mode", modeType: "select" });
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" || event.key === "§") {
         event.preventDefault();
         handleExitPlotSelectionMode?.();
       }
@@ -504,15 +504,14 @@ const Schematic: React.FC<SchematicProps> = ({
     };
   }, []);
 
-  // Handle Escape to reset all modes while in Schematic tab
+  // Track a reset signal for the action bar toggles
+  const [actionBarResetTick, setActionBarResetTick] = useState(0);
+
+  // Handle Escape/§ to reset all modes while in Schematic tab
   // Do not call preventDefault to avoid interfering with fullscreen ESC behavior
   useEffect(() => {
     const handleEscReset = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-
-      // pay attention if esc is being handled in other places
-      event.preventDefault();
-      event.stopPropagation();
+      if (event.key !== "Escape" && event.key !== "§") return;
 
       // Only when this tab is visible and focus is within the schematic container
       if (!isTabVisibleRef.current) return;
@@ -523,10 +522,12 @@ const Schematic: React.FC<SchematicProps> = ({
         document.activeElement === canvasRef.current;
       if (!isFocusInCanvas) return;
 
-      // Skip when plot selection mode is active (that flow has its own ESC handler)
+      // Skip when plot selection mode is active (that flow has its own ESC/§ handler)
       if (isPlotSelectionModeRef.current) return;
 
       eeSch.resetAllModes();
+      // Reset action bar toggle states to defaults
+      setActionBarResetTick((t) => t + 1);
     };
 
     document.addEventListener("keydown", handleEscReset);
@@ -777,6 +778,7 @@ const Schematic: React.FC<SchematicProps> = ({
               availableComponents={availableComponents}
               onExportImage={handleExportImage}
               onShowShortcuts={handleShowShortcuts}
+              resetSignal={actionBarResetTick}
             />
           }
         </Float>

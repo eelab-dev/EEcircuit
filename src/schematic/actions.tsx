@@ -23,13 +23,30 @@ type ActionsProps = {
   availableComponents: ee.AvailableComponent[];
   onExportImage: () => void;
   onShowShortcuts: () => void;
+  // When this number changes, reset all toggle states to defaults
+  resetSignal?: number;
 };
 
 const Actions: React.FC<ActionsProps> = ({
   availableComponents,
   onExportImage,
   onShowShortcuts,
+  resetSignal,
 }) => {
+  // Default toggle states
+  const DEFAULTS = React.useMemo(() => ({
+    wire: false,
+  }), []);
+
+  // Controlled pressed states for toggles
+  const [wirePressed, setWirePressed] = React.useState<boolean>(DEFAULTS.wire);
+
+  // Reset pressed states to defaults when resetSignal changes
+  React.useEffect(() => {
+    if (resetSignal === undefined) return;
+    setWirePressed(DEFAULTS.wire);
+  }, [resetSignal, DEFAULTS]);
+
   const [isCompact, setIsCompact] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -87,7 +104,10 @@ const Actions: React.FC<ActionsProps> = ({
       <Separator display={isCompact ? "none" : "block"} />
       <ToggleActionButton
         tooltip="Wire (W)"
-        defaultState={false}
+        pressed={wirePressed}
+        onToggle={(next) => {
+          setWirePressed(next);
+        }}
         onEnable={() => ee.setWireMode(true)}
         onDisable={() => ee.setWireMode(false)}
       >
