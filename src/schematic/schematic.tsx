@@ -819,7 +819,7 @@ const Schematic: React.FC<SchematicProps> = ({
         <BottomBar coord={coord} pointerInfo={pointerInfo} onSendToNetlist={sendToNetListButtonHandler} />
 
         {/* Status Icon - Top Right Floating */}
-        <StatusIcon info={info} />
+        <StatusIcon info={info} onClear={() => setInfo([])} />
       </Box>
       <ExportImageDialog
         isOpen={showExportImageDialog}

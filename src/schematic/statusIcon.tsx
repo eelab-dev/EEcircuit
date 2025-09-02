@@ -2,7 +2,6 @@ import React from "react";
 import {
   Box,
   Button,
-  CloseButton,
   Dialog,
   Flex,
   IconButton,
@@ -12,16 +11,17 @@ import {
   Circle,
   Checkbox,
 } from "@chakra-ui/react";
-import { AlertCircle, CheckCircle } from "lucide-react";
+import { AlertCircle, CheckCircle, Trash2, X } from "lucide-react";
 import { Tooltip } from "src/components/ui/tooltip";
 import { useAppStore } from "../store/appStore";
 import { dialogTheme } from "../styles/uiThemes";
 
 type StatusIconProps = {
   info: { message: string; mLevel: "user" | "dev" }[];
+  onClear?: () => void;
 };
 
-const StatusIcon: React.FC<StatusIconProps> = ({ info }) => {
+const StatusIcon: React.FC<StatusIconProps> = ({ info, onClear }) => {
   const showDevMessages = useAppStore((state) => state.showDevMessages);
   const setShowDevMessages = useAppStore((state) => state.setShowDevMessages);
 
@@ -84,11 +84,53 @@ const StatusIcon: React.FC<StatusIconProps> = ({ info }) => {
               bg={dialogTheme.bg}
               backdropFilter={dialogTheme.backdropFilter}
               borderColor={dialogTheme.borderColor}
+              position="relative"
             >
               <Dialog.Header>
-                <Dialog.Title color={dialogTheme.primaryText}>
-                  Status Messages
-                </Dialog.Title>
+                <Flex align="center" justify="space-between" w="100%">
+                  <Dialog.Title color={dialogTheme.primaryText}>
+                    Status Messages
+                  </Dialog.Title>
+                  <Flex gap={2} align="center">
+                    <Clipboard.Root
+                      value={filteredInfo.map((item) => item.message).join("\n")}
+                    >
+                      <Clipboard.Trigger asChild>
+                        <IconButton
+                          variant="ghost"
+                          size="xs"
+                          color={dialogTheme.primaryText}
+                          aria-label="Copy messages"
+                        >
+                          <Clipboard.Indicator />
+                        </IconButton>
+                      </Clipboard.Trigger>
+                    </Clipboard.Root>
+                    <Tooltip content="Clear messages" openDelay={200}>
+                      <IconButton
+                        aria-label="Clear messages"
+                        size="xs"
+                        variant="ghost"
+                        color={dialogTheme.primaryText}
+                        onClick={() => onClear?.()}
+                        disabled={!onClear || filteredInfo.length === 0}
+                      >
+                        <Trash2 size={14} />
+                      </IconButton>
+                    </Tooltip>
+                    <Dialog.CloseTrigger asChild>
+                      <IconButton
+                        aria-label="Close"
+                        size="xs"
+                        variant="ghost"
+                        color={dialogTheme.primaryText}
+                        position="static"
+                      >
+                        <X size={14} />
+                      </IconButton>
+                    </Dialog.CloseTrigger>
+                  </Flex>
+                </Flex>
               </Dialog.Header>
               <Dialog.Body>
                 <Flex direction="column" gap={3}>
@@ -145,24 +187,7 @@ const StatusIcon: React.FC<StatusIconProps> = ({ info }) => {
                   </Button>
                 </Dialog.ActionTrigger>
               </Dialog.Footer>
-              <Dialog.CloseTrigger asChild>
-                <Flex gap={2} align="center">
-                  <Clipboard.Root
-                    value={filteredInfo.map((item) => item.message).join("\n")}
-                  >
-                    <Clipboard.Trigger asChild>
-                      <IconButton
-                        variant="surface"
-                        size="xs"
-                        color={dialogTheme.primaryText}
-                      >
-                        <Clipboard.Indicator />
-                      </IconButton>
-                    </Clipboard.Trigger>
-                  </Clipboard.Root>
-                  <CloseButton size="sm" color={dialogTheme.primaryText} />
-                </Flex>
-              </Dialog.CloseTrigger>
+              
             </Dialog.Content>
           </Dialog.Positioner>
         </Portal>
