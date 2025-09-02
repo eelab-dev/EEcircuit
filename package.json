@@ -11,7 +11,7 @@
     "build": "vite build && ./copy_workers.sh",
     "preview": "vite preview",
     "lint": "eslint",
-    "check": "tsc --noEmit & eslint . --ext .ts,.tsx",
+    "check": "tsc --noEmit && eslint . --ext .ts,.tsx",
     "vercel-build": "vercel build"
   },
   "author": "Danial Chitnis",

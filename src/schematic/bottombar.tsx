@@ -13,7 +13,7 @@ import { PointerInfo } from "eecircuit-schematic";
 type BottomBarProps = {
   coord: { x: number; y: number };
   pointerInfo: PointerInfo | null;
-  onSendToNetlist: () => void;
+  onSendToNetlist: (shiftPressed: boolean) => void;
 };
 
 const getPointerIcon = (pointerInfo: PointerInfo | null) => {
@@ -100,7 +100,7 @@ const BottomBar: React.FC<BottomBarProps> = ({
   const SimulateButton = () => (
     <Button
       size="sm"
-      onClick={onSendToNetlist}
+      onClick={(e) => onSendToNetlist(!!(e as React.MouseEvent).shiftKey)}
       bg="blue.focusRing/60"
       color="gray.fg/90"
       _hover={{

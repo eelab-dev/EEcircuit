@@ -171,10 +171,25 @@ const Schematic: React.FC<SchematicProps> = ({
           setAvailableComponents(msg.availableComponents);
           break;
         case "info":
-          setInfo((prevInfo) => [
-            ...prevInfo,
-            { message: `${msg.mType}: ${msg.msg}`, mLevel: msg.mLevel },
-          ]);
+          setInfo((prevInfo) => {
+            const next = [
+              ...prevInfo,
+              { message: `${msg.mType}: ${msg.msg}`, mLevel: msg.mLevel },
+            ];
+            // Update global error indicator for cross-component logic
+            try {
+              const { setHasSchematicErrors } = useAppStore.getState() as {
+                setHasSchematicErrors?: (hasErrors: boolean) => void;
+              };
+              if (typeof setHasSchematicErrors === "function") {
+                const hasErrors = next.some((i) => i.message.startsWith("error:"));
+                setHasSchematicErrors(!!hasErrors);
+              }
+            } catch {
+              // ignore
+            }
+            return next;
+          });
           break;
         case "svg":
           setSvgContent(msg.svg);
@@ -816,10 +831,43 @@ const Schematic: React.FC<SchematicProps> = ({
         )}
 
         {/* Bottom Bar - Floating */}
-        <BottomBar coord={coord} pointerInfo={pointerInfo} onSendToNetlist={sendToNetListButtonHandler} />
+        <BottomBar
+          coord={coord}
+          pointerInfo={pointerInfo}
+          onSendToNetlist={(shift) => {
+            // Store a one-shot override when user holds Shift
+            try {
+              const { setOverrideSimulateOnNetlistErrorsOnce } =
+                useAppStore.getState() as {
+                  setOverrideSimulateOnNetlistErrorsOnce?: (override: boolean) => void;
+                };
+              if (typeof setOverrideSimulateOnNetlistErrorsOnce === "function") {
+                setOverrideSimulateOnNetlistErrorsOnce(!!shift);
+              }
+            } catch {
+              // ignore
+            }
+            sendToNetListButtonHandler();
+          }}
+        />
 
         {/* Status Icon - Top Right Floating */}
-        <StatusIcon info={info} onClear={() => setInfo([])} />
+        <StatusIcon
+          info={info}
+          onClear={() => {
+            setInfo([]);
+            try {
+              const { resetSchematicErrors } = useAppStore.getState() as {
+                resetSchematicErrors?: () => void;
+              };
+              if (typeof resetSchematicErrors === "function") {
+                resetSchematicErrors();
+              }
+            } catch {
+              // ignore
+            }
+          }}
+        />
       </Box>
       <ExportImageDialog
         isOpen={showExportImageDialog}

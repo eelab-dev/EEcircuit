@@ -13,6 +13,10 @@ export interface UiState {
   maxWebWorkers: number;
   resetVariableSelectionsOnNewSim: boolean;
   resetPlotStateOnNewSim: boolean;
+  // Schematic error tracking
+  hasSchematicErrors: boolean;
+  // One-shot override flag to allow navigating to Simulate despite errors
+  overrideSimulateOnNetlistErrorsOnce: boolean;
 }
 
 export interface UiActions {
@@ -27,6 +31,10 @@ export interface UiActions {
   setMaxWebWorkers: (count: number) => void;
   setResetVariableSelectionsOnNewSim: (reset: boolean) => void;
   setResetPlotStateOnNewSim: (reset: boolean) => void;
+  // Schematic error actions
+  setHasSchematicErrors: (hasErrors: boolean) => void;
+  resetSchematicErrors: () => void;
+  setOverrideSimulateOnNetlistErrorsOnce: (override: boolean) => void;
 }
 
 export type UiSlice = UiState & UiActions;
@@ -84,6 +92,8 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
     maxWebWorkers: Math.min(4, navigator.hardwareConcurrency || 4),
     resetVariableSelectionsOnNewSim: false,
     resetPlotStateOnNewSim: false,
+    hasSchematicErrors: false,
+    overrideSimulateOnNetlistErrorsOnce: false,
 
     // Actions
     setInputProfile: (profile) => set({ inputProfile: profile }),
@@ -133,5 +143,11 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
     // Plot reset configuration actions
     setResetVariableSelectionsOnNewSim: (reset) => set({ resetVariableSelectionsOnNewSim: reset }),
     setResetPlotStateOnNewSim: (reset) => set({ resetPlotStateOnNewSim: reset }),
+
+    // Schematic error actions
+    setHasSchematicErrors: (hasErrors) => set({ hasSchematicErrors: hasErrors }),
+    resetSchematicErrors: () => set({ hasSchematicErrors: false }),
+    setOverrideSimulateOnNetlistErrorsOnce: (override) =>
+      set({ overrideSimulateOnNetlistErrorsOnce: override === true }),
   };
 };
