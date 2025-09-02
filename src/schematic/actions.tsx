@@ -15,11 +15,12 @@ import {
   Move,
   Keyboard,
 } from "lucide-react";
-import { AvailableComponent, sendCommand } from "eecircuit-schematic";
-import { dialogTheme } from "src/styles/uiThemes";
+import * as ee from "eecircuit-schematic";
+import { actionBarTheme } from "src/styles/uiThemes";
+import ToggleActionButton from "./ToggleActionButton";
 
 type ActionsProps = {
-  availableComponents: AvailableComponent[];
+  availableComponents: ee.AvailableComponent[];
   onExportImage: () => void;
   onShowShortcuts: () => void;
 };
@@ -73,52 +74,55 @@ const Actions: React.FC<ActionsProps> = ({
         maxWidth: isCompact ? "7rem" : "auto",
       }}
     >
-      <Tooltip content="Select/Move" showArrow openDelay={300}>
-        <IconButton bg={dialogTheme.buttonIconBg}>
+      <Tooltip content="Select" showArrow openDelay={300}>
+        <IconButton bg={actionBarTheme.buttonIconBg}>
           <MousePointer />
         </IconButton>
       </Tooltip>
-      <Tooltip content="Pan View" showArrow openDelay={300}>
-        <IconButton bg={dialogTheme.buttonIconBg}>
+      <Tooltip content="Move (M)" showArrow openDelay={300}>
+        <IconButton bg={actionBarTheme.buttonIconBg}>
           <Move />
         </IconButton>
       </Tooltip>
       <Separator display={isCompact ? "none" : "block"} />
-      <Tooltip content="Add Wire" showArrow openDelay={300}>
-        <IconButton bg={dialogTheme.buttonIconBg}>
-          <Cable />
-        </IconButton>
-      </Tooltip>
+      <ToggleActionButton
+        tooltip="Wire (W)"
+        defaultState={false}
+        onEnable={() => ee.setWireMode(true)}
+        onDisable={() => ee.setWireMode(false)}
+      >
+        <Cable />
+      </ToggleActionButton>
       <AddComponentPopover availableComponents={availableComponents} />
       <Separator display={isCompact ? "none" : "block"} />
-      <Tooltip content="Remove Selected" showArrow openDelay={300}>
-        <IconButton bg={dialogTheme.buttonIconBg}>
+      <Tooltip content="Remove (Shift+D)" showArrow openDelay={300}>
+        <IconButton bg={actionBarTheme.buttonIconBg}>
           <Eraser />
         </IconButton>
       </Tooltip>
       <Separator display={isCompact ? "none" : "block"} />
       <Tooltip content="Hand Tool" showArrow openDelay={300}>
-        <IconButton bg={dialogTheme.buttonIconBg}>
+        <IconButton bg={actionBarTheme.buttonIconBg}>
           <Hand />
         </IconButton>
       </Tooltip>
-      <Tooltip content="Fit to Screen" showArrow openDelay={300}>
+      <Tooltip content="Fit to Screen (F)" showArrow openDelay={300}>
         <IconButton
-          bg={dialogTheme.buttonIconBg}
+          bg={actionBarTheme.buttonIconBg}
           onClick={() => {
-            sendCommand({ command: "view", viewType: "fit" });
+            ee.sendCommand({ command: "view", viewType: "fit" });
           }}
         >
           <Fullscreen />
         </IconButton>
       </Tooltip>
-      <Tooltip content="Return to Origin" showArrow openDelay={300}>
-        <IconButton bg={dialogTheme.buttonIconBg}>
+      <Tooltip content="Return to Origin (O)" showArrow openDelay={300}>
+        <IconButton bg={actionBarTheme.buttonIconBg}>
           <CircleDot />
         </IconButton>
       </Tooltip>
       <Tooltip content="Export Image" showArrow openDelay={300}>
-        <IconButton bg={dialogTheme.buttonIconBg} onClick={onExportImage}>
+        <IconButton bg={actionBarTheme.buttonIconBg} onClick={onExportImage}>
           <ImageDown />
         </IconButton>
       </Tooltip>
@@ -127,7 +131,7 @@ const Actions: React.FC<ActionsProps> = ({
         showArrow
         openDelay={300}
       >
-        <IconButton bg={dialogTheme.buttonIconBg} onClick={onShowShortcuts}>
+        <IconButton bg={actionBarTheme.buttonIconBg} onClick={onShowShortcuts}>
           <Keyboard />
         </IconButton>
       </Tooltip>

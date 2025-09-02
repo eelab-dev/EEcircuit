@@ -36,4 +36,12 @@ export const bottomBarTheme = {
   borderRadius: "xl",
   backdropFilter: "blur(3px)",
   primaryText: "gray.fg/95",
+}
+
+
+export const actionBarTheme = {
+  buttonIconBg: "gray.solid/90",
+  buttonIconBgSelected: "gray.focusRing/90",
+  backdropFilter: "blur(8px)",
+  border: "0px solid",
 } 
