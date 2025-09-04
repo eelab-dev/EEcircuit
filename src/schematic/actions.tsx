@@ -3,6 +3,8 @@ import { IconButton, Separator } from "@chakra-ui/react";
 import { Tooltip } from "../components/ui/tooltip";
 import AddComponentPopover from "./AddComponentPopover";
 import debounce from "lodash.debounce";
+import * as ee from "eecircuit-schematic";
+import type { AvailableComponent } from "eecircuit-schematic";
 
 import {
   Cable,
@@ -15,37 +17,23 @@ import {
   Move,
   Keyboard,
 } from "lucide-react";
-import * as ee from "eecircuit-schematic";
 import { actionBarTheme } from "src/styles/uiThemes";
 import ToggleActionButton from "./ToggleActionButton";
+import { useAppStore } from "src/store/appStore";
 
 type ActionsProps = {
-  availableComponents: ee.AvailableComponent[];
+  availableComponents: AvailableComponent[];
   onExportImage: () => void;
   onShowShortcuts: () => void;
-  // When this number changes, reset all toggle states to defaults
-  resetSignal?: number;
 };
 
 const Actions: React.FC<ActionsProps> = ({
   availableComponents,
   onExportImage,
   onShowShortcuts,
-  resetSignal,
 }) => {
-  // Default toggle states
-  const DEFAULTS = React.useMemo(() => ({
-    wire: false,
-  }), []);
-
-  // Controlled pressed states for toggles
-  const [wirePressed, setWirePressed] = React.useState<boolean>(DEFAULTS.wire);
-
-  // Reset pressed states to defaults when resetSignal changes
-  React.useEffect(() => {
-    if (resetSignal === undefined) return;
-    setWirePressed(DEFAULTS.wire);
-  }, [resetSignal, DEFAULTS]);
+  const wirePressed = useAppStore((s) => s.wireMode);
+  const setWireMode = useAppStore((s) => s.setWireMode);
 
   const [isCompact, setIsCompact] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -105,11 +93,7 @@ const Actions: React.FC<ActionsProps> = ({
       <ToggleActionButton
         tooltip="Wire (W)"
         pressed={wirePressed}
-        onToggle={(next) => {
-          setWirePressed(next);
-        }}
-        onEnable={() => ee.setWireMode(true)}
-        onDisable={() => ee.setWireMode(false)}
+        onToggle={(next) => setWireMode(next)}
       >
         <Cable />
       </ToggleActionButton>

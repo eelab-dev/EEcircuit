@@ -78,7 +78,7 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
         { keys: "M", description: "Move component" },
         { keys: "W", description: "Enter wire mode" },
         { keys: "Shift + D", description: "Activate delete mode" },
-        { keys: "Esc", description: "Cancel any mode" },
+        { keys: "Esc or §", description: "Cancel any mode (iPad keyboards use §)" },
       ],
     },
     {

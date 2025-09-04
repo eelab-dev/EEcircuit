@@ -5,8 +5,8 @@ import { actionBarTheme } from "src/styles/uiThemes";
 
 type ToggleActionButtonProps = {
   tooltip: string;
-  onEnable: () => void;
-  onDisable: () => void;
+  onEnable?: () => void;
+  onDisable?: () => void;
   // Optional initial pressed state. `defaultState` is an alias for convenience.
   defaultPressed?: boolean;
   defaultState?: boolean;
@@ -39,9 +39,9 @@ const ToggleActionButton: React.FC<ToggleActionButtonProps> = ({
       setInternalPressed(next);
     }
     if (next) {
-      onEnable();
+      onEnable?.();
     } else {
-      onDisable();
+      onDisable?.();
     }
   }, [pressed, isControlled, onToggle, onEnable, onDisable]);
 

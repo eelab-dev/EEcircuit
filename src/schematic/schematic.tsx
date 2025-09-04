@@ -18,6 +18,7 @@ import { Box, Float } from "@chakra-ui/react";
 import debounce from "lodash.debounce";
 
 import Actions from "./actions";
+import { useSchematicKeyboard } from "./useSchematicKeyboard";
 import Properties from "./properties";
 import BottomBar from "./bottombar";
 import StatusIcon from "./statusIcon";
@@ -459,82 +460,22 @@ const Schematic: React.FC<SchematicProps> = ({
     };
   }, [isPlotSelectionMode, handleExitPlotSelectionMode]);
 
-  // Handle keyboard shortcuts for undo/redo and shortcuts dialog when canvas is focused
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Only handle shortcuts when canvas container is focused or contains focus
-      const canvasContainer = containerRef.current;
-      if (!canvasContainer || !document.activeElement) return;
-
-      // Check if focus is within the canvas container or on the canvas itself
-      const isFocusInCanvas =
-        canvasContainer.contains(document.activeElement) ||
-        document.activeElement === canvasRef.current;
-
-      if (!isFocusInCanvas) return;
-
-      // Handle Shift+H or Ctrl+H for shortcuts dialog (override eecircuit-schematic's Ctrl+H)
-      if (
-        (event.shiftKey && event.key === "H") ||
-        (event.ctrlKey && (event.key === "h" || event.key === "H"))
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-        setShowShortcutsDialog(true);
-        return;
-      }
-
-      // Handle Shift+Z for undo
-      if (event.shiftKey && event.key === "Z") {
-        event.preventDefault();
-        eeSch.undoSch();
-      }
-
-      // Handle Shift+R for redo
-      if (event.shiftKey && event.key === "R") {
-        event.preventDefault();
-        eeSch.redoSch();
-      }
-    };
-
-    // Use capture phase to intercept events before eecircuit-schematic can handle them
-    document.addEventListener("keydown", handleKeyDown, true);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown, true);
-    };
-  }, []);
-
-  // Track a reset signal for the action bar toggles
-  const [actionBarResetTick, setActionBarResetTick] = useState(0);
-
-  // Handle Escape/§ to reset all modes while in Schematic tab
-  // Do not call preventDefault to avoid interfering with fullscreen ESC behavior
-  useEffect(() => {
-    const handleEscReset = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" && event.key !== "§") return;
-
-      // Only when this tab is visible and focus is within the schematic container
-      if (!isTabVisibleRef.current) return;
-      const canvasContainer = containerRef.current;
-      if (!canvasContainer || !document.activeElement) return;
-      const isFocusInCanvas =
-        canvasContainer.contains(document.activeElement) ||
-        document.activeElement === canvasRef.current;
-      if (!isFocusInCanvas) return;
-
-      // Skip when plot selection mode is active (that flow has its own ESC/§ handler)
-      if (isPlotSelectionModeRef.current) return;
-
-      eeSch.resetAllModes();
-      // Reset action bar toggle states to defaults
-      setActionBarResetTick((t) => t + 1);
-    };
-
-    document.addEventListener("keydown", handleEscReset);
-    return () => {
-      document.removeEventListener("keydown", handleEscReset);
-    };
-  }, []);
+  // Centralized keyboard handling (except plot-selection ESC)
+  useSchematicKeyboard({
+    containerRef,
+    canvasRef,
+    isTabVisibleRef,
+    isPlotSelectionModeRef,
+    onOpenShortcutsDialog: () => setShowShortcutsDialog(true),
+    onResetAllModes: () => {
+      const resetModes = useAppStore.getState().resetSchematicModes
+      resetModes();
+    },
+    onSetWireMode: (enable) => {
+      const setter = useAppStore.getState().setWireMode
+      setter(enable);
+    },
+  });
 
   // Initialize the canvas and set up the message callback
   useEffect(() => {
@@ -773,14 +714,11 @@ const Schematic: React.FC<SchematicProps> = ({
         {/* Canvas added dynamically */}
 
         <Float offset="10" placement="middle-start">
-          {
-            <Actions
-              availableComponents={availableComponents}
-              onExportImage={handleExportImage}
-              onShowShortcuts={handleShowShortcuts}
-              resetSignal={actionBarResetTick}
-            />
-          }
+          {<Actions
+            availableComponents={availableComponents}
+            onExportImage={handleExportImage}
+            onShowShortcuts={handleShowShortcuts}
+          />}
         </Float>
         {propertiesOpen && (
           <Properties

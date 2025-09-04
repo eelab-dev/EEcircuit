@@ -1,5 +1,6 @@
 import { StateCreator } from "zustand";
 import { Schematic as SchematicType } from "eecircuit-schematic";
+import * as ee from "eecircuit-schematic";
 
 // Schematic state and actions
 export interface SchematicState {
@@ -7,6 +8,8 @@ export interface SchematicState {
   hasResizedSinceSchematicView: boolean;
   hasViewedSchematic: boolean;
   currentSchematic?: SchematicType;
+  // UI modes
+  wireMode: boolean;
 }
 
 export interface SchematicActions {
@@ -14,6 +17,9 @@ export interface SchematicActions {
   setHasResizedSinceSchematicView: (has: boolean) => void;
   setHasViewedSchematic: (has: boolean) => void;
   setCurrentSchematic: (schematic?: SchematicType) => void;
+  // Mode controls
+  setWireMode: (enable: boolean) => void;
+  resetSchematicModes: () => void;
 }
 
 export type SchematicSlice = SchematicState & SchematicActions;
@@ -29,6 +35,7 @@ export const createSchematicSlice: StateCreator<
   hasResizedSinceSchematicView: false,
   hasViewedSchematic: false,
   currentSchematic: undefined,
+  wireMode: false,
 
   // Actions
   setShouldFitToScreen: (should) => set({ shouldFitToScreen: should }),
@@ -36,4 +43,21 @@ export const createSchematicSlice: StateCreator<
     set({ hasResizedSinceSchematicView: has }),
   setHasViewedSchematic: (has) => set({ hasViewedSchematic: has }),
   setCurrentSchematic: (schematic) => set({ currentSchematic: schematic }),
+  setWireMode: (enable) =>
+    set((state) => {
+      if (state.wireMode === enable) return state;
+      // Update UI state first
+      const next = { ...state, wireMode: enable } as SchematicSlice;
+      // Trigger engine mode change
+      ee.setWireMode(enable);
+      return next;
+    }),
+  resetSchematicModes: () =>
+    set((state) => {
+      if (state.wireMode) {
+        ee.setWireMode(false);
+      }
+      ee.resetAllModes();
+      return { ...state, wireMode: false } as SchematicSlice;
+    }),
 });
