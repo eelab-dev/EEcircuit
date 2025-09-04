@@ -34,6 +34,8 @@ const Actions: React.FC<ActionsProps> = ({
 }) => {
   const wirePressed = useAppStore((s) => s.wireMode);
   const setWireMode = useAppStore((s) => s.setWireMode);
+  const deletePressed = useAppStore((s) => s.deleteMode);
+  const setDeleteMode = useAppStore((s) => s.setDeleteMode);
 
   const [isCompact, setIsCompact] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -99,11 +101,13 @@ const Actions: React.FC<ActionsProps> = ({
       </ToggleActionButton>
       <AddComponentPopover availableComponents={availableComponents} />
       <Separator display={isCompact ? "none" : "block"} />
-      <Tooltip content="Remove (Shift+D)" showArrow openDelay={300}>
-        <IconButton bg={actionBarTheme.buttonIconBg}>
-          <Eraser />
-        </IconButton>
-      </Tooltip>
+      <ToggleActionButton
+        tooltip="Remove (Shift+D)"
+        pressed={deletePressed}
+        onToggle={(next) => setDeleteMode(next)}
+      >
+        <Eraser />
+      </ToggleActionButton>
       <Separator display={isCompact ? "none" : "block"} />
       <Tooltip content="Hand Tool" showArrow openDelay={300}>
         <IconButton bg={actionBarTheme.buttonIconBg}>

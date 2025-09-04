@@ -475,6 +475,10 @@ const Schematic: React.FC<SchematicProps> = ({
       const setter = useAppStore.getState().setWireMode
       setter(enable);
     },
+    onSetDeleteMode: (enable) => {
+      const setter = useAppStore.getState().setDeleteMode
+      setter(enable);
+    },
   });
 
   // Initialize the canvas and set up the message callback

@@ -10,6 +10,7 @@ export interface SchematicState {
   currentSchematic?: SchematicType;
   // UI modes
   wireMode: boolean;
+  deleteMode: boolean;
 }
 
 export interface SchematicActions {
@@ -19,6 +20,7 @@ export interface SchematicActions {
   setCurrentSchematic: (schematic?: SchematicType) => void;
   // Mode controls
   setWireMode: (enable: boolean) => void;
+  setDeleteMode: (enable: boolean) => void;
   resetSchematicModes: () => void;
 }
 
@@ -36,6 +38,7 @@ export const createSchematicSlice: StateCreator<
   hasViewedSchematic: false,
   currentSchematic: undefined,
   wireMode: false,
+  deleteMode: false,
 
   // Actions
   setShouldFitToScreen: (should) => set({ shouldFitToScreen: should }),
@@ -45,11 +48,36 @@ export const createSchematicSlice: StateCreator<
   setCurrentSchematic: (schematic) => set({ currentSchematic: schematic }),
   setWireMode: (enable) =>
     set((state) => {
-      if (state.wireMode === enable) return state;
-      // Update UI state first
-      const next = { ...state, wireMode: enable } as SchematicSlice;
-      // Trigger engine mode change
+      if (state.wireMode === enable && (!enable || state.deleteMode === false))
+        return state;
+      const next: SchematicSlice = {
+        ...state,
+        wireMode: enable,
+        // Wire and delete are mutually exclusive
+        deleteMode: enable ? false : state.deleteMode,
+      } as SchematicSlice;
+      // Trigger engine mode change(s)
+      if (enable) {
+        ee.setDeleteMode(false);
+      }
       ee.setWireMode(enable);
+      return next;
+    }),
+  setDeleteMode: (enable) =>
+    set((state) => {
+      if (state.deleteMode === enable && (!enable || state.wireMode === false))
+        return state;
+      const next: SchematicSlice = {
+        ...state,
+        deleteMode: enable,
+        // Delete and wire are mutually exclusive
+        wireMode: enable ? false : state.wireMode,
+      } as SchematicSlice;
+      // Trigger engine mode change(s)
+      if (enable) {
+        ee.setWireMode(false);
+      }
+      ee.setDeleteMode(enable);
       return next;
     }),
   resetSchematicModes: () =>
@@ -57,7 +85,10 @@ export const createSchematicSlice: StateCreator<
       if (state.wireMode) {
         ee.setWireMode(false);
       }
+      if (state.deleteMode) {
+        ee.setDeleteMode(false);
+      }
       ee.resetAllModes();
-      return { ...state, wireMode: false } as SchematicSlice;
+      return { ...state, wireMode: false, deleteMode: false } as SchematicSlice;
     }),
 });
