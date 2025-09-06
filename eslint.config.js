@@ -11,7 +11,7 @@ export default defineConfig([
 
   // Base JS config for src
   {
-    files: ["src/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    files: ["src/**/*.{ts,mts,cts,jsx,tsx}"],
     plugins: { js },
     extends: ["js/recommended"],
     languageOptions: {
