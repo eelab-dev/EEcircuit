@@ -16,6 +16,7 @@ import {
   MousePointer,
   Move,
   Keyboard,
+  Type,
 } from "lucide-react";
 import { actionBarTheme } from "src/styles/uiThemes";
 import ToggleActionButton from "./ToggleActionButton";
@@ -84,14 +85,8 @@ const Actions: React.FC<ActionsProps> = ({
           <MousePointer />
         </IconButton>
       </Tooltip>
-      <ToggleActionButton
-        tooltip="Move (M)"
-        pressed={editorMode === "move"}
-        onToggle={(next) => setEditorMode(next ? "move" : "none")}
-      >
-        <Move />
-      </ToggleActionButton>
-      <Separator display={isCompact ? "none" : "block"} />
+      <AddComponentPopover availableComponents={availableComponents} />
+
       <ToggleActionButton
         tooltip="Wire (W)"
         pressed={editorMode === "wire"}
@@ -99,8 +94,23 @@ const Actions: React.FC<ActionsProps> = ({
       >
         <Cable />
       </ToggleActionButton>
-      <AddComponentPopover availableComponents={availableComponents} />
-      <Separator display={isCompact ? "none" : "block"} />
+
+      <ToggleActionButton
+        tooltip="Move (M)"
+        pressed={editorMode === "move"}
+        onToggle={(next) => setEditorMode(next ? "move" : "none")}
+      >
+        <Move />
+      </ToggleActionButton>
+
+      <ToggleActionButton
+        tooltip="Text (T)"
+        pressed={editorMode === "text"}
+        onToggle={(next) => setEditorMode(next ? "text" : "none")}
+      >
+        <Type />
+      </ToggleActionButton>
+
       <ToggleActionButton
         tooltip="Remove (Shift+D)"
         pressed={editorMode === "delete"}
@@ -108,12 +118,16 @@ const Actions: React.FC<ActionsProps> = ({
       >
         <Eraser />
       </ToggleActionButton>
+
       <Separator display={isCompact ? "none" : "block"} />
+      {/* Navigation */}
+
       <Tooltip content="Hand Tool" showArrow openDelay={300}>
         <IconButton bg={actionBarTheme.buttonIconBg}>
           <Hand />
         </IconButton>
       </Tooltip>
+
       <Tooltip content="Fit to Screen (F)" showArrow openDelay={300}>
         <IconButton
           bg={actionBarTheme.buttonIconBg}
@@ -124,16 +138,22 @@ const Actions: React.FC<ActionsProps> = ({
           <Fullscreen />
         </IconButton>
       </Tooltip>
+
       <Tooltip content="Return to Origin (O)" showArrow openDelay={300}>
         <IconButton bg={actionBarTheme.buttonIconBg}>
           <CircleDot />
         </IconButton>
       </Tooltip>
+
+      <Separator display={isCompact ? "none" : "block"} />
+      {/* Misc */}
+
       <Tooltip content="Export Image" showArrow openDelay={300}>
         <IconButton bg={actionBarTheme.buttonIconBg} onClick={onExportImage}>
           <ImageDown />
         </IconButton>
       </Tooltip>
+
       <Tooltip
         content="Keyboard Shortcuts (Shift+H or Ctrl+H)"
         showArrow
