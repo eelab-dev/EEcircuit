@@ -4,7 +4,6 @@ import { SimulationType } from "../types/commonTypes";
 import type { BracketOperation } from "../utils/bracketParser";
 import type { ParallelSimulationResult } from "../simulation/parallelSimulation";
 import { saveSimulationConfigs, loadSimulationConfigs } from "../utils/localStorageUtils";
-import { toaster } from "../components/ui/toaster";
 
 // Define the store interface that includes both simulation and tab slices
 interface StoreWithTab {
@@ -225,34 +224,14 @@ export const createSimulationSlice: StateCreator<
     // Always set the netlist value
     set({ netList: netlistWithPreamble });
 
-    // Read schematic error flag and optional override
-    const {
-      hasSchematicErrors,
-      overrideSimulateOnNetlistErrorsOnce,
-      setIsSimulateTabEnabled,
-      setMainTabValue,
-    } = get() as SimulationSlice & StoreWithTab & {
-      hasSchematicErrors?: boolean;
-      overrideSimulateOnNetlistErrorsOnce?: boolean;
-      setIsSimulateTabEnabled: (enabled: boolean) => void;
-      setMainTabValue: (tab: "schematic" | "simulate" | "plot") => void;
-    };
+    // Proceed to enable and navigate to simulate tab (validation handled by caller)
+    const { setIsSimulateTabEnabled, setMainTabValue } = get() as SimulationSlice &
+      StoreWithTab & {
+        setIsSimulateTabEnabled: (enabled: boolean) => void;
+        setMainTabValue: (tab: "schematic" | "simulate" | "plot") => void;
+      };
 
-    // If there are schematic errors and no override, show a long error toast and do not switch tabs
-    if (hasSchematicErrors && !overrideSimulateOnNetlistErrorsOnce) {
-      toaster.create({
-        title: "Schematic Errors Detected",
-        description:
-          "Fix errors before simulating. Hold Shift and click Simulate to proceed anyway.",
-        type: "error",
-        duration: 30000,
-        meta: { closable: true },
-      });
-      // Do not enable or switch to simulate tab
-      return;
-    }
-
-    // Clear override after use (one-shot)
+    // Clear one-shot override flag if present (defensive)
     try {
       const { setOverrideSimulateOnNetlistErrorsOnce } = get() as unknown as {
         setOverrideSimulateOnNetlistErrorsOnce?: (override: boolean) => void;
@@ -262,7 +241,6 @@ export const createSimulationSlice: StateCreator<
       // ignore
     }
 
-    // Proceed to enable and navigate to simulate tab
     setIsSimulateTabEnabled(true);
     setMainTabValue("simulate");
   },

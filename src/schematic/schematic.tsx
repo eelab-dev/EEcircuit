@@ -28,16 +28,15 @@ import { ToBePlotted } from "src/types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import { getRecommendedInputProfile } from "../utils/deviceDetection";
 import { dialogTheme } from "../styles/uiThemes";
+import { toaster } from "../components/ui/toaster";
 
 type SchematicProps = {
-  onNetlistExported: (netlist: string) => void;
   // Only props that are NOT available in the store
   onCanvasResized?: () => void;
   onSchematicDataChange?: (schematicData: SchematicType) => void;
 };
 
 const Schematic: React.FC<SchematicProps> = ({
-  onNetlistExported,
   onCanvasResized,
   onSchematicDataChange,
 }) => {
@@ -166,33 +165,17 @@ const Schematic: React.FC<SchematicProps> = ({
           }
           break;
         case "netList":
-          onNetlistExported(msg.netList);
+          // Netlist messages are handled via eeSch.getNetList() promise resolution.
+          // Intentionally ignore here to avoid double navigation.
           break;
         case "availableComponents":
           setAvailableComponents(msg.availableComponents);
           break;
         case "info":
-          setInfo((prevInfo) => {
-            const next = [
-              ...prevInfo,
-              { message: `${msg.mType}: ${msg.msg}`, mLevel: msg.mLevel },
-            ];
-            // Update global error indicator for cross-component logic
-            try {
-              const { setHasSchematicErrors } = useAppStore.getState() as {
-                setHasSchematicErrors?: (hasErrors: boolean) => void;
-              };
-              if (typeof setHasSchematicErrors === "function") {
-                const hasErrors = next.some((i) =>
-                  i.message.startsWith("error:")
-                );
-                setHasSchematicErrors(!!hasErrors);
-              }
-            } catch {
-              // ignore
-            }
-            return next;
-          });
+          setInfo((prevInfo) => [
+            ...prevInfo,
+            { message: `${msg.mType}: ${msg.msg}`, mLevel: msg.mLevel },
+          ]);
           break;
         case "svg":
           setSvgContent(msg.svg);
@@ -207,7 +190,6 @@ const Schematic: React.FC<SchematicProps> = ({
       }
     },
     [
-      onNetlistExported,
       // Note: Save functionality moved to EEcircuit component - no simulation config dependencies needed
       // Removed direct prop dependencies to prevent callback recreation
       // Store-prioritized values are now accessed via refs for stability
@@ -675,10 +657,52 @@ const Schematic: React.FC<SchematicProps> = ({
     };
   }, [safeInitCanvas, onCanvasResized]);
 
-  const sendToNetListButtonHandler = useCallback(() => {
+  const sendToNetListButtonHandler = useCallback(async () => {
     if (!canvasRef.current) return;
-    // Send command to export netlist
-    eeSch.sendCommand({ command: "export", exportType: "netList" });
+
+    try {
+      const result = await eeSch.getNetList();
+      const { netList, success } = result || { netList: "", success: false };
+
+      // Read one-shot override flag (set when user holds Shift)
+      const {
+        overrideSimulateOnNetlistErrorsOnce,
+        exportNetlist,
+        setOverrideSimulateOnNetlistErrorsOnce,
+      } = useAppStore.getState() as unknown as {
+        overrideSimulateOnNetlistErrorsOnce?: boolean;
+        exportNetlist: (netlist: string) => void;
+        setOverrideSimulateOnNetlistErrorsOnce?: (override: boolean) => void;
+      };
+
+      if (success || overrideSimulateOnNetlistErrorsOnce) {
+        // Proceed: store netlist (with preamble) and navigate to Simulate
+        exportNetlist(netList);
+        // exportNetlist clears the override internally, but clear defensively if available
+        setOverrideSimulateOnNetlistErrorsOnce?.(false);
+        return;
+      }
+
+      // Not successful and no override: show error toast and do not navigate
+      toaster.create({
+        title: "Netlist Generation Failed",
+        description:
+          "Fix errors before simulating. Hold Shift and click Simulate to proceed anyway.",
+        type: "error",
+        duration: 30000,
+        meta: { closable: true },
+      });
+
+      // Ensure one-shot override doesn’t linger
+      setOverrideSimulateOnNetlistErrorsOnce?.(false);
+    } catch (err) {
+      console.error("[DEBUG NETLIST] getNetList() failed", err);
+      toaster.create({
+        title: "Netlist Error",
+        description: "Unable to generate netlist. Check schematic and try again.",
+        type: "error",
+      });
+    }
   }, []);
 
   const propertiesCallBack = React.useCallback(() => {
@@ -704,6 +728,21 @@ const Schematic: React.FC<SchematicProps> = ({
   const handleShowShortcuts = () => {
     setShowShortcutsDialog(true);
   };
+
+  // Derive schematic error flag from info messages and update global UI state
+  useEffect(() => {
+    const hasErrors = info.some((i) => i.message.startsWith("error:"));
+    try {
+      const { setHasSchematicErrors } = useAppStore.getState() as {
+        setHasSchematicErrors?: (hasErrors: boolean) => void;
+      };
+      if (typeof setHasSchematicErrors === "function") {
+        setHasSchematicErrors(!!hasErrors);
+      }
+    } catch {
+      // ignore
+    }
+  }, [info]);
 
   return (
     <Box position="relative" height={"100%"}>

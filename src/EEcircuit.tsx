@@ -82,7 +82,6 @@ const EEcircuit: React.FC = () => {
     setSchematicLoadingMessage,
     inputProfile,
     toggleInputProfile,
-    exportNetlist,
     enterPlotSelectionMode,
     setCurrentSchematic,
     allSimulationConfigs,
@@ -139,12 +138,7 @@ const EEcircuit: React.FC = () => {
     setHasResizedSinceSchematicView(false);
   }, [setHasResizedSinceSchematicView]);
 
-  const exportedNetlist = React.useCallback(
-    (netlist: string) => {
-      exportNetlist(netlist);
-    },
-    [exportNetlist]
-  );
+  // Deprecated: netlist flow now handled within Schematic via ee.getNetList().
 
   const handleMainTabValueChange = React.useCallback(
     (details: TabsValueChangeDetails) => {
@@ -605,7 +599,6 @@ const EEcircuit: React.FC = () => {
           position="relative"
         >
           <Schematic
-            onNetlistExported={exportedNetlist}
             onCanvasResized={handleCanvasResized}
             onSchematicDataChange={handleSchematicDataChange}
           />
