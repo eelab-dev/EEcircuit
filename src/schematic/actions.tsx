@@ -32,10 +32,8 @@ const Actions: React.FC<ActionsProps> = ({
   onExportImage,
   onShowShortcuts,
 }) => {
-  const wirePressed = useAppStore((s) => s.wireMode);
-  const setWireMode = useAppStore((s) => s.setWireMode);
-  const deletePressed = useAppStore((s) => s.deleteMode);
-  const setDeleteMode = useAppStore((s) => s.setDeleteMode);
+  const editorMode = useAppStore((s) => s.editorMode);
+  const setEditorMode = useAppStore((s) => s.setEditorMode);
 
   const [isCompact, setIsCompact] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -94,8 +92,8 @@ const Actions: React.FC<ActionsProps> = ({
       <Separator display={isCompact ? "none" : "block"} />
       <ToggleActionButton
         tooltip="Wire (W)"
-        pressed={wirePressed}
-        onToggle={(next) => setWireMode(next)}
+        pressed={editorMode === "wire"}
+        onToggle={(next) => setEditorMode(next ? "wire" : "none")}
       >
         <Cable />
       </ToggleActionButton>
@@ -103,8 +101,8 @@ const Actions: React.FC<ActionsProps> = ({
       <Separator display={isCompact ? "none" : "block"} />
       <ToggleActionButton
         tooltip="Remove (Shift+D)"
-        pressed={deletePressed}
-        onToggle={(next) => setDeleteMode(next)}
+        pressed={editorMode === "delete"}
+        onToggle={(next) => setEditorMode(next ? "delete" : "none")}
       >
         <Eraser />
       </ToggleActionButton>

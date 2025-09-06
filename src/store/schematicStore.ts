@@ -1,6 +1,7 @@
 import { StateCreator } from "zustand";
 import { Schematic as SchematicType } from "eecircuit-schematic";
 import * as ee from "eecircuit-schematic";
+type EditorMode = Parameters<typeof ee.setMode>[0];
 
 // Schematic state and actions
 export interface SchematicState {
@@ -8,9 +9,8 @@ export interface SchematicState {
   hasResizedSinceSchematicView: boolean;
   hasViewedSchematic: boolean;
   currentSchematic?: SchematicType;
-  // UI modes
-  wireMode: boolean;
-  deleteMode: boolean;
+  // Active editor mode (single source of truth)
+  editorMode: EditorMode;
 }
 
 export interface SchematicActions {
@@ -18,9 +18,8 @@ export interface SchematicActions {
   setHasResizedSinceSchematicView: (has: boolean) => void;
   setHasViewedSchematic: (has: boolean) => void;
   setCurrentSchematic: (schematic?: SchematicType) => void;
-  // Mode controls
-  setWireMode: (enable: boolean) => void;
-  setDeleteMode: (enable: boolean) => void;
+  // Mode controls (generic + convenience wrappers)
+  setEditorMode: (mode: EditorMode) => void;
   resetSchematicModes: () => void;
 }
 
@@ -37,8 +36,7 @@ export const createSchematicSlice: StateCreator<
   hasResizedSinceSchematicView: false,
   hasViewedSchematic: false,
   currentSchematic: undefined,
-  wireMode: false,
-  deleteMode: false,
+  editorMode: "none",
 
   // Actions
   setShouldFitToScreen: (should) => set({ shouldFitToScreen: should }),
@@ -46,49 +44,16 @@ export const createSchematicSlice: StateCreator<
     set({ hasResizedSinceSchematicView: has }),
   setHasViewedSchematic: (has) => set({ hasViewedSchematic: has }),
   setCurrentSchematic: (schematic) => set({ currentSchematic: schematic }),
-  setWireMode: (enable) =>
+  setEditorMode: (mode) =>
     set((state) => {
-      if (state.wireMode === enable && (!enable || state.deleteMode === false))
-        return state;
-      const next: SchematicSlice = {
-        ...state,
-        wireMode: enable,
-        // Wire and delete are mutually exclusive
-        deleteMode: enable ? false : state.deleteMode,
-      } as SchematicSlice;
-      // Trigger engine mode change(s)
-      if (enable) {
-        ee.setDeleteMode(false);
-      }
-      ee.setWireMode(enable);
-      return next;
-    }),
-  setDeleteMode: (enable) =>
-    set((state) => {
-      if (state.deleteMode === enable && (!enable || state.wireMode === false))
-        return state;
-      const next: SchematicSlice = {
-        ...state,
-        deleteMode: enable,
-        // Delete and wire are mutually exclusive
-        wireMode: enable ? false : state.wireMode,
-      } as SchematicSlice;
-      // Trigger engine mode change(s)
-      if (enable) {
-        ee.setWireMode(false);
-      }
-      ee.setDeleteMode(enable);
-      return next;
+      if (state.editorMode === mode) return state;
+      // Always use the engine's unified mode setter
+      ee.setMode(mode);
+      return { ...state, editorMode: mode } as SchematicSlice;
     }),
   resetSchematicModes: () =>
     set((state) => {
-      if (state.wireMode) {
-        ee.setWireMode(false);
-      }
-      if (state.deleteMode) {
-        ee.setDeleteMode(false);
-      }
       ee.resetAllModes();
-      return { ...state, wireMode: false, deleteMode: false } as SchematicSlice;
+      return { ...state, editorMode: "none" } as SchematicSlice;
     }),
 });

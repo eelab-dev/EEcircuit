@@ -450,16 +450,16 @@ const Schematic: React.FC<SchematicProps> = ({
     isPlotSelectionModeRef,
     onOpenShortcutsDialog: () => setShowShortcutsDialog(true),
     onResetAllModes: () => {
-      const resetModes = useAppStore.getState().resetSchematicModes
+      const resetModes = useAppStore.getState().resetSchematicModes;
       resetModes();
     },
     onSetWireMode: (enable) => {
-      const setter = useAppStore.getState().setWireMode
-      setter(enable);
+      const setEditorMode = useAppStore.getState().setEditorMode;
+      setEditorMode(enable ? "wire" : "none");
     },
     onSetDeleteMode: (enable) => {
-      const setter = useAppStore.getState().setDeleteMode
-      setter(enable);
+      const setEditorMode = useAppStore.getState().setEditorMode;
+      setEditorMode(enable ? "delete" : "none");
     },
   });
 
