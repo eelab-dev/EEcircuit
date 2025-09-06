@@ -84,11 +84,13 @@ const Actions: React.FC<ActionsProps> = ({
           <MousePointer />
         </IconButton>
       </Tooltip>
-      <Tooltip content="Move (M)" showArrow openDelay={300}>
-        <IconButton bg={actionBarTheme.buttonIconBg}>
-          <Move />
-        </IconButton>
-      </Tooltip>
+      <ToggleActionButton
+        tooltip="Move (M)"
+        pressed={editorMode === "move"}
+        onToggle={(next) => setEditorMode(next ? "move" : "none")}
+      >
+        <Move />
+      </ToggleActionButton>
       <Separator display={isCompact ? "none" : "block"} />
       <ToggleActionButton
         tooltip="Wire (W)"

@@ -15,6 +15,7 @@ export type UseSchematicKeyboardParams = {
   onResetAllModes: () => void; // Should also reset action bar toggles
   onSetWireMode: (enable: boolean) => void; // Syncs with action bar and schematic engine
   onSetDeleteMode: (enable: boolean) => void; // Syncs with action bar and schematic engine
+  onSetMoveMode: (enable: boolean) => void; // Syncs with action bar and schematic engine
 };
 
 export function useSchematicKeyboard({
@@ -26,6 +27,7 @@ export function useSchematicKeyboard({
   onResetAllModes,
   onSetWireMode,
   onSetDeleteMode,
+  onSetMoveMode,
 }: UseSchematicKeyboardParams) {
   // Helper to check focus within schematic canvas container
   const isFocusInCanvas = React.useCallback(() => {
@@ -77,6 +79,12 @@ export function useSchematicKeyboard({
           onSetWireMode(true);
           return;
         }
+        if (event.key === "m" || event.key === "M") {
+          eeSch.resetAllModes();
+          console.log("[DEBUG KB] Entering move mode via key 'm'");
+          onSetMoveMode(true);
+          return;
+        }
       }
 
       // Handle Shift + D to enter delete mode
@@ -100,6 +108,7 @@ export function useSchematicKeyboard({
     onOpenShortcutsDialog,
     onSetWireMode,
     onSetDeleteMode,
+    onSetMoveMode,
   ]);
 
   // Handle Escape/§ to reset all modes (and action bar toggles)
