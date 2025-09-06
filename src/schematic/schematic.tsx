@@ -465,6 +465,10 @@ const Schematic: React.FC<SchematicProps> = ({
       const setEditorMode = useAppStore.getState().setEditorMode;
       setEditorMode(enable ? "move" : "none");
     },
+    onSetTextMode: (enable) => {
+      const setEditorMode = useAppStore.getState().setEditorMode;
+      setEditorMode(enable ? "text" : "none");
+    },
   });
 
   // Initialize the canvas and set up the message callback
