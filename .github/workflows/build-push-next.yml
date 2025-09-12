@@ -35,11 +35,30 @@ jobs:
       - name: Update engine to next version
         run: npm install eecircuit-engine@next
 
-      - name: Build Project with Vite
-        run: npm run build
+      - name: Pull Vercel env
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel pull --yes --token "$VERCEL_TOKEN"
+
+      - name: Build Local for Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel build --prod --token "$VERCEL_TOKEN"
 
       - name: Deploy to Vercel
-        run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          url=$(npx vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Alias deployment
+        if: ${{ steps.deploy.outputs.url != '' }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel alias "${{ steps.deploy.outputs.url }}" next.eecircuit.com --token "$VERCEL_TOKEN"
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
