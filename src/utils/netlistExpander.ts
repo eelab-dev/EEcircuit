@@ -1,4 +1,4 @@
-import { parseBracketOperation, type BracketOperation } from './bracketParser';
+import { parseBracketOperation, BRACKET_REGEX, type BracketOperation } from './bracketParser';
 
 export interface ExpandedNetlist {
   netlist: string;
@@ -70,7 +70,8 @@ export function analyzeBracketOperations(netlist: string): {
 } {
   try {
     // Count all bracket operations in the netlist
-    const bracketRegex = /\[(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\s*:\s*(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\s*:\s*(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\]\s*(u|m|k|Meg|G|T|p|n|f|a)?/g;
+    // Use the shared bracket regex pattern with a global flag for counting
+    const bracketRegex = new RegExp(BRACKET_REGEX.source, 'g');
     const matches = Array.from(netlist.matchAll(bracketRegex));
     const totalBracketOperations = matches.length;
     

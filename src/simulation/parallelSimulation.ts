@@ -271,6 +271,13 @@ export async function runParallelSimulation(
     const { expandedNetlists } = expansionResult;
     const totalSimulations = expandedNetlists.length;
 
+    // [DEBUG][ParallelSimulation] Print all expanded netlist configs for verification
+    // This helps verify the bracket expansion produced the correct set of netlists
+    console.log(
+      "[DEBUG][ParallelSimulation] Expanded netlist configs:",
+      expandedNetlists.map((e) => e.netlist)
+    );
+
     // Get global worker pool instance
     const workerPool = GlobalSimulationWorkerPool.getInstance(maxWorkers);
     await workerPool.initialize();

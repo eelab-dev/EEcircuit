@@ -21,7 +21,10 @@ export interface ParseResult {
  * - [0.1:0.2:1]
  * - Numbers can be integers or floats
  */
-const BRACKET_REGEX = /\[(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\s*:\s*(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\s*:\s*(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\]\s*(u|m|k|Meg|G|T|p|n|f|a)?/;
+// Note: Do not consume trailing whitespace when there is no external unit.
+// The external unit (if present) may be separated by whitespace, which we include in the match,
+// but we avoid swallowing spaces otherwise to prevent token concatenation like `0.111k`.
+export const BRACKET_REGEX = /\[(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\s*:\s*(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\s*:\s*(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\](?:\s*(u|m|k|Meg|G|T|p|n|f|a))?/;
 
 
 /**
