@@ -41,6 +41,7 @@ const Schematic: React.FC<SchematicProps> = ({
   onSchematicDataChange,
 }) => {
   // Get state and actions directly from Zustand store - no prop fallbacks needed
+  const isDarkMode = useAppStore((state) => state.isDarkMode);
   const hasViewedSchematic = useAppStore((state) => state.hasViewedSchematic);
   const setHasViewedSchematic = useAppStore(
     (state) => state.setHasViewedSchematic
@@ -242,6 +243,16 @@ const Schematic: React.FC<SchematicProps> = ({
           command: "setInputProfile",
           profile: inputProfile,
         });
+
+        // Sync initial theme to schematic based on current preference
+        try {
+          eeSch.setTheme(isDarkMode ? "dark" : "light");
+        } catch (err) {
+          console.warn(
+            "[DEBUG-theme-sync] setTheme after canvas init failed:",
+            err,
+          );
+        }
       } catch (error) {
         console.error("Canvas initialization failed:", error);
         initializingCanvasRef.current = null; // Clear initializing flag on error

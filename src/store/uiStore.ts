@@ -62,6 +62,13 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
   
   // Apply initial theme to document
   applyThemeToDocument(initialTheme);
+  // Attempt to sync initial theme to schematic on first load
+  try {
+    setTheme(initialTheme ? "dark" : "light");
+  } catch (err) {
+    // [DEBUG-theme-sync] setTheme at store init may run before canvas init
+    console.warn("[DEBUG-theme-sync] Initial setTheme at store init failed:", err);
+  }
   
   // Set up system preference listener
   if (typeof window !== 'undefined') {
