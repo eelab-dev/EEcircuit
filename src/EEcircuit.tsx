@@ -635,19 +635,24 @@ const EEcircuit: React.FC = () => {
               justifyContent="center"
               zIndex={10000}
             >
-              <Flex
-                align="center"
-                justify="center"
-                direction="column"
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                flexDirection="column"
                 gap={4}
-                bg="white"
+                bg="bg"
+                color="fg"
                 p={6}
-                borderRadius="md"
+                borderRadius="lg"
                 boxShadow="lg"
+                borderWidth={dialogTheme.borderWidth}
+                borderColor={dialogTheme.borderColor}
+                minW={{ base: "260px", md: "320px" }}
               >
-                <Spinner size="xl" />
-                <Text>{schematicLoadingMessage}</Text>
-              </Flex>
+                <Spinner size="xl" color="fg" />
+                <Text color="fg">{schematicLoadingMessage}</Text>
+              </Box>
             </Box>
           )}
         </Tabs.Content>
