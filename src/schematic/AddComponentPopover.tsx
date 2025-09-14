@@ -380,17 +380,39 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
 
   React.useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isOpen) {
+      // Close on Escape or § when open
+      if ((event.key === "Escape" || event.key === "§") && isOpen) {
         closePopover();
+        return;
+      }
+
+      // Open on "A" (no modifiers) when not focused in inputs
+      if (!isOpen) {
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        const key = event.key;
+        if (key === "a" || key === "A") {
+          const target = event.target as HTMLElement | null;
+          const tag = (target?.tagName || "").toLowerCase();
+          const isEditable = !!target?.isContentEditable;
+          if (
+            tag === "input" ||
+            tag === "textarea" ||
+            tag === "select" ||
+            isEditable
+          ) {
+            return;
+          }
+          event.preventDefault();
+          openPopover();
+        }
       }
     };
-    if (isOpen) {
-      document.addEventListener("keydown", handleGlobalKeyDown);
-    }
+
+    document.addEventListener("keydown", handleGlobalKeyDown);
     return () => {
       document.removeEventListener("keydown", handleGlobalKeyDown);
     };
-  }, [isOpen, closePopover]);
+  }, [isOpen, closePopover, openPopover]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -415,7 +437,7 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
 
   return (
     <>
-      <Tooltip content="Add Component" showArrow openDelay={300}>
+      <Tooltip content="Add Component (A)" showArrow openDelay={300}>
         <IconButton
           ref={buttonRef}
           onClick={openPopover}
