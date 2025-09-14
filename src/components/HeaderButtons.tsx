@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Box, Flex, IconButton } from "@chakra-ui/react";
 import { Tooltip } from "../components/ui/tooltip";
 import {
   Mouse,
   Touchpad,
   Download,
+  Upload,
   Smartphone,
   Sun,
   Moon,
@@ -17,6 +18,7 @@ import {
 
 interface HeaderButtonsProps {
   handleSaveFile: () => void;
+  onOpenFile: (file: File) => void;
   setShowClearDialog: (show: boolean) => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
@@ -29,6 +31,7 @@ interface HeaderButtonsProps {
 
 const HeaderButtons: React.FC<HeaderButtonsProps> = ({
   handleSaveFile,
+  onOpenFile,
   setShowClearDialog,
   isDarkMode,
   toggleTheme,
@@ -38,8 +41,48 @@ const HeaderButtons: React.FC<HeaderButtonsProps> = ({
   fullscreenHandler,
   setShowConfigDialog,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleOpenClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onOpenFile(file);
+    }
+    // Reset input value so selecting the same file twice will trigger change
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   return (
     <Flex alignItems="center" gap={2}>
+      {/* Hidden file input for Open button */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,.txt,application/json,text/plain"
+        style={{ display: "none" }}
+        onChange={handleFileChange}
+      />
+
+      {/* Open File Button */}
+      <Tooltip
+        showArrow
+        content="Open EEcircuit file from disk"
+        positioning={{ placement: "bottom" }}
+      >
+        <IconButton
+          aria-label="Open EEcircuit file"
+          size="sm"
+          variant="ghost"
+          onClick={handleOpenClick}
+        >
+          <Upload size={16} />
+        </IconButton>
+      </Tooltip>
+
       {/* Save File Button */}
       <Tooltip
         showArrow

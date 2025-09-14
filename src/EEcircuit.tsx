@@ -183,6 +183,113 @@ const EEcircuit: React.FC = () => {
     ]
   );
 
+  // Reusable validator for schematic files
+  const isValidSchematicFile = React.useCallback((file: File): boolean => {
+    return (
+      file.type === "application/json" ||
+      file.type === "text/plain" ||
+      file.name.endsWith(".json") ||
+      file.name.endsWith(".txt")
+    );
+  }, []);
+
+  // Unified file processing used by both drag-and-drop and the Open button
+  const processSchematicFile = React.useCallback(
+    async (file: File) => {
+      if (!file) return;
+
+      // Validate file type
+      if (!isValidSchematicFile(file)) {
+        console.warn(
+          "[DEBUG:open-file] Invalid file type. Please select a valid schematic file."
+        );
+        setDragBox(false);
+        return;
+      }
+
+      try {
+        // Switch to schematic tab if not already there
+        if (mainTabValue !== "schematic") {
+          setMainTabValue("schematic");
+        }
+
+        // Batch state changes for smoother UI
+        setDragBox(false);
+        setIsSchematicLoading(true);
+        setSchematicLoadingMessage("Processing file...");
+
+        const content = await file.text();
+        const parsedContent: EEcircuitFile = JSON.parse(content);
+
+        // check the schema version is correct
+        if (parsedContent.schema !== "EEcircuitV1") {
+          console.error(
+            "Invalid schema version. Please drop a valid EEcircuit file."
+          );
+          setDragBox(false);
+          setIsSchematicLoading(false);
+          return;
+        }
+
+        if (parsedContent.schematic) {
+          setSchematicLoadingMessage("Loading schematic...");
+
+          // Ensure minimum loading time for better UX (run both operations in parallel)
+          await Promise.all([
+            loadSchematic(parsedContent.schematic),
+            new Promise((resolve) => setTimeout(resolve, 400)), // Minimum 400ms visible time
+          ]);
+
+          setIsSchematicLoading(false);
+        }
+
+        // Restore simulation configurations if they exist
+        if (parsedContent.simulations && parsedContent.simulations.length > 0) {
+          const firstSimConfig = parsedContent.simulations[0];
+          if (firstSimConfig) {
+            const {
+              setSelectedSimType,
+              setSimulationConfig,
+              setAllSimulationConfigs,
+            } = useAppStore.getState();
+
+            // First load all configurations
+            setAllSimulationConfigs(parsedContent.simulations);
+
+            // Then select the first one as active
+            setSelectedSimType(firstSimConfig.type);
+            setSimulationConfig(firstSimConfig);
+          }
+        } else {
+          // Reset simulation config if no simulation data in file
+          const {
+            setSelectedSimType,
+            setSimulationConfig,
+            setAllSimulationConfigs,
+          } = useAppStore.getState();
+          setAllSimulationConfigs([]);
+          setSimulationConfig(undefined);
+          setSelectedSimType("None");
+        }
+      } catch (error) {
+        console.error("Failed to load schematic from file:", error);
+        setDragBox(false);
+        setIsSchematicLoading(false);
+        alert(
+          "Failed to load schematic file. Please ensure the file is valid."
+        );
+      }
+    },
+    [
+      isValidSchematicFile,
+      mainTabValue,
+      setMainTabValue,
+      setDragBox,
+      setIsSchematicLoading,
+      setSchematicLoadingMessage,
+    ]
+  );
+
   // Add drag and drop support for schematic files
   React.useEffect(() => {
     const container = tabsContainerRef.current;
@@ -191,15 +298,6 @@ const EEcircuit: React.FC = () => {
     const preventDefault = (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
-    };
-
-    // Validate file type - accept common schematic file extensions
-    const isValidSchematicFile = (file: File): boolean => {
-      return (
-        file.type === "application/json" ||
-        file.type === "text/plain" ||
-        file.type === "application/xml"
-      );
     };
 
     const handleDragOver = (e: DragEvent) => {
@@ -234,89 +332,7 @@ const EEcircuit: React.FC = () => {
         setDragBox(false);
         return;
       }
-
-      // Validate file type
-      if (!isValidSchematicFile(file)) {
-        console.warn(
-          "Invalid file type dropped. Please drop a valid schematic file."
-        );
-        setDragBox(false);
-        return;
-      }
-
-      try {
-        // Switch to schematic tab if not already there
-        if (mainTabValue !== "schematic") {
-          setMainTabValue("schematic");
-        }
-
-        // Batch all state changes together for faster rendering
-        setDragBox(false);
-        setIsSchematicLoading(true);
-        setSchematicLoadingMessage("Processing file...");
-
-        const content = await file.text();
-        const parsedContent: EEcircuitFile = JSON.parse(content);
-
-        // check the schema version is correct
-        if (parsedContent.schema !== "EEcircuitV1") {
-          console.error(
-            "Invalid schema version. Please drop a valid EEcircuit file."
-          );
-          setDragBox(false);
-          setIsSchematicLoading(false);
-          return;
-        }
-
-        if (parsedContent.schematic) {
-          setSchematicLoadingMessage("Loading schematic...");
-
-          // Ensure minimum loading time for better UX (run both operations in parallel)
-          await Promise.all([
-            loadSchematic(parsedContent.schematic),
-            new Promise((resolve) => setTimeout(resolve, 400)), // Minimum 400ms visible time
-          ]);
-
-          setIsSchematicLoading(false);
-        }
-
-        // Restore simulation configurations if they exist
-        if (parsedContent.simulations && parsedContent.simulations.length > 0) {
-          const firstSimConfig = parsedContent.simulations[0];
-          if (firstSimConfig) {
-            // Use the store actions to update simulation state
-            const {
-              setSelectedSimType,
-              setSimulationConfig,
-              setAllSimulationConfigs,
-            } = useAppStore.getState();
-
-            // First load all configurations
-            setAllSimulationConfigs(parsedContent.simulations);
-
-            // Then select the first one as active
-            setSelectedSimType(firstSimConfig.type);
-            setSimulationConfig(firstSimConfig);
-          }
-        } else {
-          // Reset simulation config if no simulation data in file
-          const {
-            setSelectedSimType,
-            setSimulationConfig,
-            setAllSimulationConfigs,
-          } = useAppStore.getState();
-          setAllSimulationConfigs([]);
-          setSimulationConfig(undefined);
-          setSelectedSimType("None");
-        }
-      } catch (error) {
-        console.error("Failed to load schematic from dropped file:", error);
-        setDragBox(false);
-        setIsSchematicLoading(false);
-        alert(
-          "Failed to load schematic from dropped file. Please ensure the file is valid."
-        );
-      }
+      await processSchematicFile(file);
     };
 
     // Add event listeners
@@ -338,6 +354,7 @@ const EEcircuit: React.FC = () => {
     setSchematicLoadingMessage,
     mainTabValue,
     setMainTabValue,
+    processSchematicFile,
   ]); // Include all dependencies
 
   // Helper function to wait for schematic export completion
@@ -500,6 +517,7 @@ const EEcircuit: React.FC = () => {
           {/* Buttons on the right */}
           <HeaderButtons
             handleSaveFile={handleSaveFile}
+            onOpenFile={processSchematicFile}
             setShowClearDialog={setShowClearDialog}
             isDarkMode={isDarkMode}
             toggleTheme={toggleTheme}
@@ -523,6 +541,7 @@ const EEcircuit: React.FC = () => {
           >
             <HeaderButtons
               handleSaveFile={handleSaveFile}
+              onOpenFile={processSchematicFile}
               setShowClearDialog={setShowClearDialog}
               isDarkMode={isDarkMode}
               toggleTheme={toggleTheme}
