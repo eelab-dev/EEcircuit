@@ -35,17 +35,58 @@ export function useSchematicKeyboard({
   const isFocusInCanvas = React.useCallback(() => {
     const canvasContainer = containerRef.current;
     if (!canvasContainer || !document.activeElement) return false;
+    const active = document.activeElement as HTMLElement;
+
+    // If focus is within the properties dialog, treat as NOT in canvas for shortcuts
+    let el: HTMLElement | null = active;
+    while (el) {
+      if (el.hasAttribute && el.hasAttribute("data-properties-dialog")) {
+        return false;
+      }
+      el = el.parentElement;
+    }
+
     return (
-      canvasContainer.contains(document.activeElement) ||
-      document.activeElement === canvasRef.current
+      canvasContainer.contains(active) || active === canvasRef.current
     );
   }, [containerRef, canvasRef]);
+
+  // Helper to detect if an event target is inside the properties dialog
+  const isWithinPropertiesDialog = (target: EventTarget | null) => {
+    const node = target as HTMLElement | null;
+    let el: HTMLElement | null = node;
+    while (el) {
+      if (el.hasAttribute && el.hasAttribute("data-properties-dialog")) {
+        return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  };
+
+  // Helper to detect text inputs/contenteditable to avoid consuming typing keys
+  const isTextInputLike = (target: EventTarget | null) => {
+    const el = target as HTMLElement | null;
+    if (!el) return false;
+    const tag = (el.tagName || "").toLowerCase();
+    const editable = (el as HTMLElement).isContentEditable;
+    return (
+      tag === "input" ||
+      tag === "textarea" ||
+      tag === "select" ||
+      editable
+    );
+  };
 
   // Shortcuts: Shift+H/Ctrl+H, Shift+Z (undo), Shift+R (redo)
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Only when tab visible and focus within canvas container
       if (!isTabVisibleRef.current || !isFocusInCanvas()) return;
+
+      // Ignore keys originating in the properties dialog or text inputs
+      if (isWithinPropertiesDialog(event.target)) return;
+      if (isTextInputLike(event.target)) return;
 
       // Handle Shift+H or Ctrl+H for shortcuts dialog (override eecircuit-schematic's Ctrl+H)
       if (
@@ -128,6 +169,8 @@ export function useSchematicKeyboard({
 
       // Scope to visible tab and canvas focus; skip if plot-selection mode is active
       if (!isTabVisibleRef.current || !isFocusInCanvas()) return;
+      // If inside properties dialog, let the dialog handle closing
+      if (isWithinPropertiesDialog(event.target)) return;
       if (isPlotSelectionModeRef.current) return;
 
       console.log("[DEBUG KB] Resetting all modes via ESC/§");
