@@ -446,30 +446,29 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
             overflowY="auto"
             onKeyDown={handleKeyDown}
           >
-            <Box position="relative" p={4}>
-              <IconButton
-                size="xs"
-                variant="ghost"
-                position="absolute"
-                top="0.25rem"
-                right="0.25rem"
-                zIndex="1"
-                onClick={closePopover}
-              >
-                <X size={12} />
-              </IconButton>
-              <Input
-                ref={searchInputRef}
-                placeholder="Search components..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setFocusedIndex(-1);
-                }}
-                mb={4}
-                bg={styles.input.bg}
-                borderColor={styles.input.borderColor}
-              />
+            <Box p={4}>
+              <Flex align="center" gap={2} mb={4}>
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Search components..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setFocusedIndex(-1);
+                  }}
+                  bg={styles.input.bg}
+                  borderColor={styles.input.borderColor}
+                  flex={1}
+                />
+                <IconButton
+                  aria-label="Close add component"
+                  size="sm"
+                  variant="ghost"
+                  onClick={closePopover}
+                >
+                  <X size={14} />
+                </IconButton>
+              </Flex>
               <ComponentList
                 ref={listRef}
                 availableComponents={filteredComponents}
