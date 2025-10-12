@@ -1,4 +1,4 @@
-name: Next Build Deploy Test Push
+name: Main Build Test
 
 on:
   schedule:
