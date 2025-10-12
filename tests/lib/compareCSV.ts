@@ -42,9 +42,15 @@ export async function compareCSVFiles(file1: string, file2: string): Promise<num
 
         console.log('CSV files match!');
         return 0;
-    } catch (error) {
-        console.error('Error:', error.message);
-        throw error;
+    } catch (error: unknown) {
+        if (error instanceof Error) {
+            console.error('Error:', error.message);
+            throw error;
+        } else {
+            const msg = typeof error === 'string' ? error : String(error);
+            console.error('Error:', msg);
+            throw new Error(msg);
+        }
     }
 }
 
