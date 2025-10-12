@@ -1,6 +1,6 @@
 # Transistor Models
 
-The following transistor models are available in EEsim for use. Please see the reference link for detail of each models.
+The following transistor models are available in EEcircuit for use. Please see the reference link for detail of each models.
 
 ### Usage Example:
 
@@ -76,4 +76,4 @@ Currently `N90` and `P90` models from [BSIM4](https://bsim.berkeley.edu/models/b
 
 ## Skywater
 
-Work in progress - for examples see [here](https://github.com/danchitnis/EEsim/blob/main/skywater.md)
+Work in progress - for examples see [here](https://github.com/danchitnis/EEcircuit/blob/main/skywater.md)

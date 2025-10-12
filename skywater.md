@@ -4,7 +4,7 @@ see this [issue](https://github.com/google/skywater-pdk/issues/301)
 
 **🧨work-in-progress: only `nfet1v8` and `pfet1v8` implemented so far🧨**
 
-Copy and paste the examples in [EEsim's](https://eesim.dev) netlist editor.
+Copy and paste the examples in [EEcircuit's](https://EEcircuit.com) netlist editor.
 
 ## nfet1V8 - IV Curves
 

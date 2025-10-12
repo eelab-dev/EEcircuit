@@ -166,7 +166,7 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
         </Button>
       </VStack>
 
-      <a ref={aLink} href={href} download={"EEsim.csv"} />
+      <a ref={aLink} href={href} download={"EEcircuit.csv"} />
     </>
   );
 };

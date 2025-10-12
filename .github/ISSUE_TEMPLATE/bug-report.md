@@ -7,4 +7,4 @@ assignees: ''
 
 ---
 
-✋  !! Only for bug reports. Please use the [Discussions](https://github.com/danchitnis/EEsim/discussions) for a feature request ✋
+✋  !! Only for bug reports. Please use the [Discussions](https://github.com/danchitnis/EEcircuit/discussions) for a feature request ✋

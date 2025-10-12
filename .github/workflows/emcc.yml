@@ -1,4 +1,4 @@
-name: EEsim EMCC Build
+name: EEcircuit EMCC Build
 
 on:
   workflow_dispatch:
@@ -21,13 +21,13 @@ jobs:
       - name: Build the Docker image
         run: |
           cd ./Docker
-          docker build -t ngspice:eesim .
+          docker build -t ngspice:eecircuit .
 
       - name: Run Docker
         run: |
           mkdir image
           cd image
-          docker run -t -v $(realpath .):/mnt ngspice:eesim
+          docker run -t -v $(realpath .):/mnt ngspice:eecircuit
 
       - name: Inject JS
         run: |
@@ -37,5 +37,5 @@ jobs:
       - name: Archive Output
         uses: actions/upload-artifact@v4
         with:
-          name: EEsim output
+          name: EEcircuit output
           path: image/build

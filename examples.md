@@ -104,7 +104,7 @@ c1 2 0 100u
 
 ## Useful commands
 
-here are some useful command which helps in using EEsim. For mor details see ngspice user manual.
+here are some useful command which helps in using EEcircuit. For mor details see ngspice user manual.
 
 ### save
 
