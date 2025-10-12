@@ -60,6 +60,9 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: npx vercel alias "${{ steps.deploy.outputs.url }}" next.eecircuit.com --scope danchitnis-projects --token "$VERCEL_TOKEN"
 
+      - name: check deployment
+        run: curl -s https://next.eecircuit.com | head -n 50
+      
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
