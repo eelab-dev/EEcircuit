@@ -7,12 +7,13 @@ import {
   WebglLinePlot,
   WebglPolygonPlot,
   setupCanvasAndWebGL,
+  clearCanvas,
 } from "webgl-plot";
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
 import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
 import { useAppStore } from "../../store/appStore";
-import { getPlotBackgroundColor } from "./styling/plotBackgroundColors";
+const TRANSPARENT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 0];
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -69,6 +70,9 @@ export const useCanvasInitialization = ({
   useEffect(() => {
     if (!canvasRef.current || results.length === 0) return;
 
+    // Reset initialization flag so dependent effects can re-run with fresh WebGL state
+    setIsCanvasInitialized(false);
+
     const canvas = canvasRef.current;
 
     // Use requestAnimationFrame to defer initialization until after layout
@@ -85,15 +89,20 @@ export const useCanvasInitialization = ({
       canvas.width = width * devicePixelRatio;
       canvas.height = height * devicePixelRatio;
 
-      // Get theme-aware background color (CSS string works for both canvas and webgl-plot)
-      const backgroundColor = getPlotBackgroundColor(isDarkMode);
-
-      // Initialize WebGL2 context with theme-aware background
+      // Initialize WebGL2 context with transparent background so CSS handles theme colors
+      // Keeping the buffer transparent prevents the old “stuck dark” plot background when
+      // the browser enters the app already in light mode. Chakra sets the canvas bg via CSS,
+      // and WebGL only contributes the plot lines. preserveDrawing avoids flicker between frames.
       glRef.current = setupCanvasAndWebGL(canvas, {
-        backgroundColor: backgroundColor,
+        backgroundColor: TRANSPARENT_CLEAR_COLOR,
         antialias: true,
-        powerPerformance: 'high-performance',
+        powerPerformance: "high-performance",
+        preserveDrawing: true,
+        transparent: true,
       });
+
+      // Ensure the canvas is cleared immediately with a transparent background
+      clearCanvas(glRef.current, TRANSPARENT_CLEAR_COLOR);
 
       // Initialize crosshair (thin lines) - start with no lines, useCrosshair hook will manage them
       crosshairRef.current = new WebglLinePlot(glRef.current, 2);

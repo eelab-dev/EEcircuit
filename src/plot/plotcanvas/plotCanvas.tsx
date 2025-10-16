@@ -262,6 +262,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       hoveredVariable,
       showCrosshair,
       crosshairSnapToLines,
+      isCanvasInitialized,
       isBracketOperationPlot,
       bracketOperationResults,
       emphasizedPlotIndex,

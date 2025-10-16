@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, RefObject, useCallback, startTransition } from "react";
 import { ResultType } from "eecircuit-engine";
-import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanvas, setBackgroundColor } from "webgl-plot";
+import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanvas } from "webgl-plot";
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
 import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
@@ -8,7 +8,7 @@ import { BRACKET_PLOT_STYLES } from "../bracketPlotStyles";
 import type { AggregatedResult } from "../../simulation/resultAggregator";
 import { useAppStore } from "../../store/appStore";
 import { convertLinearToLogSpace } from "./utils/coordinateUtils";
-import { getPlotBackgroundColor } from "./styling/plotBackgroundColors";
+const TRANSPARENT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 0];
 
 /**
  * CRITICAL FIXES FOR DUAL CANVAS MODE:
@@ -68,6 +68,7 @@ interface UsePlotCalculationsProps {
   hoveredVariable: string | null;
   showCrosshair: boolean;
   crosshairSnapToLines: boolean;
+  isCanvasInitialized: boolean;
   // Bracket operation props
   isBracketOperationPlot?: boolean;
   bracketOperationResults?: AggregatedResult;
@@ -104,6 +105,7 @@ export const usePlotCalculations = ({
   hoveredVariable,
   showCrosshair,
   crosshairSnapToLines,
+  isCanvasInitialized,
   isBracketOperationPlot = false,
   bracketOperationResults,
   emphasizedPlotIndex = 0,
@@ -129,6 +131,8 @@ export const usePlotCalculations = ({
     offsetX: 0,
     offsetY: 0,
   });
+  const lastBackgroundModeRef = useRef<boolean | null>(null);
+  const lastBackgroundContextRef = useRef<WebGL2RenderingContext | null>(null);
 
 
   // Debounced axis scale updates to prevent rapid re-renders
@@ -238,16 +242,30 @@ export const usePlotCalculations = ({
 
   // Handle theme changes - update WebGL background color immediately  
   useEffect(() => {
-    if (!glRef.current || !plotLineRef.current) return;
-    
-    // Get new theme-aware background color
-    const newBackgroundColor = getPlotBackgroundColor(isDarkMode);
-    
-    // Follow webgl-plot procedure: setBackgroundColor → clearCanvas → draw
-    setBackgroundColor(glRef.current, newBackgroundColor);
-    clearCanvas(glRef.current);
-    plotLineRef.current.draw();
-  }, [isDarkMode]);
+    const gl = glRef.current;
+    const plot = plotLineRef.current;
+
+    if (!isCanvasInitialized || !gl || !plot) {
+      if (!isCanvasInitialized) {
+        lastBackgroundModeRef.current = null;
+        lastBackgroundContextRef.current = null;
+      }
+      return;
+    }
+
+    const contextChanged = lastBackgroundContextRef.current !== gl;
+    const modeChanged = lastBackgroundModeRef.current !== isDarkMode;
+
+    if (!contextChanged && !modeChanged) {
+      return;
+    }
+
+    clearCanvas(gl, TRANSPARENT_CLEAR_COLOR);
+    plot.draw();
+
+    lastBackgroundModeRef.current = isDarkMode;
+    lastBackgroundContextRef.current = gl;
+  }, [isDarkMode, isCanvasInitialized]);
 
   // Handle data updates with simplified autoScale (now works correctly for all coordinate spaces)
   useEffect(() => {
@@ -474,7 +492,7 @@ export const usePlotCalculations = ({
     if (!glRef.current || !plotLineRef.current || results.length === 0)
       return;
 
-    clearCanvas(glRef.current);
+    clearCanvas(glRef.current, TRANSPARENT_CLEAR_COLOR);
 
     if (selectedVariables.length === 0) {
       return;
