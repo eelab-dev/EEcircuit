@@ -2,13 +2,13 @@ import { Button, Flex, Menu, Text } from "@chakra-ui/react";
 import React, { Suspense, useEffect, useState } from "react";
 import EditorCustom from "../editor/editorCustom";
 import { Skeleton } from "@chakra-ui/react";
-import { toaster } from "../components/ui/toaster";
 import { X, Play, Square } from "lucide-react";
 import { SimulationType, ToBePlotted } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import { addAcParameterToSource } from "../utils/sourceDetection";
 import SimulationConfigPanel from "./SimulationConfigPanel";
 import { dialogTheme } from "src/styles/uiThemes";
+import { notifySimulationErrors } from "../utils/simulationErrorNotifier";
 
 type SimulationEditorProps = {
   netList: string;
@@ -135,6 +135,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   }, []);
 
   const handleSimRun = async () => {
+    let readEngineErrors: (() => string[]) | undefined;
     try {
       // Always clear previous results, optionally reset selections and plot state
       const { 
@@ -177,61 +178,58 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       const { Simulation } = await import("eecircuit-engine");
 
       const sim = new Simulation();
+      readEngineErrors = () => sim.getError();
       await sim.start();
 
       sim.setNetList(netListToSim);
 
       const result = await sim.runSim();
+      const engineErrors = readEngineErrors ? readEngineErrors() : [];
 
-      if (result) {
-        // Check if the result has valid data and variables
-        const hasData = result.data && result.data.length > 0;
-        const hasVariables =
-          result.variableNames && result.variableNames.length > 0;
-
-        // Additional check for actual data points in the result
-        let hasDataPoints = false;
-        if (hasData) {
-          hasDataPoints = result.data.some(
-            (dataSet) => dataSet.values && dataSet.values.length > 0
-          );
-        }
-
-        if (!hasData || !hasVariables || !hasDataPoints) {
-          // Show error toast for empty results
-          toaster.create({
-            title: "Simulation Error",
-            description:
-              "Simulation run but no results were generated. Check your netlist and simulation configuration.",
-            type: "error",
-            duration: 5000,
-          });
-          console.error("Simulation completed but returned empty results.");
-          return; // Don't call handleNewResults, preventing tab switch
-        }
-
-        // Valid results, proceed normally
-        handleNewResults([result]);
-      } else {
-        // Show error toast for failed simulation
-        toaster.create({
-          title: "Simulation Error",
-          description:
-            "Simulation failed to run. Check your netlist for errors.",
-          type: "error",
-          duration: 5000,
-        });
+      if (!result) {
+        notifySimulationErrors(
+          engineErrors,
+          "Simulation failed to run. Check your netlist for errors."
+        );
         console.error("Simulation failed or returned no results.");
+        return;
+      }
+
+      // Check if the result has valid data and variables
+      const hasData = result.data && result.data.length > 0;
+      const hasVariables =
+        result.variableNames && result.variableNames.length > 0;
+
+      // Additional check for actual data points in the result
+      let hasDataPoints = false;
+      if (hasData) {
+        hasDataPoints = result.data.some(
+          (dataSet) => dataSet.values && dataSet.values.length > 0
+        );
+      }
+
+      if (!hasData || !hasVariables || !hasDataPoints) {
+        notifySimulationErrors(
+          engineErrors,
+          "Simulation ran but no results were generated. Check your netlist and simulation configuration."
+        );
+        console.error("Simulation completed but returned empty results.");
+        return; // Don't call handleNewResults, preventing tab switch
+      }
+
+      // Valid results, proceed normally
+      handleNewResults([result]);
+
+      if (engineErrors.length > 0) {
+        notifySimulationErrors(engineErrors);
       }
     } catch (error) {
       console.error("Simulation error:", error);
-      toaster.create({
-        title: "Simulation Error",
-        description:
-          error instanceof Error ? error.message : "Unknown simulation error",
-        type: "error",
-        duration: 5000,
-      });
+      const engineErrors = readEngineErrors ? readEngineErrors() : [];
+      notifySimulationErrors(
+        engineErrors,
+        error instanceof Error ? error.message : "Unknown simulation error"
+      );
     }
   };
 

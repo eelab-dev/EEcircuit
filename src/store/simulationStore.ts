@@ -4,6 +4,7 @@ import { SimulationType } from "../types/commonTypes";
 import type { BracketOperation } from "../utils/bracketParser";
 import type { ParallelSimulationResult } from "../simulation/parallelSimulation";
 import { saveSimulationConfigs, loadSimulationConfigs } from "../utils/localStorageUtils";
+import { notifySimulationErrors } from "../utils/simulationErrorNotifier";
 
 // Define the store interface that includes both simulation and tab slices
 interface StoreWithTab {
@@ -348,6 +349,32 @@ export const createSimulationSlice: StateCreator<
 
       actions.setParallelSimulationResults(result);
 
+      const errorMessages: string[] = [];
+
+      result.results.forEach((simulationResult) => {
+        const parameterLabel = simulationResult.parameterValue
+          ? `Parameter ${simulationResult.parameterValue}`
+          : `Simulation #${simulationResult.parameterIndex + 1}`;
+
+        if (!simulationResult.success) {
+          if (simulationResult.errorMessage) {
+            errorMessages.push(`${parameterLabel}: ${simulationResult.errorMessage}`);
+          }
+        }
+
+        simulationResult.errorDetails?.forEach((message) => {
+          errorMessages.push(`${parameterLabel}: ${message}`);
+        });
+      });
+
+      if (result.errorMessage) {
+        errorMessages.push(result.errorMessage);
+      }
+
+      if (errorMessages.length > 0) {
+        notifySimulationErrors(errorMessages);
+      }
+
       if (result.success && result.results.length > 0) {
         // Aggregate results for plotting - show all results at once when complete
         const aggregated = aggregateParallelResults(result.results, bracketOp);
@@ -363,6 +390,11 @@ export const createSimulationSlice: StateCreator<
       }
     } catch (error) {
       console.error("Parallel simulation failed:", error);
+      notifySimulationErrors(
+        error instanceof Error
+          ? error.message
+          : "Parallel simulation failed with an unknown error"
+      );
     } finally {
       const actions = get() as SimulationSlice & StoreWithTab;
       actions.setParallelSimulationRunning(false);

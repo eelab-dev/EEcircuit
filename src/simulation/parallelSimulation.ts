@@ -4,7 +4,8 @@ import { expandNetlist } from "../utils/netlistExpander";
 export interface SimulationWorkerResult {
   success: boolean;
   result?: ResultType;
-  error?: string;
+  errorMessage?: string;
+  errorDetails?: string[];
   parameterValue: string;
   parameterIndex: number;
 }
@@ -31,7 +32,7 @@ export interface ParallelSimulationResult {
   totalSimulations: number;
   successfulSimulations: number;
   failedSimulations: number;
-  error?: string;
+  errorMessage?: string;
 }
 
 // Default configuration
@@ -184,12 +185,23 @@ async function runSimulationInWorker(
       worker.removeEventListener("message", handleMessage);
       worker.removeEventListener("error", handleError);
 
-      const { success, result, error } = event.data;
+      const {
+        success,
+        result,
+        errorMessage,
+        errorDetails,
+      } = event.data as {
+        success: boolean;
+        result?: ResultType;
+        errorMessage?: string;
+        errorDetails?: string[];
+      };
 
       resolve({
         success,
         result,
-        error,
+        errorMessage,
+        errorDetails,
         parameterValue,
         parameterIndex,
       });
@@ -205,7 +217,7 @@ async function runSimulationInWorker(
 
       resolve({
         success: false,
-        error: `Worker error: ${error.message}`,
+        errorMessage: `Worker error: ${error.message}`,
         parameterValue,
         parameterIndex,
       });
@@ -220,7 +232,7 @@ async function runSimulationInWorker(
 
       resolve({
         success: false,
-        error: `Simulation timeout after ${timeout}ms`,
+        errorMessage: `Simulation timeout after ${timeout}ms`,
         parameterValue,
         parameterIndex,
       });
@@ -264,7 +276,7 @@ export async function runParallelSimulation(
         totalSimulations: 0,
         successfulSimulations: 0,
         failedSimulations: 0,
-        error: "No bracket operations found in netlist or expansion failed",
+        errorMessage: "No bracket operations found in netlist or expansion failed",
       };
     }
 
@@ -398,7 +410,7 @@ export async function runParallelSimulation(
       totalSimulations: 0,
       successfulSimulations: 0,
       failedSimulations: 0,
-      error: error instanceof Error ? error.message : "Unknown error",
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }

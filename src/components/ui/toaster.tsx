@@ -7,6 +7,7 @@ import {
   Spinner,
   Stack,
   Toast,
+  Button,
   createToaster,
 } from "@chakra-ui/react";
 
@@ -33,7 +34,17 @@ export const Toaster = () => {
               )}
             </Stack>
             {toast.action && (
-              <Toast.ActionTrigger>{toast.action.label}</Toast.ActionTrigger>
+              <Button
+                size="xs"
+                variant="ghost"
+                color="white"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toast.action?.onClick?.();
+                }}
+              >
+                {toast.action.label}
+              </Button>
             )}
             {toast.meta?.closable && <Toast.CloseTrigger />}
           </Toast.Root>

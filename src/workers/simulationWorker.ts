@@ -7,7 +7,8 @@ interface WorkerMessage {
 interface WorkerResponse {
   success: boolean;
   result?: ResultType;
-  error?: string;
+  errorMessage?: string;
+  errorDetails?: string[];
 }
 
 // Web worker for running individual simulations
@@ -30,6 +31,7 @@ async function runSimulation(netlist: string): Promise<WorkerResponse> {
 
     simulation.setNetList(netlist);
     const result = await simulation.runSim();
+    const errorMessages = simulation.getError();
 
     if (result) {
       // Validate result has data
@@ -46,24 +48,30 @@ async function runSimulation(netlist: string): Promise<WorkerResponse> {
       if (!hasData || !hasVariables || !hasDataPoints) {
         return {
           success: false,
-          error: 'Simulation completed but returned empty results'
+          errorMessage: 'Simulation completed but returned empty results',
+          errorDetails: errorMessages
         };
       }
 
       return {
         success: true,
-        result
+        result,
+        errorDetails: errorMessages
       };
     } else {
       return {
         success: false,
-        error: 'Simulation failed to run'
+        errorMessage: 'Simulation failed to run',
+        errorDetails: errorMessages
       };
     }
   } catch (error) {
+    const errorMessages =
+      (typeof simulation?.getError === "function" ? simulation?.getError() : []) ?? [];
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown simulation error'
+      errorMessage: error instanceof Error ? error.message : 'Unknown simulation error',
+      errorDetails: errorMessages
     };
   }
 }
@@ -75,7 +83,7 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
   if (!netlist) {
     self.postMessage({
       success: false,
-      error: 'No netlist provided'
+      errorMessage: 'No netlist provided'
     } as WorkerResponse);
     return;
   }
@@ -89,7 +97,7 @@ self.addEventListener('error', (error) => {
   console.error('Simulation worker error:', error);
   self.postMessage({
     success: false,
-    error: `Worker error: ${error.message}`
+    errorMessage: `Worker error: ${error.message}`
   } as WorkerResponse);
 });
 
@@ -98,6 +106,6 @@ self.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection in simulation worker:', event.reason);
   self.postMessage({
     success: false,
-    error: `Unhandled promise rejection: ${event.reason}`
+    errorMessage: `Unhandled promise rejection: ${event.reason}`
   } as WorkerResponse);
 });
