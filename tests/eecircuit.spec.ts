@@ -4,15 +4,7 @@ import { testEEcircuit as testEEcircuit } from './lib/eecircuit-test';
 
 
 
-test('EEcircuit Prod', async ({ page }) => {
-
-  await testEEcircuit(page, 'https://eecircuit.com/');
-
-});
-
-
-test('EEcircuit Next', async ({ page }) => {
-
-  await testEEcircuit(page, 'https://next.eecircuit.com/');
-
+test('EEcircuit', async ({ page }) => {
+  const targetUrl = process.env.EECIRCUIT_URL ?? 'http://localhost:5173/';
+  await testEEcircuit(page, targetUrl);
 });

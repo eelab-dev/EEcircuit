@@ -360,6 +360,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                           <Button
                             size="xs"
                             variant="ghost"
+                            aria-label={`Remove ${item.type === "voltage" ? "voltage" : "current"} ${item.name} from To Be Plotted`}
                             onClick={(e: React.MouseEvent) => {
                               e.stopPropagation();
                               removeToBePlotted(item);

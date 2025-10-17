@@ -81,7 +81,10 @@ const Actions: React.FC<ActionsProps> = ({
       }}
     >
       <Tooltip content="Select" showArrow openDelay={300}>
-        <IconButton bg={actionBarTheme.buttonIconBg}>
+        <IconButton
+          bg={actionBarTheme.buttonIconBg}
+          aria-label="Select tool"
+        >
           <MousePointer />
         </IconButton>
       </Tooltip>
@@ -123,7 +126,10 @@ const Actions: React.FC<ActionsProps> = ({
       {/* Navigation */}
 
       <Tooltip content="Hand Tool" showArrow openDelay={300}>
-        <IconButton bg={actionBarTheme.buttonIconBg}>
+        <IconButton
+          bg={actionBarTheme.buttonIconBg}
+          aria-label="Hand tool"
+        >
           <Hand />
         </IconButton>
       </Tooltip>
@@ -131,6 +137,7 @@ const Actions: React.FC<ActionsProps> = ({
       <Tooltip content="Fit to Screen (F)" showArrow openDelay={300}>
         <IconButton
           bg={actionBarTheme.buttonIconBg}
+          aria-label="Fit schematic to screen"
           onClick={() => {
             ee.sendCommand({ command: "view", viewType: "fit" });
           }}
@@ -140,7 +147,10 @@ const Actions: React.FC<ActionsProps> = ({
       </Tooltip>
 
       <Tooltip content="Return to Origin (O)" showArrow openDelay={300}>
-        <IconButton bg={actionBarTheme.buttonIconBg}>
+        <IconButton
+          bg={actionBarTheme.buttonIconBg}
+          aria-label="Return view to origin"
+        >
           <CircleDot />
         </IconButton>
       </Tooltip>
@@ -149,7 +159,11 @@ const Actions: React.FC<ActionsProps> = ({
       {/* Misc */}
 
       <Tooltip content="Export Image" showArrow openDelay={300}>
-        <IconButton bg={actionBarTheme.buttonIconBg} onClick={onExportImage}>
+        <IconButton
+          bg={actionBarTheme.buttonIconBg}
+          aria-label="Export schematic image"
+          onClick={onExportImage}
+        >
           <ImageDown />
         </IconButton>
       </Tooltip>
@@ -159,7 +173,11 @@ const Actions: React.FC<ActionsProps> = ({
         showArrow
         openDelay={300}
       >
-        <IconButton bg={actionBarTheme.buttonIconBg} onClick={onShowShortcuts}>
+        <IconButton
+          bg={actionBarTheme.buttonIconBg}
+          aria-label="Open keyboard shortcuts"
+          onClick={onShowShortcuts}
+        >
           <Keyboard />
         </IconButton>
       </Tooltip>

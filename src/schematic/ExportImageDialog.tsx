@@ -223,6 +223,7 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                   size="sm"
                   variant="ghost"
                   onClick={onClose}
+                  aria-label="Close export dialog"
                 >
                   <X />
                 </IconButton>

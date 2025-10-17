@@ -48,6 +48,13 @@ const dcConfigMethods: BaseSimConfigMethods<SimulationDC, DcFormData> = {
 const DcConfig: React.FC<BaseSimConfigProps<SimulationDC>> = (props) => {
   const { formData, handleInputChange, configString, detectedSources } = useBaseSimConfig<SimulationDC, DcFormData>(props, dcConfigMethods);
   const dcFormData = formData;
+  const idPrefix = React.useId();
+  const fieldIds = {
+    source: `${idPrefix}-source`,
+    start: `${idPrefix}-start`,
+    stop: `${idPrefix}-stop`,
+    step: `${idPrefix}-step`,
+  };
 
   return (
     <div>
@@ -67,10 +74,13 @@ const DcConfig: React.FC<BaseSimConfigProps<SimulationDC>> = (props) => {
 
         <Fieldset.Content gap={2}>
           <Field.Root>
-            <Field.Label fontSize="sm">Sweep Source</Field.Label>
+            <Field.Label fontSize="sm" htmlFor={fieldIds.source}>
+              Sweep Source
+            </Field.Label>
             {detectedSources.length > 0 ? (
               <NativeSelectRoot size="sm">
                 <NativeSelectField
+                  id={fieldIds.source}
                   value={dcFormData.source}
                   onChange={(e) => handleInputChange("source", e.target.value)}
                 >
@@ -85,6 +95,7 @@ const DcConfig: React.FC<BaseSimConfigProps<SimulationDC>> = (props) => {
             ) : (
               <Input
                 size="sm"
+                id={fieldIds.source}
                 name="source"
                 value={dcFormData.source}
                 onChange={(e) => handleInputChange("source", e.target.value)}
@@ -94,9 +105,12 @@ const DcConfig: React.FC<BaseSimConfigProps<SimulationDC>> = (props) => {
           </Field.Root>
 
           <Field.Root>
-            <Field.Label fontSize="sm">Start Value</Field.Label>
+            <Field.Label fontSize="sm" htmlFor={fieldIds.start}>
+              Start Value
+            </Field.Label>
             <Input
               size="sm"
+              id={fieldIds.start}
               name="start"
               value={dcFormData.start}
               onChange={(e) => handleInputChange("start", e.target.value)}
@@ -105,9 +119,12 @@ const DcConfig: React.FC<BaseSimConfigProps<SimulationDC>> = (props) => {
           </Field.Root>
 
           <Field.Root>
-            <Field.Label fontSize="sm">Stop Value</Field.Label>
+            <Field.Label fontSize="sm" htmlFor={fieldIds.stop}>
+              Stop Value
+            </Field.Label>
             <Input
               size="sm"
+              id={fieldIds.stop}
               name="stop"
               value={dcFormData.stop}
               onChange={(e) => handleInputChange("stop", e.target.value)}
@@ -116,9 +133,12 @@ const DcConfig: React.FC<BaseSimConfigProps<SimulationDC>> = (props) => {
           </Field.Root>
 
           <Field.Root>
-            <Field.Label fontSize="sm">Step Size</Field.Label>
+            <Field.Label fontSize="sm" htmlFor={fieldIds.step}>
+              Step Size
+            </Field.Label>
             <Input
               size="sm"
+              id={fieldIds.step}
               name="step"
               value={dcFormData.step}
               onChange={(e) => handleInputChange("step", e.target.value)}

@@ -53,6 +53,11 @@ const StatusIcon: React.FC<StatusIconProps> = ({ info, onClear }) => {
               _hover={{ bg: dialogTheme.hoverBg }}
               boxShadow="lg"
               position="relative"
+              aria-label={
+                hasErrors
+                  ? "Open status messages, errors present"
+                  : "Open status messages"
+              }
             >
               {hasErrors ? (
                 <AlertCircle size={16} />

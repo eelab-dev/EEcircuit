@@ -43,6 +43,11 @@ const tranConfigMethods: BaseSimConfigMethods<SimulationTransient, TranFormData>
 const TransConfig: React.FC<BaseSimConfigProps<SimulationTransient>> = (props) => {
   const { formData, handleInputChange, configString } = useBaseSimConfig<SimulationTransient, TranFormData>(props, tranConfigMethods);
   const tranFormData = formData;
+  const idPrefix = React.useId();
+  const fieldIds = {
+    stopTime: `${idPrefix}-stop-time`,
+    timeStep: `${idPrefix}-time-step`,
+  };
 
   return (
     <div>
@@ -62,9 +67,12 @@ const TransConfig: React.FC<BaseSimConfigProps<SimulationTransient>> = (props) =
 
         <Fieldset.Content gap={2}>
           <Field.Root>
-            <Field.Label fontSize="sm">Stop Time</Field.Label>
+            <Field.Label fontSize="sm" htmlFor={fieldIds.stopTime}>
+              Stop Time
+            </Field.Label>
             <Input
               size="sm"
+              id={fieldIds.stopTime}
               name="stopTime"
               value={tranFormData.stopTime}
               onChange={(e) => handleInputChange("stopTime", e.target.value)}
@@ -73,9 +81,12 @@ const TransConfig: React.FC<BaseSimConfigProps<SimulationTransient>> = (props) =
           </Field.Root>
 
           <Field.Root>
-            <Field.Label fontSize="sm">Time Step</Field.Label>
+            <Field.Label fontSize="sm" htmlFor={fieldIds.timeStep}>
+              Time Step
+            </Field.Label>
             <Input
               size="sm"
+              id={fieldIds.timeStep}
               name="timeStep"
               value={tranFormData.timeStep}
               onChange={(e) => handleInputChange("timeStep", e.target.value)}

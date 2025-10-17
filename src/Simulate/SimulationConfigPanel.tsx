@@ -537,7 +537,12 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
               gap="0"
             >
               {simType.map((type) => (
-                <RadioCard.Item key={type} value={type} width="full">
+                <RadioCard.Item
+                  key={type}
+                  value={type}
+                  width="full"
+                  aria-label={type}
+                >
                   <RadioCard.ItemHiddenInput />
                   <RadioCard.ItemControl>
                     <RadioCard.ItemIndicator />

@@ -144,6 +144,7 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
                   size="sm"
                   variant="ghost"
                   onClick={handleClose}
+                  aria-label="Close shortcuts dialog"
                 >
                   <X />
                 </IconButton>

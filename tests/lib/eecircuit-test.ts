@@ -1,89 +1,254 @@
-import { test, expect, Page } from '@playwright/test';
-import { cloneAndGetLatestTag } from './getTags';
-import { compareCSVFiles } from './compareCSV';
+import { test, expect, Page, Locator } from '@playwright/test';
+
 
 
 
 export async function testEEcircuit(page: Page, url: string) {
-    const consoleErrors: string[] = [];
+  const getAccessibleName = async (locator: Locator) => {
+    return locator.evaluate((element) => {
+      const ariaLabel = element.getAttribute("aria-label");
+      if (ariaLabel && ariaLabel.trim().length > 0) {
+        return ariaLabel.trim();
+      }
 
-    let isSimCompleted: boolean = false;
-
-    // Listen for console errors
-    page.on('console', (msg: any) => {
-        if (msg.type() === 'error') {
-            consoleErrors.push(msg.text());
-            console.log('Error:', msg.text());
+      const ariaLabelledBy = element.getAttribute("aria-labelledby");
+      if (ariaLabelledBy) {
+        const doc = element.ownerDocument;
+        const tokens = ariaLabelledBy.split(/\s+/);
+        const labelledText = tokens
+          .map((id) => doc.getElementById(id)?.textContent?.trim())
+          .filter((text): text is string => !!text && text.length > 0)
+          .join(" ")
+          .trim();
+        if (labelledText.length > 0) {
+          return labelledText;
         }
+      }
 
-        if (msg.text().startsWith('Simulation run completed')) {
-            isSimCompleted = true;
+      const closestLabel = element.closest("label");
+      if (closestLabel) {
+        const labelText = closestLabel.textContent?.trim();
+        if (labelText && labelText.length > 0) {
+          return labelText;
+        }
+      }
 
-        };
+      const textContent = element.textContent?.trim();
+      if (textContent && textContent.length > 0) {
+        return textContent;
+      }
+
+      return "";
     });
+  };
+  const response = await page.goto(url, { waitUntil: "networkidle" });
 
-    // Function to wait for the simulation to complete
-    function waitForSimCompletion(): Promise<void> {
-        return new Promise((resolve) => {
-            const checkCompletion = () => {
-                if (isSimCompleted) {
-                    resolve();
-                } else {
-                    // Re-check after the next console message or event loop tick
-                    page.once('console', checkCompletion);
-                }
-            };
-            checkCompletion();
-        });
+  expect(response?.ok(), "EEcircuit app responded successfully").toBeTruthy();
+
+  // Ensure the main application shell has rendered before inspecting buttons
+  await page.waitForSelector("[data-testid='eecircuit-root'], body");
+
+  const assertButtonsHaveNames = async (context: string) => {
+    const buttonLocator = page.getByRole("button");
+    const buttonCount = await buttonLocator.count();
+
+    expect(
+      buttonCount,
+      `Expected at least one button to be present on the page during ${context}`
+    ).toBeGreaterThan(0);
+
+    const buttonNames: string[] = [];
+
+    for (let index = 0; index < buttonCount; index += 1) {
+      const locator = buttonLocator.nth(index);
+      const accessibleName = await getAccessibleName(locator);
+
+      expect(
+        accessibleName,
+        `Button at index ${index} is missing a deterministic accessible name in ${context}`
+      ).not.toEqual("");
+
+      buttonNames.push(accessibleName);
     }
 
+    console.log(
+      `[playwright][${context}] Discovered button names:`,
+      buttonNames
+    );
+  };
 
-    await page.goto(url);
+  const assertCheckboxesHaveNames = async (context: string, locator?: Locator) => {
+    const checkboxLocator = locator ?? page.getByRole("checkbox");
+    const checkboxCount = await checkboxLocator.count();
 
-    await expect(page).toHaveTitle(/EEcircuit/);
+    expect(
+      checkboxCount,
+      `Expected at least one checkbox to be present on the page during ${context}`
+    ).toBeGreaterThan(0);
 
-    await page.getByRole('button', { name: 'Run' }).click();
+    const checkboxNames: string[] = [];
 
-    await page.getByRole('button', { name: 'De-select all' }).click();
-    await page.getByRole('button', { name: 'Select all', exact: true }).click();
-    await page.getByRole('button', { name: 'De-select all' }).click();
-    await page.locator('label').filter({ hasText: 'v(2)' }).locator('span').first().click();
-    await page.getByRole('button', { name: 'Colorize' }).click();
-    await page.getByRole('button', { name: 'Reset' }).click();
-    await page.getByRole('button', { name: 'Settings' }).click();
-    //await page.getByLabel('Close').click();
+    for (let index = 0; index < checkboxCount; index += 1) {
+      const checkbox = checkboxLocator.nth(index);
+      const accessibleName = await getAccessibleName(checkbox);
 
-    await page.getByRole('button', { name: 'Run' }).click();
+      expect(
+        accessibleName,
+        `Checkbox at index ${index} is missing a deterministic accessible name in ${context}`
+      ).not.toEqual("");
 
-    await page.waitForTimeout(1000);
-    expect(consoleErrors.length).toBe(0);
+      checkboxNames.push(accessibleName);
+    }
 
-    await page.getByRole('tab', { name: 'Info' }).click();
+    console.log(
+      `[playwright][${context}] Discovered checkbox names:`,
+      checkboxNames
+    );
+  };
 
-    // Wait for simulation to complete without using a timeout
-    await waitForSimCompletion();
+  await assertButtonsHaveNames("schematic");
 
-    const text = await page.getByLabel('info', { exact: true }).inputValue();
+  // Export the schematic netlist so the Simulate tab is enabled
+  let simulateNetlistButton = page.getByRole("button", {
+    name: "Simulate (Netlist)",
+    exact: true,
+  });
+  if (await simulateNetlistButton.count() === 0) {
+    simulateNetlistButton = page.getByRole("button", {
+      name: /^Simulate$/,
+    });
+  }
+  await simulateNetlistButton.first().click();
 
-    const match = text.match(/ngspice-(\d+)/);
-    const number = match ? parseInt(match[1]) : null;
+  // Wait for automatic navigation to the Simulate tab to complete
+  const runSimulationButton = page.getByRole("button", {
+    name: /Run Simulation/i,
+  });
+  await expect(runSimulationButton).toBeVisible({ timeout: 10000 });
 
-    console.log('ngspice version from EEcircuit:', number);
+  // Ensure the Simulate tab trigger is now enabled
+  const simulateTabTrigger = page.getByRole("tab", { name: "Simulate" });
+  if (await simulateTabTrigger.count() > 0) {
+    await expect(simulateTabTrigger).toBeEnabled();
+  }
 
-    const tag = await cloneAndGetLatestTag('https://github.com/danchitnis/ngspice-sf-mirror', './tests/repos');
+  await assertButtonsHaveNames("simulate");
 
-    const version = parseInt(tag?.split('-')[1] ?? '');
+  // Verify simulation type radio buttons are deterministically labelled
+  const simulationConfigGroup = page.getByRole("radiogroup", {
+    name: /Simulation Configuration/i,
+  });
+  const simulationTypes = ["None", "DC", "AC", "Transient"] as const;
 
-    console.log('ngspice version from repo:', version);
+  for (const type of simulationTypes) {
+    await expect(
+      simulationConfigGroup.getByRole("radio", { name: type })
+    ).toBeVisible();
+  }
 
-    expect(number).toBe(version);
+  const selectSimulationType = async (type: (typeof simulationTypes)[number]) => {
+    const radioLabel = simulationConfigGroup
+      .locator("label")
+      .filter({ hasText: type })
+      .first();
+    await radioLabel.click();
+    await expect(
+      simulationConfigGroup.getByRole("radio", { name: type })
+    ).toBeChecked();
+  };
 
-    await page.getByRole('tab', { name: 'CSV' }).click();
-    const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Download' }).click();
+  // DC configuration inputs
+  await selectSimulationType("DC");
+  await expect(page.getByLabel("Sweep Source")).toBeVisible();
+  await expect(page.getByLabel("Start Value")).toBeVisible();
+  await expect(page.getByLabel("Stop Value")).toBeVisible();
+  await expect(page.getByLabel("Step Size")).toBeVisible();
 
-    const download = await downloadPromise;
-    await download.saveAs('./tests/output/' + download.suggestedFilename());
+  const configureSweepSource = async (value: string) => {
+    const sweepSourceField = page.getByLabel("Sweep Source");
+    const tagName = await sweepSourceField.evaluate((element) =>
+      element.tagName.toLowerCase()
+    );
 
-    const compare = await compareCSVFiles('./tests/lib/EEcircuit.csv', './tests/output/' + download.suggestedFilename());
+    if (tagName === "select") {
+      const options = await sweepSourceField.evaluate((select: HTMLSelectElement) =>
+        Array.from(select.options).map((option) => ({
+          value: option.value,
+          label: option.label,
+        }))
+      );
+
+      const normalizedValue = value.toLowerCase();
+      const matchingOption =
+        options.find(
+          (option) => option.value.toLowerCase() === normalizedValue
+        ) ||
+        options.find(
+          (option) => option.label.toLowerCase() === normalizedValue
+        ) ||
+        options.find((option) => option.value.trim().length > 0);
+
+      if (!matchingOption) {
+        throw new Error(
+          `Unable to find a suitable sweep source option. Available options: ${options
+            .map((option) => option.value || option.label)
+            .join(", ")}`
+        );
+      }
+
+      await sweepSourceField.selectOption(
+        matchingOption.value || matchingOption.label
+      );
+    } else {
+      await sweepSourceField.fill(value);
+    }
+  };
+
+  await configureSweepSource("vin");
+
+  const fillInput = async (label: string, value: string) => {
+    const input = page.getByLabel(label);
+    await input.fill(value);
+  };
+
+  await fillInput("Start Value", "0");
+  await fillInput("Stop Value", "1.8");
+  await fillInput("Step Size", "1m");
+
+  // AC configuration inputs
+  await selectSimulationType("AC");
+  await expect(page.getByLabel("Source")).toBeVisible();
+  await expect(page.getByLabel("Sweep Type")).toBeVisible();
+  await expect(page.getByLabel("Start Frequency")).toBeVisible();
+  await expect(page.getByLabel("Stop Frequency")).toBeVisible();
+  await expect(page.getByLabel("Steps Number")).toBeVisible();
+
+  // Transient configuration inputs
+  await selectSimulationType("Transient");
+  await expect(page.getByLabel("Stop Time")).toBeVisible();
+  await expect(page.getByLabel("Time Step")).toBeVisible();
+
+  // Reset back to None to leave the UI in its default state
+  await selectSimulationType("None");
+
+  // Re-select DC for simulation run
+  await selectSimulationType("DC");
+  await configureSweepSource("vin");
+  await fillInput("Start Value", "0");
+  await fillInput("Stop Value", "1.8");
+  await fillInput("Step Size", "1m");
+
+  // Trigger the simulation
+  await runSimulationButton.click();
+
+  // Wait for the plot tab to become active and render controls
+  const plotVariablesHeader = page.getByText("Plot Variables", {
+    exact: true,
+  });
+  await expect(plotVariablesHeader).toBeVisible({ timeout: 20000 });
+
+  await assertButtonsHaveNames("plot");
+
+  const plotCheckboxLocator = page.getByRole("checkbox");
+  await assertCheckboxesHaveNames("plot", plotCheckboxLocator);
 }

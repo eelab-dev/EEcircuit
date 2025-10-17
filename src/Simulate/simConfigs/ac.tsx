@@ -59,6 +59,14 @@ const acConfigMethods: BaseSimConfigMethods<SimulationAC, AcFormData> = {
 const AcConfig: React.FC<BaseSimConfigProps<SimulationAC>> = (props) => {
   const { formData, handleInputChange, configString, detectedSources } = useBaseSimConfig<SimulationAC, AcFormData>(props, acConfigMethods);
   const acFormData = formData;
+  const idPrefix = React.useId();
+  const fieldIds = {
+    source: `${idPrefix}-source`,
+    sweepType: `${idPrefix}-sweep-type`,
+    frequencyStart: `${idPrefix}-frequency-start`,
+    frequencyStop: `${idPrefix}-frequency-stop`,
+    stepNumber: `${idPrefix}-step-number`,
+  };
 
   return (
     <div>
@@ -78,10 +86,13 @@ const AcConfig: React.FC<BaseSimConfigProps<SimulationAC>> = (props) => {
 
         <Fieldset.Content gap={2}>
           <Field.Root>
-            <Field.Label fontSize="sm">Source</Field.Label>
+            <Field.Label fontSize="sm" htmlFor={fieldIds.source}>
+              Source
+            </Field.Label>
             {detectedSources.length > 0 ? (
               <NativeSelectRoot size="sm">
                 <NativeSelectField
+                  id={fieldIds.source}
                   value={acFormData.source}
                   onChange={(e) => handleInputChange("source", e.target.value)}
                 >
@@ -96,6 +107,7 @@ const AcConfig: React.FC<BaseSimConfigProps<SimulationAC>> = (props) => {
             ) : (
               <Input
                 size="sm"
+                id={fieldIds.source}
                 name="source"
                 value={acFormData.source}
                 onChange={(e) => handleInputChange("source", e.target.value)}
@@ -105,9 +117,12 @@ const AcConfig: React.FC<BaseSimConfigProps<SimulationAC>> = (props) => {
           </Field.Root>
 
           <Field.Root>
-            <Field.Label fontSize="sm">Sweep Type</Field.Label>
+            <Field.Label fontSize="sm" htmlFor={fieldIds.sweepType}>
+              Sweep Type
+            </Field.Label>
             <NativeSelectRoot size="sm">
               <NativeSelectField
+                id={fieldIds.sweepType}
                 value={acFormData.sweepType}
                 onChange={(e) => {
                   handleInputChange(
@@ -124,9 +139,12 @@ const AcConfig: React.FC<BaseSimConfigProps<SimulationAC>> = (props) => {
           </Field.Root>
 
           <Field.Root>
-            <Field.Label fontSize="sm">Start Frequency</Field.Label>
+            <Field.Label fontSize="sm" htmlFor={fieldIds.frequencyStart}>
+              Start Frequency
+            </Field.Label>
             <Input
               size="sm"
+              id={fieldIds.frequencyStart}
               name="frequencyStart"
               value={acFormData.frequencyStart}
               onChange={(e) =>
@@ -137,9 +155,12 @@ const AcConfig: React.FC<BaseSimConfigProps<SimulationAC>> = (props) => {
           </Field.Root>
 
           <Field.Root>
-            <Field.Label fontSize="sm">Stop Frequency</Field.Label>
+            <Field.Label fontSize="sm" htmlFor={fieldIds.frequencyStop}>
+              Stop Frequency
+            </Field.Label>
             <Input
               size="sm"
+              id={fieldIds.frequencyStop}
               name="frequencyStop"
               value={acFormData.frequencyStop}
               onChange={(e) =>
@@ -150,9 +171,12 @@ const AcConfig: React.FC<BaseSimConfigProps<SimulationAC>> = (props) => {
           </Field.Root>
 
           <Field.Root>
-            <Field.Label fontSize="sm">Steps Number</Field.Label>
+            <Field.Label fontSize="sm" htmlFor={fieldIds.stepNumber}>
+              Steps Number
+            </Field.Label>
             <Input
               size="sm"
+              id={fieldIds.stepNumber}
               name="stepNumber"
               value={acFormData.stepNumber}
               onChange={(e) => handleInputChange("stepNumber", e.target.value)}

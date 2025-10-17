@@ -62,6 +62,7 @@ const ClearSchematicDialog: React.FC<ClearSchematicDialogProps> = ({
                   size="sm"
                   variant="ghost"
                   onClick={handleCancel}
+                  aria-label="Close clear schematic dialog"
                 >
                   <X />
                 </IconButton>

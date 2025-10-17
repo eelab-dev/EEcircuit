@@ -442,6 +442,7 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
           ref={buttonRef}
           onClick={openPopover}
           bg={dialogTheme.buttonIconBg}
+          aria-label="Open add component popover"
         >
           <CopyPlus />
         </IconButton>

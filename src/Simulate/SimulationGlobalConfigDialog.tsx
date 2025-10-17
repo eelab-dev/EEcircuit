@@ -140,6 +140,7 @@ const SimulationGlobalConfigDialog: React.FC<SimulationConfigDialogProps> = ({
                     resetVariableSelections();
                   }}
                   title="Reset variable selections to default (select all)"
+                  aria-label="Reset variable selections to default"
                 >
                   <RotateCcw size={12} />
                 </IconButton>
@@ -161,6 +162,7 @@ const SimulationGlobalConfigDialog: React.FC<SimulationConfigDialogProps> = ({
                     resetPlotState();
                   }}
                   title="Reset plot settings to default (single canvas, linear scales)"
+                  aria-label="Reset plot settings to default"
                 >
                   <RotateCcw size={12} />
                 </IconButton>
