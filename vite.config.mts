@@ -13,7 +13,11 @@ export default defineConfig({
       output: {},
     },
   },
-  plugins: [react(), tsconfigPaths()],
+  plugins: [react({
+    babel: {
+      plugins: ['babel-plugin-react-compiler'],
+    },
+  }), tsconfigPaths()],
   optimizeDeps: {
     exclude: ["eecircuit-schematic"],
   },

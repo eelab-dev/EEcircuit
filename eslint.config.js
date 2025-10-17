@@ -3,10 +3,21 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import pluginReact from "eslint-plugin-react";
 import { defineConfig } from "eslint/config";
+import reactHooks from "eslint-plugin-react-hooks";
 
 export default defineConfig([
   {
-    ignores: ["temp/**", "tests/**", "types/**"], // ✅ ignore these folders completely
+    ignores: [
+      "temp/**",
+      "tests/**",
+      "types/**",
+      ".vercel/**",
+      "dist/**",
+      ".vscode/**",
+      "node_modules/**",
+      ".claude/**",
+      ".github/**",
+    ], // ✅ ignore these folders completely
   },
 
   // Base JS config for src
@@ -33,4 +44,5 @@ export default defineConfig([
       react: { version: "detect" },
     },
   },
+  reactHooks.configs.flat["recommended-latest"],
 ]);
