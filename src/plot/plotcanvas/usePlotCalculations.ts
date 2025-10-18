@@ -231,13 +231,13 @@ export const usePlotCalculations = ({
         isTransitioningRef.current = false;
       }
     });
-  }, [isLogX, isLogY]);
+  }, [isLogX, isLogY, plotLineRef, glRef, zoomController]);
 
   // Handle log axis changes with batched updates to prevent re-render cascades
   useEffect(() => {
     if (!plotLineRef.current || !glRef.current) return;
     handleAxisTransition();
-  }, [isLogX, isLogY, plotLineRef.current, handleAxisTransition]);
+  }, [isLogX, isLogY, plotLineRef, glRef, handleAxisTransition]);
 
 
   // Handle theme changes - update WebGL background color immediately  
@@ -265,7 +265,7 @@ export const usePlotCalculations = ({
 
     lastBackgroundModeRef.current = isDarkMode;
     lastBackgroundContextRef.current = gl;
-  }, [isDarkMode, isCanvasInitialized]);
+  }, [isDarkMode, isCanvasInitialized, glRef, plotLineRef]);
 
   // Handle data updates with simplified autoScale (now works correctly for all coordinate spaces)
   useEffect(() => {
@@ -274,7 +274,7 @@ export const usePlotCalculations = ({
     // Use autoScale for data updates in both linear and log space
     // autoScale() now works correctly for all coordinate spaces
     plotLineRef.current.autoScale();
-  }, [selectedVariables, results]);
+  }, [selectedVariables, results, plotLineRef]);
 
   // Calculate and apply scaling using webgl-plot's enhanced API with zoom support
   const calculateAndApplyScaling = useCallback(() => {
@@ -485,7 +485,18 @@ export const usePlotCalculations = ({
         }
       }
     }
-  }, [selectedVariables, isLogX, isLogY, updateAxisScales, sharedXAxisScale, onXAxisScaleChange, canvasId]);
+  }, [
+    selectedVariables,
+    isLogX,
+    isLogY,
+    updateAxisScales,
+    sharedXAxisScale,
+    onXAxisScaleChange,
+    canvasId,
+    plotLineRef,
+    lineDataRef,
+    zoomController,
+  ]);
 
   // Update plot visibility and colors
   const updatePlot = useCallback(() => {
@@ -628,7 +639,8 @@ export const usePlotCalculations = ({
     zoomController,
     zoomLinesRef,
     zoomRegionRef,
-    calculateAndApplyScaling
+    calculateAndApplyScaling,
+    hoveredVariable,
   ]);
 
   // Set the updatePlot ref so it can be called from the log axis useEffect

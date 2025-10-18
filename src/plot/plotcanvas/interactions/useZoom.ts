@@ -82,40 +82,39 @@ export const useZoom = ({
 
   // Set up zoom state synchronization callback
   useEffect(() => {
-    if (zoomController.current && onZoomStateChange) {
-      zoomController.current.setZoomStateCallback(onZoomStateChange);
+    const controller = zoomController.current;
+    if (controller && onZoomStateChange) {
+      controller.setZoomStateCallback(onZoomStateChange);
+      return () => {
+        controller.setZoomStateCallback(null);
+      };
     }
-    
-    // Cleanup on unmount
-    return () => {
-      if (zoomController.current) {
-        zoomController.current.setZoomStateCallback(null);
-      }
-    };
+
+    return undefined;
   }, [zoomController, onZoomStateChange]);
 
   // Set up direct webgl redraw callback
   useEffect(() => {
-    if (zoomController.current && onWebglRedraw) {
+    const controller = zoomController.current;
+    if (controller && onWebglRedraw) {
       // Create a combined callback that also recalculates scaling for real-time operations
       const webglRedrawWithScaling = () => {
         calculateAndApplyScaling();
         onWebglRedraw();
       };
-      zoomController.current.setWebglRedrawCallback(webglRedrawWithScaling);
+      controller.setWebglRedrawCallback(webglRedrawWithScaling);
+      return () => {
+        controller.setWebglRedrawCallback(null);
+      };
     }
-    
-    // Cleanup on unmount
-    return () => {
-      if (zoomController.current) {
-        zoomController.current.setWebglRedrawCallback(null);
-      }
-    };
+
+    return undefined;
   }, [zoomController, onWebglRedraw, calculateAndApplyScaling]);
   
   // Set up direct pan offset synchronization callback
   useEffect(() => {
-    if (zoomController.current && otherCanvasZoomController) {
+    const controller = zoomController.current;
+    if (controller && otherCanvasZoomController) {
       const directPanSyncCallback = (panOffset: number) => {
         // Directly apply pan offset to the other canvas without React state
         if (otherCanvasZoomController.current) {
@@ -131,15 +130,13 @@ export const useZoom = ({
         }
       };
       
-      zoomController.current.setPanOffsetCallback(directPanSyncCallback);
+      controller.setPanOffsetCallback(directPanSyncCallback);
+      return () => {
+        controller.setPanOffsetCallback(null);
+      };
     }
-    
-    // Cleanup on unmount
-    return () => {
-      if (zoomController.current) {
-        zoomController.current.setPanOffsetCallback(null);
-      }
-    };
+
+    return undefined;
   }, [zoomController, otherCanvasZoomController, otherCanvasUpdatePlot, otherCanvasCalcScaling]);
 
   // Handle incoming shared zoom state changes
@@ -171,7 +168,16 @@ export const useZoom = ({
         updatePlot();
       }
     }
-  }, [sharedZoomState, zoomController, calculateAndApplyScaling, updatePlot, isCanvasInitialized, getAxisScales]);
+  }, [
+    sharedZoomState,
+    zoomController,
+    calculateAndApplyScaling,
+    updatePlot,
+    isCanvasInitialized,
+    getAxisScales,
+    isLogX,
+    isLogY,
+  ]);
   
   
   // Zoom functions

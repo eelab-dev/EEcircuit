@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as MonacoEditor from "monaco-editor/esm/vs/editor/editor.api";
 import "./useWorker.ts";
 //import * as monaco from "monaco-editor";
@@ -39,12 +39,14 @@ const EditorCustom = ({
   options,
 }: EditorCustomType) => {
   const [isMonacoReady, setIsMonacoReady] = useState(true);
-  const [isEditorCodeMounted, setIsEditorCodeMounted] = useState(false);
   const editorCodeRef =
     useRef<MonacoEditor.editor.IStandaloneCodeEditor | null>(null);
   const editorRef = useRef<typeof MonacoEditor.editor | null>(null);
   const monacoRef = useRef<typeof MonacoEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const initialEditorThemeRef = useRef<string>(
+    theme === "light" ? "vs" : "vs-dark"
+  );
 
   useEffect(() => {
     const f = () => {
@@ -412,7 +414,7 @@ const EditorCustom = ({
           roundedSelection: false,
           scrollBeyondLastLine: false,
           readOnly: false,
-          theme: theme === "light" ? "vs" : "vs-dark",
+          theme: initialEditorThemeRef.current,
           automaticLayout: true,
           quickSuggestions: true,
           wordBasedSuggestions: "allDocuments",
@@ -421,7 +423,6 @@ const EditorCustom = ({
         }
       );
 
-      setIsEditorCodeMounted(true);
     }
 
     // Cleanup function to dispose of the Monaco editor and prevent listener leaks
@@ -436,19 +437,31 @@ const EditorCustom = ({
           console.warn("Error disposing Monaco editor:", error);
         }
         editorCodeRef.current = null;
-        setIsEditorCodeMounted(false);
       }
     };
   }, [isMonacoReady]); // Removed theme from dependencies to prevent unnecessary recreation
 
+  const monacoEvent = useCallback(
+    (e: MonacoEditor.editor.IModelContentChangedEvent) => {
+      const editorCode = editorCodeRef.current;
+      if (editorDidMount) {
+        editorDidMount(editorCode ?? undefined, e);
+      }
+      if (valueChanged) {
+        valueChanged(editorCode?.getValue());
+      }
+    },
+    [editorDidMount, valueChanged]
+  );
+
   useEffect(() => {
-    if (editorCodeRef.current && isEditorCodeMounted) {
+    if (editorCodeRef.current) {
       editorCodeRef.current.layout();
     }
   }, [width, height]);
 
   useEffect(() => {
-    if (editorCodeRef.current && isEditorCodeMounted) {
+    if (editorCodeRef.current) {
       editorCodeRef.current.updateOptions({
         theme: theme === "light" ? "vs" : "vs-dark",
       });
@@ -456,14 +469,14 @@ const EditorCustom = ({
   }, [theme]);
 
   useEffect(() => {
-    if (editorRef.current && editorCodeRef.current && isEditorCodeMounted) {
+    if (editorRef.current && editorCodeRef.current) {
       editorCodeRef.current.setValue(value ? value : "hello!");
       editorCodeRef.current.onDidChangeModelContent(monacoEvent);
     }
-  }, [isEditorCodeMounted, language]); // Removed theme to prevent unnecessary updates
+  }, [language, monacoEvent, value]); // Removed theme to prevent unnecessary updates
 
   useEffect(() => {
-    if (editorRef.current && editorCodeRef.current && isEditorCodeMounted) {
+    if (editorRef.current && editorCodeRef.current) {
       ///////////otherwsie keeps refreshing and flickering///////////////?????? put and if with getValue == value
 
       const v = editorCodeRef.current.getValue();
@@ -473,17 +486,6 @@ const EditorCustom = ({
       }
     }
   }, [value]);
-
-  const monacoEvent = (e: MonacoEditor.editor.IModelContentChangedEvent) => {
-    const changedText = e;
-    const editorCode = editorCodeRef.current;
-    if (editorDidMount) {
-      editorDidMount(editorCode ?? undefined, changedText);
-    }
-    if (valueChanged) {
-      valueChanged(editorCode?.getValue());
-    }
-  };
 
   return (
     <div

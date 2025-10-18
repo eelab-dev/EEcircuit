@@ -41,6 +41,9 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   // Local state for UI management
   const [netListToSim, setNetListToSim] = useState(netList);
   const [simCommandString, setSimCommandString] = useState("");
+  const lastSimCommandRef = React.useRef("");
+  const lastSimulationConfigRef = React.useRef<SimulationType | undefined>(undefined);
+  const lastGeneratedNetlistRef = React.useRef<string | null>(null);
 
   const handleEditor = React.useCallback((value: string | undefined) => {
     if (value !== undefined) {
@@ -84,7 +87,10 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   // Update netlist when simulation type or configuration changes
   useEffect(() => {
     if (selectedSimType === "None") {
-      setNetListToSim(netList);
+      if (lastGeneratedNetlistRef.current !== netList) {
+        lastGeneratedNetlistRef.current = netList;
+        setNetListToSim(netList);
+      }
       return;
     } else {
       const saveCommand = saveCommandConfig(toBePlotted);
@@ -109,7 +115,10 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         saveCommand +
         "\n\n" +
         ".end";
-      setNetListToSim(newNetList);
+      if (lastGeneratedNetlistRef.current !== newNetList) {
+        lastGeneratedNetlistRef.current = newNetList;
+        setNetListToSim(newNetList);
+      }
     }
   }, [
     netList,
@@ -123,15 +132,23 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   const handleStringConfigChange = React.useCallback((configString: string) => {
     // Apply ngspice compatibility corrections to the config string
     const correctedConfigString = correctUnitValueForNgspice(configString);
-    // Store the corrected SPICE command from config components
-    setSimCommandString(correctedConfigString);
+    if (lastSimCommandRef.current !== correctedConfigString) {
+      lastSimCommandRef.current = correctedConfigString;
+      setSimCommandString(correctedConfigString);
+    }
   }, []);
 
   // Handler for receiving the full configuration object from config components
   const handleFullConfigChange = React.useCallback((config: SimulationType) => {
     // Update the simulation config in the store so the useEffect can detect AC + source changes
     const { setSimulationConfig } = useAppStore.getState();
-    setSimulationConfig(config);
+    const serializedPrev = JSON.stringify(lastSimulationConfigRef.current);
+    const serializedNext = JSON.stringify(config);
+
+    if (serializedPrev !== serializedNext) {
+      lastSimulationConfigRef.current = config;
+      setSimulationConfig(config);
+    }
   }, []);
 
   const handleSimRun = async () => {

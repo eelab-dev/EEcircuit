@@ -132,33 +132,114 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
     }
   };
 
-  // SidebarContent component - linear layout since scrolling is handled by parent
-  const SidebarContent = () => {
-    if (numCanvases === 1) {
-      // Single canvas mode - original layout
-      return (
-        <CheckboxGroup
-          value={selectedVariables}
-          onValueChange={(newValues) => {
-            onSelectedVariablesChange(newValues);
-          }}
-          name="variables"
+  let sidebarContent: React.ReactNode;
+
+  if (numCanvases === 1) {
+    sidebarContent = (
+      <CheckboxGroup
+        value={selectedVariables}
+        onValueChange={(newValues) => {
+          onSelectedVariablesChange(newValues);
+        }}
+        name="variables"
+      >
+        <Text
+          fontSize="sm"
+          mb="2"
+          fontWeight="medium"
+          color={dialogTheme.secondaryText}
         >
-          {/* Top section with legend and action buttons */}
+          X-axis: {variableNames[0]}
+        </Text>
+
+        <HStack gap="1" w="100%" mb="3">
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={handleSelectAll}
+            fontSize="xs"
+            flex="1"
+            minW="0"
+          >
+            All
+          </Button>
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={handleDeselectAll}
+            fontSize="xs"
+            flex="1"
+            minW="0"
+          >
+            None
+          </Button>
+        </HStack>
+
+        <For each={variableNames.slice(1)}>
+          {(value) => (
+            <Checkbox.Root
+              key={value}
+              value={value}
+              onMouseEnter={() => onVariableHover(value)}
+              onMouseLeave={() => onVariableHover(null)}
+              mb="2"
+            >
+              <Checkbox.HiddenInput />
+              <Checkbox.Control />
+              <Checkbox.Label
+                fontWeight={hoveredVariable === value ? "semibold" : "normal"}
+                transition="font-weight 0.1s ease"
+              >
+                {value}
+              </Checkbox.Label>
+            </Checkbox.Root>
+          )}
+        </For>
+      </CheckboxGroup>
+    );
+  } else {
+    const allVariables = variableNames.slice(1);
+    const canvas1Variables = isACModeActive
+      ? allVariables.filter((v) => v.includes("[mag]"))
+      : allVariables;
+    const canvas2Variables = isACModeActive
+      ? allVariables.filter((v) => v.includes("[phase]"))
+      : allVariables;
+
+    sidebarContent = (
+      <Box>
+        <Text
+          fontSize="sm"
+          mb="3"
+          fontWeight="medium"
+          color={dialogTheme.secondaryText}
+        >
+          X-axis: {variableNames[0]}
+        </Text>
+
+        <Box mb="4">
           <Text
             fontSize="sm"
             mb="2"
-            fontWeight="medium"
-            color={dialogTheme.secondaryText}
+            fontWeight="semibold"
+            color={dialogTheme.primaryText}
           >
-            X-axis: {variableNames[0]}
+            {isACModeActive ? "Magnitude" : "Plot 1"}
           </Text>
 
-          <HStack gap="1" w="100%" mb="3">
+          <HStack gap="1" w="100%" mb="2">
             <Button
               size="xs"
               variant="outline"
-              onClick={handleSelectAll}
+              onClick={() => {
+                const otherVariables = selectedVariables.filter(
+                  (v) => !canvas1Variables.includes(v)
+                );
+                onSelectedVariablesChange([
+                  ...canvas1Variables,
+                  ...otherVariables,
+                ]);
+              }}
               fontSize="xs"
               flex="1"
               minW="0"
@@ -168,7 +249,12 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             <Button
               size="xs"
               variant="outline"
-              onClick={handleDeselectAll}
+              onClick={() => {
+                const otherVariables = selectedVariables.filter(
+                  (v) => !canvas1Variables.includes(v)
+                );
+                onSelectedVariablesChange(otherVariables);
+              }}
               fontSize="xs"
               flex="1"
               minW="0"
@@ -177,212 +263,116 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             </Button>
           </HStack>
 
-          {/* Checkbox list */}
-          <For each={variableNames.slice(1)}>
-            {(value) => (
-              <Checkbox.Root
-                key={value}
-                value={value}
-                onMouseEnter={() => onVariableHover(value)}
-                onMouseLeave={() => onVariableHover(null)}
-                mb="2"
-              >
-                <Checkbox.HiddenInput />
-                <Checkbox.Control />
-                <Checkbox.Label
-                  fontWeight={hoveredVariable === value ? "semibold" : "normal"}
-                  transition="font-weight 0.1s ease"
-                >
-                  {value}
-                </Checkbox.Label>
-              </Checkbox.Root>
+          <CheckboxGroup
+            value={selectedVariables.filter((v) =>
+              canvas1Variables.includes(v)
             )}
-          </For>
-        </CheckboxGroup>
-      );
-    } else {
-      // Dual canvas mode - separate sections for each canvas
-      // Filter variables for AC mode
-      const allVariables = variableNames.slice(1);
-      const canvas1Variables = isACModeActive
-        ? allVariables.filter((v) => v.includes("[mag]"))
-        : allVariables;
-      const canvas2Variables = isACModeActive
-        ? allVariables.filter((v) => v.includes("[phase]"))
-        : allVariables;
+            onValueChange={(newValues) => {
+              const otherVariables = selectedVariables.filter(
+                (v) => !canvas1Variables.includes(v)
+              );
+              onSelectedVariablesChange([...newValues, ...otherVariables]);
+            }}
+            name="canvas1-variables"
+          >
+            <For each={canvas1Variables}>
+              {(value) => (
+                <Checkbox.Root
+                  key={value}
+                  value={value}
+                  onMouseEnter={() => onVariableHover(value)}
+                  onMouseLeave={() => onVariableHover(null)}
+                  mb="1"
+                >
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control />
+                  <Checkbox.Label
+                    fontWeight={
+                      hoveredVariable === value ? "semibold" : "normal"
+                    }
+                    transition="font-weight 0.1s ease"
+                    fontSize="sm"
+                  >
+                    {value}
+                  </Checkbox.Label>
+                </Checkbox.Root>
+              )}
+            </For>
+          </CheckboxGroup>
+        </Box>
 
-      return (
         <Box>
-          {/* X-axis info */}
           <Text
             fontSize="sm"
-            mb="3"
-            fontWeight="medium"
-            color={dialogTheme.secondaryText}
+            mb="2"
+            fontWeight="semibold"
+            color={dialogTheme.primaryText}
           >
-            X-axis: {variableNames[0]}
+            {isACModeActive ? "Phase" : "Plot 2"}
           </Text>
 
-          {/* Canvas 1 section */}
-          <Box mb="4">
-            <Text
-              fontSize="sm"
-              mb="2"
-              fontWeight="semibold"
-              color={dialogTheme.primaryText}
+          <HStack gap="1" w="100%" mb="2">
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() =>
+                onCanvas2SelectedVariablesChange?.(canvas2Variables)
+              }
+              fontSize="xs"
+              flex="1"
+              minW="0"
             >
-              {isACModeActive ? "Magnitude" : "Plot 1"}
-            </Text>
-
-            <HStack gap="1" w="100%" mb="2">
-              <Button
-                size="xs"
-                variant="outline"
-                onClick={() => {
-                  const otherVariables = selectedVariables.filter(
-                    (v) => !canvas1Variables.includes(v)
-                  );
-                  onSelectedVariablesChange([
-                    ...canvas1Variables,
-                    ...otherVariables,
-                  ]);
-                }}
-                fontSize="xs"
-                flex="1"
-                minW="0"
-              >
-                All
-              </Button>
-              <Button
-                size="xs"
-                variant="outline"
-                onClick={() => {
-                  const otherVariables = selectedVariables.filter(
-                    (v) => !canvas1Variables.includes(v)
-                  );
-                  onSelectedVariablesChange(otherVariables);
-                }}
-                fontSize="xs"
-                flex="1"
-                minW="0"
-              >
-                None
-              </Button>
-            </HStack>
-
-            <CheckboxGroup
-              value={selectedVariables.filter((v) =>
-                canvas1Variables.includes(v)
-              )}
-              onValueChange={(newValues) => {
-                // Merge the new canvas1 selection with unchanged variables from other canvases
-                const otherVariables = selectedVariables.filter(
-                  (v) => !canvas1Variables.includes(v)
-                );
-                onSelectedVariablesChange([...newValues, ...otherVariables]);
-              }}
-              name="canvas1-variables"
+              All
+            </Button>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={handleCanvas2DeselectAll}
+              fontSize="xs"
+              flex="1"
+              minW="0"
             >
-              <For each={canvas1Variables}>
-                {(value) => (
-                  <Checkbox.Root
-                    key={value}
-                    value={value}
-                    onMouseEnter={() => onVariableHover(value)}
-                    onMouseLeave={() => onVariableHover(null)}
-                    mb="1"
+              None
+            </Button>
+          </HStack>
+
+          <CheckboxGroup
+            value={canvas2SelectedVariables.filter((v) =>
+              canvas2Variables.includes(v)
+            )}
+            onValueChange={(newValues) => {
+              onCanvas2SelectedVariablesChange?.(newValues);
+            }}
+            name="canvas2-variables"
+          >
+            <For each={canvas2Variables}>
+              {(value) => (
+                <Checkbox.Root
+                  key={`canvas2-${value}`}
+                  value={value}
+                  onMouseEnter={() => onCanvas2VariableHover?.(value)}
+                  onMouseLeave={() => onCanvas2VariableHover?.(null)}
+                  mb="1"
+                >
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control />
+                  <Checkbox.Label
+                    fontWeight={
+                      canvas2HoveredVariable === value ? "semibold" : "normal"
+                    }
+                    transition="font-weight 0.1s ease"
+                    fontSize="sm"
                   >
-                    <Checkbox.HiddenInput />
-                    <Checkbox.Control />
-                    <Checkbox.Label
-                      fontWeight={
-                        hoveredVariable === value ? "semibold" : "normal"
-                      }
-                      transition="font-weight 0.1s ease"
-                      fontSize="sm"
-                    >
-                      {value}
-                    </Checkbox.Label>
-                  </Checkbox.Root>
-                )}
-              </For>
-            </CheckboxGroup>
-          </Box>
-
-          {/* Canvas 2 section */}
-          <Box>
-            <Text
-              fontSize="sm"
-              mb="2"
-              fontWeight="semibold"
-              color={dialogTheme.primaryText}
-            >
-              {isACModeActive ? "Phase" : "Plot 2"}
-            </Text>
-
-            <HStack gap="1" w="100%" mb="2">
-              <Button
-                size="xs"
-                variant="outline"
-                onClick={() =>
-                  onCanvas2SelectedVariablesChange?.(canvas2Variables)
-                }
-                fontSize="xs"
-                flex="1"
-                minW="0"
-              >
-                All
-              </Button>
-              <Button
-                size="xs"
-                variant="outline"
-                onClick={handleCanvas2DeselectAll}
-                fontSize="xs"
-                flex="1"
-                minW="0"
-              >
-                None
-              </Button>
-            </HStack>
-
-            <CheckboxGroup
-              value={canvas2SelectedVariables.filter((v) =>
-                canvas2Variables.includes(v)
+                    {value}
+                  </Checkbox.Label>
+                </Checkbox.Root>
               )}
-              onValueChange={(newValues) => {
-                onCanvas2SelectedVariablesChange?.(newValues);
-              }}
-              name="canvas2-variables"
-            >
-              <For each={canvas2Variables}>
-                {(value) => (
-                  <Checkbox.Root
-                    key={`canvas2-${value}`}
-                    value={value}
-                    onMouseEnter={() => onCanvas2VariableHover?.(value)}
-                    onMouseLeave={() => onCanvas2VariableHover?.(null)}
-                    mb="1"
-                  >
-                    <Checkbox.HiddenInput />
-                    <Checkbox.Control />
-                    <Checkbox.Label
-                      fontWeight={
-                        canvas2HoveredVariable === value ? "semibold" : "normal"
-                      }
-                      transition="font-weight 0.1s ease"
-                      fontSize="sm"
-                    >
-                      {value}
-                    </Checkbox.Label>
-                  </Checkbox.Root>
-                )}
-              </For>
-            </CheckboxGroup>
-          </Box>
+            </For>
+          </CheckboxGroup>
         </Box>
-      );
-    }
-  };
+      </Box>
+    );
+  }
 
   return (
     <>
@@ -467,7 +457,7 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
               overflowY="auto"
               overflowX="hidden"
             >
-              <SidebarContent />
+              {sidebarContent}
             </Box>
 
             {/* Fixed bottom button */}
@@ -573,7 +563,7 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
                 overflowY="auto"
                 overflowX="hidden"
               >
-                <SidebarContent />
+                {sidebarContent}
               </Box>
 
               {/* Fixed bottom button */}

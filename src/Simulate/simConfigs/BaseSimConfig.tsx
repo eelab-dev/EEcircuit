@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { SimulationType } from "../../types/commonTypes";
 import { detectSourcesFromNetlist, validateSourceInNetlist, getDefaultSource } from "../../utils/sourceDetection";
 
@@ -126,74 +126,109 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
   const { onConfigChange, onFullConfigChange, initialData, netlist } = props;
   const { generateConfigString, generateFullConfig, validateConfig, getInitialFormData } = methods;
 
-  // Initialize form data from initial data or defaults
-  const [formData, setFormData] = useState<F>(() => 
-    getInitialFormData(initialData)
+  const buildInitialFormData = useCallback(() => {
+    const initialFormData = { ...getInitialFormData(initialData) } as F;
+
+    if ("source" in initialFormData && initialFormData.source && netlist) {
+      const isValidSource = validateSourceInNetlist(
+        netlist,
+        initialFormData.source as string
+      );
+      if (!isValidSource) {
+        const defaultSource = getDefaultSource(netlist);
+        (initialFormData as Record<string, string>).source = defaultSource;
+      }
+    }
+
+    return initialFormData;
+  }, [getInitialFormData, initialData, netlist]);
+
+  const [formData, setFormData] = useState<F>(() => buildInitialFormData());
+  const publishTimeoutRef = useRef<number | null>(null);
+  const lastPublishedFormRef = useRef<string | undefined>(undefined);
+  const lastConfigStringRef = useRef<string | undefined>(undefined);
+  const lastFullConfigSerializedRef = useRef<string | undefined>(undefined);
+
+  const nameFromInitialData = useMemo(
+    () => (initialData && "name" in initialData ? initialData.name : undefined),
+    [initialData]
   );
 
-  // Handle input changes with real-time updates
-  const handleInputChange = useCallback((field: string, value: string | boolean | number) => {
-    setFormData(currentFormData => {
-      const newFormData = { ...currentFormData, [field]: value };
+  const handleInputChange = useCallback(
+    (field: string, value: string | boolean | number) => {
+      setFormData((prev) => {
+        const currentValue = prev[field as keyof F] as unknown;
+        if (currentValue === value) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [field]: value,
+        } as F;
+      });
+    },
+    []
+  );
 
-      // CRITICAL: Defer callback execution to prevent React warning
-      // 
-      // React Rule: Cannot update parent component state while child is rendering
-      // Problem: handleInputChange can be called during user interactions that happen
-      //          while the component is still in its render cycle
-      // Solution: setTimeout(0) pushes callbacks to next event loop tick, ensuring
-      //          they execute AFTER the current render phase is complete
-      // 
-      // This is the correct use of setTimeout for React - not as an initialization hack,
-      // but to properly defer callback execution until render is finished
-      setTimeout(() => {
-        const configString = generateConfigString(newFormData);
+  useEffect(() => {
+    // This effect pushes changes to the parent after each keystroke while deduping
+    // the payload. It prevents the recursive update loop we hit previously when
+    // the Simulate tab regenerated the netlist on every character (including backspace).
+    const serializedForm = JSON.stringify(formData);
+    if (lastPublishedFormRef.current === serializedForm) {
+      return;
+    }
+
+    if (publishTimeoutRef.current !== null) {
+      window.clearTimeout(publishTimeoutRef.current);
+    }
+
+    publishTimeoutRef.current = window.setTimeout(() => {
+      lastPublishedFormRef.current = serializedForm;
+
+      const configString = generateConfigString(formData);
+      if (lastConfigStringRef.current !== configString) {
+        lastConfigStringRef.current = configString;
         onConfigChange(configString);
+      }
 
-        // Send full configuration if callback provided (regardless of validation for AC parameter addition)
-        if (onFullConfigChange) {
-          const name = initialData && 'name' in initialData ? initialData.name : undefined;
-          const fullConfig = generateFullConfig(newFormData, name);
+      if (onFullConfigChange) {
+        const fullConfig = generateFullConfig(formData, nameFromInitialData);
+        const serializedFullConfig = JSON.stringify(fullConfig);
+        if (lastFullConfigSerializedRef.current !== serializedFullConfig) {
+          lastFullConfigSerializedRef.current = serializedFullConfig;
           onFullConfigChange(fullConfig);
         }
-      }, 0);
-
-      return newFormData;
-    });
-  }, [generateConfigString, generateFullConfig, onConfigChange, onFullConfigChange, initialData]);
-
-  // Update form data when initialData changes (config switching)
-  useEffect(() => {
-    if (initialData) {
-      const newFormData = getInitialFormData(initialData);
-      
-      // Revalidate source if it exists and netlist is available
-      if ('source' in newFormData && newFormData.source && netlist) {
-        const isValidSource = validateSourceInNetlist(netlist, newFormData.source as string);
-        if (!isValidSource) {
-          // Reset invalid source to default or empty
-          const defaultSource = getDefaultSource(netlist);
-          (newFormData as Record<string, string>).source = defaultSource;
-        }
       }
-      
-      setFormData(newFormData);
-      
-      // Send config string when parent changes initialData (config loading/switching)
-      // No setTimeout needed here - useEffect already runs after render phase
-      const configString = generateConfigString(newFormData);
-      onConfigChange(configString);
-    }
-  }, [initialData, netlist, getInitialFormData, generateConfigString, onConfigChange]);
+    }, 0);
 
-  // Detect sources from netlist
+    return () => {
+      if (publishTimeoutRef.current !== null) {
+        window.clearTimeout(publishTimeoutRef.current);
+        publishTimeoutRef.current = null;
+      }
+    };
+  }, [
+    formData,
+    generateConfigString,
+    generateFullConfig,
+    nameFromInitialData,
+    onConfigChange,
+    onFullConfigChange,
+  ]);
+
+  const configString = useMemo(
+    () => generateConfigString(formData),
+    [formData, generateConfigString]
+  );
+
   const detectedSources = netlist ? detectSourcesFromNetlist(netlist) : [];
 
   return {
     formData,
     handleInputChange,
-    configString: generateConfigString(formData),
+    configString,
     isValid: validateConfig(formData),
-    detectedSources
+    detectedSources,
   };
 }

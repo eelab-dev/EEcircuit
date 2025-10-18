@@ -18,9 +18,8 @@ export const useCanvasDimensions = ({
 }: UseCanvasDimensionsProps) => {
   // Monitor canvas size changes
   useEffect(() => {
-    if (!canvasRef.current) return;
-
     const canvas = canvasRef.current;
+    if (!canvas) return;
 
     const updateCanvasDimensions = () => {
       const rect = canvas.getBoundingClientRect();
@@ -107,5 +106,5 @@ export const useCanvasDimensions = ({
       window.removeEventListener("resize", handleWindowResize);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [canvasRef.current, isCanvasInitialized]); // Watch for canvas ref changes and initialization
+  }, [canvasRef, glRef, plotLineRef, isCanvasInitialized, calculateAndApplyScaling]); // Watch for ref changes and initialization
 };

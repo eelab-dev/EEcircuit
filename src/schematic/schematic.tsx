@@ -93,7 +93,7 @@ const Schematic: React.FC<SchematicProps> = ({
   const [availableComponents, setAvailableComponents] = useState<
     eeSch.AvailableComponent[]
   >([]);
-  const [propertiesOpen, setPropertiesOpen] = useState(false);
+  const [propertiesDismissed, setPropertiesDismissed] = useState(false);
 
   const [info, setInfo] = useState<
     { message: string; mLevel: "user" | "dev" }[]
@@ -136,6 +136,7 @@ const Schematic: React.FC<SchematicProps> = ({
         case "selectedItem":
           if (msg.selectedItem !== undefined) {
             setSelectedItem(msg.selectedItem);
+            setPropertiesDismissed(false);
 
             // Handle plot selection mode - use refs to get current values
             if (
@@ -317,7 +318,7 @@ const Schematic: React.FC<SchematicProps> = ({
 
       return true; // Successfully initialized
     },
-    [msgCallback, hasViewedSchematic, setHasViewedSchematic]
+    [msgCallback, hasViewedSchematic, setHasViewedSchematic, isDarkMode]
   );
 
   // Effect to handle tab visibility changes - simplified approach like simulate/plot tabs
@@ -725,17 +726,14 @@ const Schematic: React.FC<SchematicProps> = ({
   }, []);
 
   const propertiesCallBack = React.useCallback(() => {
-    setPropertiesOpen(false);
+    setPropertiesDismissed(true);
   }, []);
 
-  useEffect(() => {
-    if (!selectedItem || selectedItem.type === "none") {
-      setPropertiesOpen(false);
-    } else if (!isPlotSelectionMode) {
-      // Only open properties dialog when not in plot selection mode
-      setPropertiesOpen(true);
-    }
-  }, [selectedItem, isPlotSelectionMode]);
+  const propertiesOpen =
+    !isPlotSelectionMode &&
+    !propertiesDismissed &&
+    !!selectedItem &&
+    selectedItem.type !== "none";
 
   const handleExportImage = () => {
     setLoadingSvg(true);

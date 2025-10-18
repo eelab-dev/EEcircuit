@@ -86,6 +86,7 @@ interface UseCrosshairProps {
   selectedVariables: string[];
   lineDataRef: RefObject<ExtendedLineConfig[]>;
   getAxisScales: () => AxisScales;
+  isCanvasInitialized: boolean;
   sharedCursorX?: number | null;
   onCursorXChange?: (x: number) => void;
   sharedCursorVisible?: boolean;
@@ -107,6 +108,7 @@ export const useCrosshair = ({
   selectedVariables,
   lineDataRef,
   getAxisScales,
+  isCanvasInitialized,
   sharedCursorX,
   onCursorXChange,
   sharedCursorVisible,
@@ -225,42 +227,48 @@ export const useCrosshair = ({
         onRedrawNeeded();
       }
     }
-  }, [showCrosshair, crosshairSnapToLines]);
+  }, [showCrosshair, crosshairSnapToLines, crosshairRef, snapCircleRef, onRedrawNeeded]);
 
   // Reset initialization flag when crosshairRef changes (canvas mode switch)
   // and trigger re-initialization if crosshair should be visible
   useEffect(() => {
     crosshairLinesInitialized.current = false;
 
-    // If crosshair should be visible, trigger re-initialization
-    if (showCrosshair && crosshairRef.current) {
-      // Use a microtask to ensure the reset happens first
-      Promise.resolve().then(() => {
-        if (crosshairRef.current && showCrosshair) {
-          const crosshairLines: LineConfig[] = [
-            {
-              points: new Float32Array([-1, 0, 1, 0]), // Horizontal line
-              color: [0, 1, 0, 0.8], // Green with transparency
-              thickness: LINE_THICKNESS.CROSSHAIR,
-              enabled: true,
-            },
-            {
-              points: new Float32Array([0, -1, 0, 1]), // Vertical line
-              color: [0, 1, 0, 0.8], // Green with transparency
-              thickness: LINE_THICKNESS.CROSSHAIR,
-              enabled: true,
-            },
-          ];
-          crosshairRef.current.initLines(crosshairLines);
-          crosshairLinesInitialized.current = true;
-
-          if (onRedrawNeeded) {
-            onRedrawNeeded();
-          }
-        }
-      });
+    if (!isCanvasInitialized) {
+      return;
     }
-  }, [crosshairRef.current]);
+
+    if (!showCrosshair || !crosshairRef.current) {
+      return;
+    }
+
+    Promise.resolve().then(() => {
+      if (!crosshairRef.current || !showCrosshair) {
+        return;
+      }
+
+      const crosshairLines: LineConfig[] = [
+        {
+          points: new Float32Array([-1, 0, 1, 0]), // Horizontal line
+          color: [0, 1, 0, 0.8], // Green with transparency
+          thickness: LINE_THICKNESS.CROSSHAIR,
+          enabled: true,
+        },
+        {
+          points: new Float32Array([0, -1, 0, 1]), // Vertical line
+          color: [0, 1, 0, 0.8], // Green with transparency
+          thickness: LINE_THICKNESS.CROSSHAIR,
+          enabled: true,
+        },
+      ];
+      crosshairRef.current.initLines(crosshairLines);
+      crosshairLinesInitialized.current = true;
+
+      if (onRedrawNeeded) {
+        onRedrawNeeded();
+      }
+    });
+  }, [isCanvasInitialized, showCrosshair, crosshairRef, onRedrawNeeded]);
 
   // Store crosshair coordinates in ref to avoid React re-renders
   const crosshairCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -323,7 +331,16 @@ export const useCrosshair = ({
         onRedrawNeeded();
       }
     }
-  }, [sharedCursorX, showCrosshair, isLogX, selectedVariables.length]);
+  }, [
+    sharedCursorX,
+    showCrosshair,
+    isLogX,
+    selectedVariables.length,
+    canvasRef,
+    crosshairRef,
+    getAxisScales,
+    onRedrawNeeded,
+  ]);
 
   // Update crosshair position - can snap to nearest plot line or move freely
   const updateCrosshair = (mouseX: number, mouseY: number) => {

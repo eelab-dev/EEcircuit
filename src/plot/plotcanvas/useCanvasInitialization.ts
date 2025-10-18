@@ -70,14 +70,12 @@ export const useCanvasInitialization = ({
   useEffect(() => {
     if (!canvasRef.current || results.length === 0) return;
 
-    // Reset initialization flag so dependent effects can re-run with fresh WebGL state
-    setIsCanvasInitialized(false);
-
+    let cancelled = false;
     const canvas = canvasRef.current;
 
     // Use requestAnimationFrame to defer initialization until after layout
     const rafId = requestAnimationFrame(() => {
-      if (!canvasRef.current || results.length === 0) return;
+      if (!canvasRef.current || results.length === 0 || cancelled) return;
 
       const devicePixelRatio = window.devicePixelRatio || 1;
 
@@ -330,7 +328,9 @@ export const useCanvasInitialization = ({
       plotLineRef.current.initLines(allLineData);
       plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
 
-      setIsCanvasInitialized(true);
+      if (!cancelled) {
+        setIsCanvasInitialized(true);
+      }
 
       // Don't call updatePlot here - let the parent component handle it
       // after variables are properly selected
@@ -339,9 +339,11 @@ export const useCanvasInitialization = ({
 
     // Cleanup function to cancel the animation frame if component unmounts
     return () => {
+      cancelled = true;
       cancelAnimationFrame(rafId);
+      setIsCanvasInitialized(false);
     };
-  }, [results]);
+  }, [results, isDarkMode]);
 
 
   return {

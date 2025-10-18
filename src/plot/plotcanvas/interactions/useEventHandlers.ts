@@ -285,6 +285,10 @@ export const useEventHandlers = ({
     touchState.lastTapTime,
     touchState.tapCount,
     resetZoom,
+    canvasRef,
+    handleHorizontalScroll,
+    handleZoomAtCursor,
+    zoomController,
   ]);
 
   // Add native wheel event listener to properly handle preventDefault
@@ -367,7 +371,15 @@ export const useEventHandlers = ({
     return () => {
       canvas.removeEventListener("wheel", handleWheel);
     };
-  }, [isCanvasInitialized, selectedVariables, inputProfile]); // Re-add listener when canvas is re-initialized, selectedVariables change, or input profile changes
+  }, [
+    isCanvasInitialized,
+    selectedVariables,
+    inputProfile,
+    canvasRef,
+    handleHorizontalScroll,
+    handleZoomAtCursor,
+    zoomController,
+  ]); // Re-add listener when canvas is re-initialized, selectedVariables change, or input profile changes
 
   return {
     touchState,

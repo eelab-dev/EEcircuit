@@ -72,32 +72,28 @@ const BottomBar: React.FC<BottomBarProps> = ({
     flexShrink: 0,
   };
 
-  // Coordinate button component
-  const CoordButton = ({
-    additionalStyles = {},
-  }: {
-    additionalStyles?: Record<string, unknown>;
-  }) => (
+  const renderCoordButton = (additionalStyles: Record<string, unknown> = {}) => (
     <Button {...baseButtonStyles} fontFamily="mono" {...additionalStyles}>
       {`X:${formatCoord(coord.x)}, Y:${formatCoord(coord.y)}`}
     </Button>
   );
 
-  // Pointer info button component
-  const PointerInfoButton = ({
-    additionalStyles = {},
-  }: {
-    additionalStyles?: Record<string, unknown>;
-  }) =>
-    pointerInfo ? (
+  const renderPointerInfoButton = (
+    additionalStyles: Record<string, unknown> = {}
+  ) => {
+    if (!pointerInfo) {
+      return null;
+    }
+
+    return (
       <Button {...baseButtonStyles} gap={2} {...additionalStyles}>
         {getPointerIcon(pointerInfo)}
         {`${pointerInfo.name} - ${pointerInfo.uid}`}
       </Button>
-    ) : null;
+    );
+  };
 
-  // Simulate Netlist button component
-  const SimulateButton = () => (
+  const renderSimulateButton = () => (
     <Button
       size="sm"
       onClick={(e) => onSendToNetlist(!!(e as React.MouseEvent).shiftKey)}
@@ -133,36 +129,32 @@ const BottomBar: React.FC<BottomBarProps> = ({
       {isWideView ? (
         <>
           {/* Wide view: Centered coordinate label */}
-          <CoordButton
-            additionalStyles={{
+          {renderCoordButton({
               position: "absolute",
               left: "50%",
               transform: "translateX(-50%)",
-            }}
-          />
+            })}
 
           {/* Pointer info to the right of coord label */}
-          <PointerInfoButton
-            additionalStyles={{
+          {renderPointerInfoButton({
               position: "absolute",
               left: "50%",
               transform: "translateX(calc(-50% + 10rem))",
-            }}
-          />
+            })}
 
           {/* Simulate button on right */}
-          <SimulateButton />
+          {renderSimulateButton()}
         </>
       ) : (
         <>
           {/* Narrow view: Coord on left */}
-          <CoordButton />
+          {renderCoordButton()}
 
           {/* Pointer info in center */}
-          <PointerInfoButton />
+          {renderPointerInfoButton()}
 
           {/* Simulate button on right */}
-          <SimulateButton />
+          {renderSimulateButton()}
         </>
       )}
     </Flex>

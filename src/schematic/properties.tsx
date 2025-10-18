@@ -35,9 +35,9 @@ const Properties: React.FC<PropertiesProps> = ({
   onApply,
 }) => {
   // Helper function to get properties from selectedItem
-  const getItemProperties = () => {
+  const getItemProperties = React.useCallback(() => {
     return getPropertiesFromSelectedItem(selectedItem);
-  };
+  }, [selectedItem]);
 
   const [localValues, setLocalValues] = useState(getItemProperties());
 
@@ -59,7 +59,7 @@ const Properties: React.FC<PropertiesProps> = ({
       setInitialValues(newProperties);
       prevSelectedItemRef.current = selectedItem;
     }
-  }, [selectedItem]);
+  }, [selectedItem, getItemProperties]);
 
   // Check if values have changed
   const hasChanges =

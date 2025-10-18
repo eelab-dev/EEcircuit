@@ -362,6 +362,17 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
     return null;
   };
 
+  const currentConfig = getCurrentConfig();
+  // Re-key the config panels so switching between saved configs remounts cleanly.
+  // Without this, the previous form state lingered and triggered the publish loop again.
+  const configComponentKey = currentConfig
+    ? `${currentConfig.type}-${selectedConfigIndex}-${
+        currentConfig.type !== "None" && "name" in currentConfig
+          ? currentConfig.name ?? ""
+          : ""
+      }`
+    : `${selectedSimType}-default`;
+
   return (
     <Flex
       flexDirection="column"
@@ -557,14 +568,13 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
 
           {/* Config Components */}
           {(() => {
-            const currentConfig = getCurrentConfig();
-            
             switch (selectedSimType) {
               case "None":
                 return <p>No addition to the netlist</p>;
               case "DC":
                 return (
                   <DcConfig
+                    key={`${configComponentKey}-dc`}
                     onConfigChange={onStringConfigChange}
                     onFullConfigChange={handleFullConfigChange}
                     initialData={
@@ -576,6 +586,7 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
               case "AC":
                 return (
                   <AcConfig
+                    key={`${configComponentKey}-ac`}
                     onConfigChange={onStringConfigChange}
                     onFullConfigChange={handleFullConfigChange}
                     initialData={
@@ -587,6 +598,7 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
               case "Transient":
                 return (
                   <TransConfig
+                    key={`${configComponentKey}-tran`}
                     onConfigChange={onStringConfigChange}
                     onFullConfigChange={handleFullConfigChange}
                     initialData={

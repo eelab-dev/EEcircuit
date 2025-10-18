@@ -119,8 +119,13 @@ const EEcircuit: React.FC = () => {
       }, 200); // Longer delay for initial load
       return () => clearTimeout(timer);
     }
-    return () => {}; // Return empty cleanup for other paths
-  }, [mainTabValue, hasViewedSchematic]);
+    return undefined;
+  }, [
+    mainTabValue,
+    hasViewedSchematic,
+    setHasViewedSchematic,
+    setShouldFitToScreen,
+  ]);
 
   // Reset shouldFitToScreen flag after it's been processed
   React.useEffect(() => {

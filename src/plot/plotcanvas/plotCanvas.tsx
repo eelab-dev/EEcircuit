@@ -137,16 +137,16 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   };
 
   // Full plot update callback for when complete redraw is needed
-  const handleFullRedrawNeeded = () => {
+  const handleFullRedrawNeeded = useCallback(() => {
     if (updatePlotRef.current) {
       updatePlotRef.current();
     }
-  };
+  }, []);
 
   // Direct webgl redraw callback for zoom/pan operations (no React re-render)
   const handleWebglRedraw = useCallback(() => {
     handleFullRedrawNeeded();
-  }, []);
+  }, [handleFullRedrawNeeded]);
 
   // Direct DOM update for crosshair coordinates (no React re-render)
   const updateCrosshairDisplay = useCallback((x: number, y: number) => {
@@ -201,7 +201,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
       yAxisRef.current?.renderAxis(yAxisParams);
     },
-    [isDarkMode]
+    [canvasId, isDarkMode]
   ); // Fresh values fetched inside effect to avoid stale closures
 
   // Initialize canvas first
@@ -236,6 +236,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     selectedVariables,
     lineDataRef,
     getAxisScales: () => axisScalesRef.current,
+    isCanvasInitialized,
     sharedCursorX,
     onCursorXChange,
     sharedCursorVisible,
@@ -304,6 +305,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     plotUpdateRef,
     plotScalingRef,
     externalPlotLineRef,
+    plotLineRef,
   ]);
 
   // Initialize zoom
@@ -361,21 +363,21 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     if (isCanvasInitialized) {
       updatePlot();
     }
-  }, [isCanvasInitialized]);
+  }, [isCanvasInitialized, colorMapRef, updatePlot]);
 
   // Update zoom colors when theme changes (after initialization)
   useEffect(() => {
     if (isCanvasInitialized && zoomController.current) {
       zoomController.current.updateZoomColors(isDarkMode);
     }
-  }, [isDarkMode, isCanvasInitialized]);
+  }, [isDarkMode, isCanvasInitialized, zoomController]);
 
   // Update plot visibility when selected variables change
   useEffect(() => {
     if (isCanvasInitialized) {
       updatePlot();
     }
-  }, [selectedVariables, isCanvasInitialized, canvasId]);
+  }, [selectedVariables, isCanvasInitialized, canvasId, updatePlot]);
 
   // Update hover state with optimized line thickness changes only
   useEffect(() => {
