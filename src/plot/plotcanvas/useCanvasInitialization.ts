@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ResultType } from "eecircuit-engine";
 import {
   DebugLogger,
@@ -14,6 +14,16 @@ import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
 import { useAppStore } from "../../store/appStore";
 const TRANSPARENT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 0];
+
+const SNAP_CIRCLE_COLORS: Record<"light" | "dark", [number, number, number, number]> = {
+  light: [154 / 255, 107 / 255, 0, 0.85], // Darker amber for light backgrounds
+  dark: [1, 0.9, 0.1, 0.85], // Bright yellow for dark backgrounds
+};
+
+const getSnapCircleStrokeColor = (
+  darkMode: boolean
+): [number, number, number, number] =>
+  darkMode ? SNAP_CIRCLE_COLORS.dark : SNAP_CIRCLE_COLORS.light;
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -42,20 +52,22 @@ export const useCanvasInitialization = ({
   const lineDataRef = useRef<ExtendedLineConfig[]>([]);
   const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
+  const isDarkMode = useAppStore((state) => state.isDarkMode);
 
   // Create the snap circle (fixed size, aspect ratio handled by transform scaling)
-  const createSnapCircle = () => {
+  const initSnapCircle = useCallback((darkMode: boolean) => {
     if (!snapCircleRef.current || !glRef.current) return;
 
     // Create circle with fixed radius in NDC space
     const baseRadius = 0.04; // Base radius in NDC coordinates
+    const strokeColor = getSnapCircleStrokeColor(darkMode);
 
     const snapCircle = WebglPolygonPlot.createCircle({
       center: [0, 0], // Will be updated when crosshair moves
       radius: baseRadius,
       segments: 20,
       fillColor: [0, 0, 0, 0], // Transparent fill (hollow)
-      strokeColor: [1, 0.9, 0.1, 0.8], // Yellow stroke border
+      strokeColor,
       strokeWeight: LINE_THICKNESS.SNAP_CIRCLE_STROKE, // Thicker border for better visibility
       isFilled: false, // No fill - hollow
       isStroked: true, // Only stroke border
@@ -63,6 +75,10 @@ export const useCanvasInitialization = ({
     });
 
     snapCircleRef.current.initPolygons([snapCircle]);
+  }, []);
+
+  const createSnapCircle = () => {
+    initSnapCircle(useAppStore.getState().isDarkMode);
   };
 
   // Initialize canvas and WebGL plot only once when results change
@@ -112,7 +128,7 @@ export const useCanvasInitialization = ({
       snapCircleRef.current = new WebglPolygonPlot(glRef.current);
 
       // Create the initial circle
-      createSnapCircle();
+      initSnapCircle(themeIsDarkMode);
 
       // Initialize zoom components
       zoomLinesRef.current = new WebglLinePlot(glRef.current, 2);
@@ -343,8 +359,22 @@ export const useCanvasInitialization = ({
       cancelAnimationFrame(rafId);
       setIsCanvasInitialized(false);
     };
-  }, [results]);
+  }, [results, initSnapCircle]);
 
+  useEffect(() => {
+    if (!snapCircleRef.current) {
+      return;
+    }
+
+    const strokeColor = getSnapCircleStrokeColor(isDarkMode);
+
+    snapCircleRef.current.updatePolygonStyle(0, {
+      strokeColor,
+    });
+
+    // Redraw ensures the updated stroke color is visible without waiting for interaction
+    snapCircleRef.current.draw();
+  }, [isDarkMode]);
 
   return {
     canvasRef,
