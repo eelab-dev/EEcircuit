@@ -15,7 +15,7 @@ import { useEventHandlers } from "./interactions/useEventHandlers";
 import PlotProgressOverlay from "../../components/PlotProgressOverlay";
 import type { AggregatedResult } from "../../simulation/resultAggregator";
 import type { ZoomController } from "./interactions/zoomController";
-import type { UnifiedLinePlot } from "webgl-plot";
+import { clearCanvas, type UnifiedLinePlot } from "webgl-plot";
 
 interface PlotCanvasProps {
   results: ResultType[];
@@ -58,6 +58,8 @@ interface PlotCanvasProps {
   // Direct plotLine ref access for external control
   plotLineRef?: React.RefObject<UnifiedLinePlot | null>;
 }
+
+const TRANSPARENT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 0];
 
 const PlotCanvas: React.FC<PlotCanvasProps> = ({
   results,
@@ -107,23 +109,38 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     offsetY: 0,
   });
 
+  const {
+    canvasRef,
+    glRef,
+    plotLineRef,
+    crosshairRef,
+    snapCircleRef,
+    zoomController,
+    zoomLinesRef,
+    zoomRegionRef,
+    lineDataRef,
+    colorMapRef,
+    isCanvasInitialized,
+  } = useCanvasInitialization({
+    results,
+  });
+
   // Callback for cursor sync redraw - optimized for crosshair-only updates
   const handleRedrawNeeded = () => {
+    const gl = glRef.current;
+    if (!gl) {
+      return;
+    }
+
+    clearCanvas(gl, TRANSPARENT_CLEAR_COLOR);
+
     // For crosshair updates in both single and dual canvas modes
-    // Always draw plot lines first to ensure crosshair appears on top
-    if (plotLineRef.current) {
-      plotLineRef.current.draw();
-    }
+    // Always draw plot lines first to ensure overlays appear on top
+    plotLineRef.current?.draw();
 
-    // Draw crosshair if visible
-    if (showCrosshair && crosshairRef.current) {
-      crosshairRef.current.draw();
-    }
-
-    // Draw snap circle if in snap mode
-    if (showCrosshair && crosshairSnapToLines && snapCircleRef.current) {
-      snapCircleRef.current.draw();
-    }
+    // Draw crosshair overlays if present
+    crosshairRef.current?.draw();
+    snapCircleRef.current?.draw();
 
     // Draw zoom components if zooming
     if (
@@ -203,23 +220,6 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     },
     [canvasId, isDarkMode]
   ); // Fresh values fetched inside effect to avoid stale closures
-
-  // Initialize canvas first
-  const {
-    canvasRef,
-    glRef,
-    plotLineRef,
-    crosshairRef,
-    snapCircleRef,
-    zoomController,
-    zoomLinesRef,
-    zoomRegionRef,
-    lineDataRef,
-    colorMapRef,
-    isCanvasInitialized,
-  } = useCanvasInitialization({
-    results,
-  });
 
   // Initialize crosshair
   const {

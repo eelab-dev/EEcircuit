@@ -95,8 +95,8 @@ export const useCanvasInitialization = ({
         backgroundColor: TRANSPARENT_CLEAR_COLOR,
         antialias: true,
         powerPerformance: "high-performance",
-        preserveDrawing: true,
         transparent: true,
+        preserveDrawing: true,
       });
 
       // Ensure the canvas is cleared immediately with a transparent background
