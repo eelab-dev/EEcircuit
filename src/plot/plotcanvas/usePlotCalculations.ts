@@ -235,9 +235,9 @@ export const usePlotCalculations = ({
 
   // Handle log axis changes with batched updates to prevent re-render cascades
   useEffect(() => {
-    if (!plotLineRef.current || !glRef.current) return;
+    if (!isCanvasInitialized || !plotLineRef.current || !glRef.current) return;
     handleAxisTransition();
-  }, [isLogX, isLogY, plotLineRef, glRef, handleAxisTransition]);
+  }, [isLogX, isLogY, isCanvasInitialized, plotLineRef, glRef, handleAxisTransition]);
 
 
   // Handle theme changes - update WebGL background color immediately  
