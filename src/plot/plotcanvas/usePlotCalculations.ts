@@ -344,12 +344,21 @@ export const usePlotCalculations = ({
         for (let i = 1; i < points.length; i += 2) {
           const x = points[i - 1];
           const y = points[i];
-          if (x !== undefined && y !== undefined && x >= xMinLinear && x <= xMaxLinear) {
-            // Convert Y to log space if needed for bounds calculation
-            const yValue = convertLinearToLogSpace(y, isLogY);
-            yMin = Math.min(yMin, yValue);
-            yMax = Math.max(yMax, yValue);
+          if (
+            x === undefined ||
+            y === undefined ||
+            x < xMinLinear ||
+            x > xMaxLinear ||
+            (isLogX && x <= 0) ||
+            (isLogY && y <= 0)
+          ) {
+            continue;
           }
+
+          // Convert Y to log space if needed for bounds calculation
+          const yValue = convertLinearToLogSpace(y, isLogY);
+          yMin = Math.min(yMin, yValue);
+          yMax = Math.max(yMax, yValue);
         }
       });
 
