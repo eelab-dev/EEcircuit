@@ -20,6 +20,33 @@ type ExtendedLineConfig = LineConfig & {
   isBracketLine?: boolean;
 };
 
+const CROSSHAIR_COLORS = {
+  light: [34 / 255, 94 / 255, 34 / 255, 0.85] as const, // Dark green for light backgrounds
+  dark: [0, 1, 0, 0.85] as const, // Bright green for dark backgrounds
+};
+
+const buildCrosshairLines = (isDarkMode: boolean): LineConfig[] => {
+  const baseColor = isDarkMode ? CROSSHAIR_COLORS.dark : CROSSHAIR_COLORS.light;
+  const [r, g, b, a] = baseColor;
+  const createColorTuple = () =>
+    [r, g, b, a] as [number, number, number, number];
+
+  return [
+    {
+      points: new Float32Array([-1, 0, 1, 0]), // Horizontal line
+      color: createColorTuple(),
+      thickness: LINE_THICKNESS.CROSSHAIR,
+      enabled: true,
+    },
+    {
+      points: new Float32Array([0, -1, 0, 1]), // Vertical line
+      color: createColorTuple(),
+      thickness: LINE_THICKNESS.CROSSHAIR,
+      enabled: true,
+    },
+  ];
+};
+
 /**
  * HIGH-PERFORMANCE CROSSHAIR SYSTEM WITH DUAL CANVAS SYNCHRONIZATION
  *
@@ -127,6 +154,7 @@ export const useCrosshair = ({
   }, [onRedrawNeeded]);
 
   // Get log axis state from store
+  const isDarkMode = useAppStore((state) => state.isDarkMode);
   const isLogX = useAppStore((state) => state.isLogX);
   const isLogY = useAppStore((state) => {
     if (canvasId === 1) {
@@ -197,20 +225,7 @@ export const useCrosshair = ({
     if (crosshairRef.current) {
       if (showCrosshair) {
         // Add crosshair lines to webgl-plot
-        const crosshairLines: LineConfig[] = [
-          {
-            points: new Float32Array([-1, 0, 1, 0]), // Horizontal line
-            color: [0, 1, 0, 0.8], // Green with transparency
-            thickness: LINE_THICKNESS.CROSSHAIR,
-            enabled: true,
-          },
-          {
-            points: new Float32Array([0, -1, 0, 1]), // Vertical line
-            color: [0, 1, 0, 0.8], // Green with transparency
-            thickness: LINE_THICKNESS.CROSSHAIR,
-            enabled: true,
-          },
-        ];
+        const crosshairLines = buildCrosshairLines(isDarkMode);
         crosshairRef.current.initLines(crosshairLines);
         crosshairLinesInitialized.current = true;
       } else {
@@ -230,7 +245,7 @@ export const useCrosshair = ({
       // Use lightweight redraw for crosshair visibility changes
       redrawCallbackRef.current?.();
     }
-  }, [showCrosshair, crosshairSnapToLines, crosshairRef, snapCircleRef]);
+  }, [showCrosshair, crosshairSnapToLines, crosshairRef, snapCircleRef, isDarkMode]);
 
   // Reset initialization flag when crosshairRef changes (canvas mode switch)
   // and trigger re-initialization if crosshair should be visible
@@ -250,26 +265,13 @@ export const useCrosshair = ({
         return;
       }
 
-      const crosshairLines: LineConfig[] = [
-        {
-          points: new Float32Array([-1, 0, 1, 0]), // Horizontal line
-          color: [0, 1, 0, 0.8], // Green with transparency
-          thickness: LINE_THICKNESS.CROSSHAIR,
-          enabled: true,
-        },
-        {
-          points: new Float32Array([0, -1, 0, 1]), // Vertical line
-          color: [0, 1, 0, 0.8], // Green with transparency
-          thickness: LINE_THICKNESS.CROSSHAIR,
-          enabled: true,
-        },
-      ];
+      const crosshairLines = buildCrosshairLines(isDarkMode);
       crosshairRef.current.initLines(crosshairLines);
       crosshairLinesInitialized.current = true;
 
       redrawCallbackRef.current?.();
     });
-  }, [isCanvasInitialized, showCrosshair, crosshairRef]);
+  }, [isCanvasInitialized, showCrosshair, crosshairRef, isDarkMode]);
 
   // Store crosshair coordinates in ref to avoid React re-renders
   const crosshairCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
