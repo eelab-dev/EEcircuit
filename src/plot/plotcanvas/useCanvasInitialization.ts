@@ -31,7 +31,6 @@ interface UseCanvasInitializationProps {
 export const useCanvasInitialization = ({
   results,
 }: UseCanvasInitializationProps) => {
-  const isDarkMode = useAppStore((state) => state.isDarkMode);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const glRef = useRef<WebGL2RenderingContext | null>(null);
   const plotLineRef = useRef<UnifiedLinePlot | null>(null);
@@ -72,6 +71,7 @@ export const useCanvasInitialization = ({
 
     let cancelled = false;
     const canvas = canvasRef.current;
+    const themeIsDarkMode = useAppStore.getState().isDarkMode;
 
     // Use requestAnimationFrame to defer initialization until after layout
     const rafId = requestAnimationFrame(() => {
@@ -157,7 +157,7 @@ export const useCanvasInitialization = ({
           zoomLinesRef.current,
           zoomRegionRef.current,
           canvasRef.current,
-          isDarkMode,
+          themeIsDarkMode,
           plotLineRef.current
         );
       }
@@ -208,11 +208,11 @@ export const useCanvasInitialization = ({
           if (!variableName) continue;
 
           // Get the base color for this variable
-          const baseColor = generatePlotColor(
-            variableName,
-            isDarkMode,
-            colorMapRef.current
-          );
+            const baseColor = generatePlotColor(
+              variableName,
+              themeIsDarkMode,
+              colorMapRef.current
+            );
 
           // Create a separate line for each parameter sweep
           for (
@@ -310,7 +310,7 @@ export const useCanvasInitialization = ({
             points: new Float32Array(array),
             color: generatePlotColor(
               variableName,
-              isDarkMode,
+              themeIsDarkMode,
               colorMapRef.current
             ),
             thickness: LINE_THICKNESS.NORMAL,
@@ -343,7 +343,7 @@ export const useCanvasInitialization = ({
       cancelAnimationFrame(rafId);
       setIsCanvasInitialized(false);
     };
-  }, [results, isDarkMode]);
+  }, [results]);
 
 
   return {

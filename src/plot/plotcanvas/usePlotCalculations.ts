@@ -446,8 +446,8 @@ export const usePlotCalculations = ({
           zoomController.current?.updateLogAxisState({ isLogX, isLogY });
           
         } else {
-          // Fallback to default transform if scales are invalid
-          plotLineRef.current.setLogAxis(false, false);
+          // Fallback to default transform if scales are invalid while preserving current axis modes
+          plotLineRef.current.setLogAxis(isLogX, isLogY);
           plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
           updateAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
         }
@@ -478,8 +478,8 @@ export const usePlotCalculations = ({
           }
           
         } else {
-          // Fallback to default transform if autoScale fails
-          plotLineRef.current.setLogAxis(false, false);
+          // Fallback to default transform if autoScale fails while preserving current axis modes
+          plotLineRef.current.setLogAxis(isLogX, isLogY);
           plotLineRef.current.setGlobalTransform([1, 1], [-1, -1]);
           updateAxisScales({ scaleX: 1, scaleY: 1, offsetX: -1, offsetY: -1 });
         }

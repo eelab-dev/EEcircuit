@@ -363,7 +363,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     if (isCanvasInitialized) {
       updatePlot();
     }
-  }, [isCanvasInitialized, colorMapRef, updatePlot]);
+  }, [isCanvasInitialized, isDarkMode, colorMapRef, updatePlot]);
 
   // Update zoom colors when theme changes (after initialization)
   useEffect(() => {
