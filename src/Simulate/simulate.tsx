@@ -1,8 +1,7 @@
-import { Button, Flex, Menu, Text } from "@chakra-ui/react";
+import { Button, Flex, Menu, Text, Skeleton, Spinner } from "@chakra-ui/react";
 import React, { Suspense, useEffect, useState } from "react";
 import EditorCustom from "../editor/editorCustom";
-import { Skeleton } from "@chakra-ui/react";
-import { X, Play, Square } from "lucide-react";
+import { X, Play } from "lucide-react";
 import { SimulationType, ToBePlotted } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import { addAcParameterToSource } from "../utils/sourceDetection";
@@ -28,6 +27,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
   // Import handleNewResults from the main app store for handling simulation results
   const handleNewResults = useAppStore((state) => state.handleNewResults);
+  const setMainTabValue = useAppStore((state) => state.setMainTabValue);
+  const setIsPlotTabEnabled = useAppStore((state) => state.setIsPlotTabEnabled);
 
   // Bracket operation state
   const isParallelSimulationRunning = useAppStore(
@@ -44,6 +45,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   const lastSimCommandRef = React.useRef("");
   const lastSimulationConfigRef = React.useRef<SimulationType | undefined>(undefined);
   const lastGeneratedNetlistRef = React.useRef<string | null>(null);
+  const [isSimulationButtonLoading, setIsSimulationButtonLoading] = useState(false);
+  const [hasAutoSwitchedToPlot, setHasAutoSwitchedToPlot] = useState(false);
 
   const handleEditor = React.useCallback((value: string | undefined) => {
     if (value !== undefined) {
@@ -128,6 +131,30 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     toBePlotted,
   ]);
 
+  useEffect(() => {
+    if (isParallelSimulationRunning) {
+      if (!hasAutoSwitchedToPlot) {
+        setIsPlotTabEnabled(true);
+        setMainTabValue("plot");
+        setHasAutoSwitchedToPlot(true);
+      }
+      setIsSimulationButtonLoading(false);
+    } else if (hasAutoSwitchedToPlot) {
+      setHasAutoSwitchedToPlot(false);
+    }
+  }, [
+    hasAutoSwitchedToPlot,
+    isParallelSimulationRunning,
+    setIsPlotTabEnabled,
+    setMainTabValue,
+  ]);
+
+  const isButtonLoading =
+    isSimulationButtonLoading || isParallelSimulationRunning;
+  const buttonLoadingText = isParallelSimulationRunning
+    ? "Simulating"
+    : "Loading engine";
+
   // Handler for string-based config changes from config components
   const handleStringConfigChange = React.useCallback((configString: string) => {
     // Apply ngspice compatibility corrections to the config string
@@ -152,23 +179,28 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   }, []);
 
   const handleSimRun = async () => {
+    if (isSimulationButtonLoading || isParallelSimulationRunning) {
+      return;
+    }
+
+    setIsSimulationButtonLoading(true);
     let readEngineErrors: (() => string[]) | undefined;
     try {
       // Always clear previous results, optionally reset selections and plot state
-      const { 
-        clearResults, 
-        resetVariableSelections, 
+      const {
+        clearResults,
+        resetVariableSelections,
         resetPlotState,
         resetVariableSelectionsOnNewSim,
-        resetPlotStateOnNewSim
+        resetPlotStateOnNewSim,
       } = useAppStore.getState();
-      
+
       clearResults(); // Always clear previous results
-      
+
       if (resetVariableSelectionsOnNewSim) {
         resetVariableSelections();
       }
-      
+
       if (resetPlotStateOnNewSim) {
         resetPlotState();
       }
@@ -180,11 +212,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       const bracketOp = findFirstBracketOperation(netListToSim);
 
       if (bracketOp) {
-        // Switch to plot tab immediately when bracket simulation starts
-        const { setMainTabValue, setIsPlotTabEnabled } = useAppStore.getState();
-        setIsPlotTabEnabled(true);
-        setMainTabValue("plot");
-
         // Run parallel simulation for bracket operations
         console.log("Bracket operation detected, running parallel simulation");
         await runParallelSimulation(netListToSim);
@@ -247,6 +274,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         engineErrors,
         error instanceof Error ? error.message : "Unknown simulation error"
       );
+    } finally {
+      setIsSimulationButtonLoading(false);
     }
   };
 
@@ -318,15 +347,15 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
           <Button
             onClick={handleSimRun}
             width="100%"
-            disabled={isParallelSimulationRunning}
+            disabled={isButtonLoading}
+            loading={isButtonLoading}
+            loadingText={buttonLoadingText}
+            spinner={<Spinner boxSize="16px" />}
+            aria-busy={isButtonLoading}
           >
             <Flex alignItems="center" gap="2">
-              {isParallelSimulationRunning ? (
-                <Square size={16} />
-              ) : (
-                <Play size={16} />
-              )}
-              {isParallelSimulationRunning ? "Simulating..." : "Run Simulation"}
+              <Play size={16} />
+              Run Simulation
             </Flex>
           </Button>
         </Flex>
