@@ -2,12 +2,16 @@ import { Button, Flex, Menu, Text, Skeleton, Spinner } from "@chakra-ui/react";
 import React, { Suspense, useEffect, useState } from "react";
 import EditorCustom from "../editor/editorCustom";
 import { X, Play } from "lucide-react";
-import { SimulationType, ToBePlotted } from "../types/commonTypes";
+import { SimulationType } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import { addAcParameterToSource } from "../utils/sourceDetection";
 import SimulationConfigPanel from "./SimulationConfigPanel";
 import { dialogTheme } from "src/styles/uiThemes";
 import { notifySimulationErrors } from "../utils/simulationErrorNotifier";
+import {
+  buildToBePlottedCommands,
+  formatToBePlottedLabel,
+} from "../utils/toBePlotted";
 
 type SimulationEditorProps = {
   netList: string;
@@ -68,25 +72,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     return correctedValue;
   };
 
-  const saveCommandConfig = (toBePlotted: ToBePlotted[]) => {
-    if (toBePlotted.length === 0) {
-      return "";
-    }
-
-    const saveCommands = toBePlotted
-      .map((item) => {
-        if (item.type === "voltage") {
-          return `v(${item.name})`;
-        } else if (item.type === "current") {
-          return `i(${item.name})`;
-        }
-        return "";
-      })
-      .filter((cmd) => cmd !== "");
-
-    return `.save ${saveCommands.join(" ")}`;
-  };
-
   // Update netlist when simulation type or configuration changes
   useEffect(() => {
     if (selectedSimType === "None") {
@@ -96,7 +81,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       }
       return;
     } else {
-      const saveCommand = saveCommandConfig(toBePlotted);
+      const plotCommands = buildToBePlottedCommands(toBePlotted);
 
       // For AC simulations, add "AC 1" to the selected source
       let baseNetList = netList;
@@ -110,14 +95,19 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         baseNetList = addAcParameterToSource(netList, simulationConfig.source);
       }
 
-      const newNetList =
-        baseNetList +
-        "\n\n" +
-        simCommandString +
-        "\n\n" +
-        saveCommand +
-        "\n\n" +
-        ".end";
+      const netlistSections = [baseNetList];
+
+      if (simCommandString.trim()) {
+        netlistSections.push(simCommandString);
+      }
+
+      if (plotCommands.trim()) {
+        netlistSections.push(plotCommands);
+      }
+
+      netlistSections.push(".end");
+
+      const newNetList = netlistSections.join("\n\n");
       if (lastGeneratedNetlistRef.current !== newNetList) {
         lastGeneratedNetlistRef.current = newNetList;
         setNetListToSim(newNetList);
@@ -390,33 +380,36 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
                 </Menu.Trigger>
                 <Menu.Positioner>
                   <Menu.Content>
-                    {toBePlotted.map((item, index) => (
-                      <Menu.Item
-                        key={index}
-                        value={`${item.type}-${item.name}`}
-                      >
-                        <Flex
-                          justifyContent="space-between"
-                          alignItems="center"
-                          width="100%"
-                        >
-                          <span>
-                            {item.type === "voltage" ? "V" : "I"}({item.name})
-                          </span>
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            aria-label={`Remove ${item.type === "voltage" ? "voltage" : "current"} ${item.name} from To Be Plotted`}
-                            onClick={(e: React.MouseEvent) => {
-                              e.stopPropagation();
-                              removeToBePlotted(item);
-                            }}
+                    {toBePlotted.map((item, index) => {
+                      const label = formatToBePlottedLabel(item);
+                      const value =
+                        item.type === "voltage"
+                          ? `voltage-${item.netName}`
+                          : `current-${item.componentName}-${item.terminalName}`;
+
+                      return (
+                        <Menu.Item key={index} value={value}>
+                          <Flex
+                            justifyContent="space-between"
+                            alignItems="center"
+                            width="100%"
                           >
-                            <X size={12} />
-                          </Button>
-                        </Flex>
-                      </Menu.Item>
-                    ))}
+                            <span>{label}</span>
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              aria-label={`Remove ${label} from To Be Plotted`}
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                removeToBePlotted(item);
+                              }}
+                            >
+                              <X size={12} />
+                            </Button>
+                          </Flex>
+                        </Menu.Item>
+                      );
+                    })}
                     <Menu.Separator />
                     <Menu.Item
                       value="add-more"

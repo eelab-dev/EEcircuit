@@ -46,7 +46,15 @@ export type SimulationType =
   | SimulationAC
   | SimulationTransient;
 
-export type ToBePlotted = {
-  type: "voltage" | "current";
-  name: string;
+export type VoltageSelection = {
+  type: "voltage";
+  netName: string;
 };
+
+export type CurrentProbeSelection = {
+  type: "current";
+  componentName: string;
+  terminalName: string;
+};
+
+export type ToBePlotted = VoltageSelection | CurrentProbeSelection;

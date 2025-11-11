@@ -1,6 +1,7 @@
 import { StateCreator } from "zustand";
 import { ResultType } from "eecircuit-engine";
 import { ToBePlotted } from "../types/commonTypes";
+import { areToBePlottedItemsEqual } from "../utils/toBePlotted";
 import type { AggregatedResult } from "../simulation/resultAggregator";
 import { transformResultForComplexData } from "../utils/complexUtils";
 
@@ -140,10 +141,8 @@ export const createPlotSlice: StateCreator<
 
   addToBePlotted: (item) =>
     set((state: PlotSlice & StoreWithTabAndSimulation) => {
-      // Check if item already exists to prevent duplicates
-      const exists = state.toBePlotted.some(
-        (existing: ToBePlotted) =>
-          existing.type === item.type && existing.name === item.name
+      const exists = state.toBePlotted.some((existing: ToBePlotted) =>
+        areToBePlottedItemsEqual(existing, item)
       );
 
       if (!exists) {
@@ -155,8 +154,7 @@ export const createPlotSlice: StateCreator<
   removeToBePlotted: (item) =>
     set((state: PlotSlice & StoreWithTabAndSimulation) => ({
       toBePlotted: state.toBePlotted.filter(
-        (existing: ToBePlotted) =>
-          !(existing.type === item.type && existing.name === item.name)
+        (existing: ToBePlotted) => !areToBePlottedItemsEqual(existing, item)
       ),
     })),
 

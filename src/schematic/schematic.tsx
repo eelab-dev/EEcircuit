@@ -27,6 +27,11 @@ import ShortcutsDialog from "./ShortcutsDialog";
 import { ToBePlotted } from "src/types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import { getRecommendedInputProfile } from "../utils/deviceDetection";
+import {
+  formatToBePlottedLabel,
+  parseTerminalPointerInfo,
+  normalizeTerminalSelection,
+} from "../utils/toBePlotted";
 import { dialogTheme } from "../styles/uiThemes";
 import { toaster } from "../components/ui/toaster";
 
@@ -109,6 +114,7 @@ const Schematic: React.FC<SchematicProps> = ({
   // Use refs to access current values in msgCallback without causing re-renders
   const isPlotSelectionModeRef = useRef(isPlotSelectionMode);
   const handlePlotItemSelectedRef = useRef(handlePlotItemSelected);
+  const pointerInfoRef = useRef<eeSch.PointerInfo>(null);
   const handleSchematicDataChangeRef = useRef(handleSchematicDataChange);
 
   // Update refs when values change
@@ -132,6 +138,7 @@ const Schematic: React.FC<SchematicProps> = ({
           break;
         case "pointerInfo":
           setPointerInfo(msg.pointerInfo);
+          pointerInfoRef.current = msg.pointerInfo;
           break;
         case "selectedItem":
           if (msg.selectedItem !== undefined) {
@@ -143,23 +150,28 @@ const Schematic: React.FC<SchematicProps> = ({
               isPlotSelectionModeRef.current &&
               handlePlotItemSelectedRef.current
             ) {
-              const item = msg.selectedItem;
+              const pointerInfo = pointerInfoRef.current;
+              if (!pointerInfo) {
+                break;
+              }
 
-              // Only allow wire and instance selections
-              if (item.type === "wire" || item.type === "junction") {
-                // Wire/junction selection - voltage measurement
-                const netName = item.netName || "unknown";
+              if (pointerInfo.type === "wire" || pointerInfo.type === "junction") {
+                const netName = pointerInfo.name?.trim() || "unknown";
                 const plotItem: ToBePlotted = {
                   type: "voltage",
-                  name: netName,
+                  netName,
                 };
                 handlePlotItemSelectedRef.current(plotItem);
-              } else if (item.type === "instance") {
-                // Instance selection - current measurement
-                const instanceName = item.name || item.typeName || "unknown";
+              } else if (pointerInfo.type === "terminal") {
+                const parsed = parseTerminalPointerInfo(pointerInfo.name);
+                if (!parsed) {
+                  break;
+                }
+                const corrected = normalizeTerminalSelection(parsed);
                 const plotItem: ToBePlotted = {
                   type: "current",
-                  name: instanceName,
+                  componentName: corrected.componentName,
+                  terminalName: corrected.terminalName,
                 };
                 handlePlotItemSelectedRef.current(plotItem);
               }
@@ -853,7 +865,7 @@ const Schematic: React.FC<SchematicProps> = ({
                 >
                   {toBePlotted.map((item, index) => (
                     <span key={index}>
-                      {item.type}({item.name})
+                      {formatToBePlottedLabel(item)}
                       {index < toBePlotted.length - 1 ? ", " : ""}
                     </span>
                   ))}
