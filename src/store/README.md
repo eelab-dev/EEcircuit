@@ -62,22 +62,22 @@ The store is now split into the following modules:
 
 **Responsibility:** Plot data management and variable selection
 
-- `isPlotSelectionMode`: Whether in plot selection mode
+- `isToBePlottedMode`: Whether the to-be-plotted selection mode is active
 - `toBePlotted`: Variables marked for plotting
 - `selectedVariables`: Currently selected plot variables
 - `hoveredVariable`: Currently hovered variable
 
 **Actions:**
 
-- `setIsPlotSelectionMode(mode)`: Toggle plot selection mode
+- `setIsToBePlottedMode(mode)`: Toggle to-be-plotted selection mode
 - `setToBePlotted(items)`: Set variables to plot
 - `addToBePlotted(item)`: Add variable to plot
 - `removeToBePlotted(item)`: Remove variable from plot
 - `setSelectedVariables(variables)`: Select variables for display
 - `setHoveredVariable(variable)`: Set hovered variable
 - `handleNewResults(results)`: Process new simulation results
-- `enterPlotSelectionMode()`: Enter plot selection mode
-- `exitPlotSelectionMode()`: Exit plot selection mode
+- `enterToBePlottedMode()`: Enter to-be-plotted selection mode
+- `exitToBePlottedMode()`: Exit to-be-plotted selection mode
 
 ### 5. UI Store (`uiStore.ts`)
 

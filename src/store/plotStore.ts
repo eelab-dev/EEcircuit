@@ -20,8 +20,8 @@ interface StoreWithTabAndSimulation {
 
 // Plot state and actions
 export interface PlotState {
-  // Plot selection
-  isPlotSelectionMode: boolean;
+  // To-be-plotted selection
+  isToBePlottedMode: boolean;
   toBePlotted: ToBePlotted[];
 
   // Multi-canvas support
@@ -53,8 +53,8 @@ export interface PlotState {
 }
 
 export interface PlotActions {
-  // Plot selection actions
-  setIsPlotSelectionMode: (mode: boolean) => void;
+  // To-be-plotted selection actions
+  setIsToBePlottedMode: (mode: boolean) => void;
   setToBePlotted: (items: ToBePlotted[]) => void;
   addToBePlotted: (item: ToBePlotted) => void;
   removeToBePlotted: (item: ToBePlotted) => void;
@@ -101,8 +101,8 @@ export interface PlotActions {
 
   // Combined actions for common operations
   handleNewResults: (results: ResultType[]) => void;
-  enterPlotSelectionMode: () => void;
-  exitPlotSelectionMode: () => void;
+  enterToBePlottedMode: () => void;
+  exitToBePlottedMode: () => void;
 }
 
 export type PlotSlice = PlotState & PlotActions;
@@ -114,7 +114,7 @@ export const createPlotSlice: StateCreator<
   PlotSlice
 > = (set, get) => ({
   // Initial state
-  isPlotSelectionMode: false,
+  isToBePlottedMode: false,
   toBePlotted: [],
   numCanvases: 1,
   isACModeActive: false,
@@ -135,8 +135,8 @@ export const createPlotSlice: StateCreator<
   canvas1IsLogY: false,
   canvas2IsLogY: false,
 
-  // Plot selection actions
-  setIsPlotSelectionMode: (mode) => set({ isPlotSelectionMode: mode }),
+  // To-be-plotted selection actions
+  setIsToBePlottedMode: (mode) => set({ isToBePlottedMode: mode }),
   setToBePlotted: (items) => set({ toBePlotted: items }),
 
   addToBePlotted: (item) =>
@@ -357,16 +357,16 @@ export const createPlotSlice: StateCreator<
     }
   },
 
-  enterPlotSelectionMode: () => {
+  enterToBePlottedMode: () => {
     set({
-      isPlotSelectionMode: true,
+      isToBePlottedMode: true,
       mainTabValue: "schematic",
     });
   },
 
-  exitPlotSelectionMode: () => {
+  exitToBePlottedMode: () => {
     set({
-      isPlotSelectionMode: false,
+      isToBePlottedMode: false,
       mainTabValue: "simulate",
     });
   },

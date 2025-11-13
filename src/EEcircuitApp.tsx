@@ -190,7 +190,7 @@ const EEcircuitApp: React.FC = () => {
     setSchematicLoadingMessage,
     inputProfile,
     toggleInputProfile,
-    enterPlotSelectionMode,
+    enterToBePlottedMode,
     setCurrentSchematic,
     allSimulationConfigs,
   } = useAppStore();
@@ -780,7 +780,7 @@ const EEcircuitApp: React.FC = () => {
           <React.Suspense fallback={<TabPanelSkeleton label="simulation workspace" />}>
             <SimulationEditor
               netList={useAppStore.getState().netList}
-              onSwitchToSchematic={enterPlotSelectionMode}
+              onSwitchToSchematic={enterToBePlottedMode}
             />
           </React.Suspense>
         </Tabs.Content>

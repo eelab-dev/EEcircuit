@@ -3,14 +3,14 @@ import * as eeSch from "eecircuit-schematic";
 
 // Centralized keyboard handling for the Schematic tab
 // - Keeps code organized and avoids duplication in the component file
-// - Does NOT handle plot-selection ESC; that remains local to schematic.tsx
+// - Does NOT handle to-be-plotted mode ESC; that remains local to schematic.tsx
 
 export type UseSchematicKeyboardParams = {
   containerRef: React.RefObject<HTMLDivElement | null>;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   // Use RefObject to avoid deprecated MutableRefObject warnings; we only read .current here
   isTabVisibleRef: React.RefObject<boolean>;
-  isPlotSelectionModeRef: React.RefObject<boolean>;
+  isToBePlottedModeRef: React.RefObject<boolean>;
   onOpenShortcutsDialog: () => void;
   onResetAllModes: () => void; // Should also reset action bar toggles
   onSetWireMode: (enable: boolean) => void; // Syncs with action bar and schematic engine
@@ -23,7 +23,7 @@ export function useSchematicKeyboard({
   containerRef,
   canvasRef,
   isTabVisibleRef,
-  isPlotSelectionModeRef,
+  isToBePlottedModeRef,
   onOpenShortcutsDialog,
   onResetAllModes,
   onSetWireMode,
@@ -167,11 +167,11 @@ export function useSchematicKeyboard({
     const handleEscReset = (event: KeyboardEvent) => {
       if (event.key !== "Escape" && event.key !== "§") return;
 
-      // Scope to visible tab and canvas focus; skip if plot-selection mode is active
+      // Scope to visible tab and canvas focus; skip if to-be-plotted mode is active
       if (!isTabVisibleRef.current || !isFocusInCanvas()) return;
       // If inside properties dialog, let the dialog handle closing
       if (isWithinPropertiesDialog(event.target)) return;
-      if (isPlotSelectionModeRef.current) return;
+      if (isToBePlottedModeRef.current) return;
 
       console.log("[DEBUG KB] Resetting all modes via ESC/§");
       onResetAllModes();
@@ -181,5 +181,5 @@ export function useSchematicKeyboard({
     return () => {
       document.removeEventListener("keydown", handleEscReset);
     };
-  }, [isFocusInCanvas, isTabVisibleRef, isPlotSelectionModeRef, onResetAllModes]);
+  }, [isFocusInCanvas, isTabVisibleRef, isToBePlottedModeRef, onResetAllModes]);
 }

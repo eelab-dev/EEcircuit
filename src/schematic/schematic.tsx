@@ -53,16 +53,16 @@ const Schematic: React.FC<SchematicProps> = ({
   );
   const setCurrentSchematic = useAppStore((state) => state.setCurrentSchematic);
 
-  const isPlotSelectionMode = useAppStore((state) => state.isPlotSelectionMode);
+  const isToBePlottedMode = useAppStore((state) => state.isToBePlottedMode);
   const toBePlotted = useAppStore((state) => state.toBePlotted);
   const addToBePlotted = useAppStore((state) => state.addToBePlotted);
-  const exitPlotSelectionMode = useAppStore(
-    (state) => state.exitPlotSelectionMode
+  const exitToBePlottedMode = useAppStore(
+    (state) => state.exitToBePlottedMode
   );
 
   // Use store actions directly
   const handlePlotItemSelected = addToBePlotted;
-  const handleExitPlotSelectionMode = exitPlotSelectionMode;
+  const handleExitToBePlottedMode = exitToBePlottedMode;
 
   // Enhanced onSchematicDataChange to also update store
   const handleSchematicDataChange = React.useCallback(
@@ -112,15 +112,15 @@ const Schematic: React.FC<SchematicProps> = ({
   // Color mode values - must be called at top level to avoid hooks order issues
 
   // Use refs to access current values in msgCallback without causing re-renders
-  const isPlotSelectionModeRef = useRef(isPlotSelectionMode);
+  const isToBePlottedModeRef = useRef(isToBePlottedMode);
   const handlePlotItemSelectedRef = useRef(handlePlotItemSelected);
   const pointerInfoRef = useRef<eeSch.PointerInfo>(null);
   const handleSchematicDataChangeRef = useRef(handleSchematicDataChange);
 
   // Update refs when values change
   useEffect(() => {
-    isPlotSelectionModeRef.current = isPlotSelectionMode;
-  }, [isPlotSelectionMode]);
+    isToBePlottedModeRef.current = isToBePlottedMode;
+  }, [isToBePlottedMode]);
 
   useEffect(() => {
     handlePlotItemSelectedRef.current = handlePlotItemSelected;
@@ -145,9 +145,9 @@ const Schematic: React.FC<SchematicProps> = ({
             setSelectedItem(msg.selectedItem);
             setPropertiesDismissed(false);
 
-            // Handle plot selection mode - use refs to get current values
+            // Handle to-be-plotted selection mode - use refs to get current values
             if (
-              isPlotSelectionModeRef.current &&
+              isToBePlottedModeRef.current &&
               handlePlotItemSelectedRef.current
             ) {
               const pointerInfo = pointerInfoRef.current;
@@ -446,17 +446,17 @@ const Schematic: React.FC<SchematicProps> = ({
     };
   }, [safeInitCanvas]); // Canvas initialization handled internally by safeInitCanvas
 
-  // Handle keyboard events for plot selection mode
+  // Handle keyboard events for the to-be-plotted selection mode
   useEffect(() => {
-    if (!isPlotSelectionMode) return;
+    if (!isToBePlottedMode) return;
 
-    // Ensure we're in select mode when plot selection is active
+    // Ensure we're in select mode when the to-be-plotted workflow is active
     eeSch.sendCommand({ command: "mode", modeType: "select" });
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" || event.key === "§") {
         event.preventDefault();
-        handleExitPlotSelectionMode?.();
+        handleExitToBePlottedMode?.();
       }
     };
 
@@ -464,14 +464,14 @@ const Schematic: React.FC<SchematicProps> = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isPlotSelectionMode, handleExitPlotSelectionMode]);
+  }, [isToBePlottedMode, handleExitToBePlottedMode]);
 
-  // Centralized keyboard handling (except plot-selection ESC)
+  // Centralized keyboard handling (except to-be-plotted ESC flow)
   useSchematicKeyboard({
     containerRef,
     canvasRef,
     isTabVisibleRef,
-    isPlotSelectionModeRef,
+    isToBePlottedModeRef,
     onOpenShortcutsDialog: () => setShowShortcutsDialog(true),
     onResetAllModes: () => {
       const resetModes = useAppStore.getState().resetSchematicModes;
@@ -742,7 +742,7 @@ const Schematic: React.FC<SchematicProps> = ({
   }, []);
 
   const propertiesOpen =
-    !isPlotSelectionMode &&
+    !isToBePlottedMode &&
     !propertiesDismissed &&
     !!selectedItem &&
     selectedItem.type !== "none";
@@ -785,13 +785,15 @@ const Schematic: React.FC<SchematicProps> = ({
       >
         {/* Canvas added dynamically */}
 
-        <Float offset="10" placement="middle-start">
-          {<Actions
-            availableComponents={availableComponents}
-            onExportImage={handleExportImage}
-            onShowShortcuts={handleShowShortcuts}
-          />}
-        </Float>
+        {!isToBePlottedMode && (
+          <Float offset="10" placement="middle-start">
+            <Actions
+              availableComponents={availableComponents}
+              onExportImage={handleExportImage}
+              onShowShortcuts={handleShowShortcuts}
+            />
+          </Float>
+        )}
         {propertiesOpen && (
           <Properties
             selectedItem={selectedItem}
@@ -807,8 +809,8 @@ const Schematic: React.FC<SchematicProps> = ({
           />
         )}
 
-        {/* Plot Selection Mode Indicator */}
-        {isPlotSelectionMode && (
+        {/* To-Be-Plotted Selection Mode Indicator */}
+        {isToBePlottedMode && (
           <Box
             position="fixed"
             top="1rem"
@@ -827,7 +829,7 @@ const Schematic: React.FC<SchematicProps> = ({
             boxShadow="lg"
             textAlign="center"
           >
-            <div>🎯 Plot Selection Mode Active</div>
+            <div>🎯 To-Be-Plotted Selection Active</div>
             <div
               style={{ fontSize: "0.8em", marginTop: "4px", color: "inherit" }}
             >
@@ -880,6 +882,9 @@ const Schematic: React.FC<SchematicProps> = ({
           coord={coord}
           pointerInfo={pointerInfo}
           onSendToNetlist={(shift) => {
+            if (isToBePlottedMode) {
+              handleExitToBePlottedMode?.();
+            }
             // Store a one-shot override when user holds Shift
             try {
               const { setOverrideSimulateOnNetlistErrorsOnce } =

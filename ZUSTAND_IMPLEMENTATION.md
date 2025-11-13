@@ -54,7 +54,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   // - Tab management
   // - Simulation configuration
   // - Schematic state
-  // - Plot selection
+  // - To-be-plotted selection mode
   // - UI state
 
   // Actions that encapsulate business logic
@@ -108,7 +108,7 @@ export const useSimulationState = () =>
 
 - **Enhanced to use store with prop fallbacks**
 - **Improved schematic data change handling**
-- **Better integration with plot selection mode**
+- **Better integration with to-be-plotted selection mode**
 
 ## Code Quality Improvements
 
