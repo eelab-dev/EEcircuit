@@ -4,7 +4,7 @@ import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanv
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
 import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
-import { BRACKET_PLOT_STYLES } from "../bracketPlotStyles";
+import { BRACKET_PLOT_STYLES, getBracketTransparency } from "../bracketPlotStyles";
 import type { AggregatedResult } from "../../simulation/resultAggregator";
 import { useAppStore } from "../../store/appStore";
 import { convertLinearToLogSpace } from "./utils/coordinateUtils";
@@ -557,9 +557,7 @@ export const usePlotCalculations = ({
           : BRACKET_PLOT_STYLES.NORMAL_LINE_THICKNESS;
 
         // Apply transparency to color
-        const alpha = isEmphasized
-          ? BRACKET_PLOT_STYLES.EMPHASIZED_TRANSPARENCY
-          : BRACKET_PLOT_STYLES.NORMAL_TRANSPARENCY;
+        const alpha = getBracketTransparency({ isDarkMode, isEmphasized });
         currentColor = [currentColor[0], currentColor[1], currentColor[2], alpha];
       } else {
         // Regular plot behavior
@@ -748,9 +746,7 @@ export const usePlotCalculations = ({
 
       // Apply transparency to existing color
       const currentColor = lineData.color || [1, 1, 1, 1]; // Fallback to white
-      const alpha = isEmphasized
-        ? BRACKET_PLOT_STYLES.EMPHASIZED_TRANSPARENCY
-        : BRACKET_PLOT_STYLES.NORMAL_TRANSPARENCY;
+      const alpha = getBracketTransparency({ isDarkMode, isEmphasized });
       const updatedColor: [number, number, number, number] = [currentColor[0], currentColor[1], currentColor[2], alpha];
 
       // Update line properties using webgl-plot API
@@ -791,7 +787,8 @@ export const usePlotCalculations = ({
     crosshairSnapToLines,
     zoomController,
     zoomLinesRef,
-    zoomRegionRef
+    zoomRegionRef,
+    isDarkMode
   ]);
 
   return {
