@@ -36,24 +36,25 @@ export const buildToBePlottedCommands = (items: ToBePlotted[]): string => {
   }
 
   const voltageTokens: string[] = [];
-  const probeCommands: string[] = [];
+  const currentTokens: string[] = [];
 
   items.forEach((item) => {
     if (item.type === "voltage") {
       voltageTokens.push(`V(${item.netName})`);
     } else {
-      probeCommands.push(`.probe I(${item.componentName},${item.terminalName})`);
+      currentTokens.push(`I(${item.componentName},${item.terminalName})`);
     }
   });
 
   const commands: string[] = [];
 
-  if (voltageTokens.length > 0) {
-    commands.push(`.save ${voltageTokens.join(" ")}`);
+  if (currentTokens.length > 0) {
+    commands.push(`.probe ${currentTokens.join(" ")}`);
   }
 
-  if (probeCommands.length > 0) {
-    commands.push(...probeCommands);
+  const saveTokens = [...voltageTokens, ...currentTokens];
+  if (saveTokens.length > 0) {
+    commands.push(`.save ${saveTokens.join(" ")}`);
   }
 
   return commands.join("\n");
