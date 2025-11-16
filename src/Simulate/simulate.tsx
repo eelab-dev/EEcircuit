@@ -14,15 +14,18 @@ import {
 } from "../utils/toBePlotted";
 
 type SimulationEditorProps = {
-  netList: string;
   onSwitchToSchematic?: () => void;
 };
 
 const SimulationEditor: React.FC<SimulationEditorProps> = ({
-  netList = "",
   onSwitchToSchematic,
 }) => {
   // Get state and actions from Zustand store
+  const netList = useAppStore((state) => state.netList);
+  const netListNeedsRefresh = useAppStore((state) => state.netListNeedsRefresh);
+  const acknowledgeNetListRefresh = useAppStore(
+    (state) => state.acknowledgeNetListRefresh
+  );
   const selectedSimType = useAppStore((state) => state.selectedSimType);
   const simulationConfig = useAppStore((state) => state.simulationConfig);
   const toBePlotted = useAppStore((state) => state.toBePlotted);
@@ -75,9 +78,15 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   // Update netlist when simulation type or configuration changes
   useEffect(() => {
     if (selectedSimType === "None") {
-      if (lastGeneratedNetlistRef.current !== netList) {
+      const hasNetlistChanged =
+        lastGeneratedNetlistRef.current !== netList || netListNeedsRefresh;
+
+      if (hasNetlistChanged) {
         lastGeneratedNetlistRef.current = netList;
         setNetListToSim(netList);
+        if (netListNeedsRefresh) {
+          acknowledgeNetListRefresh();
+        }
       }
       return;
     } else {
@@ -108,17 +117,25 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       netlistSections.push(".end");
 
       const newNetList = netlistSections.join("\n\n");
-      if (lastGeneratedNetlistRef.current !== newNetList) {
+      const shouldUpdate =
+        lastGeneratedNetlistRef.current !== newNetList || netListNeedsRefresh;
+
+      if (shouldUpdate) {
         lastGeneratedNetlistRef.current = newNetList;
         setNetListToSim(newNetList);
+        if (netListNeedsRefresh) {
+          acknowledgeNetListRefresh();
+        }
       }
     }
   }, [
     netList,
+    netListNeedsRefresh,
     simCommandString,
     selectedSimType,
     simulationConfig,
     toBePlotted,
+    acknowledgeNetListRefresh,
   ]);
 
   useEffect(() => {

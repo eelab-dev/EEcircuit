@@ -34,6 +34,7 @@ export interface ThreadState {
 export interface SimulationState {
   // Netlist and simulation results
   netList: string;
+  netListNeedsRefresh: boolean;
   results: ResultType[];
 
   // Simulation configuration
@@ -58,6 +59,7 @@ export interface SimulationActions {
   // Netlist and simulation actions
   setNetList: (netList: string) => void;
   setResults: (results: ResultType[]) => void;
+  acknowledgeNetListRefresh: () => void;
 
   // Simulation configuration actions
   setSelectedSimType: (type: SimulationType["type"]) => void;
@@ -99,6 +101,7 @@ export const createSimulationSlice: StateCreator<
 > = (set, get) => ({
   // Initial state
   netList: "",
+  netListNeedsRefresh: false,
   results: [],
   selectedSimType: "None",
   simulationConfig: undefined,
@@ -117,6 +120,7 @@ export const createSimulationSlice: StateCreator<
   // Netlist and simulation actions
   setNetList: (netList) => set({ netList }),
   setResults: (results) => set({ results }),
+  acknowledgeNetListRefresh: () => set({ netListNeedsRefresh: false }),
 
   // Simulation configuration actions
   setSelectedSimType: (type) => set({ selectedSimType: type }),
@@ -222,8 +226,8 @@ export const createSimulationSlice: StateCreator<
 `;
     const netlistWithPreamble = netListPreamble + netlist;
 
-    // Always set the netlist value
-    set({ netList: netlistWithPreamble });
+    // Always set the netlist value and signal that the Sim tab should refresh
+    set({ netList: netlistWithPreamble, netListNeedsRefresh: true });
 
     // Proceed to enable and navigate to simulate tab (validation handled by caller)
     const { setIsSimulateTabEnabled, setMainTabValue } = get() as SimulationSlice &

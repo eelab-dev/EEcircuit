@@ -778,10 +778,7 @@ const EEcircuitApp: React.FC = () => {
 
         <Tabs.Content value="simulate" flex={1} minHeight={0} display="flex">
           <React.Suspense fallback={<TabPanelSkeleton label="simulation workspace" />}>
-            <SimulationEditor
-              netList={useAppStore.getState().netList}
-              onSwitchToSchematic={enterToBePlottedMode}
-            />
+            <SimulationEditor onSwitchToSchematic={enterToBePlottedMode} />
           </React.Suspense>
         </Tabs.Content>
 

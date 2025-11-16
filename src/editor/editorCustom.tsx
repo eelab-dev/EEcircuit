@@ -469,22 +469,41 @@ const EditorCustom = ({
   }, [theme]);
 
   useEffect(() => {
-    if (editorRef.current && editorCodeRef.current) {
-      editorCodeRef.current.setValue(value ? value : "hello!");
-      editorCodeRef.current.onDidChangeModelContent(monacoEvent);
+    if (!editorRef.current || !editorCodeRef.current) {
+      return;
     }
-  }, [language, monacoEvent, value]); // Removed theme to prevent unnecessary updates
 
-  useEffect(() => {
-    if (editorRef.current && editorCodeRef.current) {
-      ///////////otherwsie keeps refreshing and flickering///////////////?????? put and if with getValue == value
+    const editorInstance = editorCodeRef.current;
 
-      const v = editorCodeRef.current.getValue();
-
-      if (value != v && value) {
-        editorCodeRef.current.setValue(value);
+    if (language && monacoRef.current) {
+      const model = editorInstance.getModel();
+      if (model) {
+        monacoRef.current.editor.setModelLanguage(model, language);
       }
     }
+
+    const disposable = editorInstance.onDidChangeModelContent(monacoEvent);
+
+    return () => {
+      disposable.dispose();
+    };
+  }, [language, monacoEvent]);
+
+  useEffect(() => {
+    if (!editorRef.current || !editorCodeRef.current) {
+      return;
+    }
+
+    if (value === undefined) {
+      return;
+    }
+
+    const currentValue = editorCodeRef.current.getValue();
+    if (currentValue === value) {
+      return;
+    }
+
+    editorCodeRef.current.setValue(value);
   }, [value]);
 
   return (
