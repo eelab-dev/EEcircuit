@@ -1,7 +1,7 @@
 import { RefObject, useEffect, useRef } from "react";
 import { LineConfig } from "webgl-plot";
 import { ZoomController } from "./zoomController";
-import { useAppStore } from "../../../store/appStore";
+
 
 // Extended LineConfig with metadata for variable tracking
 type ExtendedLineConfig = LineConfig & {
@@ -46,6 +46,9 @@ interface UseZoomProps {
   onWebglRedraw?: () => void;
   // Canvas identification for dual mode
   canvasId?: 1 | 2;
+  // Log axis state
+  isLogX: boolean;
+  isLogY: boolean;
 }
 
 export const useZoom = ({
@@ -65,20 +68,10 @@ export const useZoom = ({
   getAxisScales,
   onWebglRedraw,
   canvasId,
+  isLogX,
+  isLogY,
 }: UseZoomProps) => {
   const lastSyncedZoomState = useRef<typeof sharedZoomState>(null);
-  
-  // Get log axis state from store
-  const isLogX = useAppStore((state) => state.isLogX);
-  const isLogY = useAppStore((state) => {
-    if (canvasId === 1) {
-      return state.isLogY1;
-    } else if (canvasId === 2) {
-      return state.isLogY2;
-    } else {
-      return state.isLogY; // Single canvas mode
-    }
-  });
 
   // Set up zoom state synchronization callback
   useEffect(() => {

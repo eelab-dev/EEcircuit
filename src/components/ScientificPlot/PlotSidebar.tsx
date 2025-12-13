@@ -8,9 +8,10 @@ import {
   IconButton,
   Box,
   Text,
+  createListCollection,
 } from "@chakra-ui/react";
 import { ChevronRight, Settings, Pin, PinOff, Download } from "lucide-react";
-import { dialogTheme } from "../styles/uiThemes";
+import { dialogTheme } from "../../styles/uiThemes";
 
 interface PlotSidebarProps {
   variableNames: string[];

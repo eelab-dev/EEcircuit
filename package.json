@@ -7,7 +7,7 @@
   "scripts": {
     "vercel-prod": "vercel --prod",
     "vercel": "vercel",
-    "dev": "vite --force --host",
+    "dev": "vite --port 5173 --force --host",
     "build": "vite build && ./copy_workers.sh",
     "preview": "vite preview",
     "lint": "eslint",

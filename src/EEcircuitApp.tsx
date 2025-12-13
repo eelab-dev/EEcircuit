@@ -35,7 +35,10 @@ const Schematic = React.lazy(loadSchematicComponent);
 const loadSimulationEditorComponent = () => import("./Simulate/simulate.tsx");
 const SimulationEditor = React.lazy(loadSimulationEditorComponent);
 
-const loadPlotComponent = () => import("./plot/plot.tsx");
+const loadPlotComponent = () =>
+  import("./components/ScientificPlot").then((module) => ({
+    default: module.ScientificPlot,
+  }));
 const Plot = React.lazy(loadPlotComponent);
 
 const loadHeaderButtons = () => import("./components/HeaderButtons");
@@ -193,6 +196,11 @@ const EEcircuitApp: React.FC = () => {
     enterToBePlottedMode,
     setCurrentSchematic,
     allSimulationConfigs,
+    results, // Get reactive results for ScientificPlot
+    
+    // Bracket operation State
+    isBracketOperationPlot,
+    bracketOperationResults,
   } = useAppStore();
 
   // Ref to store promise resolver for schematic save operations (keep this as it's for async operations)
@@ -784,7 +792,13 @@ const EEcircuitApp: React.FC = () => {
 
         <Tabs.Content value="plot" flex={1} minHeight={0} display="flex">
           <React.Suspense fallback={<TabPanelSkeleton label="the plot viewer" />}>
-            <Plot results={useAppStore.getState().results} />
+            <Plot
+              results={results}
+              inputProfile={inputProfile}
+              isDarkMode={isDarkMode}
+              isBracketOperationPlot={isBracketOperationPlot}
+              bracketOperationResults={bracketOperationResults}
+            />
           </React.Suspense>
         </Tabs.Content>
       </Tabs.Root>

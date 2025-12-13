@@ -12,7 +12,7 @@ import {
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
 import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
-import { useAppStore } from "../../store/appStore";
+import type { AggregatedResult } from "../../../simulation/resultAggregator";
 const TRANSPARENT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 0];
 
 const SNAP_CIRCLE_COLORS: Record<"light" | "dark", [number, number, number, number]> = {
@@ -31,15 +31,17 @@ type ExtendedLineConfig = LineConfig & {
   parameterValue?: string;
   isBracketLine?: boolean;
 };
-import type { AggregatedResult } from "../../simulation/resultAggregator";
+
 
 
 interface UseCanvasInitializationProps {
   results: ResultType[];
+  isDarkMode: boolean;
 }
 
 export const useCanvasInitialization = ({
   results,
+  isDarkMode,
 }: UseCanvasInitializationProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const glRef = useRef<WebGL2RenderingContext | null>(null);
@@ -52,7 +54,6 @@ export const useCanvasInitialization = ({
   const lineDataRef = useRef<ExtendedLineConfig[]>([]);
   const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
-  const isDarkMode = useAppStore((state) => state.isDarkMode);
 
   // Create the snap circle (fixed size, aspect ratio handled by transform scaling)
   const initSnapCircle = useCallback((darkMode: boolean) => {
@@ -78,7 +79,7 @@ export const useCanvasInitialization = ({
   }, []);
 
   const createSnapCircle = () => {
-    initSnapCircle(useAppStore.getState().isDarkMode);
+    initSnapCircle(isDarkMode);
   };
 
   // Initialize canvas and WebGL plot only once when results change
@@ -87,7 +88,7 @@ export const useCanvasInitialization = ({
 
     let cancelled = false;
     const canvas = canvasRef.current;
-    const themeIsDarkMode = useAppStore.getState().isDarkMode;
+    const themeIsDarkMode = isDarkMode;
 
     // Use requestAnimationFrame to defer initialization until after layout
     const rafId = requestAnimationFrame(() => {

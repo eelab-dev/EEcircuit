@@ -7,7 +7,6 @@ import {
   UnifiedLinePlot,
 } from "webgl-plot";
 import { LINE_THICKNESS } from "../styling/lineThickness";
-import { useAppStore } from "../../../store/appStore";
 import {
   convertDataToDisplayCoordinates,
   convertLinearToLogSpace,
@@ -124,6 +123,10 @@ interface UseCrosshairProps {
   onCoordinateUpdate?: (x: number, y: number) => void;
   // Canvas identification for dual mode
   canvasId?: 1 | 2;
+  // Environment props
+  isDarkMode: boolean;
+  isLogX: boolean;
+  isLogY: boolean;
 }
 
 export const useCrosshair = ({
@@ -143,6 +146,9 @@ export const useCrosshair = ({
   onRedrawNeeded,
   onCoordinateUpdate,
   canvasId,
+  isDarkMode,
+  isLogX,
+  isLogY,
 }: UseCrosshairProps) => {
   const [localShowCrosshair, setLocalShowCrosshair] = useState(false);
   const lastSyncedX = useRef<number | null>(null);
@@ -152,19 +158,6 @@ export const useCrosshair = ({
   useEffect(() => {
     redrawCallbackRef.current = onRedrawNeeded;
   }, [onRedrawNeeded]);
-
-  // Get log axis state from store
-  const isDarkMode = useAppStore((state) => state.isDarkMode);
-  const isLogX = useAppStore((state) => state.isLogX);
-  const isLogY = useAppStore((state) => {
-    if (canvasId === 1) {
-      return state.isLogY1;
-    } else if (canvasId === 2) {
-      return state.isLogY2;
-    } else {
-      return state.isLogY; // Single canvas mode
-    }
-  });
 
   // Use shared cursor visibility in both single and dual canvas modes
   const showCrosshair =

@@ -1,18 +1,22 @@
 import React from "react";
 import { Box, Text, Slider } from "@chakra-ui/react";
-import { useAppStore } from "../store/appStore";
+// import { useAppStore } from "../store/appStore"; // Removed
 import { formatEngineering } from "./plotcanvas/formatUtils";
-import type { AggregatedResult } from "../simulation/resultAggregator";
+import type { AggregatedResult } from "../../simulation/resultAggregator"; // Fixed path
 
 interface BracketOperationSliderProps {
   bracketOperationResults: AggregatedResult;
+  emphasizedPlotIndex: number;
+  onEmphasizedPlotIndexChange: (index: number) => void;
 }
 
 const BracketOperationSlider: React.FC<BracketOperationSliderProps> = ({
   bracketOperationResults,
+  emphasizedPlotIndex,
+  onEmphasizedPlotIndexChange,
 }) => {
-  const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
-  const setEmphasizedPlotIndex = useAppStore((state) => state.setEmphasizedPlotIndex);
+  // const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
+  // const setEmphasizedPlotIndex = useAppStore((state) => state.setEmphasizedPlotIndex);
 
   const { parameterValues, bracketOperation } = bracketOperationResults;
 
@@ -45,7 +49,7 @@ const BracketOperationSlider: React.FC<BracketOperationSliderProps> = ({
           min={0}
           max={parameterValues.length - 1}
           step={1}
-          onValueChange={(details: { value: number[] }) => setEmphasizedPlotIndex(details.value[0] ?? 0)}
+          onValueChange={(details: { value: number[] }) => onEmphasizedPlotIndexChange(details.value[0] ?? 0)}
           size="sm"
         >
           <Slider.Control>

@@ -5,8 +5,7 @@ import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
 import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
 import { BRACKET_PLOT_STYLES, getBracketTransparency } from "../bracketPlotStyles";
-import type { AggregatedResult } from "../../simulation/resultAggregator";
-import { useAppStore } from "../../store/appStore";
+import type { AggregatedResult } from "../../../simulation/resultAggregator";
 import { convertLinearToLogSpace } from "./utils/coordinateUtils";
 const TRANSPARENT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 0];
 
@@ -80,6 +79,10 @@ interface UsePlotCalculationsProps {
   onXAxisScaleChange?: ((scale: { scaleX: number; offsetX: number }) => void) | null;
   // Canvas identification for dual mode
   canvasId?: 1 | 2;
+  // Environment props
+  isDarkMode: boolean;
+  isLogX: boolean;
+  isLogY: boolean;
 }
 
 interface UsePlotCalculationsReturn {
@@ -113,18 +116,10 @@ export const usePlotCalculations = ({
   sharedXAxisScale,
   onXAxisScaleChange,
   canvasId,
+  isDarkMode,
+  isLogX,
+  isLogY,
 }: UsePlotCalculationsProps): UsePlotCalculationsReturn => {
-  const isDarkMode = useAppStore((state) => state.isDarkMode);
-  const isLogX = useAppStore((state) => state.isLogX);
-  const isLogY = useAppStore((state) => {
-    if (canvasId === 1) {
-      return state.isLogY1;
-    } else if (canvasId === 2) {
-      return state.isLogY2;
-    } else {
-      return state.isLogY; // Single canvas mode
-    }
-  });
   const [axisScales, setAxisScales] = useState<AxisScales>({
     scaleX: 1,
     scaleY: 1,
@@ -546,7 +541,7 @@ export const usePlotCalculations = ({
       if (isBracketOperationPlot && extendedLineData.isBracketLine && bracketOperationResults) {
         // For bracket operations, determine if this line should be emphasized
         const parameterIndex = bracketOperationResults.parameterValues?.findIndex(
-          (paramValue) => paramValue === extendedLineData.parameterValue
+          (paramValue: string | number) => paramValue === extendedLineData.parameterValue
         ) ?? -1;
 
         const isEmphasized = parameterIndex === emphasizedPlotIndex;
@@ -734,7 +729,7 @@ export const usePlotCalculations = ({
 
       // Determine if this line should be emphasized
       const parameterIndex = bracketOperationResults.parameterValues?.findIndex(
-        (paramValue) => paramValue === extendedLineData.parameterValue
+        (paramValue: string | number) => paramValue === extendedLineData.parameterValue
       ) ?? -1;
 
       const isEmphasized = parameterIndex === emphasizedPlotIndex;

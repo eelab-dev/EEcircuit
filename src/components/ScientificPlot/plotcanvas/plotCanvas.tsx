@@ -4,7 +4,7 @@ import { Box, Grid, GridItem, Button } from "@chakra-ui/react";
 import { clearColorCache } from "./styling/colorUtils";
 import { formatEngineering } from "./formatUtils";
 import AxisCanvas, { type AxisCanvasRef } from "./axis/AxisCanvas";
-import { useAppStore } from "../../store/appStore";
+// import { useAppStore } from "../../store/appStore"; // Removed
 import { useCanvasInitialization } from "./useCanvasInitialization";
 import { getPlotBackgroundColor } from "./styling/plotBackgroundColors";
 import { useCanvasDimensions } from "./useCanvasDimensions";
@@ -12,10 +12,11 @@ import { useCrosshair } from "./interactions/useCrosshair";
 import { useZoom } from "./interactions/useZoom";
 import { usePlotCalculations } from "./usePlotCalculations";
 import { useEventHandlers } from "./interactions/useEventHandlers";
-import PlotProgressOverlay from "../../components/PlotProgressOverlay";
-import type { AggregatedResult } from "../../simulation/resultAggregator";
+import PlotProgressOverlay from "../../../components/PlotProgressOverlay";
+import type { AggregatedResult } from "../../../simulation/resultAggregator";
 import type { ZoomController } from "./interactions/zoomController";
 import { clearCanvas, type UnifiedLinePlot } from "webgl-plot";
+import { InputProfile } from "../types";
 
 interface PlotCanvasProps {
   results: ResultType[];
@@ -57,6 +58,12 @@ interface PlotCanvasProps {
   canvasId?: 1 | 2;
   // Direct plotLine ref access for external control
   plotLineRef?: React.RefObject<UnifiedLinePlot | null>;
+  // Environment/Store Props
+  inputProfile: InputProfile;
+  emphasizedPlotIndex: number;
+  isDarkMode: boolean;
+  isLogX: boolean;
+  isLogY: boolean; // Resolved (Y1 or Y2 based on canvasId)
 }
 
 const TRANSPARENT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 0];
@@ -83,10 +90,13 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   onXAxisScaleChange,
   canvasId,
   plotLineRef: externalPlotLineRef,
+  inputProfile,
+  emphasizedPlotIndex,
+  isDarkMode,
+  isLogX,
+  isLogY,
 }) => {
-  const inputProfile = useAppStore((state) => state.inputProfile);
-  const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
-  const isDarkMode = useAppStore((state) => state.isDarkMode);
+
   const [isAxis] = useState(true);
 
   // Theme-aware background color for canvas using single source of truth
@@ -123,6 +133,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     isCanvasInitialized,
   } = useCanvasInitialization({
     results,
+    isDarkMode,
   });
 
   // Callback for cursor sync redraw - optimized for crosshair-only updates
@@ -187,16 +198,8 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
         return; // Don't render axes with invalid scales
       }
 
-      // CRITICAL FIX: Always get fresh log axis state from store to avoid stale closures
-      const currentIsLogX = useAppStore.getState().isLogX;
-      let currentIsLogY: boolean;
-      if (canvasId === 1) {
-        currentIsLogY = useAppStore.getState().isLogY1;
-      } else if (canvasId === 2) {
-        currentIsLogY = useAppStore.getState().isLogY2;
-      } else {
-        currentIsLogY = useAppStore.getState().isLogY; // Single canvas mode
-      }
+      const currentIsLogX = isLogX;
+      const currentIsLogY = isLogY;
 
       const axisParams = {
         scale: scales.scaleX,
@@ -244,6 +247,9 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     onRedrawNeeded: handleRedrawNeeded,
     onCoordinateUpdate: updateCrosshairDisplay,
     canvasId,
+    isDarkMode,
+    isLogX,
+    isLogY,
   });
 
   // Initialize plot calculations
@@ -270,7 +276,11 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       onAxisScalesChange: renderAxes, // Call axis rendering when scales change
       sharedXAxisScale,
       onXAxisScaleChange,
+
       canvasId,
+      isDarkMode,
+      isLogX,
+      isLogY,
     });
 
   // Update refs when functions change
@@ -332,7 +342,10 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
     otherCanvasCalcScaling,
     getAxisScales: () => axisScalesRef.current,
     onWebglRedraw: handleWebglRedraw,
+
     canvasId,
+    isLogX,
+    isLogY,
   });
 
   // Initialize event handlers
