@@ -41,6 +41,8 @@ const loadPlotComponent = () =>
   }));
 const Plot = React.lazy(loadPlotComponent);
 
+import PlotProgressOverlay from "./components/PlotProgressOverlay";
+
 const loadHeaderButtons = () => import("./components/HeaderButtons");
 const HeaderButtons = React.lazy(loadHeaderButtons);
 
@@ -797,8 +799,9 @@ const EEcircuitApp: React.FC = () => {
               inputProfile={inputProfile}
               isDarkMode={isDarkMode}
               isBracketOperationPlot={isBracketOperationPlot}
-              bracketOperationResults={bracketOperationResults}
+              bracketOperationResults={bracketOperationResults as any}
             />
+            <PlotProgressOverlay />
           </React.Suspense>
         </Tabs.Content>
       </Tabs.Root>

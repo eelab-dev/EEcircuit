@@ -1,8 +1,8 @@
 import React from "react";
 import { Box, Text, Slider } from "@chakra-ui/react";
 // import { useAppStore } from "../store/appStore"; // Removed
-import { formatEngineering } from "./plotcanvas/formatUtils";
-import type { AggregatedResult } from "../../simulation/resultAggregator"; // Fixed path
+import { formatEngineering } from "./utils/formatUtils";
+import type { AggregatedResult } from "./types"; // Fixed path
 
 interface BracketOperationSliderProps {
   bracketOperationResults: AggregatedResult;

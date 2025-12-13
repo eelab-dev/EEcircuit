@@ -12,7 +12,8 @@ import {
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
 import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
-import type { AggregatedResult } from "../../../simulation/resultAggregator";
+
+import type { AggregatedResult } from "../types";
 const TRANSPARENT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 0];
 
 const SNAP_CIRCLE_COLORS: Record<"light" | "dark", [number, number, number, number]> = {

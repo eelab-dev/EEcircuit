@@ -5,7 +5,7 @@ import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
 import { LINE_THICKNESS } from "./styling/lineThickness";
 import { ZoomController } from "./interactions/zoomController";
 import { BRACKET_PLOT_STYLES, getBracketTransparency } from "../bracketPlotStyles";
-import type { AggregatedResult } from "../../../simulation/resultAggregator";
+import type { AggregatedResult } from "../types";
 import { convertLinearToLogSpace } from "./utils/coordinateUtils";
 const TRANSPARENT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 0];
 

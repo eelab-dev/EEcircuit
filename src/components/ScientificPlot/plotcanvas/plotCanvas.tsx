@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { ResultType } from "eecircuit-engine";
 import { Box, Grid, GridItem, Button } from "@chakra-ui/react";
 import { clearColorCache } from "./styling/colorUtils";
-import { formatEngineering } from "./formatUtils";
+import { formatEngineering } from "../utils/formatUtils";
 import AxisCanvas, { type AxisCanvasRef } from "./axis/AxisCanvas";
 // import { useAppStore } from "../../store/appStore"; // Removed
 import { useCanvasInitialization } from "./useCanvasInitialization";
@@ -12,11 +12,11 @@ import { useCrosshair } from "./interactions/useCrosshair";
 import { useZoom } from "./interactions/useZoom";
 import { usePlotCalculations } from "./usePlotCalculations";
 import { useEventHandlers } from "./interactions/useEventHandlers";
-import PlotProgressOverlay from "../../../components/PlotProgressOverlay";
-import type { AggregatedResult } from "../../../simulation/resultAggregator";
+
+import type { AggregatedResult, InputProfile } from "../types";
 import type { ZoomController } from "./interactions/zoomController";
 import { clearCanvas, type UnifiedLinePlot } from "webgl-plot";
-import { InputProfile } from "../types";
+
 
 interface PlotCanvasProps {
   results: ResultType[];
@@ -653,7 +653,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
           ></canvas>
 
           {/* Progress overlay positioned in bottom right corner of canvas */}
-          <PlotProgressOverlay />
+
         </Box>
       </GridItem>
       <GridItem

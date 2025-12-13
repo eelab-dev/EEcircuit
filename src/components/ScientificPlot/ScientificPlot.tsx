@@ -3,10 +3,10 @@ import { Flex, VStack, HStack, Button, Text, Box } from "@chakra-ui/react";
 import PlotCanvas from "./plotcanvas/plotCanvas";
 import PlotSidebar from "./PlotSidebar";
 import BracketOperationSlider from "./BracketOperationSlider";
-import { exportResultsToCSV } from "../../utils/csvExport";
+import { exportResultsToCSV } from "./utils/csvExport";
 import type { ZoomController } from "./plotcanvas/interactions/zoomController";
 import type { UnifiedLinePlot } from "webgl-plot";
-import { ScientificPlotProps } from "./types";
+import { ScientificPlotProps, AggregatedResult } from "./types";
 
 const ScientificPlot: React.FC<ScientificPlotProps> = ({
   results,

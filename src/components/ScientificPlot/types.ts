@@ -13,7 +13,35 @@ export interface PlotConfig {
   canvas2SelectedVariables: string[]; // For dual canvas
 }
 
-import type { AggregatedResult } from "../../simulation/resultAggregator";
+// Copied from resultAggregator.ts to make component independent
+export interface BracketOperation {
+  type: string;
+  start: number;
+  stop: number;
+  step: number; 
+  originalText?: string;
+  position?: { line: number; column: number };
+  [key: string]: any;
+}
+
+export interface AggregatedResult extends Omit<ResultType, 'data'> {
+  // Extended result data for bracket operations
+  data: Array<{ values: number[]; name: string }>;
+
+  // Additional metadata for bracket operations
+  bracketOperation?: BracketOperation;
+  parameterValues?: string[];
+  parameterCount?: number;
+  successfulResults?: number;
+  failedResults?: number;
+
+  // Bracket operation specific plotting data
+  bracketPlotData?: Array<{
+    parameterValue: string;
+    parameterIndex: number;
+    data: Array<{ values: number[]; name: string }>;
+  }>;
+}
 
 export interface ScientificPlotProps {
   results: ResultType[];
