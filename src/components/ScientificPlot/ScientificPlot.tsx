@@ -6,7 +6,7 @@ import BracketOperationSlider from "./BracketOperationSlider";
 import { exportResultsToCSV } from "./utils/csvExport";
 import type { ZoomController } from "./plotcanvas/interactions/zoomController";
 import type { UnifiedLinePlot } from "webgl-plot";
-import { ScientificPlotProps, AggregatedResult } from "./types";
+import { ScientificPlotProps } from "./types";
 
 const ScientificPlot: React.FC<ScientificPlotProps> = ({
   results,
@@ -25,16 +25,17 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
   const [isLogY2, setIsLogY2] = useState(initialConfig?.isLogY2 ?? false);
   
   // AC detection
-  const isACModeActive = results.length > 0 && (results[0] as any).type === "ac";
+  const isACModeActive = results.length > 0 && (results[0] as unknown as { type: string }).type === "ac";
 
   // Auto-configure based on results if no config provided
   useEffect(() => {
     if (results.length > 0) {
-      if ((results[0] as any).type === "ac") {
-        setNumCanvases(2);
-        setIsLogX(true);
-        setIsLogY1(true);
-        setIsLogY2(true);
+      if ((results[0] as unknown as { type: string }).type === "ac") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setNumCanvases((prev) => (prev !== 2 ? 2 : prev));
+        setIsLogX((prev) => (prev !== true ? true : prev));
+        setIsLogY1((prev) => (prev !== true ? true : prev));
+        setIsLogY2((prev) => (prev !== true ? true : prev));
       }
     }
   }, [results]);
@@ -59,6 +60,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
       if (numCanvases === 1) {
         // Default to all variables if none selected
         if (selectedVariables.length === 0) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setSelectedVariables(allVariables);
         }
       } else if (numCanvases === 2) {
@@ -73,7 +75,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
         }
       }
     }
-  }, [results, numCanvases, isACModeActive]);
+  }, [results, numCanvases, isACModeActive, selectedVariables.length, canvas1SelectedVariables.length, canvas2SelectedVariables.length]);
 
 
   // Shared state

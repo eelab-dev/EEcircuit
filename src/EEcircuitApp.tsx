@@ -24,6 +24,7 @@ import {
   Schematic as SchematicType,
 } from "eecircuit-schematic";
 import { EEcircuitFile } from "./types/commonTypes.ts";
+import type { AggregatedResult } from "./components/ScientificPlot/types";
 import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
 import { dialogTheme } from "./styles/uiThemes.ts";
@@ -799,7 +800,7 @@ const EEcircuitApp: React.FC = () => {
               inputProfile={inputProfile}
               isDarkMode={isDarkMode}
               isBracketOperationPlot={isBracketOperationPlot}
-              bracketOperationResults={bracketOperationResults as any}
+              bracketOperationResults={bracketOperationResults as unknown as AggregatedResult}
             />
             <PlotProgressOverlay />
           </React.Suspense>

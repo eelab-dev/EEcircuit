@@ -21,7 +21,7 @@ export interface BracketOperation {
   step: number; 
   originalText?: string;
   position?: { line: number; column: number };
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AggregatedResult extends Omit<ResultType, 'data'> {

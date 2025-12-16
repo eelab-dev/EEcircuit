@@ -8,7 +8,6 @@ import {
   IconButton,
   Box,
   Text,
-  createListCollection,
 } from "@chakra-ui/react";
 import { ChevronRight, Settings, Pin, PinOff, Download } from "lucide-react";
 import { theme as dialogTheme } from "./styles/theme";

@@ -221,7 +221,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
 
       yAxisRef.current?.renderAxis(yAxisParams);
     },
-    [canvasId, isDarkMode]
+    [isDarkMode, isLogX, isLogY]
   ); // Fresh values fetched inside effect to avoid stale closures
 
   // Initialize crosshair

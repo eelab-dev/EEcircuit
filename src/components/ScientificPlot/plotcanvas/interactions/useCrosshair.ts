@@ -145,7 +145,6 @@ export const useCrosshair = ({
   onCursorVisibilityChange,
   onRedrawNeeded,
   onCoordinateUpdate,
-  canvasId,
   isDarkMode,
   isLogX,
   isLogY,

@@ -361,7 +361,7 @@ export const useCanvasInitialization = ({
       cancelAnimationFrame(rafId);
       setIsCanvasInitialized(false);
     };
-  }, [results, initSnapCircle]);
+  }, [results, initSnapCircle, isDarkMode]);
 
   useEffect(() => {
     if (!snapCircleRef.current) {

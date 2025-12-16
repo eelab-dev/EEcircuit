@@ -67,7 +67,6 @@ export const useZoom = ({
   otherCanvasCalcScaling,
   getAxisScales,
   onWebglRedraw,
-  canvasId,
   isLogX,
   isLogY,
 }: UseZoomProps) => {

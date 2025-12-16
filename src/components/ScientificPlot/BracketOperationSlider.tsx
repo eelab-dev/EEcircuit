@@ -25,7 +25,7 @@ const BracketOperationSlider: React.FC<BracketOperationSliderProps> = ({
   }
 
   const currentParameterValue = parameterValues[emphasizedPlotIndex];
-  const unit = bracketOperation?.unit || "";
+  const unit = (bracketOperation?.unit as string) || "";
 
   return (
     <Box
