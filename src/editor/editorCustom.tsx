@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import * as MonacoEditor from "monaco-editor/esm/vs/editor/editor.api";
+import * as MonacoEditor from "monaco-editor";
 import "./useWorker.ts";
 //import * as monaco from "monaco-editor";
 
@@ -363,7 +363,10 @@ const EditorCustom = ({
 
       monacoEditor.languages.registerCompletionItemProvider("spice", {
         triggerCharacters: ["."],
-        provideCompletionItems: function (model, position) {
+        provideCompletionItems: function (
+          model: MonacoEditor.editor.ITextModel,
+          position: MonacoEditor.Position
+        ) {
           // find out if we are completing a property in the 'dependencies' object.
           const textUntilPosition = model.getValueInRange({
             startLineNumber: 1,

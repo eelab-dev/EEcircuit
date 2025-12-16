@@ -25,4 +25,4 @@ import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker"
   },
 };
 
-monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
+monaco.typescript.typescriptDefaults.setEagerModelSync(true);
