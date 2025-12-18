@@ -16,6 +16,12 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
   isDarkMode = false,
   isBracketOperationPlot = false,
   bracketOperationResults,
+  // New props with defaults
+  canvas1Title = "Plot 1",
+  canvas2Title = "Plot 2",
+  canvas1Filter,
+  canvas2Filter,
+  lockNumCanvases = false,
 }) => {
   // State initialization from config or defaults
   const [numCanvases, setNumCanvases] = useState(initialConfig?.numCanvases ?? 1);
@@ -23,22 +29,8 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
   const [isLogY, setIsLogY] = useState(initialConfig?.isLogY ?? false);
   const [isLogY1, setIsLogY1] = useState(initialConfig?.isLogY1 ?? false);
   const [isLogY2, setIsLogY2] = useState(initialConfig?.isLogY2 ?? false);
-  
-  // AC detection
-  const isACModeActive = results.length > 0 && (results[0] as unknown as { type: string }).type === "ac";
 
-  // Auto-configure based on results if no config provided
-  useEffect(() => {
-    if (results.length > 0) {
-      if ((results[0] as unknown as { type: string }).type === "ac") {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setNumCanvases((prev) => (prev !== 2 ? 2 : prev));
-        setIsLogX((prev) => (prev !== true ? true : prev));
-        setIsLogY1((prev) => (prev !== true ? true : prev));
-        setIsLogY2((prev) => (prev !== true ? true : prev));
-      }
-    }
-  }, [results]);
+
 
   // Single canvas state
   const [selectedVariables, setSelectedVariables] = useState<string[]>(
@@ -64,18 +56,25 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
           setSelectedVariables(allVariables);
         }
       } else if (numCanvases === 2) {
-        if (isACModeActive) {
-           const magVars = allVariables.filter(v => v.includes("[mag]"));
-           const phaseVars = allVariables.filter(v => v.includes("[phase]"));
-           if (canvas1SelectedVariables.length === 0) setCanvas1SelectedVariables(magVars);
-           if (canvas2SelectedVariables.length === 0) setCanvas2SelectedVariables(phaseVars);
-        } else {
-           if (canvas1SelectedVariables.length === 0) setCanvas1SelectedVariables(allVariables);
-           if (canvas2SelectedVariables.length === 0) setCanvas2SelectedVariables(allVariables);
-        }
+         if (canvas1Filter || canvas2Filter) {
+            if (canvas1SelectedVariables.length === 0 && canvas1Filter) {
+                setCanvas1SelectedVariables(allVariables.filter(canvas1Filter));
+            } else if(canvas1SelectedVariables.length === 0) {
+                setCanvas1SelectedVariables(allVariables);
+            }
+
+            if (canvas2SelectedVariables.length === 0 && canvas2Filter) {
+                setCanvas2SelectedVariables(allVariables.filter(canvas2Filter));
+            } else if (canvas2SelectedVariables.length === 0) {
+                setCanvas2SelectedVariables(allVariables);
+            }
+         } else {
+            if (canvas1SelectedVariables.length === 0) setCanvas1SelectedVariables(allVariables);
+            if (canvas2SelectedVariables.length === 0) setCanvas2SelectedVariables(allVariables);
+         }
       }
     }
-  }, [results, numCanvases, isACModeActive, selectedVariables.length, canvas1SelectedVariables.length, canvas2SelectedVariables.length]);
+  }, [results, numCanvases, selectedVariables.length, canvas1SelectedVariables.length, canvas2SelectedVariables.length, canvas1Filter, canvas2Filter]);
 
 
   // Shared state
@@ -171,7 +170,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
         >
              {/* Controls */}
              <HStack gap={4} alignSelf="flex-start">
-            {!isACModeActive && (
+            {!lockNumCanvases && (
               <HStack gap={2}>
                 <Text fontSize="sm" color="fg.muted">Mode:</Text>
                 <Button size="sm" variant={numCanvases === 1 ? "solid" : "outline"} onClick={() => setNumCanvases(1)}>Single</Button>
@@ -226,7 +225,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
                {/* Canvas 1 */}
                <VStack flex="1" w="100%" minH="0" gap={1}>
                   <Text fontSize="sm" fontWeight="medium" alignSelf="flex-start" color="fg.muted">
-                    {isACModeActive ? "Magnitude" : "Plot 1"}
+                    {canvas1Title}
                   </Text>
                   <Box flex="1" w="100%" minH="0">
                     <PlotCanvas
@@ -263,7 +262,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
                {/* Canvas 2 */}
                <VStack flex="1" w="100%" minH="0" gap={1}>
                   <Text fontSize="sm" fontWeight="medium" alignSelf="flex-start" color="fg.muted">
-                    {isACModeActive ? "Phase" : "Plot 2"}
+                    {canvas2Title}
                   </Text>
                   <Box flex="1" w="100%" minH="0">
                     <PlotCanvas
@@ -312,11 +311,14 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
             onPinnedChange={setIsDrawerPinned}
             onExportCSV={handleExportCSV}
             numCanvases={numCanvases}
-            isACModeActive={isACModeActive}
             canvas2SelectedVariables={canvas2SelectedVariables}
             onCanvas2SelectedVariablesChange={setCanvas2SelectedVariables}
             canvas2HoveredVariable={canvas2HoveredVariable}
             onCanvas2VariableHover={setCanvas2HoveredVariable}
+            canvas1Title={canvas1Title}
+            canvas2Title={canvas2Title}
+            canvas1AvailableVariables={canvas1Filter && results[0]?.variableNames ? results[0].variableNames.slice(1).filter(canvas1Filter) : undefined}
+            canvas2AvailableVariables={canvas2Filter && results[0]?.variableNames ? results[0].variableNames.slice(1).filter(canvas2Filter) : undefined}
           />
         )}
       </Flex>

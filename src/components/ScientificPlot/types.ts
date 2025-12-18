@@ -51,4 +51,11 @@ export interface ScientificPlotProps {
   isDarkMode?: boolean;
   isBracketOperationPlot?: boolean;
   bracketOperationResults?: AggregatedResult;
+  
+  // Customization & Control
+  canvas1Title?: string;
+  canvas2Title?: string;
+  canvas1Filter?: (variable: string) => boolean;
+  canvas2Filter?: (variable: string) => boolean;
+  lockNumCanvases?: boolean;
 }

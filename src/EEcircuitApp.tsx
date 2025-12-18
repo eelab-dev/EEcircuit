@@ -795,13 +795,50 @@ const EEcircuitApp: React.FC = () => {
 
         <Tabs.Content value="plot" flex={1} minHeight={0} display="flex">
           <React.Suspense fallback={<TabPanelSkeleton label="the plot viewer" />}>
-            <Plot
-              results={results}
-              inputProfile={inputProfile}
-              isDarkMode={isDarkMode}
-              isBracketOperationPlot={isBracketOperationPlot}
-              bracketOperationResults={bracketOperationResults as unknown as AggregatedResult}
-            />
+            {(() => {
+              // Determine plot configuration based on results
+              const firstResult = results.length > 0 ? (results[0] as unknown as { type?: string, dataType?: string }) : null;
+              const isAC = firstResult && (
+                firstResult.type?.toLowerCase() === "ac" || 
+                firstResult.dataType === "complex"
+              );
+              
+              const plotProps = isAC ? {
+                initialConfig: {
+                  numCanvases: 2 as const,
+                  isLogX: true,
+                  isLogY1: true,
+                  isLogY2: false,
+                  // We don't set selectedVariables here, leaving it to the component's internal logic 
+                  // which now respects filters if provided
+                },
+                canvas1Title: "Magnitude",
+                canvas2Title: "Phase",
+                // Filter variable names for each canvas
+                canvas1Filter: (v: string) => v.toLowerCase().includes("[mag]"),
+                canvas2Filter: (v: string) => v.toLowerCase().includes("[phase]"),
+                lockNumCanvases: true,
+              } : {
+                 // Defaults for transient/DC
+                 initialConfig: {
+                   numCanvases: 1 as const,
+                   isLogX: false,
+                   isLogY: false,
+                 }
+              };
+
+              return (
+                <Plot
+                  key={firstResult ? (firstResult.type || firstResult.dataType || "default") : "empty"}
+                  results={results}
+                  inputProfile={inputProfile}
+                  isDarkMode={isDarkMode}
+                  isBracketOperationPlot={isBracketOperationPlot}
+                  bracketOperationResults={bracketOperationResults as unknown as AggregatedResult}
+                  {...plotProps}
+                />
+              );
+            })()}
             <PlotProgressOverlay />
           </React.Suspense>
         </Tabs.Content>

@@ -22,11 +22,14 @@ interface PlotSidebarProps {
   onExportCSV?: () => void;
   // Multi-canvas support
   numCanvases?: number;
-  isACModeActive?: boolean;
   canvas2SelectedVariables?: string[];
   onCanvas2SelectedVariablesChange?: (variables: string[]) => void;
   canvas2HoveredVariable?: string | null;
   onCanvas2VariableHover?: (variable: string | null) => void;
+  canvas1Title?: string;
+  canvas2Title?: string;
+  canvas1AvailableVariables?: string[];
+  canvas2AvailableVariables?: string[];
 }
 
 // PlotSidebar implements a responsive drawer system for plot variable selection.
@@ -43,11 +46,14 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
   onPinnedChange,
   onExportCSV,
   numCanvases = 1,
-  isACModeActive = false,
   canvas2SelectedVariables = [],
   onCanvas2SelectedVariablesChange,
   canvas2HoveredVariable,
   onCanvas2VariableHover,
+  canvas1Title = "Plot 1",
+  canvas2Title = "Plot 2",
+  canvas1AvailableVariables,
+  canvas2AvailableVariables,
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
@@ -198,13 +204,13 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
       </CheckboxGroup>
     );
   } else {
+    // If specific lists provided, use them; otherwise use all variables for both (default behavior)
+    // Filter out x-axis (index 0) from default list if just using variableNames
     const allVariables = variableNames.slice(1);
-    const canvas1Variables = isACModeActive
-      ? allVariables.filter((v) => v.includes("[mag]"))
-      : allVariables;
-    const canvas2Variables = isACModeActive
-      ? allVariables.filter((v) => v.includes("[phase]"))
-      : allVariables;
+    
+    // Use provided available variables or default to all
+    const canvas1Variables = canvas1AvailableVariables ?? allVariables;
+    const canvas2Variables = canvas2AvailableVariables ?? allVariables;
 
     sidebarContent = (
       <Box>
@@ -224,7 +230,7 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             fontWeight="semibold"
             color={dialogTheme.primaryText}
           >
-            {isACModeActive ? "Magnitude" : "Plot 1"}
+            {canvas1Title}
           </Text>
 
           <HStack gap="1" w="100%" mb="2">
@@ -308,7 +314,7 @@ const PlotSidebar: React.FC<PlotSidebarProps> = ({
             fontWeight="semibold"
             color={dialogTheme.primaryText}
           >
-            {isACModeActive ? "Phase" : "Plot 2"}
+            {canvas2Title}
           </Text>
 
           <HStack gap="1" w="100%" mb="2">
