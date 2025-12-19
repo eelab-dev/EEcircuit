@@ -103,6 +103,9 @@ export interface PlotActions {
   handleNewResults: (results: ResultType[]) => void;
   enterToBePlottedMode: () => void;
   exitToBePlottedMode: () => void;
+  
+  // Bulk update action
+  updatePlotConfig: (config: Partial<PlotState>) => void;
 }
 
 export type PlotSlice = PlotState & PlotActions;
@@ -370,4 +373,6 @@ export const createPlotSlice: StateCreator<
       mainTabValue: "simulate",
     });
   },
+
+  updatePlotConfig: (config) => set((state) => ({ ...state, ...config })),
 });

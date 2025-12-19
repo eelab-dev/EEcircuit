@@ -22,6 +22,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
   canvas1Filter,
   canvas2Filter,
   lockNumCanvases = false,
+  onConfigChange,
 }) => {
   // State initialization from config or defaults
   const [numCanvases, setNumCanvases] = useState(initialConfig?.numCanvases ?? 1);
@@ -43,6 +44,32 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
   const [canvas1HoveredVariable, setCanvas1HoveredVariable] = useState<string | null>(null);
   const [canvas2SelectedVariables, setCanvas2SelectedVariables] = useState<string[]>([]);
   const [canvas2HoveredVariable, setCanvas2HoveredVariable] = useState<string | null>(null);
+
+  // Sync state changes to parent
+  useEffect(() => {
+    if (onConfigChange) {
+      onConfigChange({
+        numCanvases,
+        isLogX,
+        isLogY,
+        isLogY1,
+        isLogY2,
+        selectedVariables,
+        canvas1SelectedVariables,
+        canvas2SelectedVariables,
+      });
+    }
+  }, [
+    numCanvases,
+    isLogX,
+    isLogY,
+    isLogY1,
+    isLogY2,
+    selectedVariables,
+    canvas1SelectedVariables,
+    canvas2SelectedVariables,
+    onConfigChange,
+  ]);
 
   // Variable initialization logic
   useEffect(() => {

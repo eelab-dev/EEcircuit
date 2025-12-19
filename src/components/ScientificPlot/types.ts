@@ -58,4 +58,5 @@ export interface ScientificPlotProps {
   canvas1Filter?: (variable: string) => boolean;
   canvas2Filter?: (variable: string) => boolean;
   lockNumCanvases?: boolean;
+  onConfigChange?: (config: Partial<PlotConfig>) => void;
 }
