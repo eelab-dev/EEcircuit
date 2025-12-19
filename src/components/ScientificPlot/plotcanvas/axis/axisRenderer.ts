@@ -74,24 +74,40 @@ export const renderYAxis = ({ canvas, scale, offset, isDarkMode, isLogY }: AxisP
     maxValue: number,
     maxTicks: number
   ): number[] => {
+    // CRITICAL CRASH FIX: Return immediately if values are not finite (e.g. -Infinity from log(0))
+    if (!isFinite(minValue) || !isFinite(maxValue)) {
+      return [];
+    }
+    
+    // CRITICAL HANG FIX: Prevent massive loops if range is unreasonably large
+    // Limit to 50 decades (1e-25 to 1e25 is already huge for engineering)
+    if (Math.abs(maxValue - minValue) > 50) {
+       return []; // Too wide to render meaningful ticks
+    }
+
     const ticks: number[] = [];
 
     // Convert to powers of 10 for log scale calculation
     const startPower = Math.floor(minValue);
     const endPower = Math.ceil(maxValue);
 
+    // CRITICAL LOOP GUARD
+    const MAX_LOOP_ITERATIONS = 100;
+
     // Generate major ticks at powers of 10
+    // Added safety break to prevent infinite loops
     for (let power = startPower; power <= endPower; power++) {
       if (power >= minValue && power <= maxValue) {
         ticks.push(power);
       }
+      if (ticks.length > MAX_LOOP_ITERATIONS) break; 
     }
 
     // Aggressive optimization for very wide frequency ranges (e.g., 1Hz to 100MHz)
     const numDecades = endPower - startPower;
     const majorTickCount = ticks.length;
     
-    // For very wide ranges (>6 decades), skip minor ticks entirely and thin out major ticks
+    // For very wide ranges (>6 decades), skip major ticks logic... (existing logic)
     if (numDecades > 6) {
       // Keep only every 2nd or 3rd major tick for very wide ranges
       const keepEvery = numDecades > 8 ? 3 : 2;
@@ -116,7 +132,7 @@ export const renderYAxis = ({ canvas, scale, offset, isDarkMode, isLogY }: AxisP
           if (
             logValue >= minValue &&
             logValue <= maxValue &&
-            minorTicks.length + ticks.length < maxTicks
+            minorTicks.length + ticks.length < maxTicks // Strict limit check
           ) {
             minorTicks.push(logValue);
           }
@@ -136,7 +152,7 @@ export const renderYAxis = ({ canvas, scale, offset, isDarkMode, isLogY }: AxisP
           if (
             logValue >= minValue &&
             logValue <= maxValue &&
-            minorTicks.length + ticks.length < maxTicks
+            minorTicks.length + ticks.length < maxTicks // Strict limit check
           ) {
             minorTicks.push(logValue);
           }
