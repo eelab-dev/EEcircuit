@@ -194,83 +194,6 @@ export const usePlotCalculations = ({
   const pendingScalesRef = useRef<AxisScales | null>(null);
 
 
-  // Batched axis transition handler using React.startTransition
-  const handleAxisTransition = useCallback(() => {
-    if (!plotLineRef.current || !glRef.current || isTransitioningRef.current) return;
-
-    isTransitioningRef.current = true;
-
-    // Batch all axis mode changes in a single React transition
-    startTransition(() => {
-      try {
-        // 1. Apply log axis settings
-        plotLineRef.current!.setLogAxis(isLogX, isLogY);
-
-        // 2. Auto-scale for the new coordinate space
-        plotLineRef.current!.autoScale();
-
-        // 3. Reset zoom if transitioning to linear mode
-        if (!isLogX && !isLogY && zoomController.current) {
-          zoomController.current.resetZoom();
-        }
-
-        // 4. OPTIMIZED: Only recalculate axis scales, avoid full plot redraw
-        // The log conversion happens internally in webgl-plot, so we only need
-        // to get new data bounds and calculate new axis scales
-        calculateAndApplyScalingRef.current?.();
-
-        // 5. Single draw call to apply the log transformation visually
-        plotLineRef.current!.draw();
-      } finally {
-        // Reset transition flag after all operations complete
-        isTransitioningRef.current = false;
-      }
-    });
-  }, [isLogX, isLogY, plotLineRef, glRef, zoomController]);
-
-  // Handle log axis changes with batched updates to prevent re-render cascades
-  useEffect(() => {
-    if (!isCanvasInitialized || !plotLineRef.current || !glRef.current) return;
-    handleAxisTransition();
-  }, [isLogX, isLogY, isCanvasInitialized, plotLineRef, glRef, handleAxisTransition]);
-
-
-  // Handle theme changes - update WebGL background color immediately  
-  useEffect(() => {
-    const gl = glRef.current;
-    const plot = plotLineRef.current;
-
-    if (!isCanvasInitialized || !gl || !plot) {
-      if (!isCanvasInitialized) {
-        lastBackgroundModeRef.current = null;
-        lastBackgroundContextRef.current = null;
-      }
-      return;
-    }
-
-    const contextChanged = lastBackgroundContextRef.current !== gl;
-    const modeChanged = lastBackgroundModeRef.current !== isDarkMode;
-
-    if (!contextChanged && !modeChanged) {
-      return;
-    }
-
-    clearCanvas(gl, TRANSPARENT_CLEAR_COLOR);
-    plot.draw();
-
-    lastBackgroundModeRef.current = isDarkMode;
-    lastBackgroundContextRef.current = gl;
-  }, [isDarkMode, isCanvasInitialized, glRef, plotLineRef]);
-
-  // Handle data updates with simplified autoScale (now works correctly for all coordinate spaces)
-  useEffect(() => {
-    if (!plotLineRef.current || selectedVariables.length === 0) return;
-
-    // Use autoScale for data updates in both linear and log space
-    // autoScale() now works correctly for all coordinate spaces
-    plotLineRef.current.autoScale();
-  }, [selectedVariables, results, plotLineRef]);
-
   // Calculate and apply scaling using webgl-plot's enhanced API with zoom support
   const calculateAndApplyScaling = useCallback(() => {
     if (!plotLineRef.current || selectedVariables.length === 0) {
@@ -306,9 +229,18 @@ export const usePlotCalculations = ({
       if (!zoomController.current?.hasOriginalDataBounds()) {
         const allDataBounds = plotLineRef.current.getAllDataBounds();
         if (allDataBounds) {
+          let minX = allDataBounds.minX;
+          const maxX = allDataBounds.maxX;
+
+          if (isLogX && minX <= 0) {
+            // Clamp to a reasonable small value to prevent -Infinity
+            // 1e-12 creates 12 decades of range, which is safe for our axis renderer
+            minX = 1e-12; 
+          }
+
           // CRITICAL FIX: Always use linear space bounds, regardless of log axis
           // The zoom controller will handle coordinate conversion internally
-          zoomController.current?.setOriginalDataBounds(allDataBounds.minX, allDataBounds.maxX);
+          zoomController.current?.setOriginalDataBounds(minX, maxX);
         }
       }
 
@@ -395,6 +327,7 @@ export const usePlotCalculations = ({
         // Calculate bounds manually from line data for consistency
         let dataMinX = Infinity;
         let dataMaxX = -Infinity;
+        let hasValidData = false;
 
         lineDataRef.current.forEach(line => {
           const extendedLine = line as ExtendedLineConfig;
@@ -403,14 +336,30 @@ export const usePlotCalculations = ({
             for (let i = 0; i < points.length; i += 2) {
               const x = points[i];
               if (x !== undefined && isFinite(x)) {
+                // CRITICAL FIX: Filter out non-positive values when in Log X mode
+                if (isLogX && x <= 0) continue;
+                
                 dataMinX = Math.min(dataMinX, x);
                 dataMaxX = Math.max(dataMaxX, x);
+                hasValidData = true;
               }
             }
           }
         });
 
-        if (isFinite(dataMinX) && isFinite(dataMaxX)) {
+        // Only set bounds if we found at least one valid data point
+        if (hasValidData && isFinite(dataMinX) && isFinite(dataMaxX)) {
+          // Additional safety check: ensure min < max
+          if (dataMinX >= dataMaxX) {
+             // Handle single point or tiny range
+             if (isLogX) {
+               dataMaxX = dataMinX * 10; 
+               dataMinX = dataMinX / 10;
+             } else {
+               dataMaxX = dataMinX + 1;
+               dataMinX = dataMinX - 1;
+             }
+          }
           zoomController.current.setOriginalDataBounds(dataMinX, dataMaxX);
         }
       }
@@ -501,6 +450,86 @@ export const usePlotCalculations = ({
     lineDataRef,
     zoomController,
   ]);
+
+  // Batched axis transition handler using React.startTransition
+  const handleAxisTransition = useCallback(() => {
+    if (!plotLineRef.current || !glRef.current || isTransitioningRef.current) return;
+
+    isTransitioningRef.current = true;
+
+    // Batch all axis mode changes in a single React transition
+    startTransition(() => {
+      try {
+        // 1. Apply log axis settings
+        plotLineRef.current!.setLogAxis(isLogX, isLogY);
+
+        // 2. Auto-scale for the new coordinate space
+        plotLineRef.current!.autoScale();
+
+        // 3. Reset zoom if transitioning to linear mode
+        if (!isLogX && !isLogY && zoomController.current) {
+          zoomController.current.resetZoom();
+        }
+
+        // 4. OPTIMIZED: Only recalculate axis scales, avoid full plot redraw
+        // The log conversion happens internally in webgl-plot, so we only need
+        // to get new data bounds and calculate new axis scales
+        // CRITICAL FIX: call function directly to avoid stale ref closure issues
+        calculateAndApplyScaling();
+
+        // 5. Single draw call to apply the log transformation visually
+        plotLineRef.current!.draw();
+      } finally {
+        // Reset transition flag after all operations complete
+        isTransitioningRef.current = false;
+      }
+    });
+  }, [isLogX, isLogY, plotLineRef, glRef, zoomController, calculateAndApplyScaling]);
+
+  // Handle log axis changes with batched updates to prevent re-render cascades
+  useEffect(() => {
+    if (!isCanvasInitialized || !plotLineRef.current || !glRef.current) return;
+    handleAxisTransition();
+  }, [isLogX, isLogY, isCanvasInitialized, plotLineRef, glRef, handleAxisTransition]);
+
+
+  // Handle theme changes - update WebGL background color immediately  
+  useEffect(() => {
+    const gl = glRef.current;
+    const plot = plotLineRef.current;
+
+    if (!isCanvasInitialized || !gl || !plot) {
+      if (!isCanvasInitialized) {
+        lastBackgroundModeRef.current = null;
+        lastBackgroundContextRef.current = null;
+      }
+      return;
+    }
+
+    const contextChanged = lastBackgroundContextRef.current !== gl;
+    const modeChanged = lastBackgroundModeRef.current !== isDarkMode;
+
+    if (!contextChanged && !modeChanged) {
+      return;
+    }
+
+    clearCanvas(gl, TRANSPARENT_CLEAR_COLOR);
+    plot.draw();
+
+    lastBackgroundModeRef.current = isDarkMode;
+    lastBackgroundContextRef.current = gl;
+  }, [isDarkMode, isCanvasInitialized, glRef, plotLineRef]);
+
+  // Handle data updates with simplified autoScale (now works correctly for all coordinate spaces)
+  useEffect(() => {
+    if (!plotLineRef.current || selectedVariables.length === 0) return;
+
+    // Use autoScale for data updates in both linear and log space
+    // autoScale() now works correctly for all coordinate spaces
+    plotLineRef.current.autoScale();
+  }, [selectedVariables, results, plotLineRef]);
+
+
 
   // Update plot visibility and colors
   const updatePlot = useCallback(() => {
