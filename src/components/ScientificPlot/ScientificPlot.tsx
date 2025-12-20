@@ -40,9 +40,13 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
   const [hoveredVariable, setHoveredVariable] = useState<string | null>(null);
 
   // Dual canvas state
-  const [canvas1SelectedVariables, setCanvas1SelectedVariables] = useState<string[]>([]);
+  const [canvas1SelectedVariables, setCanvas1SelectedVariables] = useState<string[]>(
+    initialConfig?.canvas1SelectedVariables ?? []
+  );
   const [canvas1HoveredVariable, setCanvas1HoveredVariable] = useState<string | null>(null);
-  const [canvas2SelectedVariables, setCanvas2SelectedVariables] = useState<string[]>([]);
+  const [canvas2SelectedVariables, setCanvas2SelectedVariables] = useState<string[]>(
+    initialConfig?.canvas2SelectedVariables ?? []
+  );
   const [canvas2HoveredVariable, setCanvas2HoveredVariable] = useState<string | null>(null);
 
   // Sync state changes to parent
@@ -71,37 +75,58 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
     onConfigChange,
   ]);
 
+  // Ref to track previous variable names to detect actual schema changes
+  const prevVariableNamesRef = useRef<string[]>(
+    results.length > 0 && results[0]?.variableNames 
+      ? results[0].variableNames.slice(1) 
+      : []
+  );
+  // Refs for filters to avoid dependencies instabilites
+  const canvas1FilterRef = useRef(canvas1Filter);
+  const canvas2FilterRef = useRef(canvas2Filter);
+
+  useEffect(() => {
+    canvas1FilterRef.current = canvas1Filter;
+    canvas2FilterRef.current = canvas2Filter;
+  }, [canvas1Filter, canvas2Filter]);
+
+  // Variable initialization logic
   // Variable initialization logic
   useEffect(() => {
     if (results.length > 0 && results[0]?.variableNames) {
       const allVariables = results[0].variableNames.slice(1);
+      const currentVariableNamesJson = JSON.stringify(allVariables);
+      const prevVariableNamesJson = JSON.stringify(prevVariableNamesRef.current);
       
-      if (numCanvases === 1) {
-        // Default to all variables if none selected
-        if (selectedVariables.length === 0) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
+      // Only run auto-selection if variable names have actually changed (new simulation schema)
+      // This prevents resetting user selection on simple re-renders or same-schema updates
+      if (currentVariableNamesJson !== prevVariableNamesJson) {
+        if (numCanvases === 1) {
+          // Default to all variables for new schema
           setSelectedVariables(allVariables);
-        }
-      } else if (numCanvases === 2) {
-         if (canvas1Filter || canvas2Filter) {
-            if (canvas1SelectedVariables.length === 0 && canvas1Filter) {
-                setCanvas1SelectedVariables(allVariables.filter(canvas1Filter));
-            } else if(canvas1SelectedVariables.length === 0) {
-                setCanvas1SelectedVariables(allVariables);
-            }
+        } else if (numCanvases === 2) {
+          const c1Filter = canvas1FilterRef.current;
+          const c2Filter = canvas2FilterRef.current;
 
-            if (canvas2SelectedVariables.length === 0 && canvas2Filter) {
-                setCanvas2SelectedVariables(allVariables.filter(canvas2Filter));
-            } else if (canvas2SelectedVariables.length === 0) {
-                setCanvas2SelectedVariables(allVariables);
-            }
-         } else {
-            if (canvas1SelectedVariables.length === 0) setCanvas1SelectedVariables(allVariables);
-            if (canvas2SelectedVariables.length === 0) setCanvas2SelectedVariables(allVariables);
-         }
+          // Apply filters to defaults if present
+          if (c1Filter) {
+             setCanvas1SelectedVariables(allVariables.filter(c1Filter));
+          } else {
+             setCanvas1SelectedVariables(allVariables);
+          }
+
+          if (c2Filter) {
+             setCanvas2SelectedVariables(allVariables.filter(c2Filter));
+          } else {
+             setCanvas2SelectedVariables(allVariables);
+          }
+        }
+        // Update the ref
+        prevVariableNamesRef.current = allVariables;
       }
     }
-  }, [results, numCanvases, selectedVariables.length, canvas1SelectedVariables.length, canvas2SelectedVariables.length, canvas1Filter, canvas2Filter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, numCanvases]);
 
 
   // Shared state

@@ -50,6 +50,9 @@ export interface PlotState {
   // Canvas-specific log Y state
   canvas1IsLogY: boolean;
   canvas2IsLogY: boolean;
+
+  // Track previous variable names for schema change detection
+  previousVariableNames: string[] | null;
 }
 
 export interface PlotActions {
@@ -137,6 +140,7 @@ export const createPlotSlice: StateCreator<
   isLogY2: false,
   canvas1IsLogY: false,
   canvas2IsLogY: false,
+  previousVariableNames: null,
 
   // To-be-plotted selection actions
   setIsToBePlottedMode: (mode) => set({ isToBePlottedMode: mode }),
@@ -264,6 +268,10 @@ export const createPlotSlice: StateCreator<
       }
 
       const newVariableNames = firstResult.variableNames.slice(1); // Skip first variable (frequency/time)
+      const currentVariableNamesJson = JSON.stringify(newVariableNames);
+      const prevVariableNamesJson = JSON.stringify(currentState.previousVariableNames || []);
+      
+      const isSchemaUnchanged = currentVariableNamesJson === prevVariableNamesJson && currentState.previousVariableNames !== null;
 
       // Determine which variables to select based on previous user selections
       let variablesToSelect: string[];
@@ -325,6 +333,9 @@ export const createPlotSlice: StateCreator<
                                         currentState.canvas1SelectedVariables.length > 0 || 
                                         currentState.canvas2SelectedVariables.length > 0;
       
+      // If schema is unchanged, we force "preservation" even if lists are empty (meaning user deselected all)
+      const shouldPreserveSelections = isSchemaUnchanged || hasExistingValidSelections;
+      
 
       set({
         results: [firstResult], // Always use firstResult which has been processed correctly
@@ -335,12 +346,14 @@ export const createPlotSlice: StateCreator<
         numCanvases: numCanvases as 1 | 2,
         isACModeActive,
         
-        // Variable selections - only update if no valid existing selections
-        ...(hasExistingValidSelections ? {} : {
+        // Variable selections - only update if no valid existing selections AND schema changed
+        ...(shouldPreserveSelections ? {} : {
           selectedVariables: variablesToSelect,
           canvas1SelectedVariables: canvas1Variables,
           canvas2SelectedVariables: canvas2Variables,
         }),
+        
+        previousVariableNames: newVariableNames,
         
         // Log scaling configuration for AC simulations
         ...(isACSimulation && {
