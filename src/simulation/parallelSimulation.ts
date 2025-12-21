@@ -165,9 +165,9 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * Run a single simulation in a web worker
+ * Run a single simulation in a web worker (internal use)
  */
-async function runSimulationInWorker(
+export async function runSimulationInWorker(
   worker: Worker,
   netlist: string,
   parameterValue: string,
@@ -248,6 +248,36 @@ async function runSimulationInWorker(
     // Send netlist to worker
     worker.postMessage({ netlist });
   });
+}
+
+/**
+ * Run a single simulation using the worker pool
+ */
+export async function runSingleSimulation(
+  netlist: string,
+  timeout: number = DEFAULT_TIMEOUT
+): Promise<SimulationWorkerResult> {
+  const workerPool = GlobalSimulationWorkerPool.getInstance();
+  await workerPool.initialize();
+  
+  workerPool.resetForNewSession();
+  
+  const worker = workerPool.getAvailableWorker();
+  if (!worker) {
+    throw new Error("No simulation workers available");
+  }
+
+  try {
+    return await runSimulationInWorker(
+      worker,
+      netlist,
+      "", // No parameter value
+      0,  // Parameter index 0
+      timeout
+    );
+  } finally {
+    workerPool.releaseWorker(worker);
+  }
 }
 
 /**

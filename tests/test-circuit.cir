@@ -1,0 +1,69 @@
+*test circuit
+.include modelcard.ptm
+ 
+ 
+VDD vdd 0 1.2
+VSS vss 0 0
+ 
+Vin in2 0 AC 1 SIN(0.6 0.6 10k 0 0)
+ 
+XUAMP out in2 out vdd vss basic_amp
+ 
+*Cl out vss 10p
+*Rl out vss 0.1k
+ 
+.tran 1u 1m
+ 
+.save v(out) v(in1) v(in2)
+ 
+.subckt basic_amp in1 in2 out vdd vss
+M3 d3 in2 midp vdd PTM90P W=72u L=850n
+M4 d4 in1 midp vdd PTM90P W=72u  L=850n
+M6 midp bias1 vdd vdd PTM90P W=10u L=800n
+ 
+M1 d1 in1 midn vss PTM90N W=32u L=850n
+M2 d2 in2 midn vss PTM90N W=32u L=850n
+M5  midn bias2 vss vss  PTM90N W=3.5u L=500n
+ 
+M7  d1  g7    vdd vdd PTM90P W=6u  L=180n
+M8  d2  g7    vdd vdd PTM90P W=6u  L=180n
+M9  g7  bias3 d1  vdd PTM90P W=6u  L=220n
+ 
+M10 d10 bias3 d2  vdd PTM90P W=6u  L=220n
+M11 s15 bias4 d4  vss PTM90N W=3.5u L=1200n
+M12 s17 bias4 d3  vss PTM90N W=3.5u L=1200n
+ 
+M13 d4  s15   vss  vss  PTM90N W=2u  L=1200n
+M14 d3  s15   vss  vss  PTM90N W=2u  L=1200n
+M15 g7  bias5 s15 vss   PTM90N W=3u  L=220n
+ 
+M16 s15 bias6 g7  vdd PTM90P W=10u L=1400n
+M17 d10 bias5 s17 vss PTM90N W=3u  L=180n
+M18 s17 bias6 d10 vdd PTM90P W=10u L=1400n
+ 
+M19 out d10 vdd vdd PTM90P W=280u L=380n
+M20 out s17 vss vss PTM90N W=140u L=380n
+ 
+M21 bias2 bias2 vss vss PTM90N W=0.5u L=2000n
+M22 bias1 bias1 vdd vdd PTM90P W=6.7u L=800n
+ 
+M23 bias3 bias3 vss  vss PTM90N W=4u  L=800n
+M24 bias3 bias1 vdd vdd PTM90P W=50u  L=800n
+ 
+M25 bias4 bias2 vss  vss PTM90N W=0.8u L=2000n
+M26 bias4 bias4 vdd vdd PTM90P W=180u  L=2000n
+ 
+M27 bias6 bias6 vss  vss PTM90N W=400u L=800n
+M28 bias6 bias1 vdd vdd PTM90P W=0.14u L=800n
+ 
+M29 bias5 bias2 vss  vss PTM90N W=0.19u  L=2000n
+M30 bias5 bias5 vdd vdd PTM90P W=400u  L=120n
+ 
+Cc1 out d10 4p
+Cc2 out s17 4p
+ 
+Ibias1 bias1 bias2 15u
+.ends
+ 
+ 
+.end

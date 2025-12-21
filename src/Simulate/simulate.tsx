@@ -225,54 +225,36 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         return;
       }
 
-      // Standard single simulation
-      const { Simulation } = await import("eecircuit-engine");
+      // Standard single simulation (using worker for performance isolation)
+      const { runSingleSimulation } = await import(
+        "../simulation/parallelSimulation"
+      );
 
-      const sim = new Simulation();
-      readEngineErrors = () => sim.getError();
-      await sim.start();
+      const start = performance.now();
+      const simResult = await runSingleSimulation(netListToSim);
+      const end = performance.now();
+      const duration = end - start;
 
-      sim.setNetList(netListToSim);
+      // Update window for testing/debugging
+      // @ts-ignore
+      window.lastSimulationDuration = duration;
 
-      const result = await sim.runSim();
-      const engineErrors = readEngineErrors ? readEngineErrors() : [];
-
-      if (!result) {
+      if (!simResult.success) {
         notifySimulationErrors(
-          engineErrors,
-          "Simulation failed to run. Check your netlist for errors."
+          simResult.errorDetails || [],
+          simResult.errorMessage ||
+            "Simulation failed to run. Check your netlist for errors."
         );
-        console.error("Simulation failed or returned no results.");
         return;
       }
 
-      // Check if the result has valid data and variables
-      const hasData = result.data && result.data.length > 0;
-      const hasVariables =
-        result.variableNames && result.variableNames.length > 0;
-
-      // Additional check for actual data points in the result
-      let hasDataPoints = false;
-      if (hasData) {
-        hasDataPoints = result.data.some(
-          (dataSet) => dataSet.values && dataSet.values.length > 0
-        );
-      }
-
-      if (!hasData || !hasVariables || !hasDataPoints) {
-        notifySimulationErrors(
-          engineErrors,
-          "Simulation ran but no results were generated. Check your netlist and simulation configuration."
-        );
-        console.error("Simulation completed but returned empty results.");
-        return; // Don't call handleNewResults, preventing tab switch
-      }
-
       // Valid results, proceed normally
-      handleNewResults([result]);
+      if (simResult.result) {
+        handleNewResults([simResult.result]);
+      }
 
-      if (engineErrors.length > 0) {
-        notifySimulationErrors(engineErrors);
+      if (simResult.errorDetails && simResult.errorDetails.length > 0) {
+        notifySimulationErrors(simResult.errorDetails);
       }
     } catch (error) {
       console.error("Simulation error:", error);

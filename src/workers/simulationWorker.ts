@@ -30,7 +30,10 @@ async function runSimulation(netlist: string): Promise<WorkerResponse> {
     }
 
     simulation.setNetList(netlist);
+    const start = performance.now();
     const result = await simulation.runSim();
+    const end = performance.now();
+    console.log(`[Worker] Simulation execution time: ${(end - start).toFixed(2)}ms`);
     const errorMessages = simulation.getError();
 
     if (result) {
