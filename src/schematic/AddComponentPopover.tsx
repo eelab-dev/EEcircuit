@@ -391,6 +391,10 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
         if (event.ctrlKey || event.metaKey || event.altKey) return;
         const key = event.key;
         if (key === "a" || key === "A") {
+          // Check if we are in the schematic tab
+          const mainTabValue = useAppStore.getState().mainTabValue;
+          if (mainTabValue !== "schematic") return;
+
           const target = event.target as HTMLElement | null;
           const tag = (target?.tagName || "").toLowerCase();
           const isEditable = !!target?.isContentEditable;
