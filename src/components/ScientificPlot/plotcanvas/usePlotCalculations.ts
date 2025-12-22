@@ -83,6 +83,7 @@ interface UsePlotCalculationsProps {
   isDarkMode: boolean;
   isLogX: boolean;
   isLogY: boolean;
+  lineThickness: number;
 }
 
 interface UsePlotCalculationsReturn {
@@ -119,6 +120,7 @@ export const usePlotCalculations = ({
   isDarkMode,
   isLogX,
   isLogY,
+  lineThickness,
 }: UsePlotCalculationsProps): UsePlotCalculationsReturn => {
   const [axisScales, setAxisScales] = useState<AxisScales>({
     scaleX: 1,
@@ -585,7 +587,9 @@ export const usePlotCalculations = ({
         currentColor = [currentColor[0], currentColor[1], currentColor[2], alpha];
       } else {
         // Regular plot behavior
-        thickness = isSelected && isHovered ? LINE_THICKNESS.HOVERED : LINE_THICKNESS.NORMAL;
+        const normalThickness = lineThickness ?? LINE_THICKNESS.NORMAL;
+        const hoveredThickness = normalThickness * 2;
+        thickness = isSelected && isHovered ? hoveredThickness : normalThickness;
       }
 
       // Update line properties using the new API methods
@@ -672,6 +676,7 @@ export const usePlotCalculations = ({
     zoomRegionRef,
     calculateAndApplyScaling,
     hoveredVariable,
+    lineThickness,
   ]);
 
   // Set the updatePlot ref so it can be called from the log axis useEffect
@@ -705,7 +710,9 @@ export const usePlotCalculations = ({
 
       // Only update thickness if this is a regular plot (not bracket operation)
       if (!isBracketOperationPlot) {
-        const thickness = isSelected && isHovered ? LINE_THICKNESS.HOVERED : LINE_THICKNESS.NORMAL;
+        const normalThickness = lineThickness ?? LINE_THICKNESS.NORMAL;
+        const hoveredThickness = normalThickness * 2;
+        const thickness = isSelected && isHovered ? hoveredThickness : normalThickness;
         plotLineRef.current!.updateLineThickness(index, thickness);
         lineData.thickness = thickness;
       }
@@ -739,7 +746,8 @@ export const usePlotCalculations = ({
     crosshairSnapToLines,
     zoomController,
     zoomLinesRef,
-    zoomRegionRef
+    zoomRegionRef,
+    lineThickness,
   ]);
 
   // Optimized bracket emphasis update - only updates line thickness and color without full redraw

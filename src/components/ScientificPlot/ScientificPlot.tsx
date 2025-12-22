@@ -23,6 +23,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
   canvas2Filter,
   lockNumCanvases = false,
   onConfigChange,
+  lineThickness: initialLineThickness = 1,
 }) => {
   // State initialization from config or defaults
   const [numCanvases, setNumCanvases] = useState(initialConfig?.numCanvases ?? 1);
@@ -30,6 +31,12 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
   const [isLogY, setIsLogY] = useState(initialConfig?.isLogY ?? false);
   const [isLogY1, setIsLogY1] = useState(initialConfig?.isLogY1 ?? false);
   const [isLogY2, setIsLogY2] = useState(initialConfig?.isLogY2 ?? false);
+  const [lineThickness, setLineThickness] = useState(initialConfig?.lineThickness ?? initialLineThickness);
+
+  // Update internal state when prop changes
+  useEffect(() => {
+    setLineThickness(initialLineThickness);
+  }, [initialLineThickness]);
 
 
 
@@ -61,6 +68,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
         selectedVariables,
         canvas1SelectedVariables,
         canvas2SelectedVariables,
+        lineThickness,
       });
     }
   }, [
@@ -72,6 +80,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
     selectedVariables,
     canvas1SelectedVariables,
     canvas2SelectedVariables,
+    lineThickness,
     onConfigChange,
   ]);
 
@@ -252,8 +261,9 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
                  emphasizedPlotIndex={emphasizedPlotIndex}
                  isLogX={isLogX}
                  isLogY={isLogY}
-                 canvasId={1} // Just 1 as default
-               />
+                  canvasId={1} // Just 1 as default
+                  lineThickness={lineThickness}
+                />
              </Box>
           )}
 
@@ -292,6 +302,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
                       emphasizedPlotIndex={emphasizedPlotIndex}
                       isLogX={isLogX}
                       isLogY={isLogY1}
+                      lineThickness={lineThickness}
                     />
                   </Box>
                </VStack>
@@ -329,6 +340,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
                       emphasizedPlotIndex={emphasizedPlotIndex}
                       isLogX={isLogX}
                       isLogY={isLogY2}
+                      lineThickness={lineThickness}
                     />
                   </Box>
                </VStack>

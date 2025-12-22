@@ -205,6 +205,7 @@ const EEcircuitApp: React.FC = () => {
     // Plot configuration state
     isLogX, isLogY, isLogY1, isLogY2, numCanvases,
     selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
+    lineThickness,
     updatePlotConfig,
   } = useAppStore();
 
@@ -600,20 +601,23 @@ const EEcircuitApp: React.FC = () => {
       isLogX,
       isLogY1,
       isLogY2,
-      selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables
+      selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
+      lineThickness,
     },
     canvas1Title: "Magnitude",
     canvas2Title: "Phase",
-    canvas1Filter: (v: string) => v.toLowerCase().includes("[mag]"),
     canvas2Filter: (v: string) => v.toLowerCase().includes("[phase]"),
     lockNumCanvases: true,
+    lineThickness,
   } : {
      initialConfig: {
        numCanvases: numCanvases as 1 | 2,
        isLogX,
        isLogY,
-       selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables
-     }
+        selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
+        lineThickness,
+      },
+      lineThickness,
   };
 
   return (

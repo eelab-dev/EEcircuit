@@ -64,6 +64,7 @@ interface PlotCanvasProps {
   isDarkMode: boolean;
   isLogX: boolean;
   isLogY: boolean; // Resolved (Y1 or Y2 based on canvasId)
+  lineThickness: number;
 }
 
 const TRANSPARENT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 0];
@@ -95,6 +96,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   isDarkMode,
   isLogX,
   isLogY,
+  lineThickness,
 }) => {
 
   const [isAxis] = useState(true);
@@ -134,6 +136,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
   } = useCanvasInitialization({
     results,
     isDarkMode,
+    lineThickness,
   });
 
   // Callback for cursor sync redraw - optimized for crosshair-only updates
@@ -281,6 +284,7 @@ const PlotCanvas: React.FC<PlotCanvasProps> = ({
       isDarkMode,
       isLogX,
       isLogY,
+      lineThickness,
     });
 
   // Update refs when functions change

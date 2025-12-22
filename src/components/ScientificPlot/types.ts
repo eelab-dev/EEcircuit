@@ -11,6 +11,7 @@ export interface PlotConfig {
   selectedVariables: string[]; // For single canvas
   canvas1SelectedVariables: string[]; // For dual canvas
   canvas2SelectedVariables: string[]; // For dual canvas
+  lineThickness: number;
 }
 
 // Copied from resultAggregator.ts to make component independent
@@ -59,4 +60,5 @@ export interface ScientificPlotProps {
   canvas2Filter?: (variable: string) => boolean;
   lockNumCanvases?: boolean;
   onConfigChange?: (config: Partial<PlotConfig>) => void;
+  lineThickness?: number;
 }

@@ -38,11 +38,13 @@ type ExtendedLineConfig = LineConfig & {
 interface UseCanvasInitializationProps {
   results: ResultType[];
   isDarkMode: boolean;
+  lineThickness: number;
 }
 
 export const useCanvasInitialization = ({
   results,
   isDarkMode,
+  lineThickness,
 }: UseCanvasInitializationProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const glRef = useRef<WebGL2RenderingContext | null>(null);
@@ -280,7 +282,7 @@ export const useCanvasInitialization = ({
             } allLineData.push({
               points: new Float32Array(array),
               color: baseColor, // Use same color for all parameter sweeps of this variable
-              thickness: LINE_THICKNESS.NORMAL,
+              thickness: lineThickness,
               scale: [1, 1],
               offset: [0, 0],
               enabled: true,
@@ -331,7 +333,7 @@ export const useCanvasInitialization = ({
               themeIsDarkMode,
               colorMapRef.current
             ),
-            thickness: LINE_THICKNESS.NORMAL,
+            thickness: lineThickness,
             scale: [1, 1],
             offset: [0, 0],
             enabled: true,
@@ -361,7 +363,7 @@ export const useCanvasInitialization = ({
       cancelAnimationFrame(rafId);
       setIsCanvasInitialized(false);
     };
-  }, [results, initSnapCircle, isDarkMode]);
+  }, [results, initSnapCircle, isDarkMode, lineThickness]);
 
   useEffect(() => {
     if (!snapCircleRef.current) {

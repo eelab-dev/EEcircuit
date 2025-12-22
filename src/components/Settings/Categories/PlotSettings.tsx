@@ -1,5 +1,5 @@
 import React from "react";
-import { Flex, IconButton, Text } from "@chakra-ui/react";
+import { Flex, IconButton, Text, Box, Slider } from "@chakra-ui/react";
 import { RotateCcw } from "lucide-react";
 import { CustomCheckbox as Checkbox } from "../../ui/checkbox";
 import { useAppStore } from "../../../store/appStore";
@@ -9,6 +9,8 @@ interface PlotSettingsProps {
   setTempResetVariableSelections: (value: boolean) => void;
   tempResetPlotState: boolean;
   setTempResetPlotState: (value: boolean) => void;
+  lineThickness: number;
+  setLineThickness: (value: number) => void;
 }
 
 const PlotSettings: React.FC<PlotSettingsProps> = ({
@@ -16,6 +18,8 @@ const PlotSettings: React.FC<PlotSettingsProps> = ({
   setTempResetVariableSelections,
   tempResetPlotState,
   setTempResetPlotState,
+  lineThickness,
+  setLineThickness,
 }) => {
   return (
     <Flex flexDirection="column" gap="3">
@@ -77,6 +81,34 @@ const PlotSettings: React.FC<PlotSettingsProps> = ({
           <RotateCcw size={12} />
         </IconButton>
       </Flex>
+
+      <Box pt={2}>
+        <Text fontSize="sm" fontWeight="medium" mb={1}>
+          Line Thickness
+        </Text>
+        <Flex alignItems="center" gap={3}>
+          <Box flex="1">
+            <Slider.Root
+              min={1}
+              max={5}
+              step={0.5}
+              value={[lineThickness]}
+              onValueChange={(details) => setLineThickness(details.value[0] ?? 1)}
+              size="sm"
+            >
+              <Slider.Control>
+                <Slider.Track>
+                  <Slider.Range />
+                </Slider.Track>
+                <Slider.Thumb index={0} />
+              </Slider.Control>
+            </Slider.Root>
+          </Box>
+          <Text fontSize="xs" minW="3ch">
+            {lineThickness}
+          </Text>
+        </Flex>
+      </Box>
     </Flex>
   );
 };

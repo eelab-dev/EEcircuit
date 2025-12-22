@@ -37,6 +37,8 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
   const setResetPlotStateOnNewSim = useAppStore(
     (state) => state.setResetPlotStateOnNewSim
   );
+  const lineThickness = useAppStore((state) => state.lineThickness);
+  const setLineThickness = useAppStore((state) => state.setLineThickness);
 
   // Local state for temp values
   const [tempMaxWorkers, setTempMaxWorkers] = useState(maxWebWorkers);
@@ -45,6 +47,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
   const [tempResetPlotState, setTempResetPlotState] = useState(
     resetPlotStateOnNewSim
   );
+  const [tempLineThickness, setTempLineThickness] = useState(lineThickness);
 
   const [activeCategory, setActiveCategory] =
     useState<SettingsCategory>("simulation");
@@ -55,6 +58,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
     setMaxWebWorkers(tempMaxWorkers);
     setResetVariableSelectionsOnNewSim(tempResetVariableSelections);
     setResetPlotStateOnNewSim(tempResetPlotState);
+    setLineThickness(tempLineThickness);
     onClose();
   };
 
@@ -63,6 +67,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
     setTempMaxWorkers(maxWebWorkers);
     setTempResetVariableSelections(resetVariableSelectionsOnNewSim);
     setTempResetPlotState(resetPlotStateOnNewSim);
+    setTempLineThickness(lineThickness);
     onClose();
   };
 
@@ -115,6 +120,8 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
                   }
                   tempResetPlotState={tempResetPlotState}
                   setTempResetPlotState={setTempResetPlotState}
+                  lineThickness={tempLineThickness}
+                  setLineThickness={setTempLineThickness}
                 />
               )}
             </Box>
