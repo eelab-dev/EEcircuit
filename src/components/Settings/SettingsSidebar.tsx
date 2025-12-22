@@ -1,0 +1,51 @@
+import React from "react";
+import { Flex, Button } from "@chakra-ui/react";
+import { Activity, Settings2 } from "lucide-react";
+
+export type SettingsCategory = "simulation" | "plotting";
+
+interface SettingsSidebarProps {
+  activeCategory: SettingsCategory;
+  setActiveCategory: (category: SettingsCategory) => void;
+}
+
+const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
+  activeCategory,
+  setActiveCategory,
+}) => {
+  return (
+    <Flex
+      direction="column"
+      gap={2}
+      p={2}
+      borderRightWidth="1px"
+      borderColor="border.muted"
+      width="100%"
+      height="100%"
+      bg="bg.subtle"
+    >
+      <Button
+        variant={activeCategory === "simulation" ? "subtle" : "ghost"}
+        justifyContent="flex-start"
+        onClick={() => setActiveCategory("simulation")}
+        size="sm"
+        width="100%"
+      >
+        <Activity size={16} style={{ marginRight: "8px" }} />
+        Simulation
+      </Button>
+      <Button
+        variant={activeCategory === "plotting" ? "subtle" : "ghost"}
+        justifyContent="flex-start"
+        onClick={() => setActiveCategory("plotting")}
+        size="sm"
+        width="100%"
+      >
+        <Settings2 size={16} style={{ marginRight: "8px" }} />
+        Plotting
+      </Button>
+    </Flex>
+  );
+};
+
+export default SettingsSidebar;

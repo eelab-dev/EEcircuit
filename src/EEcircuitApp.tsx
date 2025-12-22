@@ -50,11 +50,8 @@ const HeaderButtons = React.lazy(loadHeaderButtons);
 const loadClearSchematicDialog = () => import("./schematic/ClearSchematicDialog");
 const ClearSchematicDialog = React.lazy(loadClearSchematicDialog);
 
-const loadSimulationGlobalConfigDialog = () =>
-  import("./Simulate/SimulationGlobalConfigDialog");
-const SimulationGlobalConfigDialog = React.lazy(
-  loadSimulationGlobalConfigDialog
-);
+const loadSettingsDialog = () => import("./components/Settings/SettingsDialog");
+const SettingsDialog = React.lazy(loadSettingsDialog);
 
 const TabPanelSkeleton: React.FC<{ label: string }> = ({ label }) => (
   <Flex
@@ -126,7 +123,7 @@ const EEcircuitApp: React.FC = () => {
     const warmLazyDependencies = () => {
       void loadHeaderButtons();
       void loadClearSchematicDialog();
-      void loadSimulationGlobalConfigDialog();
+      void loadSettingsDialog();
     };
 
     let idleHandle: number | undefined;
@@ -863,10 +860,12 @@ const EEcircuitApp: React.FC = () => {
 
       {/* Simulation Configuration Dialog */}
       <React.Suspense fallback={null}>
-        <SimulationGlobalConfigDialog
-          open={showConfigDialog}
-          onClose={() => setShowConfigDialog(false)}
-        />
+        {showConfigDialog && (
+          <SettingsDialog
+            open={showConfigDialog}
+            onClose={() => setShowConfigDialog(false)}
+          />
+        )}
       </React.Suspense>
 
       <Toaster />
