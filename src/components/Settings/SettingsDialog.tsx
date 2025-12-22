@@ -13,7 +13,7 @@ import {
 } from "@chakra-ui/react";
 import { useAppStore } from "../../store/appStore";
 import { dialogTheme } from "../../styles/uiThemes";
-import SettingsSidebar, { SettingsCategory } from "./SettingsSidebar";
+import SettingsSidebar from "./SettingsSidebar";
 import SimulationSettings from "./Categories/SimulationSettings";
 import PlotSettings from "./Categories/PlotSettings";
 
@@ -39,6 +39,8 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
   );
   const lineThickness = useAppStore((state) => state.lineThickness);
   const setLineThickness = useAppStore((state) => state.setLineThickness);
+  const activeSettingsCategory = useAppStore((state) => state.activeSettingsCategory);
+  const setActiveSettingsCategory = useAppStore((state) => state.setActiveSettingsCategory);
 
   // Local state for temp values
   const [tempMaxWorkers, setTempMaxWorkers] = useState(maxWebWorkers);
@@ -49,8 +51,6 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
   );
   const [tempLineThickness, setTempLineThickness] = useState(lineThickness);
 
-  const [activeCategory, setActiveCategory] =
-    useState<SettingsCategory>("simulation");
 
 
 
@@ -99,20 +99,20 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
             {/* Sidebar - Left Column */}
             <Box width="250px" height="100%">
               <SettingsSidebar
-                activeCategory={activeCategory}
-                setActiveCategory={setActiveCategory}
+                activeCategory={activeSettingsCategory}
+                setActiveCategory={setActiveSettingsCategory}
               />
             </Box>
 
             {/* Content - Right Column */}
             <Box flex={1} p={6} overflowY="auto">
-              {activeCategory === "simulation" && (
+              {activeSettingsCategory === "simulation" && (
                 <SimulationSettings
                   tempMaxWorkers={tempMaxWorkers}
                   setTempMaxWorkers={setTempMaxWorkers}
                 />
               )}
-              {activeCategory === "plotting" && (
+              {activeSettingsCategory === "plotting" && (
                 <PlotSettings
                   tempResetVariableSelections={tempResetVariableSelections}
                   setTempResetVariableSelections={

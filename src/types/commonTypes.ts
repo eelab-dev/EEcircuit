@@ -58,3 +58,5 @@ export type CurrentProbeSelection = {
 };
 
 export type ToBePlotted = VoltageSelection | CurrentProbeSelection;
+
+export type SettingsCategory = "simulation" | "plotting";

@@ -1,6 +1,7 @@
 import { sendCommand, setTheme } from "eecircuit-schematic";
 import { StateCreator } from "zustand";
 import { getRecommendedInputProfile } from "../utils/deviceDetection";
+import { SettingsCategory } from "../types/commonTypes";
 
 // UI state and actions
 export interface UiState {
@@ -17,6 +18,7 @@ export interface UiState {
   hasSchematicErrors: boolean;
   // One-shot override flag to allow navigating to Simulate despite errors
   overrideSimulateOnNetlistErrorsOnce: boolean;
+  activeSettingsCategory: SettingsCategory;
 }
 
 export interface UiActions {
@@ -35,6 +37,7 @@ export interface UiActions {
   setHasSchematicErrors: (hasErrors: boolean) => void;
   resetSchematicErrors: () => void;
   setOverrideSimulateOnNetlistErrorsOnce: (override: boolean) => void;
+  setActiveSettingsCategory: (category: SettingsCategory) => void;
 }
 
 export type UiSlice = UiState & UiActions;
@@ -108,6 +111,7 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
     resetPlotStateOnNewSim: false,
     hasSchematicErrors: false,
     overrideSimulateOnNetlistErrorsOnce: false,
+    activeSettingsCategory: "simulation",
 
     // Actions
     setInputProfile: (profile) => set({ inputProfile: profile }),
@@ -177,5 +181,6 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
     resetSchematicErrors: () => set({ hasSchematicErrors: false }),
     setOverrideSimulateOnNetlistErrorsOnce: (override) =>
       set({ overrideSimulateOnNetlistErrorsOnce: override === true }),
+    setActiveSettingsCategory: (category) => set({ activeSettingsCategory: category }),
   };
 };

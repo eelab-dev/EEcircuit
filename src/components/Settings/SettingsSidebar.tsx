@@ -2,7 +2,7 @@ import React from "react";
 import { Flex, Button } from "@chakra-ui/react";
 import { Activity, Settings2 } from "lucide-react";
 
-export type SettingsCategory = "simulation" | "plotting";
+import { SettingsCategory } from "../../types/commonTypes";
 
 interface SettingsSidebarProps {
   activeCategory: SettingsCategory;
