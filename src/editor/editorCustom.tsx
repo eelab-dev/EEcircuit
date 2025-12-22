@@ -55,11 +55,7 @@ const EditorCustom = ({
       const monacoEditor = MonacoEditor;
       monacoRef.current = monacoEditor;
       
-      // Expose monaco to window for testing purposes
-      if (typeof window !== 'undefined') {
-        // @ts-ignore
-        window.monaco = monacoEditor;
-      }
+
       
       editorRef.current = monacoEditor.editor;
 

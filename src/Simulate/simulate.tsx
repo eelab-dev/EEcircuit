@@ -230,14 +230,9 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         "../simulation/parallelSimulation"
       );
 
-      const start = performance.now();
       const simResult = await runSingleSimulation(netListToSim);
-      const end = performance.now();
-      const duration = end - start;
 
-      // Update window for testing/debugging
-      // @ts-ignore
-      window.lastSimulationDuration = duration;
+
 
       if (!simResult.success) {
         notifySimulationErrors(

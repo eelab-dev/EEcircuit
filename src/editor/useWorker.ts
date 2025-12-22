@@ -6,8 +6,13 @@ import htmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
 import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 
 // Monaco environment needs to be set on self for web worker support
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(self as any).MonacoEnvironment = {
+interface MonacoEnvironmentGlobal {
+  MonacoEnvironment: {
+    getWorker(_: unknown, label: string): Worker;
+  };
+}
+
+(self as unknown as MonacoEnvironmentGlobal).MonacoEnvironment = {
   getWorker(_: unknown, label: string) {
     if (label === "json") {
       return new jsonWorker();

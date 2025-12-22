@@ -260,8 +260,7 @@ export const createPlotSlice: StateCreator<
       let isACSimulation = false;
       if (!isBracketResult && firstResult.dataType === 'complex') {
         isACSimulation = true;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        firstResult = transformResultForComplexData(firstResult) as any;
+        firstResult = transformResultForComplexData(firstResult);
       } else if (isBracketResult && firstResult.dataType === 'complex') {
         // Bracket operation with complex data - already transformed in aggregation
         isACSimulation = true;
@@ -271,7 +270,7 @@ export const createPlotSlice: StateCreator<
       const currentVariableNamesJson = JSON.stringify(newVariableNames);
       const prevVariableNamesJson = JSON.stringify(currentState.previousVariableNames || []);
       
-      const isSchemaUnchanged = currentVariableNamesJson === prevVariableNamesJson && currentState.previousVariableNames !== null;
+      const areResultVariableNamesUnchanged = currentVariableNamesJson === prevVariableNamesJson && currentState.previousVariableNames !== null;
 
       // Determine which variables to select based on previous user selections
       let variablesToSelect: string[];
@@ -333,8 +332,8 @@ export const createPlotSlice: StateCreator<
                                         currentState.canvas1SelectedVariables.length > 0 || 
                                         currentState.canvas2SelectedVariables.length > 0;
       
-      // If schema is unchanged, we force "preservation" even if lists are empty (meaning user deselected all)
-      const shouldPreserveSelections = isSchemaUnchanged || hasExistingValidSelections;
+      // If ResultVariableNames are unchanged, we force "preservation" even if lists are empty (meaning user deselected all)
+      const shouldPreserveSelections = areResultVariableNamesUnchanged || hasExistingValidSelections;
       
 
       set({
@@ -346,7 +345,7 @@ export const createPlotSlice: StateCreator<
         numCanvases: numCanvases as 1 | 2,
         isACModeActive,
         
-        // Variable selections - only update if no valid existing selections AND schema changed
+        // Variable selections - only update if no valid existing selections AND ResultVariableNames changed
         ...(shouldPreserveSelections ? {} : {
           selectedVariables: variablesToSelect,
           canvas1SelectedVariables: canvas1Variables,

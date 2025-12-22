@@ -58,15 +58,21 @@ export function isComplexDataType(dataType: string): boolean {
  * Transform a single ResultType to handle complex data by expanding variables
  * Each complex variable becomes 2 data elements: magnitude and phase
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function transformResultForComplexData(result: ResultType): any {
+export function transformResultForComplexData(result: ResultType): ResultType {
   if (!isComplexDataType(result.dataType)) {
     return result;
   }
 
 
+
   // For complex data, create expanded data array
-  const transformedData: Array<{ values: number[]; name: string; type: string }> = [];
+  // Define local type matching RealDataType from eecircuit-engine
+  type ExpandedData = {
+    values: number[];
+    name: string;
+    type: "voltage" | "current" | "time" | "frequency" | "notype";
+  };
+  const transformedData: ExpandedData[] = [];
   const expandedVariableNames: string[] = [];
 
   // First, handle frequency data (index 0) - extract real part
@@ -76,7 +82,7 @@ export function transformResultForComplexData(result: ResultType): any {
     transformedData.push({
       values: frequencyValues,
       name: frequencyData.name,
-      type: frequencyData.type || 'frequency'
+      type: (frequencyData.type as ExpandedData['type']) || 'frequency'
     });
     expandedVariableNames.push(frequencyData.name);
     
@@ -94,7 +100,7 @@ export function transformResultForComplexData(result: ResultType): any {
     transformedData.push({
       values: magnitudes,
       name: `${dataElement.name}[mag]`,
-      type: dataElement.type || 'voltage'
+      type: (dataElement.type as ExpandedData['type']) || 'voltage'
     });
     expandedVariableNames.push(`${dataElement.name}[mag]`);
 
@@ -102,7 +108,7 @@ export function transformResultForComplexData(result: ResultType): any {
     transformedData.push({
       values: phases,
       name: `${dataElement.name}[phase]`,
-      type: dataElement.type || 'voltage'
+      type: (dataElement.type as ExpandedData['type']) || 'voltage'
     });
     expandedVariableNames.push(`${dataElement.name}[phase]`);
 
@@ -115,6 +121,7 @@ export function transformResultForComplexData(result: ResultType): any {
     variableNames: expandedVariableNames,
     numVariables: expandedVariableNames.length,
     numPoints: transformedData[0]?.values?.length || 0,
-    data: transformedData
-  };
+    data: transformedData,
+    dataType: 'real'
+  } as ResultType;
 }

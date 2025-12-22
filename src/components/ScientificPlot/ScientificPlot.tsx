@@ -75,58 +75,43 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
     onConfigChange,
   ]);
 
-  // Ref to track previous variable names to detect actual schema changes
-  const prevVariableNamesRef = useRef<string[]>(
+  // State to track previous input line names to detect actual data input line signature changes
+  // Using state instead of ref to allow render-time updates
+  const [prevInputLineNames, setPrevInputLineNames] = useState<string[]>(
     results.length > 0 && results[0]?.variableNames 
       ? results[0].variableNames.slice(1) 
       : []
   );
-  // Refs for filters to avoid dependencies instabilites
-  const canvas1FilterRef = useRef(canvas1Filter);
-  const canvas2FilterRef = useRef(canvas2Filter);
 
-  useEffect(() => {
-    canvas1FilterRef.current = canvas1Filter;
-    canvas2FilterRef.current = canvas2Filter;
-  }, [canvas1Filter, canvas2Filter]);
+  // Variable initialization logic - Render-time state update (replaces useEffect)
+  if (results.length > 0 && results[0]?.variableNames) {
+    const inputLineNames = results[0].variableNames.slice(1);
+    const currentInputLineNamesJson = JSON.stringify(inputLineNames);
+    const prevInputLineNamesJson = JSON.stringify(prevInputLineNames);
 
-  // Variable initialization logic
-  // Variable initialization logic
-  useEffect(() => {
-    if (results.length > 0 && results[0]?.variableNames) {
-      const allVariables = results[0].variableNames.slice(1);
-      const currentVariableNamesJson = JSON.stringify(allVariables);
-      const prevVariableNamesJson = JSON.stringify(prevVariableNamesRef.current);
-      
-      // Only run auto-selection if variable names have actually changed (new simulation schema)
-      // This prevents resetting user selection on simple re-renders or same-schema updates
-      if (currentVariableNamesJson !== prevVariableNamesJson) {
-        if (numCanvases === 1) {
-          // Default to all variables for new schema
-          setSelectedVariables(allVariables);
-        } else if (numCanvases === 2) {
-          const c1Filter = canvas1FilterRef.current;
-          const c2Filter = canvas2FilterRef.current;
+    // Only run auto-selection if input line names have actually changed (new data input line signature)
+    if (currentInputLineNamesJson !== prevInputLineNamesJson) {
+      setPrevInputLineNames(inputLineNames);
 
-          // Apply filters to defaults if present
-          if (c1Filter) {
-             setCanvas1SelectedVariables(allVariables.filter(c1Filter));
-          } else {
-             setCanvas1SelectedVariables(allVariables);
-          }
-
-          if (c2Filter) {
-             setCanvas2SelectedVariables(allVariables.filter(c2Filter));
-          } else {
-             setCanvas2SelectedVariables(allVariables);
-          }
+      if (numCanvases === 1) {
+        // Default to all variables for new input line signature
+        setSelectedVariables(inputLineNames);
+      } else if (numCanvases === 2) {
+        // Apply filters to defaults if present
+        if (canvas1Filter) {
+           setCanvas1SelectedVariables(inputLineNames.filter(canvas1Filter));
+        } else {
+           setCanvas1SelectedVariables(inputLineNames);
         }
-        // Update the ref
-        prevVariableNamesRef.current = allVariables;
+
+        if (canvas2Filter) {
+           setCanvas2SelectedVariables(inputLineNames.filter(canvas2Filter));
+        } else {
+           setCanvas2SelectedVariables(inputLineNames);
+        }
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [results, numCanvases]);
+  }
 
 
   // Shared state
