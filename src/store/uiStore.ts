@@ -19,6 +19,7 @@ export interface UiState {
   // One-shot override flag to allow navigating to Simulate despite errors
   overrideSimulateOnNetlistErrorsOnce: boolean;
   activeSettingsCategory: SettingsCategory;
+  isWiring: boolean;
 }
 
 export interface UiActions {
@@ -38,6 +39,7 @@ export interface UiActions {
   resetSchematicErrors: () => void;
   setOverrideSimulateOnNetlistErrorsOnce: (override: boolean) => void;
   setActiveSettingsCategory: (category: SettingsCategory) => void;
+  setIsWiring: (isWiring: boolean) => void;
 }
 
 export type UiSlice = UiState & UiActions;
@@ -112,6 +114,7 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
     hasSchematicErrors: false,
     overrideSimulateOnNetlistErrorsOnce: false,
     activeSettingsCategory: "simulation",
+    isWiring: false,
 
     // Actions
     setInputProfile: (profile) => set({ inputProfile: profile }),
@@ -182,5 +185,6 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
     setOverrideSimulateOnNetlistErrorsOnce: (override) =>
       set({ overrideSimulateOnNetlistErrorsOnce: override === true }),
     setActiveSettingsCategory: (category) => set({ activeSettingsCategory: category }),
+    setIsWiring: (isWiring) => set({ isWiring }),
   };
 };

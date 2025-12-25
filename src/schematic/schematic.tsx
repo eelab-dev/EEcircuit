@@ -18,6 +18,7 @@ import { Box, Float } from "@chakra-ui/react";
 import debounce from "lodash.debounce";
 
 import Actions from "./actions";
+import TouchControls from "./TouchControls";
 import { useSchematicKeyboard } from "./useSchematicKeyboard";
 import Properties from "./properties";
 import BottomBar from "./bottombar";
@@ -199,6 +200,17 @@ const Schematic: React.FC<SchematicProps> = ({
           // Call the callback to uplift schematic data to parent
           if (handleSchematicDataChangeRef.current) {
             handleSchematicDataChangeRef.current(msg.schematic);
+          }
+          break;
+        case "wiringStatus":
+          // Dispatch directly to store
+          // Use unknown cast to access extended type if type definition isn't updated yet in IDE context
+          // but runtime should work given the interface exists in the package.
+          {
+            const setIsWiring = useAppStore.getState().setIsWiring;
+            if (setIsWiring) {
+              setIsWiring(msg.isDrawing);
+            }
           }
           break;
       }
@@ -792,6 +804,11 @@ const Schematic: React.FC<SchematicProps> = ({
               onExportImage={handleExportImage}
               onShowShortcuts={handleShowShortcuts}
             />
+          </Float>
+        )}
+        {!isToBePlottedMode && (
+          <Float offset="10" placement="middle-end">
+            <TouchControls />
           </Float>
         )}
         {propertiesOpen && (

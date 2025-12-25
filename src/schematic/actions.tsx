@@ -181,6 +181,7 @@ const Actions: React.FC<ActionsProps> = ({
           <Keyboard />
         </IconButton>
       </Tooltip>
+
     </div>
   );
 };
