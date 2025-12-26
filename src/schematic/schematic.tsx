@@ -202,14 +202,18 @@ const Schematic: React.FC<SchematicProps> = ({
             handleSchematicDataChangeRef.current(msg.schematic);
           }
           break;
-        case "wiringStatus":
-          // Dispatch directly to store
-          // Use unknown cast to access extended type if type definition isn't updated yet in IDE context
-          // but runtime should work given the interface exists in the package.
+        case "schematicEditorActivity":
           {
-            const setIsWiring = useAppStore.getState().setIsWiring;
-            if (setIsWiring) {
-              setIsWiring(msg.isDrawing);
+            const { setIsWiring, setIsMoving } = useAppStore.getState();
+            if (msg.activity === "wiring") {
+              setIsWiring?.(true);
+              setIsMoving?.(false);
+            } else if (msg.activity === "moving") {
+              setIsWiring?.(false);
+              setIsMoving?.(true);
+            } else {
+              setIsWiring?.(false);
+              setIsMoving?.(false);
             }
           }
           break;

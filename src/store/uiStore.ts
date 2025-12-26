@@ -20,6 +20,7 @@ export interface UiState {
   overrideSimulateOnNetlistErrorsOnce: boolean;
   activeSettingsCategory: SettingsCategory;
   isWiring: boolean;
+  isMoving: boolean;
 }
 
 export interface UiActions {
@@ -40,6 +41,7 @@ export interface UiActions {
   setOverrideSimulateOnNetlistErrorsOnce: (override: boolean) => void;
   setActiveSettingsCategory: (category: SettingsCategory) => void;
   setIsWiring: (isWiring: boolean) => void;
+  setIsMoving: (isMoving: boolean) => void;
 }
 
 export type UiSlice = UiState & UiActions;
@@ -115,6 +117,7 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
     overrideSimulateOnNetlistErrorsOnce: false,
     activeSettingsCategory: "simulation",
     isWiring: false,
+    isMoving: false,
 
     // Actions
     setInputProfile: (profile) => set({ inputProfile: profile }),
@@ -186,5 +189,6 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
       set({ overrideSimulateOnNetlistErrorsOnce: override === true }),
     setActiveSettingsCategory: (category) => set({ activeSettingsCategory: category }),
     setIsWiring: (isWiring) => set({ isWiring }),
+    setIsMoving: (isMoving) => set({ isMoving }),
   };
 };
