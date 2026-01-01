@@ -497,6 +497,7 @@ export const componentPropertyConfigs: Record<ComponentType, PropertyField[]> =
         required: true,
       },
     ],
+    OPAMP90: [], // No specific properties for now
   };
 
 // Extended types for property management

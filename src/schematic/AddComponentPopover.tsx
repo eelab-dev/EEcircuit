@@ -17,6 +17,7 @@ const createCategoryPriority = (): Record<ComponentCategory, number> => {
     power: 4, // VDD, GND
     "dependent-source": 5, // dependent sources (VCVS, CCCS, etc.)
     connection: 6, // ports, connections
+    subcircuit: 7, // subcircuits
   };
 
   return priorities;

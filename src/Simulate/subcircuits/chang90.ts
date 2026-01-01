@@ -1,22 +1,5 @@
-*test circuit
-.include modelcard.ptm
- 
- 
-VDD vdd 0 1.2
-VSS vss 0 0
- 
-Vin inp 0 AC 1 SIN(0.6 0.6 10k 0 0)
- 
-XUAMP inp out out vdd vss basic_amp
- 
-*Cl out vss 10p
-*Rl out vss 0.1k
- 
-.tran 1u 1m
- 
-.save v(out) v(inn) v(inp)
- 
-.subckt basic_amp inp inn out vdd vss
+export const chang90 = `
+.subckt chang90 inp inn out vdd vss
 M3 d3 inp midp vdd PTM90P W=72u L=850n
 M4 d4 inn midp vdd PTM90P W=72u  L=850n
 M6 midp bias1 vdd vdd PTM90P W=10u L=800n
@@ -64,6 +47,4 @@ Cc2 out s17 4p
  
 Ibias1 bias1 bias2 15u
 .ends
- 
- 
-.end
+`;
