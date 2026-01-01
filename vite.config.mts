@@ -19,7 +19,10 @@ export default defineConfig({
     },
   }), tsconfigPaths()],
   optimizeDeps: {
+    // Exclude local packages to enable HMR during development
     exclude: ["eecircuit-schematic"],
+    // Include engine because it's used in a Worker (preventing late-discovery reloads)
+    include: ["eecircuit-engine"],
   },
   worker: { format: "es" },
 });
