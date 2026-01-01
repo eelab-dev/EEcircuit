@@ -90,7 +90,7 @@ const PlotSettings: React.FC<PlotSettingsProps> = ({
           <Box flex="1">
             <Slider.Root
               min={1}
-              max={5}
+              max={10}
               step={0.5}
               value={[lineThickness]}
               onValueChange={(details) => setLineThickness(details.value[0] ?? 1)}

@@ -143,7 +143,7 @@ export const createPlotSlice: StateCreator<
   canvas1IsLogY: false,
   canvas2IsLogY: false,
   previousVariableNames: null,
-  lineThickness: 1,
+  lineThickness: 3,
 
   // To-be-plotted selection actions
   setIsToBePlottedMode: (mode) => set({ isToBePlottedMode: mode }),
