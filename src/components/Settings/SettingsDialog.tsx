@@ -16,6 +16,7 @@ import { dialogTheme } from "../../styles/uiThemes";
 import SettingsSidebar from "./SettingsSidebar";
 import SimulationSettings from "./Categories/SimulationSettings";
 import PlotSettings from "./Categories/PlotSettings";
+import GeneralSettings from "./Categories/GeneralSettings";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -124,6 +125,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
                   setLineThickness={setTempLineThickness}
                 />
               )}
+              {activeSettingsCategory === "general" && <GeneralSettings />}
             </Box>
           </Flex>
         </DialogBody>

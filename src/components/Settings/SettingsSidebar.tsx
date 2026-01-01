@@ -1,6 +1,6 @@
 import React from "react";
 import { Flex, Button } from "@chakra-ui/react";
-import { Activity, Settings2 } from "lucide-react";
+import { Activity, Settings2, Settings } from "lucide-react";
 
 import { SettingsCategory } from "../../types/commonTypes";
 
@@ -24,6 +24,16 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
       height="100%"
       bg="bg.subtle"
     >
+      <Button
+        variant={activeCategory === "general" ? "subtle" : "ghost"}
+        justifyContent="flex-start"
+        onClick={() => setActiveCategory("general")}
+        size="sm"
+        width="100%"
+      >
+        <Settings size={16} style={{ marginRight: "8px" }} />
+        General
+      </Button>
       <Button
         variant={activeCategory === "simulation" ? "subtle" : "ghost"}
         justifyContent="flex-start"
