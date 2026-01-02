@@ -29,6 +29,7 @@ import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
 import { dialogTheme } from "./styles/uiThemes.ts";
 import { handleFullscreen } from "./utils/fullscreenUtils.tsx";
+import { filterInternalSignals } from "./components/ScientificPlot/utils/resultFiltering";
 
 const loadSchematicComponent = () => import("./schematic/schematic.tsx");
 const Schematic = React.lazy(loadSchematicComponent);
@@ -206,6 +207,7 @@ const EEcircuitApp: React.FC = () => {
     isLogX, isLogY, isLogY1, isLogY2, numCanvases,
     selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
     lineThickness,
+    showInternalSignals,
     updatePlotConfig,
   } = useAppStore();
 
@@ -588,8 +590,12 @@ const EEcircuitApp: React.FC = () => {
     [updatePlotConfig]
   );
   
-  // Calculate plot configuration based on current state & results
-  const firstResult = results.length > 0 ? (results[0] as unknown as { type?: string, dataType?: string }) : null;
+// Helper to filter results based on internal signal visibility
+  const filteredResults = React.useMemo(() => {
+    return filterInternalSignals(results, showInternalSignals);
+  }, [results, showInternalSignals]);
+
+  const firstResult = filteredResults.length > 0 ? (filteredResults[0] as unknown as { type?: string, dataType?: string }) : null;
   const isAC = firstResult && (
     firstResult.type?.toLowerCase() === "ac" || 
     firstResult.dataType === "complex"
@@ -614,8 +620,8 @@ const EEcircuitApp: React.FC = () => {
        numCanvases: numCanvases as 1 | 2,
        isLogX,
        isLogY,
-        selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
-        lineThickness,
+       selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
+       lineThickness,
       },
       lineThickness,
   };
@@ -841,7 +847,7 @@ const EEcircuitApp: React.FC = () => {
           <React.Suspense fallback={<TabPanelSkeleton label="the plot viewer" />}>
             <Plot
               key={firstResult ? (firstResult.type || firstResult.dataType || "default") : "empty"}
-              results={results}
+              results={filteredResults}
               inputProfile={inputProfile}
               isDarkMode={isDarkMode}
               isBracketOperationPlot={isBracketOperationPlot}

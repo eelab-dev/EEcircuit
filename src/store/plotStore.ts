@@ -54,6 +54,7 @@ export interface PlotState {
   // Track previous variable names for schema change detection
   previousVariableNames: string[] | null;
   lineThickness: number;
+  showInternalSignals: boolean;
 }
 
 export interface PlotActions {
@@ -103,6 +104,7 @@ export interface PlotActions {
   resetVariableSelections: () => void;
   resetPlotState: () => void;
   setLineThickness: (thickness: number) => void;
+  setShowInternalSignals: (show: boolean) => void;
 
   // Combined actions for common operations
   handleNewResults: (results: ResultType[]) => void;
@@ -144,6 +146,7 @@ export const createPlotSlice: StateCreator<
   canvas2IsLogY: false,
   previousVariableNames: null,
   lineThickness: 3,
+  showInternalSignals: false,
 
   // To-be-plotted selection actions
   setIsToBePlottedMode: (mode) => set({ isToBePlottedMode: mode }),
@@ -233,6 +236,7 @@ export const createPlotSlice: StateCreator<
   }),
 
   setLineThickness: (thickness) => set({ lineThickness: thickness }),
+  setShowInternalSignals: (show) => set({ showInternalSignals: show }),
 
   // Combined actions for common operations
   handleNewResults: (newResults) => {

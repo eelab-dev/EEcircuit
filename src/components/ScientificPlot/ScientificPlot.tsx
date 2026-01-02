@@ -95,6 +95,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
   // Variable initialization logic - Render-time state update (replaces useEffect)
   if (results.length > 0 && results[0]?.variableNames) {
     const inputLineNames = results[0].variableNames.slice(1);
+    
     const currentInputLineNamesJson = JSON.stringify(inputLineNames);
     const prevInputLineNamesJson = JSON.stringify(prevInputLineNames);
 

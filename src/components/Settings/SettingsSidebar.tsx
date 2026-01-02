@@ -30,6 +30,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         onClick={() => setActiveCategory("general")}
         size="sm"
         width="100%"
+        aria-label="General Settings"
       >
         <Settings size={16} style={{ marginRight: "8px" }} />
         General
@@ -40,6 +41,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         onClick={() => setActiveCategory("simulation")}
         size="sm"
         width="100%"
+        aria-label="Simulation Settings"
       >
         <Activity size={16} style={{ marginRight: "8px" }} />
         Simulation
@@ -50,6 +52,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         onClick={() => setActiveCategory("plotting")}
         size="sm"
         width="100%"
+        aria-label="Plotting Settings"
       >
         <Settings2 size={16} style={{ marginRight: "8px" }} />
         Plotting

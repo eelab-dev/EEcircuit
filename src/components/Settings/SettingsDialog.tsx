@@ -42,6 +42,8 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
   const setLineThickness = useAppStore((state) => state.setLineThickness);
   const activeSettingsCategory = useAppStore((state) => state.activeSettingsCategory);
   const setActiveSettingsCategory = useAppStore((state) => state.setActiveSettingsCategory);
+  const showInternalSignals = useAppStore((state) => state.showInternalSignals);
+  const setShowInternalSignals = useAppStore((state) => state.setShowInternalSignals);
 
   // Local state for temp values
   const [tempMaxWorkers, setTempMaxWorkers] = useState(maxWebWorkers);
@@ -123,6 +125,8 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
                   setTempResetPlotState={setTempResetPlotState}
                   lineThickness={tempLineThickness}
                   setLineThickness={setTempLineThickness}
+                  showInternalSignals={showInternalSignals}
+                  setShowInternalSignals={setShowInternalSignals}
                 />
               )}
               {activeSettingsCategory === "general" && <GeneralSettings />}

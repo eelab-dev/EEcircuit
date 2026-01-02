@@ -11,6 +11,8 @@ interface PlotSettingsProps {
   setTempResetPlotState: (value: boolean) => void;
   lineThickness: number;
   setLineThickness: (value: number) => void;
+  showInternalSignals: boolean;
+  setShowInternalSignals: (value: boolean) => void;
 }
 
 const PlotSettings: React.FC<PlotSettingsProps> = ({
@@ -20,6 +22,8 @@ const PlotSettings: React.FC<PlotSettingsProps> = ({
   setTempResetPlotState,
   lineThickness,
   setLineThickness,
+  showInternalSignals,
+  setShowInternalSignals,
 }) => {
   return (
     <Flex flexDirection="column" gap="3">
@@ -108,6 +112,21 @@ const PlotSettings: React.FC<PlotSettingsProps> = ({
             {lineThickness}
           </Text>
         </Flex>
+      </Box>
+
+      <Box pt={2}>
+        <Text fontSize="sm" fontWeight="medium" mb={1}>
+          Signal Visibility
+        </Text>
+        <Checkbox
+          checked={showInternalSignals}
+          onCheckedChange={(details) =>
+            setShowInternalSignals(!!details.checked)
+          }
+          size="sm"
+        >
+          <Text fontSize="xs">Show internal subcircuit signals</Text>
+        </Checkbox>
       </Box>
     </Flex>
   );
