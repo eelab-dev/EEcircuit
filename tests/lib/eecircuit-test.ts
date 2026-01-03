@@ -1,11 +1,11 @@
-import { test, expect, Page, Locator } from '@playwright/test';
+import { expect, Page, Locator } from '@playwright/test';
 
 
 
 
 export async function testEEcircuit(page: Page, url: string) {
   const getAccessibleName = async (locator: Locator) => {
-    return locator.evaluate((element) => {
+    return locator.evaluate((element: Element) => {
       const ariaLabel = element.getAttribute("aria-label");
       if (ariaLabel && ariaLabel.trim().length > 0) {
         return ariaLabel.trim();
@@ -16,8 +16,8 @@ export async function testEEcircuit(page: Page, url: string) {
         const doc = element.ownerDocument;
         const tokens = ariaLabelledBy.split(/\s+/);
         const labelledText = tokens
-          .map((id) => doc.getElementById(id)?.textContent?.trim())
-          .filter((text): text is string => !!text && text.length > 0)
+          .map((id: string) => doc.getElementById(id)?.textContent?.trim())
+          .filter((text: string | null | undefined): text is string => !!text && text.length > 0)
           .join(" ")
           .trim();
         if (labelledText.length > 0) {

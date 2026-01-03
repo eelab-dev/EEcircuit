@@ -9,7 +9,7 @@ export default defineConfig([
   {
     ignores: [
       "temp/**",
-      "tests/**",
+
       "types/**",
       ".vercel/**",
       "dist/**",
@@ -22,7 +22,7 @@ export default defineConfig([
 
   // Base JS config for src
   {
-    files: ["src/**/*.{ts,mts,cts,jsx,tsx}"],
+    files: ["src/**/*.{ts,mts,cts,jsx,tsx}", "tests/**/*.{ts,mts,cts,jsx,tsx}"],
     plugins: { js },
     extends: ["js/recommended"],
     languageOptions: {
@@ -33,13 +33,13 @@ export default defineConfig([
   // TypeScript configs
   ...tseslint.configs.recommended.map((config) => ({
     ...config,
-    files: ["src/**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
   })),
 
   // React config
   {
     ...pluginReact.configs.flat.recommended,
-    files: ["src/**/*.{jsx,tsx}"],
+    files: ["src/**/*.{jsx,tsx}", "tests/**/*.{jsx,tsx}"],
     settings: {
       react: { version: "detect" },
     },

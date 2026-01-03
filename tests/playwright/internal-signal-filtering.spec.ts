@@ -22,7 +22,7 @@ test('verify internal signal filtering', async ({ page }) => {
   const spinnerContainer = page.getByText(/Loading schematic|Processing file/);
   try {
     await expect(spinnerContainer).toBeVisible({ timeout: 5000 });
-  } catch (e) {
+  } catch {
     console.log('Spinner did not appear or was too fast.');
   }
   await expect(spinnerContainer).toBeHidden({ timeout: 15000 });
@@ -61,9 +61,9 @@ test('verify internal signal filtering', async ({ page }) => {
     await transientRadio.waitFor({ timeout: 10000 });
     await transientRadio.check({ force: true });
     
-  } catch (e) {
+  } catch (_e) {
     console.log('Timed out waiting for configuration or encountered error.');
-    throw e;
+    throw _e;
   }
 
   console.log('Running simulation...');
