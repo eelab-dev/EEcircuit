@@ -18,7 +18,7 @@ import { Box, Float } from "@chakra-ui/react";
 import debounce from "lodash.debounce";
 
 import Actions from "./actions";
-import TouchControls from "./TouchControls";
+import CanvasControls from "./CanvasControls";
 import { useSchematicKeyboard } from "./useSchematicKeyboard";
 import Properties from "./properties";
 import BottomBar from "./bottombar";
@@ -812,7 +812,7 @@ const Schematic: React.FC<SchematicProps> = ({
         )}
         {!isToBePlottedMode && (
           <Float offset="10" placement="middle-end">
-            <TouchControls />
+            <CanvasControls />
           </Float>
         )}
         {propertiesOpen && (

@@ -5,13 +5,22 @@ import * as ee from "eecircuit-schematic";
 import { Undo2, X, RotateCw, FlipHorizontal, FlipVertical } from "lucide-react";
 import { useAppStore } from "src/store/appStore";
 
-const TouchControls: React.FC = () => {
-  const inputProfile = useAppStore((s) => s.inputProfile);
+const CanvasControls: React.FC = () => {
+  // const inputProfile = useAppStore((s) => s.inputProfile); // Removed profile check
   const isWiring = useAppStore((s) => s.isWiring);
   const isMoving = useAppStore((s) => s.isMoving);
+  const editorMode = useAppStore((s) => s.editorMode);
+  const resetSchematicModes = useAppStore((s) => s.resetSchematicModes);
+  
+  // Direct state setters to ensure UI updates immediately if engine messages lag/missing
+  const setIsWiring = useAppStore((s) => s.setIsWiring);
+  const setIsMoving = useAppStore((s) => s.setIsMoving);
 
-  // Only show in touchscreen mode when actively wiring or moving
-  if (inputProfile !== "touchscreen" || (!isWiring && !isMoving)) {
+  const showWiring = isWiring || editorMode === "wire";
+  const showMoving = isMoving; // Move mode is implied by activity, not just tool selection
+
+  // Show whenever valid active state exists
+  if (!showWiring && !showMoving) {
     return null;
   }
 
@@ -25,7 +34,7 @@ const TouchControls: React.FC = () => {
         width: "fit-content",
       }}
     >
-      {isWiring && (
+      {showWiring && (
         <>
           <Tooltip content="Undo Last Point" showArrow openDelay={300}>
             <IconButton
@@ -35,7 +44,11 @@ const TouchControls: React.FC = () => {
               size="lg"
               backdropFilter="blur(4px)"
               aria-label="Undo last wire point"
-              onClick={() => ee.undoLastWirePoint()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                ee.undoLastWirePoint();
+              }}
             >
               <Undo2 />
             </IconButton>
@@ -48,7 +61,13 @@ const TouchControls: React.FC = () => {
               size="lg"
               backdropFilter="blur(4px)"
               aria-label="Cancel wire"
-              onClick={() => ee.cancelWire()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Use robust reset to exit mode
+                resetSchematicModes();
+                setIsWiring(false); // Force update UI
+              }}
             >
               <X />
             </IconButton>
@@ -56,7 +75,7 @@ const TouchControls: React.FC = () => {
         </>
       )}
 
-      {isMoving && (
+      {showMoving && (
         <>
           <Tooltip content="Rotate Selection" showArrow openDelay={300}>
             <IconButton
@@ -66,7 +85,11 @@ const TouchControls: React.FC = () => {
               size="lg"
               backdropFilter="blur(4px)"
               aria-label="Rotate selection"
-              onClick={() => ee.rotateSelected()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                ee.rotateSelected();
+              }}
             >
               <RotateCw />
             </IconButton>
@@ -79,7 +102,11 @@ const TouchControls: React.FC = () => {
               size="lg"
               backdropFilter="blur(4px)"
               aria-label="Flip horizontal"
-              onClick={() => ee.flipHorizontal()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                ee.flipHorizontal();
+              }}
             >
               <FlipHorizontal />
             </IconButton>
@@ -92,7 +119,11 @@ const TouchControls: React.FC = () => {
               size="lg"
               backdropFilter="blur(4px)"
               aria-label="Flip vertical"
-              onClick={() => ee.flipVertical()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                ee.flipVertical();
+              }}
             >
               <FlipVertical />
             </IconButton>
@@ -105,7 +136,13 @@ const TouchControls: React.FC = () => {
               size="lg"
               backdropFilter="blur(4px)"
               aria-label="Cancel move"
-              onClick={() => ee.cancelMove()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Use robust reset to ensure controls disappear
+                resetSchematicModes();
+                setIsMoving(false); // Force update UI
+              }}
             >
               <X />
             </IconButton>
@@ -116,4 +153,4 @@ const TouchControls: React.FC = () => {
   );
 };
 
-export default TouchControls;
+export default CanvasControls;
