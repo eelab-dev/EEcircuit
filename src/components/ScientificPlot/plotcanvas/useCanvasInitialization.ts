@@ -55,8 +55,14 @@ export const useCanvasInitialization = ({
   const zoomLinesRef = useRef<WebglLinePlot | null>(null);
   const zoomRegionRef = useRef<WebglPolygonPlot | null>(null);
   const lineDataRef = useRef<ExtendedLineConfig[]>([]);
+  const lineThicknessRef = useRef(lineThickness);
   const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
+
+  // Keep lineThicknessRef updated
+  useEffect(() => {
+    lineThicknessRef.current = lineThickness;
+  }, [lineThickness]);
 
   // Create the snap circle (fixed size, aspect ratio handled by transform scaling)
   const initSnapCircle = useCallback((darkMode: boolean) => {
@@ -282,7 +288,7 @@ export const useCanvasInitialization = ({
             } allLineData.push({
               points: new Float32Array(array),
               color: baseColor, // Use same color for all parameter sweeps of this variable
-              thickness: lineThickness,
+              thickness: lineThicknessRef.current,
               scale: [1, 1],
               offset: [0, 0],
               enabled: true,
@@ -333,7 +339,7 @@ export const useCanvasInitialization = ({
               themeIsDarkMode,
               colorMapRef.current
             ),
-            thickness: lineThickness,
+            thickness: lineThicknessRef.current,
             scale: [1, 1],
             offset: [0, 0],
             enabled: true,
@@ -362,8 +368,57 @@ export const useCanvasInitialization = ({
       cancelled = true;
       cancelAnimationFrame(rafId);
       setIsCanvasInitialized(false);
+      
+      // Cleanup WebGL resources to prevent memory leaks
+      if (plotLineRef.current) {
+        plotLineRef.current.cleanup();
+        plotLineRef.current = null;
+      }
     };
-  }, [results, initSnapCircle, isDarkMode, lineThickness]);
+  }, [results, initSnapCircle, isDarkMode]);
+
+  // Handle line thickness changes efficiently
+  useEffect(() => {
+    if (!plotLineRef.current || !lineDataRef.current || lineDataRef.current.length === 0) {
+      return;
+    }
+
+    // Update the local data reference with new thickness for all lines
+    const updatedLineData = lineDataRef.current.map(line => ({
+      ...line,
+      thickness: lineThickness
+    }));
+    lineDataRef.current = updatedLineData;
+
+    // Check current internal plotter type
+    const currentPlotterType = plotLineRef.current.getInternalPlotterType();
+    
+    // Determine if we need to switch plotter strategies (re-initialize)
+    // Case 1: Switching to Thinline (1px) -> Force initLines if not already using WebglLinePlot
+    // Case 2: Switching to Thick (>1px) -> Force initLines if not already using WebglLineThick
+    const shouldReinitialize = 
+      (lineThickness <= 1 && currentPlotterType !== "WebglLinePlot") ||
+      (lineThickness > 1 && currentPlotterType !== "WebglLineThick");
+
+    if (shouldReinitialize) {
+      // Full re-initialization needed to switch internal plotter strategy
+      plotLineRef.current.initLines(updatedLineData);
+    } else if (lineThickness > 1) {
+      // Optimization: If already using thick plotter, update thickness in-place
+      // This avoids re-uploading all geometry data
+      for (let i = 0; i < updatedLineData.length; i++) {
+        plotLineRef.current.updateLineThickness(i, lineThickness);
+      }
+    }
+    // If thickness <= 1 and already using WebglLinePlot, no action needed (always 1px)
+
+    // Trigger a redraw (assuming parent handles main loop, or we can force one if needed)
+    // note: UnifiedLinePlot doesn't self-draw, but updating uniforms might need a draw call
+    // The parent component typically drives the loop or reacts to changes.
+    // However, since we updated internal state, we should ensure the next frame reflects it.
+    // Assuming the parent's updatePlot or similar mechanism will pick this up, 
+    // or we rely on the main draw loop if active.
+  }, [lineThickness]);
 
   useEffect(() => {
     if (!snapCircleRef.current) {
