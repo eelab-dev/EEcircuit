@@ -107,6 +107,7 @@ const BottomBar: React.FC<BottomBarProps> = ({
       borderRadius="lg"
       flexShrink={0}
       aria-label="Simulate Circuit"
+      pointerEvents="auto"
     >
       {isWideView ? "Simulate (Netlist)" : "Simulate"}
       <ArrowBigRight size={16} />
