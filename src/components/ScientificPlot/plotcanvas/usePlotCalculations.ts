@@ -219,6 +219,7 @@ export const usePlotCalculations = ({
     // Check if zoom is active to determine scaling approach
     const customXBounds = zoomController.current?.getZoomBounds();
 
+
     if (customXBounds) {
       // Zoom is active: maintain compatibility with existing zoom system
       // We still need manual bounds calculation for zoom integration
@@ -476,8 +477,9 @@ export const usePlotCalculations = ({
         // 4. OPTIMIZED: Only recalculate axis scales, avoid full plot redraw
         // The log conversion happens internally in webgl-plot, so we only need
         // to get new data bounds and calculate new axis scales
-        // CRITICAL FIX: call function directly to avoid stale ref closure issues
-        calculateAndApplyScaling();
+        // CRITICAL FIX: call function via ref to avoid stale ref closure issues AND unintended dependency changes
+        // Using ref prevents this effect from re-running when selectedVariables changes
+        calculateAndApplyScalingRef.current?.();
 
         // 5. Single draw call to apply the log transformation visually
         plotLineRef.current!.draw();
@@ -486,7 +488,7 @@ export const usePlotCalculations = ({
         isTransitioningRef.current = false;
       }
     });
-  }, [isLogX, isLogY, plotLineRef, glRef, zoomController, calculateAndApplyScaling]);
+  }, [isLogX, isLogY, plotLineRef, glRef, zoomController]); // Removed calculateAndApplyScaling from dependencies
 
   // Handle log axis changes with batched updates to prevent re-render cascades
   useEffect(() => {
@@ -524,12 +526,17 @@ export const usePlotCalculations = ({
 
   // Handle data updates with simplified autoScale (now works correctly for all coordinate spaces)
   useEffect(() => {
-    if (!plotLineRef.current || selectedVariables.length === 0) return;
+    if (!plotLineRef.current || results.length === 0) return;
 
     // Use autoScale for data updates in both linear and log space
-    // autoScale() now works correctly for all coordinate spaces
+    // autoScale() now works correctly for all coordinate spaces.
+    // NOTE: selectedVariables is intentionally OMITTED from dependencies.
+    // When lines are toggled, we want to preserve the current zoom/pan state (X-axis).
+    // The updatePlot() function handles the visual update and calls calculateAndApplyScaling(),
+    // which intelligently adjusts the Y-axis range while respecting the current X-axis zoom.
+    // autoScale() resets everything, so we only call it when the actual data (results) changes.
     plotLineRef.current.autoScale();
-  }, [selectedVariables, results, plotLineRef]);
+  }, [results, plotLineRef]);
 
 
 
