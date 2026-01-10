@@ -45,3 +45,20 @@ export const actionBarTheme = {
   backdropFilter: "blur(8px)",
   border: "0px solid",
 } 
+
+export const schCanvasMessageTheme = {
+  error: {
+    bg: "red.solid/70",
+    borderColor: "red.muted/50",
+    color: "white",
+  },
+  warning: {
+    bg: "orange.solid/70",
+    borderColor: "orange.muted/50",
+    color: "white/90",
+  },
+  backdropFilter: "blur(6px)",
+  borderRadius: "xl",
+  borderWidth: "1px",
+  boxShadow: "lg",
+} as const;

@@ -33,7 +33,7 @@ import {
   parseTerminalPointerInfo,
   normalizeTerminalSelection,
 } from "../utils/toBePlotted";
-import { dialogTheme } from "../styles/uiThemes";
+import { dialogTheme, schCanvasMessageTheme } from "../styles/uiThemes";
 import { toaster } from "../components/ui/toaster";
 
 type SchematicProps = {
@@ -109,6 +109,10 @@ const Schematic: React.FC<SchematicProps> = ({
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [loadingSvg, setLoadingSvg] = useState(false);
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
+  const [canvasMessage, setCanvasMessage] = useState<{
+    text: string;
+    type: "error" | "warning";
+  } | null>(null);
 
   // Color mode values - must be called at top level to avoid hooks order issues
 
@@ -191,6 +195,9 @@ const Schematic: React.FC<SchematicProps> = ({
             ...prevInfo,
             { message: `${msg.mType}: ${msg.msg}`, mLevel: msg.mLevel },
           ]);
+          if (msg.mType === "error" || msg.mType === "warning") {
+            setCanvasMessage({ text: msg.msg, type: msg.mType });
+          }
           break;
         case "svg":
           setSvgContent(msg.svg);
@@ -200,6 +207,11 @@ const Schematic: React.FC<SchematicProps> = ({
           // Call the callback to uplift schematic data to parent
           if (handleSchematicDataChangeRef.current) {
             handleSchematicDataChangeRef.current(msg.schematic);
+          }
+          break;
+        case "liveWireStatus":
+          if (!msg.status.isValid && msg.status.reason) {
+            setCanvasMessage({ text: msg.status.reason, type: "warning" });
           }
           break;
         case "schematicEditorActivity":
@@ -789,6 +801,17 @@ const Schematic: React.FC<SchematicProps> = ({
     }
   }, [info]);
 
+  // Clear canvas message after 3 seconds
+  useEffect(() => {
+    if (canvasMessage) {
+      const timer = setTimeout(() => {
+        setCanvasMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [canvasMessage]);
+
   return (
     <Box position="relative" height={"100%"}>
       <Box
@@ -828,6 +851,45 @@ const Schematic: React.FC<SchematicProps> = ({
             }}
             onCloseButtonClick={propertiesCallBack}
           />
+        )}
+
+        {canvasMessage && (
+          <Box
+            position="absolute"
+            top="10%"
+            left="50%"
+            transform="translateX(-50%)"
+            zIndex={1000}
+            bg={
+              canvasMessage.type === "error"
+                ? schCanvasMessageTheme.error.bg
+                : schCanvasMessageTheme.warning.bg
+            }
+            backdropFilter={schCanvasMessageTheme.backdropFilter}
+            borderRadius={schCanvasMessageTheme.borderRadius}
+            borderWidth={schCanvasMessageTheme.borderWidth}
+            borderColor={
+              canvasMessage.type === "error"
+                ? schCanvasMessageTheme.error.borderColor
+                : schCanvasMessageTheme.warning.borderColor
+            }
+            color={
+              canvasMessage.type === "error"
+                ? schCanvasMessageTheme.error.color
+                : schCanvasMessageTheme.warning.color
+            }
+            boxShadow={schCanvasMessageTheme.boxShadow}
+            px={5}
+            py={2.5}
+            fontWeight="medium"
+            fontSize="md"
+            pointerEvents="none"
+            display="flex"
+            alignItems="center"
+            gap={2}
+          >
+            {canvasMessage.text}
+          </Box>
         )}
 
         {/* To-Be-Plotted Selection Mode Indicator */}
