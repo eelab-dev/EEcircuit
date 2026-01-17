@@ -90,7 +90,7 @@ export function aggregateParallelResults(
     numVariables: expandedVariableNames.length,
     variableNames: expandedVariableNames,
     numPoints: 0, // Will be calculated after aggregation
-    dataType: baseResult.dataType,
+    dataType: isComplex ? 'real' : baseResult.dataType,
     data: [],
     // Add bracket operation metadata
     bracketOperation,

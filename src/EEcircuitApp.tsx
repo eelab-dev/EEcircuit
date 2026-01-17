@@ -595,10 +595,14 @@ const EEcircuitApp: React.FC = () => {
     return filterInternalSignals(results, showInternalSignals);
   }, [results, showInternalSignals]);
 
-  const firstResult = filteredResults.length > 0 ? (filteredResults[0] as unknown as { type?: string, dataType?: string }) : null;
+  const firstResult = filteredResults.length > 0 ? (filteredResults[0] as unknown as { type?: string, dataType?: string, header?: string }) : null;
   const isAC = firstResult && (
     firstResult.type?.toLowerCase() === "ac" || 
-    firstResult.dataType === "complex"
+    // Notes on AC Detection:
+    // Both Single and Bracket/Parallel simulations now convert 'complex' -> 'real' 
+    // (with [mag]/[phase] pairs) before reaching here.
+    // Thus, dataType is always 'real', so we must check the header to identify AC analysis.
+    firstResult.header?.includes("Plotname: AC Analysis")
   );
   
   const plotProps = isAC ? {
@@ -612,6 +616,7 @@ const EEcircuitApp: React.FC = () => {
     },
     canvas1Title: "Magnitude",
     canvas2Title: "Phase",
+    canvas1Filter: (v: string) => !v.toLowerCase().includes("[phase]"),
     canvas2Filter: (v: string) => v.toLowerCase().includes("[phase]"),
     lockNumCanvases: true,
     lineThickness,
