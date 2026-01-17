@@ -36,6 +36,17 @@ export type SimulationTransient = {
   initialConditions?: boolean;
 };
 
+export type SimulationNoise = {
+  name?: string;
+  type: "Noise";
+  netName: string;
+  source: string;
+  steps: string;
+  startFreq: string;
+  stopFreq: string;
+  sweepType: "dec" | "oct" | "lin";
+};
+
 export type SimulationNone = {
   type: "None";
 };
@@ -44,7 +55,8 @@ export type SimulationType =
   | SimulationNone
   | SimulationDC
   | SimulationAC
-  | SimulationTransient;
+  | SimulationTransient
+  | SimulationNoise;
 
 export type VoltageSelection = {
   type: "voltage";

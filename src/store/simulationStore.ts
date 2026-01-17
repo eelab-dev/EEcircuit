@@ -6,6 +6,7 @@ import type { ParallelSimulationResult } from "../simulation/parallelSimulation"
 import { saveSimulationConfigs, loadSimulationConfigs } from "../utils/localStorageUtils";
 import { notifySimulationErrors } from "../utils/simulationErrorNotifier";
 import { chang90 } from "../Simulate/subcircuits/chang90";
+import { addAcParameterToSource } from "../utils/sourceDetection";
 
 // Define the store interface that includes both simulation and tab slices
 interface StoreWithTab {
@@ -221,13 +222,21 @@ export const createSimulationSlice: StateCreator<
 
   // Combined actions for common operations
   exportNetlist: (netlist) => {
+    // 0. Pre-process netlist for specific simulation types
+    let processedNetlist = netlist;
+    const state = get();
+    
+    if (state.simulationConfig?.type === "Noise" && state.simulationConfig.source) {
+      processedNetlist = addAcParameterToSource(processedNetlist, state.simulationConfig.source);
+    }
+
     // 1. Define available external models
     const availableModels: Record<string, string> = {
       chang90: chang90,
     };
 
     // 2. Parse netlist to find required subcircuits
-    const lines = netlist.split("\n");
+    const lines = processedNetlist.split("\n");
     const requiredModels = new Set<string>();
     const definedSubckts = new Set<string>();
 
@@ -299,7 +308,7 @@ export const createSimulationSlice: StateCreator<
     // Check if .end exists
     const endLineIndex = lines.findIndex(l => l.trim().toUpperCase() === ".END");
     
-    let finalNetlist = netlist;
+    let finalNetlist = processedNetlist;
     const additionalModelsStr = modelsToAppend.join("\n");
 
     if (additionalModelsStr) {

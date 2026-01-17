@@ -56,6 +56,8 @@ export function detectSourcesFromNetlist(netlist: string | undefined): string[] 
   });
 }
 
+
+
 /**
  * Validates if a source exists in the given netlist
  * 

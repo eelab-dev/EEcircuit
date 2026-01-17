@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { SimulationType } from "../../types/commonTypes";
 import { detectSourcesFromNetlist, validateSourceInNetlist, getDefaultSource } from "../../utils/sourceDetection";
+import { detectNetsFromNetlist } from "../../utils/netDetection";
 
 export interface BaseSimConfigProps<T extends SimulationType> {
   onConfigChange: (configString: string) => void;
@@ -224,11 +225,14 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
 
   const detectedSources = netlist ? detectSourcesFromNetlist(netlist) : [];
 
+  const detectedNets = netlist ? detectNetsFromNetlist(netlist) : [];
+
   return {
     formData,
     handleInputChange,
     configString,
     isValid: validateConfig(formData),
     detectedSources,
+    detectedNets,
   };
 }

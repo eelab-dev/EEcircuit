@@ -92,12 +92,12 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     } else {
       const plotCommands = buildToBePlottedCommands(toBePlotted);
 
-      // For AC simulations, add "AC 1" to the selected source
+      // For AC and Noise simulations, add "AC 1" to the selected source
       let baseNetList = netList;
       if (
-        selectedSimType === "AC" &&
+        (selectedSimType === "AC" || selectedSimType === "Noise") &&
         simulationConfig &&
-        simulationConfig.type === "AC" &&
+        (simulationConfig.type === "AC" || simulationConfig.type === "Noise") &&
         "source" in simulationConfig &&
         simulationConfig.source
       ) {

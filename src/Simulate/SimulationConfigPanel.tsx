@@ -2,7 +2,6 @@ import {
   Button,
   Box,
   Flex,
-  Group,
   RadioCard,
   RadioCardValueChangeDetails,
   NativeSelectRoot,
@@ -15,16 +14,18 @@ import React, { useState } from "react";
 import DcConfig from "./simConfigs/dc";
 import AcConfig from "./simConfigs/ac";
 import TransConfig from "./simConfigs/tran";
+import NoiseConfig from "./simConfigs/noise";
 import {
   SimulationType,
   SimulationDC,
   SimulationAC,
   SimulationTransient,
+  SimulationNoise,
 } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
 
 // Define the simulation type options
-const simType: SimulationType["type"][] = ["None", "DC", "AC", "Transient"];
+const simType: SimulationType["type"][] = ["None", "DC", "AC", "Transient", "Noise"];
 
 interface SimulationConfigPanelProps {
   onStringConfigChange: (configString: string) => void;
@@ -101,6 +102,14 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
         );
       case "Transient":
         return !!(config.stopTime?.trim() && config.timeStep?.trim());
+      case "Noise":
+        return !!(
+          config.netName?.trim() &&
+          config.source?.trim() &&
+          config.steps?.trim() &&
+          config.startFreq?.trim() &&
+          config.stopFreq?.trim()
+        );
       default:
         return false;
     }
@@ -200,6 +209,18 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
           name: newConfigName.trim() || defaultName,
           stopTime: "",
           timeStep: "",
+        };
+        break;
+      case "Noise":
+        newConfig = {
+          type: "Noise",
+          name: newConfigName.trim() || defaultName,
+          netName: "",
+          source: "",
+          steps: "",
+          startFreq: "",
+          stopFreq: "",
+          sweepType: "dec",
         };
         break;
       default:
@@ -326,6 +347,18 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
             name: defaultName,
             stopTime: "",
             timeStep: "",
+          };
+          break;
+        case "Noise":
+          emptyConfig = {
+            type: "Noise",
+            name: defaultName,
+            netName: "",
+            source: "",
+            steps: "",
+            startFreq: "",
+            stopFreq: "",
+            sweepType: "dec",
           };
           break;
         default:
@@ -541,17 +574,16 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
             }}
           >
             <RadioCard.Label>Simulation Configuration</RadioCard.Label>
-            <Group
-              attached
-              display="grid"
-              gridTemplateColumns="repeat(2, 1fr)"
-              gap="0"
+            <Flex
+              gap="2"
+              wrap="wrap"
             >
               {simType.map((type) => (
                 <RadioCard.Item
                   key={type}
                   value={type}
-                  width="full"
+                  flex="1 0 min-content"
+                  minW="80px"
                   aria-label={type}
                 >
                   <RadioCard.ItemHiddenInput />
@@ -563,7 +595,7 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
                   </RadioCard.ItemControl>
                 </RadioCard.Item>
               ))}
-            </Group>
+            </Flex>
           </RadioCard.Root>
 
           {/* Config Components */}
@@ -604,6 +636,18 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
                     initialData={
                       currentConfig?.type === "Transient" ? (currentConfig as SimulationTransient) : undefined
                     }
+                  />
+                );
+              case "Noise":
+                return (
+                  <NoiseConfig
+                    key={`${configComponentKey}-noise`}
+                    onConfigChange={onStringConfigChange}
+                    onFullConfigChange={handleFullConfigChange}
+                    initialData={
+                      currentConfig?.type === "Noise" ? (currentConfig as SimulationNoise) : undefined
+                    }
+                    netlist={netList}
                   />
                 );
               default:
