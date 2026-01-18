@@ -57,9 +57,11 @@ test('verify internal signal filtering', async ({ page }) => {
     }
     
     // Check if Transient configuration option appears
-    const transientRadio = page.getByRole('radio', { name: 'Transient' });
-    await transientRadio.waitFor({ timeout: 10000 });
-    await transientRadio.check({ force: true });
+    // Verify Transient option is visible, then click the visible label wrapper
+    // The native radio might be hidden or "glitched" for automation in this UI library
+    const transientText = page.getByText('Transient', { exact: true });
+    await transientText.waitFor({ timeout: 10000 });
+    await transientText.click({ force: true });
     
   } catch (_e) {
     console.log('Timed out waiting for configuration or encountered error.');
