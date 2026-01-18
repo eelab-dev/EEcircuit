@@ -16,6 +16,7 @@ import {
 } from "@chakra-ui/react";
 
 import { Toaster } from "./components/ui/toaster.tsx";
+import { Tooltip } from "./components/ui/tooltip.tsx";
 
 import Logo from "./logo.tsx";
 import {
@@ -177,8 +178,8 @@ const EEcircuitApp: React.FC = () => {
   // Use Zustand store instead of multiple useState calls
   const {
     mainTabValue,
-    isSimulateTabEnabled,
-    isPlotTabEnabled,
+    isSimulationTabEnabled,
+    isPlottingTabEnabled,
     setMainTabValue,
     shouldFitToScreen,
     setShouldFitToScreen,
@@ -274,10 +275,10 @@ const EEcircuitApp: React.FC = () => {
       const newTabValue = details.value as MainTabsValue;
 
       // Prevent switching to disabled tabs
-      if (newTabValue === "simulate" && !isSimulateTabEnabled) {
+      if (newTabValue === "simulate" && !isSimulationTabEnabled) {
         return;
       }
-      if (newTabValue === "plot" && !isPlotTabEnabled) {
+      if (newTabValue === "plot" && !isPlottingTabEnabled) {
         return;
       }
 
@@ -304,8 +305,8 @@ const EEcircuitApp: React.FC = () => {
     [
       hasViewedSchematic,
       hasResizedSinceSchematicView,
-      isSimulateTabEnabled,
-      isPlotTabEnabled,
+      isSimulationTabEnabled,
+      isPlottingTabEnabled,
       setMainTabValue,
       setShouldFitToScreen,
       setHasViewedSchematic,
@@ -669,27 +670,37 @@ const EEcircuitApp: React.FC = () => {
             <Tabs.Trigger value="schematic" marginX="0.5em">
               Schematic
             </Tabs.Trigger>
-            <Tabs.Trigger
-              value="simulate"
-              marginX="0.5em"
-              disabled={!isSimulateTabEnabled}
-              style={{
-                opacity: isSimulateTabEnabled ? 1 : 0.5,
-                cursor: isSimulateTabEnabled ? "pointer" : "not-allowed",
-              }}
+            <Tooltip
+              content="click first on the simulate button to generate the netlist"
+              disabled={isSimulationTabEnabled}
             >
-              Simulate
-            </Tabs.Trigger>
+              <Box display="inline-block" marginX="0.5em">
+                <Tabs.Trigger
+                  value="simulate"
+                  aria-label="simulation config"
+                  disabled={!isSimulationTabEnabled}
+                  style={{
+                    opacity: isSimulationTabEnabled ? 1 : 0.5,
+                    cursor: isSimulationTabEnabled ? "pointer" : "not-allowed",
+                    pointerEvents: isSimulationTabEnabled ? "auto" : "none",
+                    width: "100%",
+                  }}
+                >
+                  Simulation
+                </Tabs.Trigger>
+              </Box>
+            </Tooltip>
             <Tabs.Trigger
               value="plot"
               marginX="0.5em"
-              disabled={!isPlotTabEnabled}
+              aria-label="plot display"
+              disabled={!isPlottingTabEnabled}
               style={{
-                opacity: isPlotTabEnabled ? 1 : 0.5,
-                cursor: isPlotTabEnabled ? "pointer" : "not-allowed",
+                opacity: isPlottingTabEnabled ? 1 : 0.5,
+                cursor: isPlottingTabEnabled ? "pointer" : "not-allowed",
               }}
             >
-              Plot
+              Plotting
             </Tabs.Trigger>
           </Flex>
 
@@ -741,25 +752,36 @@ const EEcircuitApp: React.FC = () => {
             <Logo />
             <Flex alignItems="center" gap={2}>
               <Tabs.Trigger value="schematic">Schematic</Tabs.Trigger>
-              <Tabs.Trigger
-                value="simulate"
-                disabled={!isSimulateTabEnabled}
-                style={{
-                  opacity: isSimulateTabEnabled ? 1 : 0.5,
-                  cursor: isSimulateTabEnabled ? "pointer" : "not-allowed",
-                }}
+              <Tooltip
+                content="click first on the simulate button to generate the netlist"
+                disabled={isSimulationTabEnabled}
               >
-                Simulate
-              </Tabs.Trigger>
+                <Box display="inline-block">
+                  <Tabs.Trigger
+                    value="simulate"
+                    aria-label="simulation config"
+                    disabled={!isSimulationTabEnabled}
+                    style={{
+                      opacity: isSimulationTabEnabled ? 1 : 0.5,
+                      cursor: isSimulationTabEnabled ? "pointer" : "not-allowed",
+                      pointerEvents: isSimulationTabEnabled ? "auto" : "none",
+                      width: "100%",
+                    }}
+                  >
+                    Simulation
+                  </Tabs.Trigger>
+                </Box>
+              </Tooltip>
               <Tabs.Trigger
                 value="plot"
-                disabled={!isPlotTabEnabled}
+                aria-label="plot display"
+                disabled={!isPlottingTabEnabled}
                 style={{
-                  opacity: isPlotTabEnabled ? 1 : 0.5,
-                  cursor: isPlotTabEnabled ? "pointer" : "not-allowed",
+                  opacity: isPlottingTabEnabled ? 1 : 0.5,
+                  cursor: isPlottingTabEnabled ? "pointer" : "not-allowed",
                 }}
               >
-                Plot
+                Plotting
               </Tabs.Trigger>
             </Flex>
           </Flex>

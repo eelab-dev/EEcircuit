@@ -11,11 +11,11 @@ import { addAcParameterToSource } from "../utils/sourceDetection";
 // Define the store interface that includes both simulation and tab slices
 interface StoreWithTab {
   // Tab management
-  isSimulateTabEnabled: boolean;
-  isPlotTabEnabled: boolean;
+  isSimulationTabEnabled: boolean;
+  isPlottingTabEnabled: boolean;
   mainTabValue: "schematic" | "simulate" | "plot";
-  setIsSimulateTabEnabled: (enabled: boolean) => void;
-  setIsPlotTabEnabled: (enabled: boolean) => void;
+  setIsSimulationTabEnabled: (enabled: boolean) => void;
+  setIsPlottingTabEnabled: (enabled: boolean) => void;
   setMainTabValue: (tab: "schematic" | "simulate" | "plot") => void;
 }
 
@@ -328,9 +328,9 @@ export const createSimulationSlice: StateCreator<
     set({ netList: netlistWithPreamble, netListNeedsRefresh: true });
 
     // Proceed to enable and navigate to simulate tab (validation handled by caller)
-    const { setIsSimulateTabEnabled, setMainTabValue } = get() as SimulationSlice &
+    const { setIsSimulationTabEnabled, setMainTabValue } = get() as SimulationSlice &
       StoreWithTab & {
-        setIsSimulateTabEnabled: (enabled: boolean) => void;
+        setIsSimulationTabEnabled: (enabled: boolean) => void;
         setMainTabValue: (tab: "schematic" | "simulate" | "plot") => void;
       };
 
@@ -344,7 +344,8 @@ export const createSimulationSlice: StateCreator<
       // ignore
     }
 
-    setIsSimulateTabEnabled(true);
+
+    setIsSimulationTabEnabled(true);
     setMainTabValue("simulate");
   },
 

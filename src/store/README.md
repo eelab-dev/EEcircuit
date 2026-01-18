@@ -11,14 +11,14 @@ The store is now split into the following modules:
 **Responsibility:** Tab management state and navigation
 
 - `mainTabValue`: Current active tab
-- `isSimulateTabEnabled`: Whether simulate tab is available
-- `isPlotTabEnabled`: Whether plot tab is available
+- `isSimulationTabEnabled`: Whether simulate tab is available
+- `isPlottingTabEnabled`: Whether plot tab is available
 
 **Actions:**
 
 - `setMainTabValue(tab)`: Switch to a specific tab
-- `setIsSimulateTabEnabled(enabled)`: Enable/disable simulate tab
-- `setIsPlotTabEnabled(enabled)`: Enable/disable plot tab
+- `setIsSimulationTabEnabled(enabled)`: Enable/disable simulate tab
+- `setIsPlottingTabEnabled(enabled)`: Enable/disable plot tab
 
 ### 2. Schematic Store (`schematicStore.ts`)
 

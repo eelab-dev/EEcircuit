@@ -35,7 +35,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   // Import handleNewResults from the main app store for handling simulation results
   const handleNewResults = useAppStore((state) => state.handleNewResults);
   const setMainTabValue = useAppStore((state) => state.setMainTabValue);
-  const setIsPlotTabEnabled = useAppStore((state) => state.setIsPlotTabEnabled);
+  const setIsPlottingTabEnabled = useAppStore((state) => state.setIsPlottingTabEnabled);
 
   // Bracket operation state
   const isParallelSimulationRunning = useAppStore(
@@ -141,7 +141,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   useEffect(() => {
     if (isParallelSimulationRunning) {
       if (!hasAutoSwitchedToPlot) {
-        setIsPlotTabEnabled(true);
+        setIsPlottingTabEnabled(true);
         setMainTabValue("plot");
         setHasAutoSwitchedToPlot(true);
       }
@@ -152,7 +152,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   }, [
     hasAutoSwitchedToPlot,
     isParallelSimulationRunning,
-    setIsPlotTabEnabled,
+    setIsPlottingTabEnabled,
     setMainTabValue,
   ]);
 

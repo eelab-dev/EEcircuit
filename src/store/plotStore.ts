@@ -8,9 +8,9 @@ import { transformResultForComplexData } from "../utils/complexUtils";
 // Define the store interface that includes both plot and tab slices
 interface StoreWithTabAndSimulation {
   // Tab management
-  isPlotTabEnabled: boolean;
+  isPlottingTabEnabled: boolean;
   mainTabValue: "schematic" | "simulate" | "plot";
-  setIsPlotTabEnabled: (enabled: boolean) => void;
+  setIsPlottingTabEnabled: (enabled: boolean) => void;
   setMainTabValue: (tab: "schematic" | "simulate" | "plot") => void;
 
   // Simulation results
@@ -351,7 +351,7 @@ export const createPlotSlice: StateCreator<
 
       set({
         results: [firstResult], // Always use firstResult which has been processed correctly
-        isPlotTabEnabled: true,
+        isPlottingTabEnabled: true,
         mainTabValue: "plot",
         
         // Canvas mode - AC simulations always need dual canvas
