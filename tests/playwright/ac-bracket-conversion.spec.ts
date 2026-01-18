@@ -6,15 +6,15 @@ test('verify ac bracket mode conversion with test file', async ({ page }) => {
   await page.goto('http://localhost:5173/');
   await page.waitForTimeout(1000);
 
-  // 2. Load Test Circuit File
+  // 2. Load Test Circuit File (TIA)
   console.log('Step: Load Test Circuit File');
   
   // Use the hidden file input to upload the test file
-  // The file is located at tests/test-circuit-ac.json
+  // The file is located at tests/test-circuit-tia.json
   const fileInputs = await page.locator('input[type="file"]').all();
   console.log(`Found ${fileInputs.length} file inputs`);
   for (const input of fileInputs) {
-      await input.setInputFiles(path.resolve('tests/test-circuit-ac.json'));
+      await input.setInputFiles(path.resolve('tests/test-circuit-tia.json'));
   }
   
   // Wait for schematic to load - check for success message or component visibility
@@ -49,7 +49,7 @@ test('verify ac bracket mode conversion with test file', async ({ page }) => {
   console.log('Transited to Plot Tab');
 
   // 6. Select only V(output) mag and phase
-  console.log('Step: Select only V(output)');
+  console.log('Step: Select only V(out)[mag]');
 
   // Open the sidebar if needed (it might be open by default on desktop)
   // But strictly, we can try to find the checkboxes directly if visible.
@@ -64,11 +64,15 @@ test('verify ac bracket mode conversion with test file', async ({ page }) => {
       }
   }
 
-  // Select V(output)[mag]
-  await page.getByText('V(output)[mag]').click({ force: true });
+  // Select V(out)[mag]
+  await page.locator('div, label').filter({ hasText: /^v\(out\)\[mag\]$/i }).first().click({ force: true });
 
-  // Select V(output)[phase]
-  await page.getByText('V(output)[phase]').click({ force: true });
+  // Select V(out)[phase]
+  const phaseItem = page.locator('div, label').filter({ hasText: /^v\(out\)\[phase\]$/i }).first();
+  await phaseItem.click({ force: true });
+  
+  // Verify Phase header is visible (bottom plot)
+  await expect(page.getByText('Phase').first()).toBeVisible({ timeout: 5000 });
   
   // Verify Slider
   const sliderLabel = page.getByText('Parameter:', { exact: true }).first();

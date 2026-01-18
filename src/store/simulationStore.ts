@@ -226,7 +226,7 @@ export const createSimulationSlice: StateCreator<
     let processedNetlist = netlist;
     const state = get();
     
-    if (state.simulationConfig?.type === "Noise" && state.simulationConfig.source) {
+    if ((state.simulationConfig?.type === "Noise" || state.simulationConfig?.type === "AC") && state.simulationConfig.source) {
       processedNetlist = addAcParameterToSource(processedNetlist, state.simulationConfig.source);
     }
 

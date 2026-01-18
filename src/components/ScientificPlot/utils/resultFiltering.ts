@@ -1,5 +1,6 @@
 import { ResultType, RealDataType, ComplexDataType } from "eecircuit-engine";
 import { isInternalSignal } from "./signalUtils";
+import { AggregatedResult } from "../types";
 
 /**
  * Filters out internal signals (those starting with 'x' or 'X' via isInternalSignal)
@@ -18,6 +19,9 @@ export const filterInternalSignals = (
   }
 
   return results.map((result) => {
+    // Handle discriminated union to ensure types match
+    const bracketPlotData = (result as Partial<AggregatedResult>).bracketPlotData;
+    
     if (!result.variableNames || !result.data) return result;
 
     // Identify indices to keep
@@ -42,29 +46,39 @@ export const filterInternalSignals = (
       (i) => result.variableNames[i]
     ) as string[];
 
-    // Handle discriminated union to ensure types match
-    if (result.dataType === "real") {
-      const filteredData = indicesToKeep.map(
-        (i) => result.data[i]
-      ) as RealDataType[];
+    let baseResult: ResultType;
 
-      return {
+    if (result.dataType === "real") {
+      baseResult = {
         ...result,
         variableNames: filteredVariableNames,
-        data: filteredData,
+        data: indicesToKeep.map((i) => result.data[i]) as RealDataType[],
         numVariables: filteredVariableNames.length,
       };
     } else {
-      const filteredData = indicesToKeep.map(
-        (i) => result.data[i]
-      ) as ComplexDataType[];
-
-      return {
+      baseResult = {
         ...result,
         variableNames: filteredVariableNames,
-        data: filteredData,
+        data: indicesToKeep.map((i) => result.data[i]) as ComplexDataType[],
         numVariables: filteredVariableNames.length,
       };
     }
+
+    // Explicitly preserve bracketPlotData (and filter it if needed)
+    if (bracketPlotData) {
+        // Return as ResultType, casting via unknown if needed because AggregatedResult structure 
+        // adds properties that might not be in the strict ResultType union definition
+        // but are valid at runtime.
+        const augmentedResult = {
+            ...baseResult,
+            bracketPlotData: bracketPlotData.map((sweep) => ({
+                ...sweep,
+                data: indicesToKeep.map(i => sweep.data[i]!)
+            }))
+        };
+        return augmentedResult as unknown as ResultType;
+    }
+    
+    return baseResult;
   });
 };

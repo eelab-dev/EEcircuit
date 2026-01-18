@@ -1,0 +1,474 @@
+{
+  "schema": "EEcircuitV1",
+  "title": "EEcircuit",
+  "description": "EEcircuit Schematic",
+  "date": "2026-01-18T04:11:48.830Z",
+  "schematic": {
+    "componentInstances": [
+      {
+        "typeName": "OPAMP90",
+        "name": "X1",
+        "value": "chang90",
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "rotation": "0",
+        "flip": "vertical"
+      },
+      {
+        "typeName": "resistor",
+        "name": "Rf",
+        "value": "1M",
+        "origin": {
+          "x": 5,
+          "y": 14
+        },
+        "rotation": "0",
+        "flip": "none"
+      },
+      {
+        "typeName": "GND",
+        "name": "3",
+        "value": "",
+        "origin": {
+          "x": 5,
+          "y": 7
+        },
+        "rotation": "0",
+        "flip": "vertical"
+      },
+      {
+        "typeName": "VDD",
+        "name": "4",
+        "value": "",
+        "origin": {
+          "x": 5,
+          "y": -8
+        },
+        "rotation": "0",
+        "flip": "vertical"
+      },
+      {
+        "typeName": "ipulse",
+        "name": "Iin",
+        "value": "PULSE([0:0.1:0.5]u 1u 0 1n 1n 10u 20u)",
+        "origin": {
+          "x": -11,
+          "y": -8
+        },
+        "rotation": "0",
+        "flip": "none"
+      },
+      {
+        "typeName": "GND",
+        "name": "6",
+        "value": "",
+        "origin": {
+          "x": -4,
+          "y": -6
+        },
+        "rotation": "0",
+        "flip": "none"
+      },
+      {
+        "typeName": "vdc",
+        "name": "Vsup",
+        "value": "1.2V",
+        "origin": {
+          "x": -23,
+          "y": 1
+        },
+        "rotation": "0",
+        "flip": "none"
+      },
+      {
+        "typeName": "VDD",
+        "name": "8",
+        "value": "",
+        "origin": {
+          "x": -23,
+          "y": 8
+        },
+        "rotation": "0",
+        "flip": "none"
+      },
+      {
+        "typeName": "GND",
+        "name": "9",
+        "value": "",
+        "origin": {
+          "x": -23,
+          "y": -7
+        },
+        "rotation": "0",
+        "flip": "none"
+      },
+      {
+        "typeName": "GND",
+        "name": "10",
+        "value": "",
+        "origin": {
+          "x": -11,
+          "y": -16
+        },
+        "rotation": "0",
+        "flip": "none"
+      },
+      {
+        "typeName": "capacitor",
+        "name": "Cf",
+        "value": "0.5p",
+        "origin": {
+          "x": 5,
+          "y": 22
+        },
+        "rotation": "90",
+        "flip": "none"
+      }
+    ],
+    "wires": [
+      {
+        "absolutePath": [
+          {
+            "x": -23,
+            "y": -7
+          },
+          {
+            "x": -23,
+            "y": -3
+          }
+        ],
+        "startLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "9",
+            "terminalName": "GND"
+          }
+        },
+        "endLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "Vsup",
+            "terminalName": "neg"
+          }
+        },
+        "netName": "GND"
+      },
+      {
+        "absolutePath": [
+          {
+            "x": -23,
+            "y": 5
+          },
+          {
+            "x": -23,
+            "y": 8
+          }
+        ],
+        "startLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "Vsup",
+            "terminalName": "pos"
+          }
+        },
+        "endLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "8",
+            "terminalName": "VDD"
+          }
+        },
+        "netName": "VDD"
+      },
+      {
+        "absolutePath": [
+          {
+            "x": -4,
+            "y": -6
+          },
+          {
+            "x": -4,
+            "y": -2
+          },
+          {
+            "x": 0,
+            "y": -2
+          }
+        ],
+        "startLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "6",
+            "terminalName": "GND"
+          }
+        },
+        "endLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "X1",
+            "terminalName": "in+"
+          }
+        },
+        "netName": "GND"
+      },
+      {
+        "absolutePath": [
+          {
+            "x": 0,
+            "y": 2
+          },
+          {
+            "x": -11,
+            "y": 2
+          },
+          {
+            "x": -11,
+            "y": -4
+          }
+        ],
+        "startLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "X1",
+            "terminalName": "in-"
+          }
+        },
+        "endLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "Iin",
+            "terminalName": "pos"
+          }
+        },
+        "netName": "in"
+      },
+      {
+        "absolutePath": [
+          {
+            "x": 0,
+            "y": 14
+          },
+          {
+            "x": -5,
+            "y": 14
+          },
+          {
+            "x": -5,
+            "y": 2
+          }
+        ],
+        "startLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "Rf",
+            "terminalName": "1"
+          }
+        },
+        "endLocation": {
+          "type": "junction",
+          "prop": {
+            "junctionPosition": {
+              "x": -5,
+              "y": 2
+            }
+          }
+        },
+        "netName": "in"
+      },
+      {
+        "absolutePath": [
+          {
+            "x": 5,
+            "y": 4
+          },
+          {
+            "x": 5,
+            "y": 7
+          }
+        ],
+        "startLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "X1",
+            "terminalName": "v-"
+          }
+        },
+        "endLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "3",
+            "terminalName": "GND"
+          }
+        },
+        "netName": "GND"
+      },
+      {
+        "absolutePath": [
+          {
+            "x": 5,
+            "y": -4
+          },
+          {
+            "x": 5,
+            "y": -8
+          }
+        ],
+        "startLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "X1",
+            "terminalName": "v+"
+          }
+        },
+        "endLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "4",
+            "terminalName": "VDD"
+          }
+        },
+        "netName": "VDD"
+      },
+      {
+        "absolutePath": [
+          {
+            "x": 9,
+            "y": 0
+          },
+          {
+            "x": 18,
+            "y": 0
+          },
+          {
+            "x": 18,
+            "y": 14
+          },
+          {
+            "x": 10,
+            "y": 14
+          }
+        ],
+        "startLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "X1",
+            "terminalName": "out"
+          }
+        },
+        "endLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "Rf",
+            "terminalName": "2"
+          }
+        },
+        "netName": "out"
+      },
+      {
+        "absolutePath": [
+          {
+            "x": -11,
+            "y": -16
+          },
+          {
+            "x": -11,
+            "y": -12
+          }
+        ],
+        "startLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "10",
+            "terminalName": "GND"
+          }
+        },
+        "endLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "Iin",
+            "terminalName": "neg"
+          }
+        },
+        "netName": "GND"
+      },
+      {
+        "absolutePath": [
+          {
+            "x": 3,
+            "y": 22
+          },
+          {
+            "x": -5,
+            "y": 22
+          },
+          {
+            "x": -5,
+            "y": 14
+          }
+        ],
+        "startLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "Cf",
+            "terminalName": "1"
+          }
+        },
+        "endLocation": {
+          "type": "junction",
+          "prop": {
+            "junctionPosition": {
+              "x": -5,
+              "y": 14
+            }
+          }
+        },
+        "netName": "in"
+      },
+      {
+        "absolutePath": [
+          {
+            "x": 7,
+            "y": 22
+          },
+          {
+            "x": 18,
+            "y": 22
+          },
+          {
+            "x": 18,
+            "y": 14
+          }
+        ],
+        "startLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "Cf",
+            "terminalName": "2"
+          }
+        },
+        "endLocation": {
+          "type": "junction",
+          "prop": {
+            "junctionPosition": {
+              "x": 18,
+              "y": 14
+            }
+          }
+        },
+        "netName": "out"
+      }
+    ]
+  },
+  "simulations": [
+    {
+      "type": "AC",
+      "source": "Iin",
+      "frequencyStart": "1",
+      "frequencyStop": "1G",
+      "stepNumber": "20",
+      "sweepType": "dec"
+    }
+  ]
+}
