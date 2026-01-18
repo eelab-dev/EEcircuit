@@ -195,6 +195,7 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
   }, [isLogX, isLogY1, isLogY2, numCanvases]);
 
 
+
   return (
     <Flex direction="column" w="100%" h="100%" overflow="hidden" position="relative">
       {/* Bracket Operation Slider */}

@@ -270,7 +270,11 @@ export const createPlotSlice: StateCreator<
       if (!isBracketResult && firstResult.dataType === 'complex') {
         isACSimulation = true;
         firstResult = transformResultForComplexData(firstResult);
-      } else if (isBracketResult && firstResult.dataType === 'complex') {
+      } else if (isBracketResult && (
+        firstResult.dataType === 'complex' || 
+        (firstResult.variableNames && firstResult.variableNames[0] === 'frequency') ||
+        firstResult.header?.includes("Plotname: AC Analysis")
+      )) {
         // Bracket operation with complex data - already transformed in aggregation
         isACSimulation = true;
       }
