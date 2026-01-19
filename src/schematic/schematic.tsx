@@ -212,6 +212,8 @@ const Schematic: React.FC<SchematicProps> = ({
         case "liveWireStatus":
           if (!msg.status.isValid && msg.status.reason) {
             setCanvasMessage({ text: msg.status.reason, type: "warning" });
+          } else if (msg.status.isValid) {
+            setCanvasMessage(null);
           }
           break;
         case "schematicEditorActivity":
