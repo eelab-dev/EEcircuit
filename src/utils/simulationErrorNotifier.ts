@@ -34,6 +34,12 @@ export const notifySimulationErrors = (...sources: ErrorSource[]): void => {
     return;
   }
 
+  const isNote = messages.every(
+    (message) => message.startsWith("Note:") || message.includes(": Note:")
+  );
+  const toastType = isNote ? "info" : "error";
+  const toastTitle = isNote ? "Simulation Note" : "Simulation Error";
+
   const maxCollapsedItems = 2;
   const hasExtra = messages.length > maxCollapsedItems;
 
@@ -43,7 +49,7 @@ export const notifySimulationErrors = (...sources: ErrorSource[]): void => {
 
   const collapsedDescription = hasExtra
     ? `${formatBulletedList(collapsedMessages)}
-(${messages.length - maxCollapsedItems} more error${
+(${messages.length - maxCollapsedItems} more ${isNote ? "note" : "error"}${
         messages.length - maxCollapsedItems === 1 ? "" : "s"
       })`
     : formatBulletedList(collapsedMessages);
@@ -70,14 +76,14 @@ export const notifySimulationErrors = (...sources: ErrorSource[]): void => {
         : undefined,
       duration: 10000,
       meta: { closable: true },
-      type: "error",
+      type: toastType,
     });
   };
 
   toastId = toaster.create({
-    title: "Simulation Error",
+    title: toastTitle,
     description: collapsedDescription,
-    type: "error",
+    type: toastType,
     duration: 10000,
     meta: { closable: true },
     action: hasExtra
