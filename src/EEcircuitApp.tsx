@@ -591,20 +591,21 @@ const EEcircuitApp: React.FC = () => {
     [updatePlotConfig]
   );
   
-// Helper to filter results based on internal signal visibility
+  // Helper to filter results based on internal signal visibility
   const filteredResults = React.useMemo(() => {
     return filterInternalSignals(results, showInternalSignals);
   }, [results, showInternalSignals]);
 
   const firstResult = filteredResults.length > 0 ? (filteredResults[0] as unknown as { type?: string, dataType?: string, header?: string }) : null;
-  const isAC = firstResult && (
-    firstResult.type?.toLowerCase() === "ac" || 
-    // Notes on AC Detection:
-    // Both Single and Bracket/Parallel simulations now convert 'complex' -> 'real' 
-    // (with [mag]/[phase] pairs) before reaching here.
-    // Thus, dataType is always 'real', so we must check the header to identify AC analysis.
-    firstResult.header?.includes("Plotname: AC Analysis")
-  );
+
+  const { netList } = useAppStore();
+  
+  // Robust AC detection: check the netlist for the .ac command
+  // This decouples UI plotting logic (mag/phase split) from result headers
+  // ensuring we only force dual plotting for actual AC simulations.
+  const isAC = React.useMemo(() => {
+    return /^\s*\.ac\s+/im.test(netList);
+  }, [netList]);
   
   const plotProps = isAC ? {
     initialConfig: {

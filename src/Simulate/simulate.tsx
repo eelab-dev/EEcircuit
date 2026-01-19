@@ -195,12 +195,16 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     try {
       // Always clear previous results, optionally reset selections and plot state
       const {
+        setNetList, // Get setNetList action
         clearResults,
         resetVariableSelections,
         resetPlotState,
         resetVariableSelectionsOnNewSim,
         resetPlotStateOnNewSim,
       } = useAppStore.getState();
+
+      // Sync the netlist being simulated to the global store so other components (like EEcircuitApp) handles AC detection correctly
+      setNetList(netListToSim);
 
       clearResults(); // Always clear previous results
 
