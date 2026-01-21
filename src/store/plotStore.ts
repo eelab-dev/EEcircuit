@@ -266,18 +266,20 @@ export const createPlotSlice: StateCreator<
       const isBracketResult = 'bracketOperation' in firstResult && 'parameterValues' in firstResult;
       const aggregatedResult = isBracketResult ? firstResult as AggregatedResult : undefined;
 
-      // Transform single simulation results to handle complex data
-      let isACSimulation = false;
-      if (!isBracketResult && firstResult.dataType === 'complex') {
-        isACSimulation = true;
-        firstResult = transformResultForComplexData(firstResult);
-      } else if (isBracketResult && (
-        firstResult.dataType === 'complex' || 
-        (firstResult.variableNames && firstResult.variableNames[0] === 'frequency') ||
-        firstResult.header?.includes("Plotname: AC Analysis")
-      )) {
-        // Bracket operation with complex data - already transformed in aggregation
-        isACSimulation = true;
+      // Primary Detection Mechanism: Netlist Check
+      const netList = currentState.netList;
+      const isNoiseSimulation = /^\s*\.noise\s+/im.test(netList);
+      const isACSimulation = /^\s*\.ac\s+/im.test(netList);
+
+
+
+      // Data Transformation for AC
+      // If we are in AC mode, we expect complex data that needs to be split into mag/phase
+      if (isACSimulation) {
+          if (!isBracketResult && firstResult.dataType === 'complex') {
+               firstResult = transformResultForComplexData(firstResult);
+          }
+          // Note: Bracket results are already transformed during aggregation if they were complex
       }
 
       const newVariableNames = firstResult.variableNames.slice(1); // Skip first variable (frequency/time)
@@ -285,7 +287,7 @@ export const createPlotSlice: StateCreator<
       const prevVariableNamesJson = JSON.stringify(currentState.previousVariableNames || []);
       
       const areResultVariableNamesUnchanged = currentVariableNamesJson === prevVariableNamesJson && currentState.previousVariableNames !== null;
-
+      
       // Determine which variables to select based on previous user selections
       let variablesToSelect: string[];
       let canvas1Variables: string[] = [];
@@ -307,7 +309,15 @@ export const createPlotSlice: StateCreator<
         variablesToSelect = [...magVariables, ...phaseVariables]; // For legacy compatibility
 
       } else {
-        // Non-AC simulation - preserve existing canvas configuration
+        // Non-AC simulation (Noise, Tran, DC)
+        
+        // If we were automatically in dual mode (AC), reset to single mode
+        // Also force single mode for Noise (design choice)
+        if (currentState.isACModeActive || isNoiseSimulation) {
+           numCanvases = 1;
+        }
+
+        // Generic variable selection logic
         if (numCanvases === 2) {
           // User has dual canvas mode - distribute variables based on existing selections
           const existingCanvas1 = currentState.canvas1SelectedVariables.filter(
@@ -340,22 +350,16 @@ export const createPlotSlice: StateCreator<
         }
       }
 
-
-      // Simple logic: check if we have valid existing selections to preserve
-      const hasExistingValidSelections = currentState.selectedVariables.length > 0 || 
-                                        currentState.canvas1SelectedVariables.length > 0 || 
-                                        currentState.canvas2SelectedVariables.length > 0;
       
       // If ResultVariableNames are unchanged, we force "preservation" even if lists are empty (meaning user deselected all)
-      const shouldPreserveSelections = areResultVariableNamesUnchanged || hasExistingValidSelections;
-      
+      const shouldPreserveSelections = areResultVariableNamesUnchanged;
 
       set({
         results: [firstResult], // Always use firstResult which has been processed correctly
         isPlottingTabEnabled: true,
         mainTabValue: "plot",
         
-        // Canvas mode - AC simulations always need dual canvas
+        // Canvas mode
         numCanvases: numCanvases as 1 | 2,
         isACModeActive,
         
@@ -369,12 +373,31 @@ export const createPlotSlice: StateCreator<
         previousVariableNames: newVariableNames,
         
         // Log scaling configuration for AC simulations
-        // Log scaling configuration for AC simulations
         ...(isACSimulation && {
           isLogX: true,    // Frequency axis should be logarithmic
           isLogY1: true,   // Magnitude plot should be logarithmic
           isLogY2: false,  // Phase plot should be linear
         }),
+        
+        // Log scaling for Noise simulations
+         ...(isNoiseSimulation && {
+            isLogX: true,
+            isLogY: true,
+            isLogY1: true,
+            isLogY2: true,
+            canvas1IsLogY: true, 
+            canvas2IsLogY: true
+         }),
+
+         // Default Linear scaling for other simulations (Tran, DC)
+         ...(!isACSimulation && !isNoiseSimulation && {
+            isLogX: false,
+            isLogY: false,
+            isLogY1: false,
+            isLogY2: false,
+            canvas1IsLogY: false,
+            canvas2IsLogY: false
+         }),
 
         // Set bracket operation specific state
         bracketOperationResults: aggregatedResult,
@@ -382,21 +405,6 @@ export const createPlotSlice: StateCreator<
         currentParameterValues: aggregatedResult?.parameterValues,
       });
 
-      // Special handling for Noise simulation (detected via netlist)
-      // This overrides AC defaults if both are present (though usually mutually exclusive)
-      const isNoiseSimulation = /^\s*\.noise\s+/im.test(currentState.netList);
-      
-      if (isNoiseSimulation) {
-          set({
-              numCanvases: 1,
-              isACModeActive: false, // Noise is single plot, not dual AC mode
-              isLogX: true,
-              isLogY: true,
-              // Update canvas-specific logs too just in case
-              isLogY1: true,
-              isLogY2: true,
-          });
-      }
     } else {
       console.warn(
         "handleNewResults called with invalid results, not enabling plot tab"

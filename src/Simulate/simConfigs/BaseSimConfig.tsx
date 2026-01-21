@@ -171,6 +171,20 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
     []
   );
 
+  // Sync formData with initialData when it changes
+  useEffect(() => {
+    if (initialData) {
+      setFormData((prev) => {
+         const newInitial = getInitialFormData(initialData);
+         // Simple shallow comparison to avoid unnecessary updates/loops
+         const isDifferent = Object.keys(newInitial).some(
+            key => String(newInitial[key]) !== String(prev[key])
+         );
+         return isDifferent ? (newInitial as F) : prev;
+      });
+    }
+  }, [initialData, getInitialFormData]);
+
   useEffect(() => {
     // This effect pushes changes to the parent after each keystroke while deduping
     // the payload. It prevents the recursive update loop we hit previously when

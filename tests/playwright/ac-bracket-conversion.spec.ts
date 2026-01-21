@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import path from 'path';
 
 test('verify ac bracket mode conversion with test file', async ({ page }) => {
+
   // 1. Load the test-circuit-ac.json file
   await page.goto('http://localhost:5173/');
   await page.waitForTimeout(1000);
