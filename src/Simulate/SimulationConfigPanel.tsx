@@ -398,10 +398,17 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
   const currentConfig = getCurrentConfig();
   // Re-key the config panels so switching between saved configs remounts cleanly.
   // Without this, the previous form state lingered and triggered the publish loop again.
-  const configComponentKey = currentConfig
-    ? `${currentConfig.type}-${selectedConfigIndex}-${
-        currentConfig.type !== "None" && "name" in currentConfig
-          ? currentConfig.name ?? ""
+  // Determine the active config, falling back to the store's simulationConfig
+  // to support "detached" new configs that haven't been added to the list yet.
+  const activeConfig = currentConfig || simulationConfig;
+
+  // Generate a stable key based on type and name.
+  // We explicitly exclude selectedConfigIndex to prevent remounting (and focus loss)
+  // when a new config transitions from invalid (index -1) to valid (index >= 0).
+  const configComponentKey = activeConfig
+    ? `${activeConfig.type}-${
+        activeConfig.type !== "None" && "name" in activeConfig
+          ? activeConfig.name ?? ""
           : ""
       }`
     : `${selectedSimType}-default`;
