@@ -606,32 +606,53 @@ const EEcircuitApp: React.FC = () => {
   const isAC = React.useMemo(() => {
     return /^\s*\.ac\s+/im.test(netList);
   }, [netList]);
+
+  const isNoise = React.useMemo(() => {
+    return /^\s*\.noise\s+/im.test(netList);
+  }, [netList]);
   
-  const plotProps = isAC ? {
-    initialConfig: {
-      numCanvases: numCanvases as 1 | 2,
-      isLogX,
-      isLogY1,
-      isLogY2,
-      selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
-      lineThickness,
-    },
-    canvas1Title: "Magnitude",
-    canvas2Title: "Phase",
-    canvas1Filter: (v: string) => !v.toLowerCase().includes("[phase]"),
-    canvas2Filter: (v: string) => v.toLowerCase().includes("[phase]"),
-    lockNumCanvases: true,
-    lineThickness,
-  } : {
-     initialConfig: {
-       numCanvases: numCanvases as 1 | 2,
-       isLogX,
-       isLogY,
-       selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
-       lineThickness,
-      },
-      lineThickness,
-  };
+  const plotProps = React.useMemo(() => {
+    if (isAC) {
+        return {
+            initialConfig: {
+              numCanvases: numCanvases as 1 | 2,
+              isLogX,
+              isLogY1,
+              isLogY2,
+              selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
+              lineThickness,
+            },
+            canvas1Title: "Magnitude",
+            canvas2Title: "Phase",
+            canvas1Filter: (v: string) => !v.toLowerCase().includes("[phase]"),
+            canvas2Filter: (v: string) => v.toLowerCase().includes("[phase]"),
+            lockNumCanvases: true,
+            lineThickness,
+        };
+    } else if (isNoise) {
+        return {
+             initialConfig: {
+               numCanvases: 1 as 1 | 2, // Force single canvas for noise
+               isLogX,
+               isLogY, 
+               selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
+               lineThickness,
+              },
+              lineThickness,
+        };
+    } else {
+        return {
+             initialConfig: {
+               numCanvases: numCanvases as 1 | 2,
+               isLogX,
+               isLogY,
+               selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
+               lineThickness,
+              },
+              lineThickness,
+        };
+    }
+  }, [isAC, isNoise, numCanvases, isLogX, isLogY, isLogY1, isLogY2, selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables, lineThickness]);
 
   return (
     <Box
@@ -874,7 +895,7 @@ const EEcircuitApp: React.FC = () => {
         <Tabs.Content value="plot" flex={1} minHeight={0} display="flex">
           <React.Suspense fallback={<TabPanelSkeleton label="the plot viewer" />}>
             <Plot
-              key={firstResult ? (firstResult.type || firstResult.dataType || "default") : "empty"}
+              key={(firstResult ? (firstResult.type || firstResult.dataType || "default") : "empty") + (isAC ? "-ac" : "") + (isNoise ? "-noise" : "")}
               results={filteredResults}
               inputProfile={inputProfile}
               isDarkMode={isDarkMode}

@@ -16,6 +16,7 @@ interface StoreWithTabAndSimulation {
   // Simulation results
   results: ResultType[];
   setResults: (results: ResultType[]) => void;
+  netList: string;
 }
 
 // Plot state and actions
@@ -368,16 +369,34 @@ export const createPlotSlice: StateCreator<
         previousVariableNames: newVariableNames,
         
         // Log scaling configuration for AC simulations
+        // Log scaling configuration for AC simulations
         ...(isACSimulation && {
           isLogX: true,    // Frequency axis should be logarithmic
           isLogY1: true,   // Magnitude plot should be logarithmic
           isLogY2: false,  // Phase plot should be linear
         }),
+
         // Set bracket operation specific state
         bracketOperationResults: aggregatedResult,
         isBracketOperationPlot: isBracketResult,
         currentParameterValues: aggregatedResult?.parameterValues,
       });
+
+      // Special handling for Noise simulation (detected via netlist)
+      // This overrides AC defaults if both are present (though usually mutually exclusive)
+      const isNoiseSimulation = /^\s*\.noise\s+/im.test(currentState.netList);
+      
+      if (isNoiseSimulation) {
+          set({
+              numCanvases: 1,
+              isACModeActive: false, // Noise is single plot, not dual AC mode
+              isLogX: true,
+              isLogY: true,
+              // Update canvas-specific logs too just in case
+              isLogY1: true,
+              isLogY2: true,
+          });
+      }
     } else {
       console.warn(
         "handleNewResults called with invalid results, not enabling plot tab"
