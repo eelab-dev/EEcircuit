@@ -39,7 +39,8 @@ export const loadSimulationConfigs = (): SimulationType[] => {
         (config.type === "None" ||
           config.type === "DC" ||
           config.type === "AC" ||
-          config.type === "Transient")
+          config.type === "Transient" ||
+          config.type === "Noise")
       );
     });
   } catch (error) {
