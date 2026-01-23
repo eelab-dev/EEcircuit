@@ -83,19 +83,17 @@ test('verify noise simulation configuration and plotting', async ({ page }) => {
   await expect(page.getByText('onoise_spectrum')).toBeVisible();
   
   // Verify it is selected (checkbox is checked)
+  // Verify it is selected (checkbox is checked)
   const noiseVarLabel = page.locator('label').filter({ hasText: 'onoise_spectrum' });
-  // In typical Chakra/React setups, the input might be inside or sibling. 
-  // We can look for the checkbox role within this label context or associated control.
   const checkbox = noiseVarLabel.locator('input[type="checkbox"]');
-  // Or simply:
-  await expect(page.getByLabel('onoise_spectrum')).toBeChecked();
+  await expect(checkbox).toBeChecked();
   
-  // Verify X-Axis Log button is active?
-  // Button text "Log X"
+  // Verify X-Axis Log button is visible (Log X defaults to false unless configured otherwise, but checking presence confirms UI loaded)
   const logXBtn = page.getByRole('button', { name: 'Log X' });
   const logYBtn = page.getByRole('button', { name: 'Log Y' });
   
-  // Check if they are "solid" which implies active. 
+  await expect(logXBtn).toBeVisible();
+  await expect(logYBtn).toBeVisible(); 
   // Chakra UI buttons often have `data-active` or similar attribute if using ToggleButton?
   // If not, we might need to rely on the fact that the simulation ran without error.
 
