@@ -172,18 +172,24 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
   );
 
   // Sync formData with initialData when it changes
-  useEffect(() => {
+  // We use the "adjust state during render" pattern to avoid useEffect/setState cascades
+  // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevInitialDataRec, setPrevInitialDataRec] = useState(JSON.stringify(initialData));
+
+  const currentInitialDataRec = JSON.stringify(initialData);
+  if (currentInitialDataRec !== prevInitialDataRec) {
+    setPrevInitialDataRec(currentInitialDataRec);
     if (initialData) {
+      const newInitial = getInitialFormData(initialData);
       setFormData((prev) => {
-         const newInitial = getInitialFormData(initialData);
-         // Simple shallow comparison to avoid unnecessary updates/loops
-         const isDifferent = Object.keys(newInitial).some(
-            key => String(newInitial[key]) !== String(prev[key])
-         );
-         return isDifferent ? (newInitial as F) : prev;
+        // Simple shallow comparison to avoid unnecessary updates
+        const isDifferent = Object.keys(newInitial).some(
+           key => String(newInitial[key]) !== String(prev[key])
+        );
+        return isDifferent ? (newInitial as F) : prev;
       });
     }
-  }, [initialData, getInitialFormData]);
+  }
 
   useEffect(() => {
     // This effect pushes changes to the parent after each keystroke while deduping

@@ -21,6 +21,7 @@ export interface InductorProperties extends BaseComponentProperties {
 
 export interface VoltageSourceProperties extends BaseComponentProperties {
   value: string; // e.g., "5V", "1.8V"
+  dcValue?: string; // DC analysis value
   type?: "dc" | "ac" | "pulse" | "sin"; // Source type
   // SIN parameters: (offset_voltage amplitude frequency delay damping_factor phase)
   offset?: string; // Offset voltage
@@ -41,6 +42,7 @@ export interface VoltageSourceProperties extends BaseComponentProperties {
 
 export interface CurrentSourceProperties extends BaseComponentProperties {
   value: string; // e.g., "1mA", "10uA"
+  dcValue?: string; // DC analysis value
   type?: "dc" | "ac" | "pulse" | "sin"; // Source type
   // SIN parameters: (offset_current amplitude frequency delay damping_factor phase)
   offset?: string; // Offset current
@@ -232,6 +234,14 @@ export const componentPropertyConfigs: Record<ComponentType, PropertyField[]> =
     ],
     vsin: [
       {
+        key: "dcValue",
+        label: "DC Value",
+        type: "text",
+        placeholder: "e.g., 0V, 1.2V",
+        required: false,
+        unit: "V",
+      },
+      {
         key: "offset",
         label: "Offset Voltage",
         type: "text",
@@ -280,6 +290,14 @@ export const componentPropertyConfigs: Record<ComponentType, PropertyField[]> =
       },
     ],
     vpulse: [
+      {
+        key: "dcValue",
+        label: "DC Value",
+        type: "text",
+        placeholder: "e.g., 0V, 1.2V",
+        required: false,
+        unit: "V",
+      },
       {
         key: "v1",
         label: "Initial Value (V1)",
@@ -339,6 +357,14 @@ export const componentPropertyConfigs: Record<ComponentType, PropertyField[]> =
     ],
     isin: [
       {
+        key: "dcValue",
+        label: "DC Value",
+        type: "text",
+        placeholder: "e.g., 0A, 1mA",
+        required: false,
+        unit: "A",
+      },
+      {
         key: "offset",
         label: "Offset Current",
         type: "text",
@@ -387,6 +413,14 @@ export const componentPropertyConfigs: Record<ComponentType, PropertyField[]> =
       },
     ],
     ipulse: [
+      {
+        key: "dcValue",
+        label: "DC Value",
+        type: "text",
+        placeholder: "e.g., 0A, 1mA",
+        required: false,
+        unit: "A",
+      },
       {
         key: "i1",
         label: "Initial Value (I1)",
@@ -541,7 +575,14 @@ export function parseComponentProperties(
   }
 
   // For SIN sources, parse format: "SIN(offset amplitude frequency delay damping phase)"
+  // Also handle optional partial DC param like "DC 1.2 SIN(...)"
   if (componentType === "vsin" || componentType === "isin") {
+    // Check for DC parameter first
+    const dcMatch = valueString.match(/DC\s+([^\s]+)/i);
+    if (dcMatch && dcMatch[1]) {
+      properties.dcValue = dcMatch[1];
+    }
+
     const sinMatch = valueString.match(/SIN\s*\(\s*([^)]+)\s*\)/i);
     if (sinMatch) {
       const params = sinMatch[1]!.split(/\s+/);
@@ -567,7 +608,14 @@ export function parseComponentProperties(
   }
 
   // For PULSE sources, parse format: "PULSE(v1 v2 time_delay rise_time fall_time width period)"
+  // Also handle optional partial DC param like "DC 1.2 PULSE(...)"
   if (componentType === "vpulse" || componentType === "ipulse") {
+    // Check for DC parameter first
+    const dcMatch = valueString.match(/DC\s+([^\s]+)/i);
+    if (dcMatch && dcMatch[1]) {
+      properties.dcValue = dcMatch[1];
+    }
+
     const pulseMatch = valueString.match(/PULSE\s*\(\s*([^)]+)\s*\)/i);
     if (pulseMatch) {
       const params = pulseMatch[1]!.split(/\s+/);
@@ -671,7 +719,12 @@ export function serializeComponentProperties(
         params.pop();
       }
 
-      return `SIN(${params.join(" ")})`;
+      const sinPart = `SIN(${params.join(" ")})`;
+      // Prepend DC value if present and non-zero
+      if (props.dcValue && props.dcValue !== "0") {
+        return `DC ${props.dcValue} ${sinPart}`;
+      }
+      return sinPart;
     } else {
       const props = properties as Partial<CurrentSourceProperties>;
       const params = [
@@ -688,7 +741,12 @@ export function serializeComponentProperties(
         params.pop();
       }
 
-      return `SIN(${params.join(" ")})`;
+      const sinPart = `SIN(${params.join(" ")})`;
+      // Prepend DC value if present and non-zero
+      if (props.dcValue && props.dcValue !== "0") {
+        return `DC ${props.dcValue} ${sinPart}`;
+      }
+      return sinPart;
     }
   }
 
@@ -713,7 +771,12 @@ export function serializeComponentProperties(
         params.pop();
       }
 
-      return `PULSE(${params.join(" ")})`;
+      const pulsePart = `PULSE(${params.join(" ")})`;
+      // Prepend DC value if present and non-zero
+      if (props.dcValue && props.dcValue !== "0") {
+        return `DC ${props.dcValue} ${pulsePart}`;
+      }
+      return pulsePart;
     } else {
       const props = properties as Partial<CurrentSourceProperties>;
       const params = [
@@ -731,7 +794,12 @@ export function serializeComponentProperties(
         params.pop();
       }
 
-      return `PULSE(${params.join(" ")})`;
+      const pulsePart = `PULSE(${params.join(" ")})`;
+      // Prepend DC value if present and non-zero
+      if (props.dcValue && props.dcValue !== "0") {
+        return `DC ${props.dcValue} ${pulsePart}`;
+      }
+      return pulsePart;
     }
   }
 
