@@ -210,6 +210,7 @@ const EEcircuitApp: React.FC = () => {
     lineThickness,
     showInternalSignals,
     updatePlotConfig,
+    selectedSimType,
   } = useAppStore();
 
   // Ref to store promise resolver for schematic save operations (keep this as it's for async operations)
@@ -596,20 +597,23 @@ const EEcircuitApp: React.FC = () => {
     return filterInternalSignals(results, showInternalSignals);
   }, [results, showInternalSignals]);
 
-  const firstResult = filteredResults.length > 0 ? (filteredResults[0] as unknown as { type?: string, dataType?: string, header?: string }) : null;
+
 
   const { netList } = useAppStore();
   
-  // Robust AC detection: check the netlist for the .ac command
+  // Robust AC detection: check the netlist for the .ac command OR if current simulation is AC
   // This decouples UI plotting logic (mag/phase split) from result headers
   // ensuring we only force dual plotting for actual AC simulations.
   const isAC = React.useMemo(() => {
-    return /^\s*\.ac\s+/im.test(netList);
-  }, [netList]);
+    const fromNetlist = /^\s*\.ac\s+/im.test(netList);
+    const fromSelect = selectedSimType === "AC";
+    console.log(`[EEcircuitApp] isAC check: netListRegex=${fromNetlist}, selectedSimType=${selectedSimType}, result=${fromNetlist || fromSelect}`);
+    return fromNetlist || fromSelect;
+  }, [netList, selectedSimType]);
 
   const isNoise = React.useMemo(() => {
-    return /^\s*\.noise\s+/im.test(netList);
-  }, [netList]);
+    return /^\s*\.noise\s+/im.test(netList) || selectedSimType === "Noise";
+  }, [netList, selectedSimType]);
   
   const plotProps = React.useMemo(() => {
     if (isAC) {
@@ -895,7 +899,7 @@ const EEcircuitApp: React.FC = () => {
         <Tabs.Content value="plot" flex={1} minHeight={0} display="flex">
           <React.Suspense fallback={<TabPanelSkeleton label="the plot viewer" />}>
             <Plot
-              key={(firstResult ? (firstResult.type || firstResult.dataType || "default") : "empty") + (isAC ? "-ac" : "") + (isNoise ? "-noise" : "")}
+              key={`${selectedSimType}-${plotProps.initialConfig.numCanvases}`} // Force remount when simulation type or canvas count changes
               results={filteredResults}
               inputProfile={inputProfile}
               isDarkMode={isDarkMode}

@@ -1,6 +1,6 @@
 import { StateCreator } from "zustand";
 import { ResultType } from "eecircuit-engine";
-import { ToBePlotted } from "../types/commonTypes";
+import { ToBePlotted, SimulationType } from "../types/commonTypes";
 import { areToBePlottedItemsEqual } from "../utils/toBePlotted";
 import type { AggregatedResult } from "../simulation/resultAggregator";
 import { transformResultForComplexData } from "../utils/complexUtils";
@@ -17,6 +17,7 @@ interface StoreWithTabAndSimulation {
   results: ResultType[];
   setResults: (results: ResultType[]) => void;
   netList: string;
+  selectedSimType: SimulationType["type"];
 }
 
 // Plot state and actions
@@ -266,10 +267,12 @@ export const createPlotSlice: StateCreator<
       const isBracketResult = 'bracketOperation' in firstResult && 'parameterValues' in firstResult;
       const aggregatedResult = isBracketResult ? firstResult as AggregatedResult : undefined;
 
-      // Primary Detection Mechanism: Netlist Check
+      // Primary Detection Mechanism: selectedSimType or Netlist Check
       const netList = currentState.netList;
-      const isNoiseSimulation = /^\s*\.noise\s+/im.test(netList);
-      const isACSimulation = /^\s*\.ac\s+/im.test(netList);
+      const selectedSimType = currentState.selectedSimType;
+      
+      const isNoiseSimulation = selectedSimType === "Noise" || /^\s*\.noise\s+/im.test(netList);
+      const isACSimulation = selectedSimType === "AC" || /^\s*\.ac\s+/im.test(netList);
 
 
 

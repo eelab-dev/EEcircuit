@@ -195,7 +195,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     try {
       // Always clear previous results, optionally reset selections and plot state
       const {
-        setNetList, // Get setNetList action
+        // setNetList, // Get setNetList action
         clearResults,
         resetVariableSelections,
         resetPlotState,
@@ -204,7 +204,8 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       } = useAppStore.getState();
 
       // Sync the netlist being simulated to the global store so other components (like EEcircuitApp) handles AC detection correctly
-      setNetList(netListToSim);
+      // setNetList(netListToSim); // REMOVED: This pollutes the global netlist with appended commands (.noise, .ac) causing lingering settings bug.
+
 
       clearResults(); // Always clear previous results
 
@@ -233,7 +234,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       const { runSingleSimulation } = await import(
         "../simulation/parallelSimulation"
       );
-
+      
       const simResult = await runSingleSimulation(netListToSim);
 
 
