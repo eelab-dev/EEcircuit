@@ -15,6 +15,7 @@ import {
   RotateCw,
   Settings,
 } from "lucide-react";
+import StatusIcon from "./StatusIcon";
 
 interface HeaderButtonsProps {
   handleSaveFile: () => void;
@@ -190,6 +191,9 @@ const HeaderButtons: React.FC<HeaderButtonsProps> = ({
           <Settings size={16} />
         </IconButton>
       </Tooltip>
+
+      {/* Global Status Icon */}
+      <StatusIcon />
 
       {/* Subtle divider */}
       <Box

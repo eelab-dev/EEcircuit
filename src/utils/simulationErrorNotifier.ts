@@ -1,4 +1,5 @@
 import { toaster } from "../components/ui/toaster.tsx";
+import { useAppStore } from "../store/appStore";
 
 type ErrorSource = string | string[] | undefined | null;
 
@@ -92,5 +93,16 @@ export const notifySimulationErrors = (...sources: ErrorSource[]): void => {
           onClick: toggleDetails,
         }
       : undefined,
+  });
+
+  // Log to global message store
+  const { addMessage } = useAppStore.getState();
+  messages.forEach((msg) => {
+    addMessage({
+      text: msg,
+      type: toastType === "info" ? "info" : "error",
+      category: "Simulation",
+      mLevel: "user",
+    });
   });
 };

@@ -22,7 +22,6 @@ import CanvasControls from "./CanvasControls";
 import { useSchematicKeyboard } from "./useSchematicKeyboard";
 import Properties from "./properties";
 import BottomBar from "./bottombar";
-import StatusIcon from "./statusIcon";
 import ExportImageDialog from "./ExportImageDialog";
 import ShortcutsDialog from "./ShortcutsDialog";
 import { ToBePlotted } from "src/types/commonTypes";
@@ -101,9 +100,10 @@ const Schematic: React.FC<SchematicProps> = ({
   >([]);
   const [propertiesDismissed, setPropertiesDismissed] = useState(false);
 
-  const [info, setInfo] = useState<
-    { message: string; mLevel: "user" | "dev" }[]
-  >([]);
+
+
+  const { addMessage, messages } = useAppStore();
+
   const [canvasHeight] = useState(0);
   const [showExportImageDialog, setShowExportImageDialog] = useState(false);
   const [svgContent, setSvgContent] = useState<string | null>(null);
@@ -191,10 +191,12 @@ const Schematic: React.FC<SchematicProps> = ({
           setAvailableComponents(msg.availableComponents);
           break;
         case "info":
-          setInfo((prevInfo) => [
-            ...prevInfo,
-            { message: `${msg.mType}: ${msg.msg}`, mLevel: msg.mLevel },
-          ]);
+          addMessage({
+            text: msg.msg,
+            type: msg.mType === "error" || msg.mType === "warning" ? msg.mType : "info",
+            category: "Schematic",
+            mLevel: msg.mLevel,
+          });
           if (msg.mType === "error" || msg.mType === "warning") {
             setCanvasMessage({ text: msg.msg, type: msg.mType });
           }
@@ -238,6 +240,7 @@ const Schematic: React.FC<SchematicProps> = ({
       // Removed direct prop dependencies to prevent callback recreation
       // Store-prioritized values are now accessed via refs for stability
       // Also removed onSchematicDataChange to use ref for stability
+      addMessage,
     ]
   );
 
@@ -788,9 +791,10 @@ const Schematic: React.FC<SchematicProps> = ({
     setShowShortcutsDialog(true);
   };
 
-  // Derive schematic error flag from info messages and update global UI state
+  // Derive schematic error flag from global messages and update UI state
   useEffect(() => {
-    const hasErrors = info.some((i) => i.message.startsWith("error:"));
+    // Check global message store for any active errors categorized under "Schematic"
+    const hasErrors = useAppStore.getState().messages.some(m => m.category === "Schematic" && m.type === "error");
     try {
       const { setHasSchematicErrors } = useAppStore.getState() as {
         setHasSchematicErrors?: (hasErrors: boolean) => void;
@@ -799,9 +803,10 @@ const Schematic: React.FC<SchematicProps> = ({
         setHasSchematicErrors(!!hasErrors);
       }
     } catch {
-      // ignore
+        // ignore
     }
-  }, [info]);
+  }, [messages]); // Re-run when messages change
+
 
   // Clear canvas message after 3 seconds
   useEffect(() => {
@@ -990,23 +995,7 @@ const Schematic: React.FC<SchematicProps> = ({
           }}
         />
 
-        {/* Status Icon - Top Right Floating */}
-        <StatusIcon
-          info={info}
-          onClear={() => {
-            setInfo([]);
-            try {
-              const { resetSchematicErrors } = useAppStore.getState() as {
-                resetSchematicErrors?: () => void;
-              };
-              if (typeof resetSchematicErrors === "function") {
-                resetSchematicErrors();
-              }
-            } catch {
-              // ignore
-            }
-          }}
-        />
+
       </Box>
       <ExportImageDialog
         isOpen={showExportImageDialog}
