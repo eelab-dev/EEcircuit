@@ -81,19 +81,22 @@ export const notifySimulationErrors = (...sources: ErrorSource[]): void => {
     });
   };
 
-  toastId = toaster.create({
-    title: toastTitle,
-    description: collapsedDescription,
-    type: toastType,
-    duration: 10000,
-    meta: { closable: true },
-    action: hasExtra
-      ? {
-          label: "Show details",
-          onClick: toggleDetails,
-        }
-      : undefined,
-  });
+  // Only show toast for warnings and errors (not info)
+  if (toastType !== "info") {
+    toastId = toaster.create({
+      title: toastTitle,
+      description: collapsedDescription,
+      type: toastType,
+      duration: 10000,
+      meta: { closable: true },
+      action: hasExtra
+        ? {
+            label: "Show details",
+            onClick: toggleDetails,
+          }
+        : undefined,
+    });
+  }
 
   // Log to global message store
   const { addMessage } = useAppStore.getState();

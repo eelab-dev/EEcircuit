@@ -26,6 +26,30 @@ export const dialogTheme = {
   backdropFilter: "blur(12px)",
   toggleButtonBackdropFilter: "blur(8px)",
   borderWidth: "1px",
+  
+  // Status colors - semantic tokens automatically adapt
+  status: {
+    error: {
+      text: "red.fg",
+      bg: "red.emphasized/10",
+      border: "red.focusRing",
+    },
+    warning: {
+      text: "orange.fg",
+      bg: "orange.emphasized/10",
+      border: "orange.focusRing", 
+    },
+    success: {
+      text: "green.fg",
+      bg: "green.emphasized/10",
+      border: "green.focusRing",
+    },
+    info: {
+      text: "blue.fg",
+      bg: "blue.emphasized/10",
+      border: "blue.focusRing",
+    },
+  },
 } as const;
 
 export type DialogTheme = typeof dialogTheme;
