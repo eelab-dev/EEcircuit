@@ -25,7 +25,7 @@ import {
   Schematic as SchematicType,
 } from "eecircuit-schematic";
 import { EEcircuitFile } from "./types/commonTypes.ts";
-import type { AggregatedResult, PlotConfig } from "./components/ScientificPlot/types";
+import type { PlotConfig } from "./components/ScientificPlot/types";
 import { useAppStore } from "./store/appStore";
 import { SimulationType } from "./types/commonTypes";
 import { dialogTheme } from "./styles/uiThemes.ts";
@@ -205,7 +205,7 @@ const EEcircuitApp: React.FC = () => {
     bracketOperationResults,
     
     // Plot configuration state
-    isLogX, isLogY, isLogY1, isLogY2, numCanvases,
+    numCanvases,
     selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
     lineThickness,
     showInternalSignals,
@@ -619,10 +619,10 @@ const EEcircuitApp: React.FC = () => {
     if (isAC) {
         return {
             initialConfig: {
-              numCanvases: numCanvases as 1 | 2,
-              isLogX,
-              isLogY1,
-              isLogY2,
+              numCanvases: 2 as 1 | 2, // Force dual plot for AC
+              isLogX: true,   // Force Log X
+              isLogY1: true,  // Force Log Y1
+              isLogY2: false, // Force Linear Y2
               selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
               lineThickness,
             },
@@ -637,8 +637,8 @@ const EEcircuitApp: React.FC = () => {
         return {
              initialConfig: {
                numCanvases: 1 as 1 | 2, // Force single canvas for noise
-               isLogX,
-               isLogY, 
+               isLogX: true, // Noise always Log X
+               isLogY: true, // Noise always Log Y (per user requirement)
                selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
                lineThickness,
               },
@@ -648,15 +648,15 @@ const EEcircuitApp: React.FC = () => {
         return {
              initialConfig: {
                numCanvases: numCanvases as 1 | 2,
-               isLogX,
-               isLogY,
+               isLogX: false, // Transient defaults to Linear
+               isLogY: false, // Transient defaults to Linear
                selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
                lineThickness,
               },
               lineThickness,
         };
     }
-  }, [isAC, isNoise, numCanvases, isLogX, isLogY, isLogY1, isLogY2, selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables, lineThickness]);
+  }, [isAC, isNoise, numCanvases, selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables, lineThickness]);
 
   return (
     <Box
@@ -904,7 +904,7 @@ const EEcircuitApp: React.FC = () => {
               inputProfile={inputProfile}
               isDarkMode={isDarkMode}
               isBracketOperationPlot={isBracketOperationPlot}
-              bracketOperationResults={bracketOperationResults as unknown as AggregatedResult}
+              bracketOperationResults={bracketOperationResults}
               onConfigChange={handlePlotConfigChange}
               {...plotProps}
             />

@@ -235,13 +235,13 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
 
             <HStack gap={2}>
               <Text fontSize="sm" color="fg.muted">Scale:</Text>
-              <Button size="sm" variant={isLogX ? "solid" : "outline"} onClick={handleLogXToggle}>Log X</Button>
+              <Button size="sm" variant={isLogX ? "solid" : "outline"} onClick={handleLogXToggle} aria-pressed={isLogX}>Log X</Button>
               {numCanvases === 1 ? (
-                <Button size="sm" variant={isLogY ? "solid" : "outline"} onClick={() => setIsLogY(!isLogY)}>Log Y</Button>
+                <Button size="sm" variant={isLogY ? "solid" : "outline"} onClick={() => setIsLogY(!isLogY)} aria-pressed={isLogY}>Log Y</Button>
               ) : (
                 <>
-                  <Button size="sm" variant={isLogY1 ? "solid" : "outline"} onClick={() => setIsLogY1(!isLogY1)}>Log Y1</Button>
-                  <Button size="sm" variant={isLogY2 ? "solid" : "outline"} onClick={() => setIsLogY2(!isLogY2)}>Log Y2</Button>
+                  <Button size="sm" variant={isLogY1 ? "solid" : "outline"} onClick={() => setIsLogY1(!isLogY1)} aria-pressed={isLogY1}>Log Y1</Button>
+                  <Button size="sm" variant={isLogY2 ? "solid" : "outline"} onClick={() => setIsLogY2(!isLogY2)} aria-pressed={isLogY2}>Log Y2</Button>
                 </>
               )}
             </HStack>

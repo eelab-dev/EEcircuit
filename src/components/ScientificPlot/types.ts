@@ -15,15 +15,7 @@ export interface PlotConfig {
 }
 
 // Copied from resultAggregator.ts to make component independent
-export interface BracketOperation {
-  type: string;
-  start: number;
-  stop: number;
-  step: number; 
-  originalText?: string;
-  position?: { line: number; column: number };
-  [key: string]: unknown;
-}
+import type { BracketOperation } from "../../utils/bracketParser";
 
 export interface AggregatedResult extends Omit<ResultType, 'data'> {
   // Extended result data for bracket operations

@@ -19,7 +19,7 @@
       {
         "typeName": "resistor",
         "name": "Rf",
-        "value": "1M",
+        "value": "[1:1:5]M",
         "origin": {
           "x": 5,
           "y": 14
@@ -52,7 +52,7 @@
       {
         "typeName": "ipulse",
         "name": "Iin",
-        "value": "PULSE([0:0.1:0.5]u 1u 0 1n 1n 10u 20u)",
+        "value": "DC 1u PULSE(0u 1u 0 1n 1n 10u 20u)",
         "origin": {
           "x": -11,
           "y": -8
@@ -462,13 +462,6 @@
     ]
   },
   "simulations": [
-    {
-      "type": "AC",
-      "source": "Iin",
-      "frequencyStart": "1",
-      "frequencyStop": "1G",
-      "stepNumber": "20",
-      "sweepType": "dec"
-    }
+    
   ]
 }
