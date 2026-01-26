@@ -19,7 +19,7 @@
       {
         "typeName": "resistor",
         "name": "Rf",
-        "value": "[1:1:5]M",
+        "value": "[0.2:0.2:1]M",
         "origin": {
           "x": 5,
           "y": 14

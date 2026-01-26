@@ -7,6 +7,7 @@ import { saveSimulationConfigs, loadSimulationConfigs } from "../utils/localStor
 import { notifySimulationErrors } from "../utils/simulationErrorNotifier";
 import { chang90 } from "../Simulate/subcircuits/chang90";
 import { addAcParameterToSource } from "../utils/sourceDetection";
+import { correctNgspiceUnits } from "../utils/unitCorrection";
 
 // Define the store interface that includes both simulation and tab slices
 interface StoreWithTab {
@@ -222,8 +223,8 @@ export const createSimulationSlice: StateCreator<
 
   // Combined actions for common operations
   exportNetlist: (netlist) => {
-    // 0. Pre-process netlist for specific simulation types
-    let processedNetlist = netlist;
+    // 0. Pre-process netlist for specific simulation types AND unit correction
+    let processedNetlist = correctNgspiceUnits(netlist);
     const state = get();
     
     if ((state.simulationConfig?.type === "Noise" || state.simulationConfig?.type === "AC") && state.simulationConfig.source) {

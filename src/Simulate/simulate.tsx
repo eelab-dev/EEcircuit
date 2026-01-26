@@ -5,6 +5,7 @@ import { X, Play } from "lucide-react";
 import { SimulationType } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
 import { addAcParameterToSource } from "../utils/sourceDetection";
+import { correctNgspiceUnits } from "../utils/unitCorrection";
 import SimulationConfigPanel from "./SimulationConfigPanel";
 import { dialogTheme } from "src/styles/uiThemes";
 import { notifySimulationErrors } from "../utils/simulationErrorNotifier";
@@ -60,20 +61,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       setNetListToSim(value);
     }
   }, []);
-
-  /**
-   * Corrects instance values for ngspice compatibility.
-   * ngspice has a bug where it doesn't accept "M" as a unit multiplier,
-   * but accepts "Meg" instead. This function converts values like "1M" to "1Meg".
-   * Handles both integer and fractional numbers (e.g., "2.01M" becomes "2.01Meg").
-   */
-  const correctUnitValueForNgspice = (value: string): string => {
-    // Replace "M" with "Meg" only when it's at the end of the string or followed by non-letter characters
-    // This regex matches numbers (including decimals) followed by "M" at word boundaries
-    const correctedValue = value.replace(/(\d+(?:\.\d+)?)\s*M\b/g, "$1Meg");
-
-    return correctedValue;
-  };
 
   // Update netlist when simulation type or configuration changes
   useEffect(() => {
@@ -165,7 +152,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   // Handler for string-based config changes from config components
   const handleStringConfigChange = React.useCallback((configString: string) => {
     // Apply ngspice compatibility corrections to the config string
-    const correctedConfigString = correctUnitValueForNgspice(configString);
+    const correctedConfigString = correctNgspiceUnits(configString);
     if (lastSimCommandRef.current !== correctedConfigString) {
       lastSimCommandRef.current = correctedConfigString;
       setSimCommandString(correctedConfigString);

@@ -24,7 +24,7 @@ export interface ParseResult {
 // Note: Do not consume trailing whitespace when there is no external unit.
 // The external unit (if present) may be separated by whitespace, which we include in the match,
 // but we avoid swallowing spaces otherwise to prevent token concatenation like `0.111k`.
-export const BRACKET_REGEX = /\[(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\s*:\s*(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\s*:\s*(-?\d+(?:\.\d+)?)(u|m|k|Meg|G|T|p|n|f|a)?\](?:\s*(u|m|k|Meg|G|T|p|n|f|a))?/;
+export const BRACKET_REGEX = /\[(-?\d+(?:\.\d+)?)(Meg|u|m|M|k|G|T|p|n|f|a)?\s*:\s*(-?\d+(?:\.\d+)?)(Meg|u|m|M|k|G|T|p|n|f|a)?\s*:\s*(-?\d+(?:\.\d+)?)(Meg|u|m|M|k|G|T|p|n|f|a)?\](?:\s*(Meg|u|m|M|k|G|T|p|n|f|a))?/;
 
 
 /**
@@ -74,7 +74,15 @@ export function findFirstBracketOperation(netlist: string): BracketOperation | n
   const [fullMatch, startStr, startUnit, stepStr, stepUnit, stopStr, stopUnit, externalUnit] = match;
   
   // Determine the unit to use (external unit takes precedence)
-  const finalUnit = externalUnit || startUnit || stepUnit || stopUnit;
+  let finalUnit = externalUnit || startUnit || stepUnit || stopUnit;
+  
+  // Convert 'M' to 'Meg' for SPICE compatibility (since 'M' is often milli in SPICE, but user intent here is Mega as per singular mode)
+  // However, usually m/M is milli and Meg is Mega. But user app logic seems to treat 'M' as Mega in singular context?
+  // User said: "In singular mode when saying 1M ... converts to 1Meg".
+  // So we follow that pattern.
+  if (finalUnit === 'M') {
+    finalUnit = 'Meg';
+  }
   
   const start = parseFloat(startStr!);
   const step = parseFloat(stepStr!);
