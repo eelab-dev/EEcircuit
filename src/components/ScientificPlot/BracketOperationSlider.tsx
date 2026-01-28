@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Text, Slider } from "@chakra-ui/react";
 // import { useAppStore } from "../store/appStore"; // Removed
-import { formatEngineering } from "./utils/formatUtils";
+import { formatEngineering, parseSpiceNumber } from "./utils/formatUtils";
 import type { AggregatedResult } from "./types"; // Fixed path
 
 interface BracketOperationSliderProps {
@@ -18,14 +18,14 @@ const BracketOperationSlider: React.FC<BracketOperationSliderProps> = ({
   // const emphasizedPlotIndex = useAppStore((state) => state.emphasizedPlotIndex);
   // const setEmphasizedPlotIndex = useAppStore((state) => state.setEmphasizedPlotIndex);
 
-  const { parameterValues, bracketOperation } = bracketOperationResults;
+  const { parameterValues } = bracketOperationResults;
 
   if (!parameterValues || parameterValues.length === 0) {
     return null;
   }
 
   const currentParameterValue = parameterValues[emphasizedPlotIndex];
-  const unit = (bracketOperation?.unit as string) || "";
+
 
   return (
     <Box
@@ -61,7 +61,7 @@ const BracketOperationSlider: React.FC<BracketOperationSliderProps> = ({
         </Slider.Root>
       </Box>
       <Text fontSize="xs" fontWeight="medium" minW="fit-content">
-        {formatEngineering(parseFloat(currentParameterValue || "0"))}{unit}
+        {formatEngineering(parseSpiceNumber(currentParameterValue || "0"))}
       </Text>
     </Box>
   );

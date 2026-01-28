@@ -37,3 +37,53 @@ export const formatEngineering = (
   // For very small numbers, use scientific notation
   return value.toExponential(decimals);
 };
+
+/**
+ * Parses a SPICE number string (e.g. "10k", "1Meg", "1u") into a number.
+ * Handles standard SPICE suffixes.
+ */
+export const parseSpiceNumber = (valueStr: string): number => {
+  if (!valueStr) return 0;
+  
+  // Remove any surrounding whitespace
+  const trimmed = valueStr.trim();
+  
+  // Extract number and suffix
+  // RegEx looks for number (int or float) followed efficiently by optional suffix
+  const match = trimmed.match(/^(-?\d+(?:\.\d+)?)([a-zA-Z]+)?$/);
+  
+  if (!match) {
+    // Try simple float parse if regex fails (though regex covers most cases)
+    return parseFloat(trimmed);
+  }
+  
+  const numberPart = parseFloat(match[1]!);
+  const suffix = match[2];
+  
+  if (!suffix) {
+    return numberPart;
+  }
+  
+  // Multipliers map
+  // Note: SPICE is generally case-insensitive, but we look for specific forms common in this app
+  // 'Meg' is 1e6, 'M' usually treated as Meg by some SPICE variants but 'm' is milli. 
+  // BracketParser regex suggests: Meg, u, m, M, k, G, T, p, n, f, a
+  // In `unitCorrection.ts`, 'M' -> 'Meg'. 
+  // Let's implement standard multipliers.
+  
+  switch (suffix) {
+    case 'T': return numberPart * 1e12;
+    case 'G': return numberPart * 1e9;
+    case 'Meg': return numberPart * 1e6;
+    case 'M': return numberPart * 1e6; // Often 'M' is Meg in SPICE context if distinct from 'm', but careful if case matters.
+                                       // In previous conversation context: M -> Meg, m -> milli.
+    case 'k': return numberPart * 1e3;
+    case 'm': return numberPart * 1e-3;
+    case 'u': return numberPart * 1e-6;
+    case 'n': return numberPart * 1e-9;
+    case 'p': return numberPart * 1e-12;
+    case 'f': return numberPart * 1e-15;
+    case 'a': return numberPart * 1e-18;
+    default: return numberPart;
+  }
+};
