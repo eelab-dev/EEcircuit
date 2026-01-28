@@ -112,10 +112,13 @@ const runAC = async (page: Page) => {
   // Wait for config form
   await expect(page.getByLabel('Start Frequency')).toBeVisible();
 
-  await page.getByLabel('Source').selectOption('Vsup');
-  await page.getByLabel('Start Frequency').fill('1k');
-  await page.getByLabel('Stop Frequency').fill('10M');
-  await page.getByLabel('Steps Number').fill('10');
+  await page.getByLabel('Source').selectOption('Iin');
+  await page.getByLabel('Sweep Type').selectOption('dec');
+  await page.getByLabel('Start Frequency').fill('1');
+  await page.getByLabel('Stop Frequency').fill('1000M');
+  await page.getByLabel('Steps Number').fill('20');
+
+  await page.waitForTimeout(5000);
   
   await expect(runBtn).toBeEnabled();
   await page.locator('.chakra-toast').evaluateAll((toasts: HTMLElement[]) => toasts.forEach(t => t.remove()));

@@ -133,7 +133,8 @@ export function addAcParameterToSource(netlist: string | undefined, sourceName: 
       if (!hasAcParam) {
         // Preserve original indentation by finding the start of content
         const originalIndent = line.substring(0, line.indexOf(trimmedLine));
-        return originalIndent + trimmedLine + ' AC 1';
+        const newLine = originalIndent + trimmedLine + ' AC 1';
+        return newLine;
       }
     }
 

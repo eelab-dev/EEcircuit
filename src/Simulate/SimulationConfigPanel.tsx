@@ -28,12 +28,10 @@ import { useAppStore } from "../store/appStore";
 const simType: SimulationType["type"][] = ["None", "DC", "AC", "Transient", "Noise"];
 
 interface SimulationConfigPanelProps {
-  onStringConfigChange: (configString: string) => void;
   onFullConfigChange: (config: SimulationType) => void;
 }
 
 const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
-  onStringConfigChange,
   onFullConfigChange,
 }) => {
   // Get state and actions from Zustand store
@@ -46,6 +44,9 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
   const setSelectedSimType = useAppStore((state) => state.setSelectedSimType);
   const setAllSimulationConfigs = useAppStore(
     (state) => state.setAllSimulationConfigs
+  );
+  const setSimulationCommandString = useAppStore(
+    (state) => state.setSimulationCommandString
   );
 
   // Local state for UI management
@@ -246,8 +247,8 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
     if (newConfigs.length === 0) {
       setSelectedConfigIndex(-1);
       setSelectedSimType("None");
-      onStringConfigChange("");
       onFullConfigChange({ type: "None" });
+      setSimulationCommandString("");
     } else if (selectedConfigIndex === configIndex) {
       const newSelectedIndex = configIndex > 0 ? configIndex - 1 : 0;
       const newSelectedConfig = newConfigs[newSelectedIndex];
@@ -297,8 +298,8 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
 
     if (newType === "None") {
       setSelectedConfigIndex(-1);
-      onStringConfigChange("");
       onFullConfigChange({ type: "None" });
+      setSimulationCommandString("");
       return;
     }
 
@@ -614,10 +615,10 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
                 return (
                   <DcConfig
                     key={`${configComponentKey}-dc`}
-                    onConfigChange={onStringConfigChange}
+                    onConfigChange={setSimulationCommandString}
                     onFullConfigChange={handleFullConfigChange}
                     initialData={
-                      currentConfig?.type === "DC" ? (currentConfig as SimulationDC) : undefined
+                      activeConfig?.type === "DC" ? (activeConfig as SimulationDC) : undefined
                     }
                     netlist={netList}
                   />
@@ -626,10 +627,10 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
                 return (
                   <AcConfig
                     key={`${configComponentKey}-ac`}
-                    onConfigChange={onStringConfigChange}
+                    onConfigChange={setSimulationCommandString}
                     onFullConfigChange={handleFullConfigChange}
                     initialData={
-                      currentConfig?.type === "AC" ? (currentConfig as SimulationAC) : undefined
+                      activeConfig?.type === "AC" ? (activeConfig as SimulationAC) : undefined
                     }
                     netlist={netList}
                   />
@@ -638,10 +639,10 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
                 return (
                   <TransConfig
                     key={`${configComponentKey}-tran`}
-                    onConfigChange={onStringConfigChange}
+                    onConfigChange={setSimulationCommandString}
                     onFullConfigChange={handleFullConfigChange}
                     initialData={
-                      currentConfig?.type === "Transient" ? (currentConfig as SimulationTransient) : undefined
+                      activeConfig?.type === "Transient" ? (activeConfig as SimulationTransient) : undefined
                     }
                   />
                 );
@@ -649,10 +650,10 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
                 return (
                   <NoiseConfig
                     key={`${configComponentKey}-noise`}
-                    onConfigChange={onStringConfigChange}
+                    onConfigChange={setSimulationCommandString}
                     onFullConfigChange={handleFullConfigChange}
                     initialData={
-                      currentConfig?.type === "Noise" ? (currentConfig as SimulationNoise) : undefined
+                      activeConfig?.type === "Noise" ? (activeConfig as SimulationNoise) : undefined
                     }
                     netlist={netList}
                   />

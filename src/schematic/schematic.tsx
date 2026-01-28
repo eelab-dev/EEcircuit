@@ -736,13 +736,13 @@ const Schematic: React.FC<SchematicProps> = ({
         setOverrideSimulateOnNetlistErrorsOnce,
       } = useAppStore.getState() as unknown as {
         overrideSimulateOnNetlistErrorsOnce?: boolean;
-        exportNetlist: (netlist: string) => void;
+        exportNetlist: (netlist: string) => Promise<void>;
         setOverrideSimulateOnNetlistErrorsOnce?: (override: boolean) => void;
       };
 
       if (success || overrideSimulateOnNetlistErrorsOnce) {
         // Proceed: store netlist (with preamble) and navigate to Simulate
-        exportNetlist(netList);
+        await exportNetlist(netList);
         // exportNetlist clears the override internally, but clear defensively if available
         setOverrideSimulateOnNetlistErrorsOnce?.(false);
         return;

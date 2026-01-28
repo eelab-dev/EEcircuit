@@ -1,6 +1,6 @@
 import { StateCreator } from "zustand";
 import { ResultType } from "eecircuit-engine";
-import { SimulationType } from "../types/commonTypes";
+import { SimulationType, ToBePlotted } from "../types/commonTypes";
 import type { BracketOperation } from "../utils/bracketParser";
 import type { ParallelSimulationResult } from "../simulation/parallelSimulation";
 import { saveSimulationConfigs, loadSimulationConfigs } from "../utils/localStorageUtils";
@@ -36,7 +36,8 @@ export interface ThreadState {
 // Simulation state and actions
 export interface SimulationState {
   // Netlist and simulation results
-  netList: string;
+  rawNetlist: string; // The base netlist from schematic without sim commands
+  netList: string;    // The full netlist for simulation/display
   netListNeedsRefresh: boolean;
   results: ResultType[];
 
@@ -56,6 +57,7 @@ export interface SimulationState {
     threads: ThreadState[];
   };
   parallelSimulationResults?: ParallelSimulationResult;
+  simulationCommandString: string;
 }
 
 export interface SimulationActions {
@@ -63,6 +65,9 @@ export interface SimulationActions {
   setNetList: (netList: string) => void;
   setResults: (results: ResultType[]) => void;
   acknowledgeNetListRefresh: () => void;
+  setSimulationCommandString: (command: string) => void;
+  setRawNetlist: (netlist: string) => Promise<void>;
+  generateDisplayNetlist: () => Promise<void>;
 
   // Simulation configuration actions
   setSelectedSimType: (type: SimulationType["type"]) => void;
@@ -90,7 +95,7 @@ export interface SimulationActions {
   resetParallelSimulation: () => void;
 
   // Combined actions for common operations
-  exportNetlist: (netlist: string) => void;
+  exportNetlist: (netlist: string) => Promise<void>;
   runParallelSimulation: (netlist: string) => Promise<void>;
 }
 
@@ -103,6 +108,7 @@ export const createSimulationSlice: StateCreator<
   SimulationSlice
 > = (set, get) => ({
   // Initial state
+  rawNetlist: "",
   netList: "",
   netListNeedsRefresh: false,
   results: [],
@@ -119,15 +125,33 @@ export const createSimulationSlice: StateCreator<
     threads: [],
   },
   parallelSimulationResults: undefined,
+  simulationCommandString: "",
 
   // Netlist and simulation actions
+  setRawNetlist: async (netlist: string) => {
+    set({ rawNetlist: netlist });
+    await (get() as SimulationSlice).generateDisplayNetlist();
+  },
   setNetList: (netList) => set({ netList }),
   setResults: (results) => set({ results }),
   acknowledgeNetListRefresh: () => set({ netListNeedsRefresh: false }),
+  setSimulationCommandString: (command: string) => {
+    set({ simulationCommandString: command });
+    void (get() as SimulationSlice).generateDisplayNetlist();
+  },
 
   // Simulation configuration actions
-  setSelectedSimType: (type) => set({ selectedSimType: type }),
-  setSimulationConfig: (config) => set({ simulationConfig: config }),
+  setSelectedSimType: (type) => {
+    set({ selectedSimType: type });
+    void (get() as SimulationSlice).generateDisplayNetlist();
+  },
+  setSimulationConfig: (config) => {
+    set((state: SimulationSlice) => ({ 
+      simulationConfig: config,
+      selectedSimType: config?.type && config.type !== "None" ? config.type : state.selectedSimType
+    }));
+    void (get() as SimulationSlice).generateDisplayNetlist();
+  },
   setAllSimulationConfigs: (configs) => {
     set({ allSimulationConfigs: configs });
     saveSimulationConfigs(configs);
@@ -221,22 +245,26 @@ export const createSimulationSlice: StateCreator<
       parallelSimulationResults: undefined,
     }),
 
-  // Combined actions for common operations
-  exportNetlist: (netlist) => {
-    // 0. Pre-process netlist for specific simulation types AND unit correction
-    let processedNetlist = correctNgspiceUnits(netlist);
-    const state = get();
-    
-    if ((state.simulationConfig?.type === "Noise" || state.simulationConfig?.type === "AC") && state.simulationConfig.source) {
-      processedNetlist = addAcParameterToSource(processedNetlist, state.simulationConfig.source);
+  generateDisplayNetlist: async () => {
+    const { rawNetlist, selectedSimType, simulationConfig, simulationCommandString } = get() as SimulationSlice;
+    if (!rawNetlist) {
+        set({ netList: "", netListNeedsRefresh: true });
+        return;
     }
 
-    // 1. Define available external models
+    // 0. Pre-process netlist with unit correction
+    let processedNetlist = correctNgspiceUnits(rawNetlist);
+    
+    // 1. Add AC parameter if needed
+    if ((selectedSimType === "Noise" || selectedSimType === "AC") && simulationConfig && "source" in simulationConfig && simulationConfig.source) {
+      processedNetlist = addAcParameterToSource(processedNetlist, simulationConfig.source);
+    }
+
+    // 2. Resolve models
     const availableModels: Record<string, string> = {
       chang90: chang90,
     };
 
-    // 2. Parse netlist to find required subcircuits
     const lines = processedNetlist.split("\n");
     const requiredModels = new Set<string>();
     const definedSubckts = new Set<string>();
@@ -244,110 +272,86 @@ export const createSimulationSlice: StateCreator<
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) continue;
-
       const parts = trimmed.split(/\s+/);
       if (parts.length === 0) continue;
-      
       const firstToken = parts[0]!.toUpperCase();
-
-      // Check for component usage (starts with X)
       if (firstToken.startsWith("X")) {
         const modelName = parts[parts.length - 1];
-        if (modelName) {
-          requiredModels.add(modelName);
-        }
+        if (modelName) requiredModels.add(modelName);
       }
-
-      // Check for subcircuit definitions
       if (firstToken === ".SUBCKT") {
-        // .subckt name node1 node2 ...
         const subcktName = parts[1];
-        if (subcktName) {
-          definedSubckts.add(subcktName);
-        }
+        if (subcktName) definedSubckts.add(subcktName);
       }
     }
 
-    // 3. Resolve models
     const modelsToAppend: string[] = [];
     const missingModels: string[] = [];
-
     requiredModels.forEach((modelName) => {
-      // If it's already defined in the netlist, we don't need to append it
       if (definedSubckts.has(modelName)) return;
-
-      // Check if we have it available externally
       const modelContent = availableModels[modelName];
       if (modelContent) {
         modelsToAppend.push(modelContent);
       } else {
-        // Not defined in netlist AND not found in our available models
         missingModels.push(modelName);
       }
     });
 
-    // 4. Handle errors
     if (missingModels.length > 0) {
-      notifySimulationErrors(
-        missingModels.map((m) => `Missing subcircuit model: ${m}`)
-      );
-      return; // Refuse to simulate
+      notifySimulationErrors(missingModels.map((m) => `Missing subcircuit model: ${m}`));
     }
 
-    // 5. Construct final netlist
+    // 3. Construct segments
     const netListPreamble = `* Netlist generated by EEcircuit
-.include modelcard.ptm
-`;
+.include modelcard.ptm`;
     
-    // Append models before the end if needed, or just append to string
-    // The user said "include at the end of the netlist before the .end line"
-    // But since simple concatenation works for SPICE usually, we can just append.
-    // However, keeping strict to "before .end" is safer if .end is present.
-    // For simplicity and robustness, appending pre-amble + models + netlist is often easiest,
-    // but the instruction says "included at the end of the netlist".
-    
-    // Check if .end exists
+    // Append models before .end if exists
     const endLineIndex = lines.findIndex(l => l.trim().toUpperCase() === ".END");
-    
-    let finalNetlist = processedNetlist;
+    let baseNetlistWithModels = processedNetlist;
     const additionalModelsStr = modelsToAppend.join("\n");
 
     if (additionalModelsStr) {
-        if (endLineIndex !== -1) {
-            // Insert before .end
-            lines.splice(endLineIndex, 0, additionalModelsStr);
-            finalNetlist = lines.join("\n");
-        } else {
-            // Append to end
-            finalNetlist += "\n" + additionalModelsStr;
-        }
+      if (endLineIndex !== -1) {
+        // We use lines here because it's a split array
+        const tempLines = [...lines];
+        tempLines.splice(endLineIndex, 0, additionalModelsStr);
+        baseNetlistWithModels = tempLines.join("\n");
+      } else {
+        baseNetlistWithModels += "\n" + additionalModelsStr;
+      }
     }
 
-    const netlistWithPreamble = netListPreamble + finalNetlist;
+    // 4. Create the final multi-section netlist
+    const netlistSections = [netListPreamble + "\n" + baseNetlistWithModels];
 
-    // Always set the netlist value and signal that the Sim tab should refresh
-    set({ netList: netlistWithPreamble, netListNeedsRefresh: true });
+    if (selectedSimType !== "None" && simulationCommandString?.trim()) {
+      netlistSections.push(simulationCommandString);
+    }
 
+    // Add plot commands (.save) if any
+    const { toBePlotted } = get() as unknown as { toBePlotted: ToBePlotted[] }; 
+    const { buildToBePlottedCommands } = await import("../utils/toBePlotted");
+    const plotCommands = buildToBePlottedCommands(toBePlotted || []);
+    if (plotCommands && plotCommands.trim()) {
+      netlistSections.push(plotCommands);
+    }
+
+    if (!processedNetlist.toUpperCase().includes(".END")) {
+        netlistSections.push(".end");
+    }
+
+    const finalNetlist = netlistSections.join("\n\n");
+    set({ netList: finalNetlist, netListNeedsRefresh: true });
+  },
+
+  // Combined actions for common operations
+  exportNetlist: async (netlist) => {
+    await (get() as SimulationSlice).setRawNetlist(netlist);
+    
     // Proceed to enable and navigate to simulate tab (validation handled by caller)
-    const { setIsSimulationTabEnabled, setMainTabValue } = get() as SimulationSlice &
-      StoreWithTab & {
-        setIsSimulationTabEnabled: (enabled: boolean) => void;
-        setMainTabValue: (tab: "schematic" | "simulate" | "plot") => void;
-      };
-
-    // Clear one-shot override flag if present (defensive)
-    try {
-      const { setOverrideSimulateOnNetlistErrorsOnce } = get() as unknown as {
-        setOverrideSimulateOnNetlistErrorsOnce?: (override: boolean) => void;
-      };
-      setOverrideSimulateOnNetlistErrorsOnce?.(false);
-    } catch {
-      // ignore
-    }
-
-
-    setIsSimulationTabEnabled(true);
-    setMainTabValue("simulate");
+    const { setIsSimulationTabEnabled, setMainTabValue } = get() as unknown as StoreWithTab;
+    if (setIsSimulationTabEnabled) setIsSimulationTabEnabled(true);
+    if (setMainTabValue) setMainTabValue("simulate");
   },
 
   runParallelSimulation: async (netlist: string) => {
@@ -363,18 +367,17 @@ export const createSimulationSlice: StateCreator<
 
     try {
       // Reset previous state
-      const actions = get() as SimulationSlice & StoreWithTab;
+      const actions = get() as SimulationSlice;
       actions.resetParallelSimulation();
       
       // Always clear previous results, optionally reset selections and plot state
-      const allActions = get() as SimulationSlice & 
-        StoreWithTab & {
-          clearResults: () => void;
-          resetVariableSelections: () => void;
-          resetPlotState: () => void;
-          resetVariableSelectionsOnNewSim: boolean;
-          resetPlotStateOnNewSim: boolean;
-        };
+      const allActions = get() as unknown as { 
+        resetVariableSelectionsOnNewSim?: boolean;
+        resetVariableSelections: () => void;
+        resetPlotStateOnNewSim?: boolean;
+        resetPlotState: () => void;
+        clearResults: () => void;
+       };
       
       allActions.clearResults(); // Always clear previous results
       
@@ -396,7 +399,7 @@ export const createSimulationSlice: StateCreator<
       actions.setParallelSimulationRunning(true);
 
       // Initialize threads first to get the worker count
-      const maxWorkers = (get() as SimulationSlice & StoreWithTab & { maxWebWorkers: number }).maxWebWorkers || 4;
+      const maxWorkers = (get() as unknown as { maxWebWorkers?: number }).maxWebWorkers || 4;
       const { expandNetlist } = await import("../utils/netlistExpander");
       const expansionResult = expandNetlist(netlist);
       const totalSims = expansionResult.expandedNetlists?.length || 0;
@@ -405,7 +408,6 @@ export const createSimulationSlice: StateCreator<
         Math.min(maxWorkers, navigator.hardwareConcurrency || 4),
         totalSims
       );
-
 
       // Run parallel simulation
       const result = await runParallelSimulation(netlist, {
@@ -422,7 +424,6 @@ export const createSimulationSlice: StateCreator<
         },
         onResult: () => {
           // Individual results are handled for progress tracking only
-          // Plotting happens only when all simulations are complete
         },
         onThreadUpdate: (threadId, status, currentSim) => {
           if (status === "start") {
@@ -480,15 +481,10 @@ export const createSimulationSlice: StateCreator<
       }
 
       if (result.success && result.results.length > 0) {
-        // Aggregate results for plotting - show all results at once when complete
+        // Aggregate results for plotting 
         const aggregated = aggregateParallelResults(result.results, bracketOp);
         if (aggregated) {
-          // Update results and trigger plot tab using handleNewResults for bracket operation detection
-          // Type assertion needed because AggregatedResult extends ResultType but with additional properties
-          const appActions = get() as SimulationSlice &
-            StoreWithTab & {
-              handleNewResults: (results: ResultType[]) => void;
-            };
+          const appActions = get() as unknown as { handleNewResults: (res: ResultType[]) => void };
           appActions.handleNewResults([aggregated as ResultType]);
         }
       }
@@ -500,7 +496,7 @@ export const createSimulationSlice: StateCreator<
           : "Parallel simulation failed with an unknown error"
       );
     } finally {
-      const actions = get() as SimulationSlice & StoreWithTab;
+      const actions = get() as SimulationSlice;
       actions.setParallelSimulationRunning(false);
     }
   },

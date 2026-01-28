@@ -71,41 +71,35 @@ export const unitConvert2string = (n: number, fractDigits?: number): string => {
 };
 
 export const unitConvert2float = (input: string): number => {
-  const num = parseFloat(input.trim());
-  const unit = input.trim().slice(-1);
+  const trimmed = input.trim();
+  if (!trimmed) return 0;
 
-  let factor = 1;
-  switch (unit) {
-    case "G":
-      factor = 1e9;
-      break;
-    case "M":
-      factor = 1e6;
-      break;
-    case "k":
-      factor = 1e3;
-      break;
-    case "m":
-      factor = 1e-3;
-      break;
-    case "u":
-      factor = 1e-6;
-      break;
-    case "n":
-      factor = 1e-9;
-      break;
-    case "p":
-      factor = 1e-12;
-      break;
-    case "f":
-      factor = 1e-15;
-      break;
-    default:
-      factor = 1;
-      break;
+  // Handle "Meg" explicitly (since it's 3 chars, unlike single-char suffixes)
+  if (trimmed.endsWith("Meg")) {
+    const num = parseFloat(trimmed.slice(0, -3));
+    return num * 1e6;
   }
 
-  const numOut = num * factor;
+  // Handle single-char suffixes
+  const unit = trimmed.slice(-1);
+  const isSuffix = ["G", "M", "k", "m", "u", "n", "p", "f"].includes(unit);
+  
+  if (isSuffix) {
+    const num = parseFloat(trimmed.slice(0, -1));
+    let factor = 1;
+    switch (unit) {
+      case "G": factor = 1e9; break;
+      case "M": factor = 1e6; break;
+      case "k": factor = 1e3; break;
+      case "m": factor = 1e-3; break;
+      case "u": factor = 1e-6; break;
+      case "n": factor = 1e-9; break;
+      case "p": factor = 1e-12; break;
+      case "f": factor = 1e-15; break;
+    }
+    return num * factor;
+  }
 
-  return numOut;
+  // No suffix
+  return parseFloat(trimmed);
 };

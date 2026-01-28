@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { SimulationType } from "../../types/commonTypes";
 import { detectSourcesFromNetlist, validateSourceInNetlist, getDefaultSource } from "../../utils/sourceDetection";
 import { detectNetsFromNetlist } from "../../utils/netDetection";
+import { correctNgspiceUnits } from "../../utils/unitCorrection";
 
 export interface BaseSimConfigProps<T extends SimulationType> {
   onConfigChange: (configString: string) => void;
@@ -207,7 +208,7 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
     publishTimeoutRef.current = window.setTimeout(() => {
       lastPublishedFormRef.current = serializedForm;
 
-      const configString = generateConfigString(formData);
+      const configString = correctNgspiceUnits(generateConfigString(formData));
       if (lastConfigStringRef.current !== configString) {
         lastConfigStringRef.current = configString;
         onConfigChange(configString);
@@ -239,7 +240,7 @@ export function useBaseSimConfig<T extends SimulationType, F extends BaseSimConf
   ]);
 
   const configString = useMemo(
-    () => generateConfigString(formData),
+    () => correctNgspiceUnits(generateConfigString(formData)),
     [formData, generateConfigString]
   );
 

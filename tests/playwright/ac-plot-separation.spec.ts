@@ -4,7 +4,7 @@ test('strict verify ac plot signal separation', async ({ page }) => {
   // Enable console logging with filter
   page.on('console', msg => {
     const text = msg.text();
-    if (text.includes('EEcircuitApp') || text.includes('Step:') || text.includes('Simulation Result')) {
+    if (text.includes('EEcircuitApp') || text.includes('Step:') || text.includes('Simulation Result') || text.includes('DEBUG')) {
       console.log(`BROWSER LOG: ${text}`);
     }
   });
@@ -119,4 +119,5 @@ test('strict verify ac plot signal separation', async ({ page }) => {
   await expect(phaseVar).toBeVisible();
 
   console.log('Verification Complete');
+  await page.waitForTimeout(5000);
 });

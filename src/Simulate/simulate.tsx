@@ -4,13 +4,10 @@ import EditorCustom from "../editor/editorCustom";
 import { X, Play } from "lucide-react";
 import { SimulationType } from "../types/commonTypes";
 import { useAppStore } from "../store/appStore";
-import { addAcParameterToSource } from "../utils/sourceDetection";
-import { correctNgspiceUnits } from "../utils/unitCorrection";
 import SimulationConfigPanel from "./SimulationConfigPanel";
 import { dialogTheme } from "src/styles/uiThemes";
 import { notifySimulationErrors } from "../utils/simulationErrorNotifier";
 import {
-  buildToBePlottedCommands,
   formatToBePlottedLabel,
 } from "../utils/toBePlotted";
 
@@ -27,8 +24,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   const acknowledgeNetListRefresh = useAppStore(
     (state) => state.acknowledgeNetListRefresh
   );
-  const selectedSimType = useAppStore((state) => state.selectedSimType);
-  const simulationConfig = useAppStore((state) => state.simulationConfig);
+  // selectedSimType and simulationConfig removed as unused
   const toBePlotted = useAppStore((state) => state.toBePlotted);
   const removeToBePlotted = useAppStore((state) => state.removeToBePlotted);
   const isDarkMode = useAppStore((state) => state.isDarkMode);
@@ -37,6 +33,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   const handleNewResults = useAppStore((state) => state.handleNewResults);
   const setMainTabValue = useAppStore((state) => state.setMainTabValue);
   const setIsPlottingTabEnabled = useAppStore((state) => state.setIsPlottingTabEnabled);
+  const setSimulationConfig = useAppStore((state) => state.setSimulationConfig);
 
   // Bracket operation state
   const isParallelSimulationRunning = useAppStore(
@@ -49,8 +46,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
   // Local state for UI management
   const [netListToSim, setNetListToSim] = useState(netList);
-  const [simCommandString, setSimCommandString] = useState("");
-  const lastSimCommandRef = React.useRef("");
   const lastSimulationConfigRef = React.useRef<SimulationType | undefined>(undefined);
   const lastGeneratedNetlistRef = React.useRef<string | null>(null);
   const [isSimulationButtonLoading, setIsSimulationButtonLoading] = useState(false);
@@ -62,66 +57,21 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     }
   }, []);
 
-  // Update netlist when simulation type or configuration changes
+  // Sync netlist from store to local state for simulated editor/worker
   useEffect(() => {
-    if (selectedSimType === "None") {
-      const hasNetlistChanged =
-        lastGeneratedNetlistRef.current !== netList || netListNeedsRefresh;
+    const hasNetlistChanged =
+      lastGeneratedNetlistRef.current !== netList || netListNeedsRefresh;
 
-      if (hasNetlistChanged) {
-        lastGeneratedNetlistRef.current = netList;
-        setNetListToSim(netList);
-        if (netListNeedsRefresh) {
-          acknowledgeNetListRefresh();
-        }
-      }
-      return;
-    } else {
-      const plotCommands = buildToBePlottedCommands(toBePlotted);
-
-      // For AC and Noise simulations, add "AC 1" to the selected source
-      let baseNetList = netList;
-      if (
-        (selectedSimType === "AC" || selectedSimType === "Noise") &&
-        simulationConfig &&
-        (simulationConfig.type === "AC" || simulationConfig.type === "Noise") &&
-        "source" in simulationConfig &&
-        simulationConfig.source
-      ) {
-        baseNetList = addAcParameterToSource(netList, simulationConfig.source);
-      }
-
-      const netlistSections = [baseNetList];
-
-      if (simCommandString.trim()) {
-        netlistSections.push(simCommandString);
-      }
-
-      if (plotCommands.trim()) {
-        netlistSections.push(plotCommands);
-      }
-
-      netlistSections.push(".end");
-
-      const newNetList = netlistSections.join("\n\n");
-      const shouldUpdate =
-        lastGeneratedNetlistRef.current !== newNetList || netListNeedsRefresh;
-
-      if (shouldUpdate) {
-        lastGeneratedNetlistRef.current = newNetList;
-        setNetListToSim(newNetList);
-        if (netListNeedsRefresh) {
-          acknowledgeNetListRefresh();
-        }
+    if (hasNetlistChanged) {
+      lastGeneratedNetlistRef.current = netList;
+      setNetListToSim(netList);
+      if (netListNeedsRefresh) {
+        acknowledgeNetListRefresh();
       }
     }
   }, [
     netList,
     netListNeedsRefresh,
-    simCommandString,
-    selectedSimType,
-    simulationConfig,
-    toBePlotted,
     acknowledgeNetListRefresh,
   ]);
 
@@ -149,28 +99,21 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     ? "Simulating"
     : "Loading engine";
 
-  // Handler for string-based config changes from config components
-  const handleStringConfigChange = React.useCallback((configString: string) => {
-    // Apply ngspice compatibility corrections to the config string
-    const correctedConfigString = correctNgspiceUnits(configString);
-    if (lastSimCommandRef.current !== correctedConfigString) {
-      lastSimCommandRef.current = correctedConfigString;
-      setSimCommandString(correctedConfigString);
-    }
-  }, []);
-
-  // Handler for receiving the full configuration object from config components
-  const handleFullConfigChange = React.useCallback((config: SimulationType) => {
-    // Update the simulation config in the store so the useEffect can detect AC + source changes
-    const { setSimulationConfig } = useAppStore.getState();
-    const serializedPrev = JSON.stringify(lastSimulationConfigRef.current);
-    const serializedNext = JSON.stringify(config);
-
-    if (serializedPrev !== serializedNext) {
-      lastSimulationConfigRef.current = config;
-      setSimulationConfig(config);
-    }
-  }, []);
+  // Handler for full config changes from config components
+  const handleFullConfigChange = React.useCallback(
+    (config: SimulationType) => {
+      // Update simulationConfig only if it has changed to avoid infinite loop
+      // We also check for deep equality for objects
+      if (
+        JSON.stringify(lastSimulationConfigRef.current) !==
+        JSON.stringify(config)
+      ) {
+        lastSimulationConfigRef.current = config;
+        setSimulationConfig(config);
+      }
+    },
+    [setSimulationConfig]
+  );
 
   const handleSimRun = async () => {
     if (isSimulationButtonLoading || isParallelSimulationRunning) {
@@ -190,11 +133,12 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         resetPlotStateOnNewSim,
       } = useAppStore.getState();
 
-      // Sync the netlist being simulated to the global store so other components (like EEcircuitApp) handles AC detection correctly
-      // setNetList(netListToSim); // REMOVED: This pollutes the global netlist with appended commands (.noise, .ac) causing lingering settings bug.
-
-
-      clearResults(); // Always clear previous results
+      // Ensure netlist is up to date before simulating
+      const { generateDisplayNetlist } = useAppStore.getState();
+      await generateDisplayNetlist();
+      
+      const latestNetlistFromStore = useAppStore.getState().netList;
+      const activeNetlist = latestNetlistFromStore; // Use store by default for consistency
 
       if (resetVariableSelectionsOnNewSim) {
         resetVariableSelections();
@@ -204,16 +148,17 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         resetPlotState();
       }
 
+      clearResults(); // Move here to ensure it runs before any sim launch
+
       // First check if netlist contains bracket operations
       const { findFirstBracketOperation } = await import(
         "../utils/bracketParser"
       );
-      const bracketOp = findFirstBracketOperation(netListToSim);
+      const bracketOp = findFirstBracketOperation(activeNetlist);
 
       if (bracketOp) {
         // Run parallel simulation for bracket operations
-        console.log("Bracket operation detected, running parallel simulation");
-        await runParallelSimulation(netListToSim);
+        await runParallelSimulation(activeNetlist);
         return;
       }
 
@@ -222,7 +167,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         "../simulation/parallelSimulation"
       );
       
-      const simResult = await runSingleSimulation(netListToSim);
+      const simResult = await runSingleSimulation(activeNetlist);
 
 
 
@@ -285,10 +230,10 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
           flex={{ base: "none", md: "1" }}
           overflow={{ base: "visible", md: "hidden" }}
         >
-          <SimulationConfigPanel
-            onStringConfigChange={handleStringConfigChange}
-            onFullConfigChange={handleFullConfigChange}
-          />
+            {/* Configuration Panel */}
+            <SimulationConfigPanel
+              onFullConfigChange={handleFullConfigChange}
+            />
         </Flex>
 
         {/* Simulation controls and progress */}

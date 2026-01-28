@@ -1,3 +1,5 @@
+import { normalizeUnit } from "./unitCorrection";
+
 export interface BracketOperation {
   start: number;
   step: number;
@@ -76,13 +78,8 @@ export function findFirstBracketOperation(netlist: string): BracketOperation | n
   // Determine the unit to use (external unit takes precedence)
   let finalUnit = externalUnit || startUnit || stepUnit || stopUnit;
   
-  // Convert 'M' to 'Meg' for SPICE compatibility (since 'M' is often milli in SPICE, but user intent here is Mega as per singular mode)
-  // However, usually m/M is milli and Meg is Mega. But user app logic seems to treat 'M' as Mega in singular context?
-  // User said: "In singular mode when saying 1M ... converts to 1Meg".
-  // So we follow that pattern.
-  if (finalUnit === 'M') {
-    finalUnit = 'Meg';
-  }
+  // Normalize unit for SPICE compatibility (e.g. M -> Meg)
+  finalUnit = normalizeUnit(finalUnit);
   
   const start = parseFloat(startStr!);
   const step = parseFloat(stepStr!);

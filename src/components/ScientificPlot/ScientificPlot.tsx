@@ -40,6 +40,8 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
 
 
 
+
+
   // Single canvas state
   const [selectedVariables, setSelectedVariables] = useState<string[]>(
     initialConfig?.selectedVariables ?? []
@@ -55,6 +57,40 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
     initialConfig?.canvas2SelectedVariables ?? []
   );
   const [canvas2HoveredVariable, setCanvas2HoveredVariable] = useState<string | null>(null);
+
+  // Sync state with initialConfig updates (e.g. from store)
+  // Sync state with initialConfig updates (e.g. from store)
+  // We destructure the values we care about to avoid using the unstable initialConfig object reference in dependencies
+  const {
+    isLogX: initLogX,
+    isLogY: initLogY,
+    isLogY1: initLogY1,
+    isLogY2: initLogY2,
+    numCanvases: initNumCanvases,
+    selectedVariables: initSelectedVariables,
+    canvas1SelectedVariables: initCanvas1SelectedVariables,
+    canvas2SelectedVariables: initCanvas2SelectedVariables,
+  } = initialConfig || {};
+
+  useEffect(() => {
+    if (initLogX !== undefined) setIsLogX(initLogX);
+    if (initLogY !== undefined) setIsLogY(initLogY);
+    if (initLogY1 !== undefined) setIsLogY1(initLogY1);
+    if (initLogY2 !== undefined) setIsLogY2(initLogY2);
+    if (initNumCanvases !== undefined) setNumCanvases(initNumCanvases);
+    
+    // Also sync variable selections if provided
+    if (initSelectedVariables) setSelectedVariables(initSelectedVariables);
+    if (initCanvas1SelectedVariables) setCanvas1SelectedVariables(initCanvas1SelectedVariables);
+    if (initCanvas2SelectedVariables) setCanvas2SelectedVariables(initCanvas2SelectedVariables);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    initLogX,
+    initLogY,
+    initLogY1,
+    initLogY2,
+    initNumCanvases,
+  ]);
 
   // Sync state changes to parent
   useEffect(() => {

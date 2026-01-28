@@ -268,11 +268,19 @@ export const createPlotSlice: StateCreator<
       const aggregatedResult = isBracketResult ? firstResult as AggregatedResult : undefined;
 
       // Primary Detection Mechanism: selectedSimType or Netlist Check
-      const netList = currentState.netList;
-      const selectedSimType = currentState.selectedSimType;
+      const { netList, selectedSimType } = currentState;
       
-      const isNoiseSimulation = selectedSimType === "Noise" || /^\s*\.noise\s+/im.test(netList);
-      const isACSimulation = selectedSimType === "AC" || /^\s*\.ac\s+/im.test(netList);
+      let isNoiseSimulation = false;
+      let isACSimulation = false;
+
+      if (selectedSimType && selectedSimType !== "None") {
+          isNoiseSimulation = selectedSimType === "Noise";
+          isACSimulation = selectedSimType === "AC";
+      } else {
+          // Fallback to netlist parsing
+          isNoiseSimulation = /^\s*\.noise\s+/im.test(netList);
+          isACSimulation = /^\s*\.ac\s+/im.test(netList);
+      }
 
 
 
@@ -357,6 +365,23 @@ export const createPlotSlice: StateCreator<
       // If ResultVariableNames are unchanged, we force "preservation" even if lists are empty (meaning user deselected all)
       const shouldPreserveSelections = areResultVariableNamesUnchanged;
 
+      // Calculate log states based on simulation type
+      const logState = {
+        isLogX: isACSimulation || isNoiseSimulation,
+        isLogY: isACSimulation || isNoiseSimulation,
+        isLogY1: isACSimulation || isNoiseSimulation,
+        isLogY2: isNoiseSimulation, // Only true for noise, false for AC
+        canvas1IsLogY: isNoiseSimulation,
+        canvas2IsLogY: isNoiseSimulation
+      };
+
+      // Specific override for AC mode (Linear Phase)
+      if (isACSimulation) {
+        logState.isLogY2 = false;
+        logState.canvas1IsLogY = true; // Mag is log
+        logState.canvas2IsLogY = false; // Phase is linear
+      }
+
       set({
         results: [firstResult], // Always use firstResult which has been processed correctly
         isPlottingTabEnabled: true,
@@ -375,32 +400,8 @@ export const createPlotSlice: StateCreator<
         
         previousVariableNames: newVariableNames,
         
-        // Log scaling configuration for AC simulations
-        ...(isACSimulation && {
-          isLogX: true,    // Frequency axis should be logarithmic
-          isLogY1: true,   // Magnitude plot should be logarithmic
-          isLogY2: false,  // Phase plot should be linear
-        }),
-        
-        // Log scaling for Noise simulations
-         ...(isNoiseSimulation && {
-            isLogX: true,
-            isLogY: true,
-            isLogY1: true,
-            isLogY2: true,
-            canvas1IsLogY: true, 
-            canvas2IsLogY: true
-         }),
-
-         // Default Linear scaling for other simulations (Tran, DC)
-         ...(!isACSimulation && !isNoiseSimulation && {
-            isLogX: false,
-            isLogY: false,
-            isLogY1: false,
-            isLogY2: false,
-            canvas1IsLogY: false,
-            canvas2IsLogY: false
-         }),
+        // Apply log states
+        ...logState,
 
         // Set bracket operation specific state
         bracketOperationResults: aggregatedResult,
