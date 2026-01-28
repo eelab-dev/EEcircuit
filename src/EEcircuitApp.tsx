@@ -211,6 +211,10 @@ const EEcircuitApp: React.FC = () => {
     showInternalSignals,
     updatePlotConfig,
     selectedSimType,
+    
+    // Log axis state
+    isLogX, isLogY,
+    isLogY1, isLogY2
   } = useAppStore();
 
   // Ref to store promise resolver for schematic save operations (keep this as it's for async operations)
@@ -618,11 +622,12 @@ const EEcircuitApp: React.FC = () => {
   const plotProps = React.useMemo(() => {
     if (isAC) {
         return {
-            initialConfig: {
+            config: {
               numCanvases: 2 as 1 | 2, // Force dual plot for AC
-              isLogX: true,   // Force Log X
-              isLogY1: true,  // Force Log Y1
-              isLogY2: false, // Force Linear Y2
+              isLogX,
+              isLogY1,
+              isLogY2,
+              isLogY, // Default filler
               selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
               lineThickness,
             },
@@ -635,10 +640,12 @@ const EEcircuitApp: React.FC = () => {
         };
     } else if (isNoise) {
         return {
-             initialConfig: {
+              config: {
                numCanvases: 1 as 1 | 2, // Force single canvas for noise
-               isLogX: true, // Noise always Log X
-               isLogY: true, // Noise always Log Y (per user requirement)
+               isLogX,
+               isLogY,
+               isLogY1,
+               isLogY2,
                selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
                lineThickness,
               },
@@ -646,17 +653,19 @@ const EEcircuitApp: React.FC = () => {
         };
     } else {
         return {
-             initialConfig: {
+              config: {
                numCanvases: numCanvases as 1 | 2,
-               isLogX: false, // Transient defaults to Linear
-               isLogY: false, // Transient defaults to Linear
+               isLogX,
+               isLogY,
+               isLogY1,
+               isLogY2,
                selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables,
                lineThickness,
               },
               lineThickness,
         };
     }
-  }, [isAC, isNoise, numCanvases, selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables, lineThickness]);
+  }, [isAC, isNoise, numCanvases, selectedVariables, canvas1SelectedVariables, canvas2SelectedVariables, lineThickness, isLogX, isLogY, isLogY1, isLogY2]);
 
   return (
     <Box
@@ -899,7 +908,7 @@ const EEcircuitApp: React.FC = () => {
         <Tabs.Content value="plot" flex={1} minHeight={0} display="flex">
           <React.Suspense fallback={<TabPanelSkeleton label="the plot viewer" />}>
             <Plot
-              key={`${selectedSimType}-${plotProps.initialConfig.numCanvases}`} // Force remount when simulation type or canvas count changes
+              key={`${selectedSimType}-${plotProps.config.numCanvases}`} // Force remount when simulation type or canvas count changes
               results={filteredResults}
               inputProfile={inputProfile}
               isDarkMode={isDarkMode}

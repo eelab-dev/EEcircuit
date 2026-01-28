@@ -10,7 +10,7 @@ import { ScientificPlotProps } from "./types";
 
 const ScientificPlot: React.FC<ScientificPlotProps> = ({
   results,
-  initialConfig,
+  config, // Controlled source of truth
   onExportCSV,
   inputProfile = "mouse",
   isDarkMode = false,
@@ -25,144 +25,36 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
   onConfigChange,
   lineThickness: initialLineThickness = 1,
 }) => {
-  // State initialization from config or defaults
-  const [numCanvases, setNumCanvases] = useState(initialConfig?.numCanvases ?? 1);
-  const [isLogX, setIsLogX] = useState(initialConfig?.isLogX ?? false);
-  const [isLogY, setIsLogY] = useState(initialConfig?.isLogY ?? false);
-  const [isLogY1, setIsLogY1] = useState(initialConfig?.isLogY1 ?? false);
-  const [isLogY2, setIsLogY2] = useState(initialConfig?.isLogY2 ?? false);
-  const [lineThickness, setLineThickness] = useState(initialConfig?.lineThickness ?? initialLineThickness);
+  // Destructure config for easier usage
+  const {
+    numCanvases = 1,
+    isLogX = false,
+    isLogY = false,
+    isLogY1 = false,
+    isLogY2 = false,
+    selectedVariables = [],
+    canvas1SelectedVariables = [],
+    canvas2SelectedVariables = [],
+    lineThickness = initialLineThickness,
+  } = config;
 
-  // Update internal state when prop changes
-  useEffect(() => {
-    setLineThickness(initialLineThickness);
-  }, [initialLineThickness]);
+  // -- INTERNAL STATE --
+  // We only keep state for things that are TRULY internal and transient (like hover or cursor position)
 
-
-
-
-
-  // Single canvas state
-  const [selectedVariables, setSelectedVariables] = useState<string[]>(
-    initialConfig?.selectedVariables ?? []
-  );
+  // Single canvas interaction state
   const [hoveredVariable, setHoveredVariable] = useState<string | null>(null);
 
-  // Dual canvas state
-  const [canvas1SelectedVariables, setCanvas1SelectedVariables] = useState<string[]>(
-    initialConfig?.canvas1SelectedVariables ?? []
-  );
+  // Dual canvas interaction state
   const [canvas1HoveredVariable, setCanvas1HoveredVariable] = useState<string | null>(null);
-  const [canvas2SelectedVariables, setCanvas2SelectedVariables] = useState<string[]>(
-    initialConfig?.canvas2SelectedVariables ?? []
-  );
   const [canvas2HoveredVariable, setCanvas2HoveredVariable] = useState<string | null>(null);
 
-  // Sync state with initialConfig updates (e.g. from store)
-  // Sync state with initialConfig updates (e.g. from store)
-  // We destructure the values we care about to avoid using the unstable initialConfig object reference in dependencies
-  const {
-    isLogX: initLogX,
-    isLogY: initLogY,
-    isLogY1: initLogY1,
-    isLogY2: initLogY2,
-    numCanvases: initNumCanvases,
-    selectedVariables: initSelectedVariables,
-    canvas1SelectedVariables: initCanvas1SelectedVariables,
-    canvas2SelectedVariables: initCanvas2SelectedVariables,
-  } = initialConfig || {};
-
-  useEffect(() => {
-    if (initLogX !== undefined) setIsLogX(initLogX);
-    if (initLogY !== undefined) setIsLogY(initLogY);
-    if (initLogY1 !== undefined) setIsLogY1(initLogY1);
-    if (initLogY2 !== undefined) setIsLogY2(initLogY2);
-    if (initNumCanvases !== undefined) setNumCanvases(initNumCanvases);
-    
-    // Also sync variable selections if provided
-    if (initSelectedVariables) setSelectedVariables(initSelectedVariables);
-    if (initCanvas1SelectedVariables) setCanvas1SelectedVariables(initCanvas1SelectedVariables);
-    if (initCanvas2SelectedVariables) setCanvas2SelectedVariables(initCanvas2SelectedVariables);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    initLogX,
-    initLogY,
-    initLogY1,
-    initLogY2,
-    initNumCanvases,
-  ]);
-
-  // Sync state changes to parent
-  useEffect(() => {
-    if (onConfigChange) {
-      onConfigChange({
-        numCanvases,
-        isLogX,
-        isLogY,
-        isLogY1,
-        isLogY2,
-        selectedVariables,
-        canvas1SelectedVariables,
-        canvas2SelectedVariables,
-        lineThickness,
-      });
-    }
-  }, [
-    numCanvases,
-    isLogX,
-    isLogY,
-    isLogY1,
-    isLogY2,
-    selectedVariables,
-    canvas1SelectedVariables,
-    canvas2SelectedVariables,
-    lineThickness,
-    onConfigChange,
-  ]);
-
-  // State to track previous input line names to detect actual data input line signature changes
-  // Using state instead of ref to allow render-time updates
-  const [prevInputLineNames, setPrevInputLineNames] = useState<string[]>(
-    results.length > 0 && results[0]?.variableNames 
-      ? results[0].variableNames.slice(1) 
-      : []
-  );
-
-  // Variable initialization logic - Render-time state update (replaces useEffect)
-  if (results.length > 0 && results[0]?.variableNames) {
-    const inputLineNames = results[0].variableNames.slice(1);
-    
-    const currentInputLineNamesJson = JSON.stringify(inputLineNames);
-    const prevInputLineNamesJson = JSON.stringify(prevInputLineNames);
-
-    // Only run auto-selection if input line names have actually changed (new data input line signature)
-    if (currentInputLineNamesJson !== prevInputLineNamesJson) {
-      setPrevInputLineNames(inputLineNames);
-
-      if (numCanvases === 1) {
-        // Default to all variables for new input line signature
-        setSelectedVariables(inputLineNames);
-      } else if (numCanvases === 2) {
-        // Apply filters to defaults if present
-        if (canvas1Filter) {
-           setCanvas1SelectedVariables(inputLineNames.filter(canvas1Filter));
-        } else {
-           setCanvas1SelectedVariables(inputLineNames);
-        }
-
-        if (canvas2Filter) {
-           setCanvas2SelectedVariables(inputLineNames.filter(canvas2Filter));
-        } else {
-           setCanvas2SelectedVariables(inputLineNames);
-        }
-      }
-    }
-  }
-
-
-  // Shared state
+  // Shared UI state
   const [sharedCursorX, setSharedCursorX] = useState<number | null>(null);
   const [sharedCursorVisible, setSharedCursorVisible] = useState(false);
+  const [isDrawerPinned, setIsDrawerPinned] = useState(false);
+  const [emphasizedPlotIndex, setEmphasizedPlotIndex] = useState(0);
+
+  // Shared Axis/Zoom State
   const [sharedXAxisScale, setSharedXAxisScale] = useState<{
     scaleX: number;
     offsetX: number;
@@ -177,10 +69,6 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
     zoomBounds: { min: number; max: number } | null;
   } | null>(null);
 
-  const [isDrawerPinned, setIsDrawerPinned] = useState(false);
-  // Using 0 as default emphasized index (optional control could be added)
-  const [emphasizedPlotIndex, setEmphasizedPlotIndex] = useState(0);
-
 
   // Refs
   const canvas1PlotLineRef = useRef<UnifiedLinePlot | null>(null);
@@ -192,8 +80,60 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
   const canvas1PlotScalingRef = useRef<(() => void) | null>(null);
   const canvas2PlotScalingRef = useRef<(() => void) | null>(null);
 
+  // -- AUTO SELECTION LOGIC --
+  // We use a ref to track the previous variable signature to decide when to reset selections.
+  // This replaces the render-time state update pattern with a controlled side-effect.
+  const prevInputLineNamesRef = useRef<string[]>([]);
+  
+  useEffect(() => {
+    if (results.length > 0 && results[0]?.variableNames) {
+      const inputLineNames = results[0].variableNames.slice(1);
+      const currentInputLineNamesJson = JSON.stringify(inputLineNames);
+      const prevInputLineNamesJson = JSON.stringify(prevInputLineNamesRef.current);
 
-  // Handlers
+      if (currentInputLineNamesJson !== prevInputLineNamesJson) {
+        // Variable signature changed! Update ref and trigger config change.
+        prevInputLineNamesRef.current = inputLineNames;
+        
+        if (onConfigChange) {
+             const updates: Partial<typeof config> = {};
+             
+             // logic to determine default selections
+             // We can check the CURRENT numCanvases from props to decide what to populate
+             // But usually we just want to populate EVERYTHING so it's ready for any mode switch
+             
+             // 1. Single Canvas Defaults
+             updates.selectedVariables = inputLineNames;
+
+             // 2. Dual Canvas Defaults
+             if (canvas1Filter) {
+                updates.canvas1SelectedVariables = inputLineNames.filter(canvas1Filter);
+             } else {
+                updates.canvas1SelectedVariables = inputLineNames;
+             }
+
+             if (canvas2Filter) {
+                updates.canvas2SelectedVariables = inputLineNames.filter(canvas2Filter);
+             } else {
+                updates.canvas2SelectedVariables = inputLineNames;
+             }
+             
+             onConfigChange(updates);
+        }
+      }
+    }
+  }, [results, onConfigChange, canvas1Filter, canvas2Filter]);
+
+
+  // -- HANDLERS --
+  // These now update the PARENT via onConfigChange instead of local state
+
+  const handleUpdateConfig = useCallback((updates: Partial<typeof config>) => {
+    if (onConfigChange) {
+      onConfigChange(updates);
+    }
+  }, [onConfigChange]);
+
   const handleCanvas1XAxisScaleChange = useCallback(
     (scale: { scaleX: number; offsetX: number }) => {
       setSharedXAxisScale({ ...scale, sourceCanvas: 1, timestamp: Date.now() });
@@ -216,9 +156,8 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
 
   const handleLogXToggle = useCallback(() => {
     const newIsLogX = !isLogX;
-    setIsLogX(newIsLogX);
     
-    // Imperative update for immediate feedback in dual mode
+    // Imperative update for immediate feedback in dual mode (Optional but good for UX)
     if (numCanvases === 2) {
        canvas1PlotLineRef.current?.setLogAxis(newIsLogX, isLogY1);
        canvas1PlotLineRef.current?.autoScale();
@@ -228,8 +167,10 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
        canvas2PlotLineRef.current?.autoScale();
        canvas2PlotLineRef.current?.draw();
     }
-  }, [isLogX, isLogY1, isLogY2, numCanvases]);
-
+    
+    // Notify Parent
+    handleUpdateConfig({ isLogX: newIsLogX });
+  }, [isLogX, isLogY1, isLogY2, numCanvases, handleUpdateConfig]);
 
 
   return (
@@ -257,8 +198,8 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
             {!lockNumCanvases && (
               <HStack gap={2}>
                 <Text fontSize="sm" color="fg.muted">Mode:</Text>
-                <Button size="sm" variant={numCanvases === 1 ? "solid" : "outline"} onClick={() => setNumCanvases(1)}>Single</Button>
-                <Button size="sm" variant={numCanvases === 2 ? "solid" : "outline"} onClick={() => setNumCanvases(2)}>Dual</Button>
+                <Button size="sm" variant={numCanvases === 1 ? "solid" : "outline"} onClick={() => handleUpdateConfig({ numCanvases: 1 })}>Single</Button>
+                <Button size="sm" variant={numCanvases === 2 ? "solid" : "outline"} onClick={() => handleUpdateConfig({ numCanvases: 2 })}>Dual</Button>
               </HStack>
             )}
 
@@ -273,11 +214,11 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
               <Text fontSize="sm" color="fg.muted">Scale:</Text>
               <Button size="sm" variant={isLogX ? "solid" : "outline"} onClick={handleLogXToggle} aria-pressed={isLogX}>Log X</Button>
               {numCanvases === 1 ? (
-                <Button size="sm" variant={isLogY ? "solid" : "outline"} onClick={() => setIsLogY(!isLogY)} aria-pressed={isLogY}>Log Y</Button>
+                <Button size="sm" variant={isLogY ? "solid" : "outline"} onClick={() => handleUpdateConfig({ isLogY: !isLogY })} aria-pressed={isLogY}>Log Y</Button>
               ) : (
                 <>
-                  <Button size="sm" variant={isLogY1 ? "solid" : "outline"} onClick={() => setIsLogY1(!isLogY1)} aria-pressed={isLogY1}>Log Y1</Button>
-                  <Button size="sm" variant={isLogY2 ? "solid" : "outline"} onClick={() => setIsLogY2(!isLogY2)} aria-pressed={isLogY2}>Log Y2</Button>
+                  <Button size="sm" variant={isLogY1 ? "solid" : "outline"} onClick={() => handleUpdateConfig({ isLogY1: !isLogY1 })} aria-pressed={isLogY1}>Log Y1</Button>
+                  <Button size="sm" variant={isLogY2 ? "solid" : "outline"} onClick={() => handleUpdateConfig({ isLogY2: !isLogY2 })} aria-pressed={isLogY2}>Log Y2</Button>
                 </>
               )}
             </HStack>
@@ -392,14 +333,17 @@ const ScientificPlot: React.FC<ScientificPlotProps> = ({
           <PlotSidebar
             variableNames={results[0].variableNames}
             selectedVariables={numCanvases === 1 ? selectedVariables : canvas1SelectedVariables}
-            onSelectedVariablesChange={numCanvases === 1 ? setSelectedVariables : setCanvas1SelectedVariables}
+            onSelectedVariablesChange={(vars) => numCanvases === 1 
+              ? handleUpdateConfig({ selectedVariables: vars }) 
+              : handleUpdateConfig({ canvas1SelectedVariables: vars })
+            }
             hoveredVariable={numCanvases === 1 ? hoveredVariable : canvas1HoveredVariable}
             onVariableHover={numCanvases === 1 ? setHoveredVariable : setCanvas1HoveredVariable}
             onPinnedChange={setIsDrawerPinned}
             onExportCSV={handleExportCSV}
             numCanvases={numCanvases}
             canvas2SelectedVariables={canvas2SelectedVariables}
-            onCanvas2SelectedVariablesChange={setCanvas2SelectedVariables}
+            onCanvas2SelectedVariablesChange={(vars) => handleUpdateConfig({ canvas2SelectedVariables: vars })}
             canvas2HoveredVariable={canvas2HoveredVariable}
             onCanvas2VariableHover={setCanvas2HoveredVariable}
             canvas1Title={canvas1Title}

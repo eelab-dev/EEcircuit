@@ -38,7 +38,7 @@ export interface AggregatedResult extends Omit<ResultType, 'data'> {
 
 export interface ScientificPlotProps {
   results: ResultType[];
-  initialConfig?: Partial<PlotConfig>;
+  config: PlotConfig; // Controlled component: config is required and source of truth
   onExportCSV?: (results: ResultType[]) => void;
   inputProfile?: InputProfile;
   isDarkMode?: boolean;
