@@ -12,15 +12,15 @@ import {
   Github,
   Expand,
   SquareX,
-  RotateCw,
   Settings,
+  FilePlus,
 } from "lucide-react";
 import StatusIcon from "./StatusIcon";
 
 interface HeaderButtonsProps {
   handleSaveFile: () => void;
   onOpenFile: (file: File) => void;
-  setShowClearDialog: (show: boolean) => void;
+  setShowNewSchematicDialog: (show: boolean) => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
   inputProfile: "mouse" | "trackpad" | "touchscreen";
@@ -33,7 +33,7 @@ interface HeaderButtonsProps {
 const HeaderButtons: React.FC<HeaderButtonsProps> = ({
   handleSaveFile,
   onOpenFile,
-  setShowClearDialog,
+  setShowNewSchematicDialog,
   isDarkMode,
   toggleTheme,
   inputProfile,
@@ -59,6 +59,21 @@ const HeaderButtons: React.FC<HeaderButtonsProps> = ({
 
   return (
     <Flex alignItems="center" gap={2}>
+      {/* New Schematic Button */}
+      <Tooltip
+        showArrow
+        content="New Schematic"
+        positioning={{ placement: "bottom" }}
+      >
+        <IconButton
+          aria-label="New Schematic"
+          size="sm"
+          variant="ghost"
+          onClick={() => setShowNewSchematicDialog(true)}
+        >
+          <FilePlus size={16} />
+        </IconButton>
+      </Tooltip>
       {/* Hidden file input for Open button */}
       <input
         ref={fileInputRef}
@@ -100,21 +115,7 @@ const HeaderButtons: React.FC<HeaderButtonsProps> = ({
         </IconButton>
       </Tooltip>
 
-      {/* Clear Schematic Button */}
-      <Tooltip
-        showArrow
-        content="Clear schematic"
-        positioning={{ placement: "bottom" }}
-      >
-        <IconButton
-          aria-label="Clear schematic"
-          size="sm"
-          variant="ghost"
-          onClick={() => setShowClearDialog(true)}
-        >
-          <RotateCw size={16} />
-        </IconButton>
-      </Tooltip>
+
 
       {/* Dark Mode Toggle Button */}
       <Tooltip

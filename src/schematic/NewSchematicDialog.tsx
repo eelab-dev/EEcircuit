@@ -1,19 +1,20 @@
+
 import React from "react";
 import { Dialog, Button, Flex, IconButton, Portal } from "@chakra-ui/react";
 import { X } from "lucide-react";
 import { sendCommand, loadDemoSchematic } from "eecircuit-schematic";
 import { dialogTheme } from "../styles/uiThemes";
 
-type ClearSchematicDialogProps = {
+type NewSchematicDialogProps = {
   isOpen: boolean;
   onClose: () => void;
 };
 
-const ClearSchematicDialog: React.FC<ClearSchematicDialogProps> = ({
+const NewSchematicDialog: React.FC<NewSchematicDialogProps> = ({
   isOpen,
   onClose,
 }) => {
-  const handleClearSchematic = React.useCallback(() => {
+  const handleNewSchematic = React.useCallback(() => {
     sendCommand({ command: "clearSchematic" });
     onClose();
   }, [onClose]);
@@ -41,7 +42,7 @@ const ClearSchematicDialog: React.FC<ClearSchematicDialogProps> = ({
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content
-            maxW="400px"
+            maxW={{ base: "95vw", sm: "500px" }}
             position="fixed"
             top="50%"
             left="50%"
@@ -53,7 +54,7 @@ const ClearSchematicDialog: React.FC<ClearSchematicDialogProps> = ({
             borderColor={dialogTheme.borderColor}
           >
             <Dialog.Header position="relative" pb="4">
-              <Dialog.Title>Clear Schematic</Dialog.Title>
+              <Dialog.Title>Create New Schematic</Dialog.Title>
               <Dialog.CloseTrigger asChild>
                 <IconButton
                   position="absolute"
@@ -62,7 +63,7 @@ const ClearSchematicDialog: React.FC<ClearSchematicDialogProps> = ({
                   size="sm"
                   variant="ghost"
                   onClick={handleCancel}
-                  aria-label="Close clear schematic dialog"
+                  aria-label="Close new schematic dialog"
                 >
                   <X />
                 </IconButton>
@@ -70,24 +71,24 @@ const ClearSchematicDialog: React.FC<ClearSchematicDialogProps> = ({
             </Dialog.Header>
             <Dialog.Body pb="6">
               <p>
-                Are you sure you want to clear the schematic? This action will
+                Are you sure you want to create a new schematic? This action will
                 delete all your current work and cannot be undone.
               </p>
               <p style={{ marginTop: "16px", fontSize: "14px", color: "#666" }}>
-                You can either clear to start fresh or load the demo schematic.
+                You can either start fresh or load the demo schematic.
               </p>
             </Dialog.Body>
             <Dialog.Footer>
-              <Flex justify="space-between" width="100%">
+              <Flex justify="space-between" width="100%" wrap="wrap" gap={3}>
                 <Button variant="outline" onClick={handleCancel}>
                   Cancel
                 </Button>
-                <Flex gap={2}>
+                <Flex gap={2} wrap="wrap" justify="flex-end" flex={1}>
                   <Button colorPalette="blue" onClick={handleLoadDemo}>
                     Load Demo
                   </Button>
-                  <Button colorPalette="red" onClick={handleClearSchematic}>
-                    Clear All
+                  <Button colorPalette="red" onClick={handleNewSchematic}>
+                    New Empty Schematic
                   </Button>
                 </Flex>
               </Flex>
@@ -99,4 +100,4 @@ const ClearSchematicDialog: React.FC<ClearSchematicDialogProps> = ({
   );
 };
 
-export default ClearSchematicDialog;
+export default NewSchematicDialog;

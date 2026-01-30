@@ -49,8 +49,8 @@ import PlotProgressOverlay from "./components/PlotProgressOverlay";
 const loadHeaderButtons = () => import("./components/HeaderButtons");
 const HeaderButtons = React.lazy(loadHeaderButtons);
 
-const loadClearSchematicDialog = () => import("./schematic/ClearSchematicDialog");
-const ClearSchematicDialog = React.lazy(loadClearSchematicDialog);
+const loadNewSchematicDialog = () => import("./schematic/NewSchematicDialog");
+const NewSchematicDialog = React.lazy(loadNewSchematicDialog);
 
 const loadSettingsDialog = () => import("./components/Settings/SettingsDialog");
 const SettingsDialog = React.lazy(loadSettingsDialog);
@@ -112,7 +112,8 @@ const EEcircuitApp: React.FC = () => {
   const [fullscreen, setFullscreen] = React.useState(false);
 
   // Clear schematic dialog state
-  const [showClearDialog, setShowClearDialog] = React.useState(false);
+  // New schematic dialog state
+  const [showNewSchematicDialog, setShowNewSchematicDialog] = React.useState(false);
 
   // Simulation config dialog state
   const [showConfigDialog, setShowConfigDialog] = React.useState(false);
@@ -124,7 +125,7 @@ const EEcircuitApp: React.FC = () => {
 
     const warmLazyDependencies = () => {
       void loadHeaderButtons();
-      void loadClearSchematicDialog();
+      void loadNewSchematicDialog();
       void loadSettingsDialog();
     };
 
@@ -582,9 +583,9 @@ const EEcircuitApp: React.FC = () => {
     await handleFullscreen(fullscreen);
   }, [fullscreen]);
 
-  // Clear schematic dialog handlers
-  const handleCloseClearDialog = React.useCallback(() => {
-    setShowClearDialog(false);
+  // New schematic dialog handlers
+  const handleCloseNewSchematicDialog = React.useCallback(() => {
+    setShowNewSchematicDialog(false);
   }, []);
 
   // Plot configuration handler
@@ -744,7 +745,7 @@ const EEcircuitApp: React.FC = () => {
             <HeaderButtons
               handleSaveFile={handleSaveFile}
               onOpenFile={processSchematicFile}
-              setShowClearDialog={setShowClearDialog}
+              setShowNewSchematicDialog={setShowNewSchematicDialog}
               isDarkMode={isDarkMode}
               toggleTheme={toggleTheme}
               inputProfile={inputProfile}
@@ -767,10 +768,11 @@ const EEcircuitApp: React.FC = () => {
             flexWrap="wrap"
           >
             <React.Suspense fallback={<HeaderButtonsSkeleton wrap />}> 
+
               <HeaderButtons
                 handleSaveFile={handleSaveFile}
                 onOpenFile={processSchematicFile}
-                setShowClearDialog={setShowClearDialog}
+                setShowNewSchematicDialog={setShowNewSchematicDialog}
                 isDarkMode={isDarkMode}
                 toggleTheme={toggleTheme}
                 inputProfile={inputProfile}
@@ -922,15 +924,15 @@ const EEcircuitApp: React.FC = () => {
         </Tabs.Content>
       </Tabs.Root>
 
-      {/* Clear Schematic Confirmation Dialog */}
-      <React.Suspense fallback={null}>
-        <ClearSchematicDialog
-          isOpen={showClearDialog}
-          onClose={handleCloseClearDialog}
-        />
-      </React.Suspense>
-
-      {/* Simulation Configuration Dialog */}
+      {/* New Schematic Dialog */}
+      {showNewSchematicDialog && (
+        <React.Suspense fallback={null}>
+          <NewSchematicDialog
+            isOpen={showNewSchematicDialog}
+            onClose={handleCloseNewSchematicDialog}
+          />
+        </React.Suspense>
+      )} {/* Simulation Configuration Dialog */}
       <React.Suspense fallback={null}>
         {showConfigDialog && (
           <SettingsDialog

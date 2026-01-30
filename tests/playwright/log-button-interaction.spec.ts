@@ -18,7 +18,7 @@ test('Log button interaction', async ({ page }) => {
 
   // 2. Load Demo Circuit (Schematic Tab)
   console.log('Step: Load Demo Circuit');
-  await page.getByLabel('Clear schematic').first().click();
+  await page.getByLabel('New Schematic').first().click();
   await page.getByRole('button', { name: 'Load Demo' }).click();
   await expect(page.getByRole('dialog')).toBeHidden({ timeout: 5000 });
   await page.waitForTimeout(VISUAL_DELAY); 
