@@ -120,6 +120,8 @@ const EEcircuitApp: React.FC = () => {
 
   // Preload heavier modules after first paint to improve perceived load on slow devices
   React.useEffect(() => {
+
+
     void loadSimulationEditorComponent();
     void loadPlotComponent();
 

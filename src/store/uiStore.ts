@@ -58,6 +58,13 @@ const applyThemeToDocument = (isDark: boolean) => {
 // Helper function to detect initial theme preference
 const getInitialTheme = (): boolean => {
   if (typeof window === 'undefined') return false;
+  
+  // Check URL parameters for explicit theme override
+  const params = new URLSearchParams(window.location.search);
+  const themeParam = params.get('theme');
+  if (themeParam === 'dark') return true;
+  if (themeParam === 'light') return false;
+
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 };
 

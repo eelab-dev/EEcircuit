@@ -299,6 +299,17 @@ const Schematic: React.FC<SchematicProps> = ({
             err,
           );
         }
+
+        // Apply clean slate if requested via URL
+        if (typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          if (params.get("clean") === "true") {
+            console.log("Applying clean slate from URL parameter...");
+            // Use eecircuit-schematic to clear
+            // Note: passing empty arrays as SchematicType
+            eeSch.loadSchematic({ componentInstances: [], wires: [], nodes: [] } as unknown as SchematicType);
+          }
+        }
       } catch (error) {
         console.error("Canvas initialization failed:", error);
         initializingCanvasRef.current = null; // Clear initializing flag on error
