@@ -137,20 +137,28 @@ export const createSimulationSlice: StateCreator<
   acknowledgeNetListRefresh: () => set({ netListNeedsRefresh: false }),
   setSimulationCommandString: (command: string) => {
     set({ simulationCommandString: command });
-    void (get() as SimulationSlice).generateDisplayNetlist();
+    const currentSimType = (get() as SimulationSlice).selectedSimType;
+    if (currentSimType !== "None") {
+        void (get() as SimulationSlice).generateDisplayNetlist();
+    }
   },
 
   // Simulation configuration actions
   setSelectedSimType: (type) => {
     set({ selectedSimType: type });
-    void (get() as SimulationSlice).generateDisplayNetlist();
+    if (type !== "None") {
+        void (get() as SimulationSlice).generateDisplayNetlist();
+    }
   },
   setSimulationConfig: (config) => {
     set((state: SimulationSlice) => ({ 
       simulationConfig: config,
       selectedSimType: config?.type && config.type !== "None" ? config.type : state.selectedSimType
     }));
-    void (get() as SimulationSlice).generateDisplayNetlist();
+    const currentSimType = (get() as SimulationSlice).selectedSimType;
+    if (currentSimType !== "None") {
+        void (get() as SimulationSlice).generateDisplayNetlist();
+    }
   },
   setAllSimulationConfigs: (configs) => {
     set({ allSimulationConfigs: configs });

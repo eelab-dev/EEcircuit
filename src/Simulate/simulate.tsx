@@ -131,14 +131,23 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
         resetPlotState,
         resetVariableSelectionsOnNewSim,
         resetPlotStateOnNewSim,
+        setNetList
       } = useAppStore.getState();
 
-      // Ensure netlist is up to date before simulating
-      const { generateDisplayNetlist } = useAppStore.getState();
-      await generateDisplayNetlist();
+      const { generateDisplayNetlist, selectedSimType } = useAppStore.getState();
       
-      const latestNetlistFromStore = useAppStore.getState().netList;
-      const activeNetlist = latestNetlistFromStore; // Use store by default for consistency
+      let activeNetlist: string;
+
+      if (selectedSimType === "None") {
+        // If simulation config is None, use the editor content directly
+        activeNetlist = netListToSim;
+        // Sync store to match what's in the editor
+        setNetList(activeNetlist);
+      } else {
+        // Otherwise, generate the netlist from the schematic
+        await generateDisplayNetlist();
+        activeNetlist = useAppStore.getState().netList;
+      }
 
       if (resetVariableSelectionsOnNewSim) {
         resetVariableSelections();
