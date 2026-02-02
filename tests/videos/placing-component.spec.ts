@@ -173,7 +173,7 @@ test('record component placement', async ({ page }) => {
     // Speed: ~500 pixels per second for clearer tracking visibility
     // distance / speed = time
     // e.g. 500px -> 1.0s
-    const speed = 300; // Increased speed for better video flow, testing if throttling handles it 
+    const speed = 500; // Increased speed for better video flow, testing if throttling handles it 
     const duration = Math.max(100, (distance / speed) * 1000);
 
     // Run the animation in the browser
@@ -183,7 +183,7 @@ test('record component placement', async ({ page }) => {
     
     // Wait for the UI to update coordinates (debounce/render cycle)
     // This verifies the app actually received the events
-    await page.waitForTimeout(50);
+    await page.waitForTimeout(10);
     // const coordsText = await page.getByRole('button', { name: /X:.*Y:/ }).textContent();
     // console.log(`Moved to (${x}, ${y}). App sees: ${coordsText}`);
 
