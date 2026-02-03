@@ -8,6 +8,7 @@ import { notifySimulationErrors } from "../utils/simulationErrorNotifier";
 import { chang90 } from "../Simulate/subcircuits/chang90";
 import { addAcParameterToSource } from "../utils/sourceDetection";
 import { correctNgspiceUnits } from "../utils/unitCorrection";
+import { buildToBePlottedCommands } from "../utils/toBePlotted";
 
 // Define the store interface that includes both simulation and tab slices
 interface StoreWithTab {
@@ -338,7 +339,6 @@ export const createSimulationSlice: StateCreator<
 
     // Add plot commands (.save) if any
     const { toBePlotted } = get() as unknown as { toBePlotted: ToBePlotted[] }; 
-    const { buildToBePlottedCommands } = await import("../utils/toBePlotted");
     const plotCommands = buildToBePlottedCommands(toBePlotted || []);
     if (plotCommands && plotCommands.trim()) {
       netlistSections.push(plotCommands);
