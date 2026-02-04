@@ -40,7 +40,33 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
     return URL.createObjectURL(blob);
   };
 
-  const svgDataUrl = getSvgDataUrl(svgContent);
+  // Post-process SVG to adjust font size
+  const adjustSvgFontSize = (svg: string | null, scaleFactor: number) => {
+    if (!svg) return "";
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svg, "image/svg+xml");
+      const textElements = doc.querySelectorAll("text");
+      
+      textElements.forEach((text) => {
+        const currentSize = parseFloat(text.getAttribute("font-size") || "0");
+        if (currentSize > 0) {
+          text.setAttribute("font-size", (currentSize * scaleFactor).toString());
+        }
+      });
+      
+      return new XMLSerializer().serializeToString(doc);
+    } catch (e) {
+      console.error("Error adjusting SVG font size:", e);
+      return svg;
+    }
+  };
+
+  // Apply the scale factor (0.4) to reduce the font size to ~60% of existing, 
+  // which brings it from the library's 2.5x back to ~1.0x (base size).
+  const processedSvgContent = React.useMemo(() => adjustSvgFontSize(svgContent, 0.4), [svgContent]);
+
+  const svgDataUrl = getSvgDataUrl(processedSvgContent);
 
   // Cleanup blob URL when component unmounts or svgContent changes
   useEffect(() => {
@@ -52,8 +78,8 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
   }, [svgDataUrl]);
 
   const handleDownloadSVG = () => {
-    if (svgContent) {
-      const blob = new Blob([svgContent], { type: "image/svg+xml" });
+    if (processedSvgContent) {
+      const blob = new Blob([processedSvgContent], { type: "image/svg+xml" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -66,7 +92,7 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
   };
 
   const handleDownloadPNG = () => {
-    if (!svgContent) return;
+    if (!processedSvgContent) return;
 
     // Create a temporary canvas to convert SVG to PNG
     const canvas = document.createElement("canvas");
@@ -133,14 +159,14 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
   };
 
   const handleDownloadPDF = async () => {
-    if (!svgContent) return;
+    if (!processedSvgContent) return;
 
     try {
       console.log("Starting PDF generation using svg-to-pdf library...");
 
       // Parse SVG string using browser's DOMParser
       const parser = new DOMParser();
-      const doc = parser.parseFromString(svgContent, "image/svg+xml");
+      const doc = parser.parseFromString(processedSvgContent, "image/svg+xml");
       const svgElementFromDom = doc.documentElement;
 
       if (
@@ -241,7 +267,7 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                   <Spinner size="xl" />
                 </Box>
               )}
-              {svgContent && (
+              {processedSvgContent && (
                 // The background color should always be white for clarity
                 <Box
                   border="1px"
@@ -277,7 +303,7 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
             </Dialog.Body>
             <Dialog.Footer>
               <Flex justify="space-between" width="100%" align="center">
-                {svgContent && (
+                {processedSvgContent && (
                   <Button
                     variant="outline"
                     onClick={() => setIsFullScale(!isFullScale)}
@@ -294,7 +320,7 @@ const ExportImageDialog: React.FC<ExportImageDialogProps> = ({
                   </Button>
                   <Menu.Root>
                     <Menu.Trigger asChild>
-                      <Button variant="outline" disabled={!svgContent}>
+                      <Button variant="outline" disabled={!processedSvgContent}>
                         <Download />
                         <span style={{ marginLeft: "0.5rem" }}>Download</span>
                         <ChevronDown style={{ marginLeft: "0.5rem" }} />
