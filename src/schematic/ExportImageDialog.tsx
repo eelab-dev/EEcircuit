@@ -13,7 +13,7 @@ import { X, ZoomIn, ZoomOut, Download, ChevronDown } from "lucide-react";
 import {
   convertSvgToPdfFromSimpleStructure,
   type SimpleSvgElement,
-} from "svg-to-pdf";
+} from "@danchitnis/svg-to-pdf";
 import { dialogTheme } from "../styles/uiThemes";
 
 const PDF_MULTIPLIER = 4;
