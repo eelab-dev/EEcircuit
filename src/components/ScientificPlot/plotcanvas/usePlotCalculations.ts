@@ -10,6 +10,25 @@ import { convertLinearToLogSpace } from "./utils/coordinateUtils";
 const TRANSPARENT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 0];
 
 /**
+ * Calculates global transform scales and offsets from data bounds.
+ * Extracted into a helper to replace webgl-plot's autoScale() which has hardware limits.
+ */
+function calculateAxisScales(bounds: { minX: number; maxX: number; minY: number; maxY: number } | null) {
+  let scaleX = 1, scaleY = 1, offsetX = -1, offsetY = -1;
+
+  if (bounds) {
+    const xRange = bounds.maxX - bounds.minX;
+    const yRange = bounds.maxY - bounds.minY;
+    scaleX = xRange > 0 && isFinite(xRange) ? 2 / xRange : 1;
+    scaleY = yRange > 0 && isFinite(yRange) ? 2 / yRange : 1;
+    offsetX = isFinite(xRange) ? -1 - bounds.minX * scaleX : -1;
+    offsetY = isFinite(yRange) ? -1 - bounds.minY * scaleY : -1;
+  }
+  
+  return { scaleX, scaleY, offsetX, offsetY };
+}
+
+/**
  * CRITICAL FIXES FOR DUAL CANVAS MODE:
  * 
  * This hook includes two critical fixes to ensure proper dual canvas operation:
@@ -375,16 +394,11 @@ export const usePlotCalculations = ({
         // Add timestamp check to prevent infinite loops
         Date.now() - sharedXAxisScale.timestamp < 1000;
 
+      const bounds = plotLineRef.current.getAllDataBounds();
+
       if (shouldUseSharedXAxis) {
         // Use X-axis scales from other canvas, calculate own Y-axis
-        plotLineRef.current.autoScale();
-        
-        // Extract only Y-axis scales from autoScale
-        const globalScale = plotLineRef.current.getGlobalScale();
-        const globalOffset = plotLineRef.current.getGlobalOffset();
-        
-        const scaleY = globalScale[1];
-        const offsetY = globalOffset[1];
+        const { scaleY, offsetY } = calculateAxisScales(bounds);
         
         // Use shared X-axis scales
         const scaleX = sharedXAxisScale.scaleX;
@@ -409,19 +423,12 @@ export const usePlotCalculations = ({
         }
       } else {
         // Calculate own X and Y axis scales, potentially share X-axis with other canvas
-        plotLineRef.current.autoScale();
-        
-        // Extract axis scales after autoScale
-        const globalScale = plotLineRef.current.getGlobalScale();
-        const globalOffset = plotLineRef.current.getGlobalOffset();
-        
-        const scaleX = globalScale[0];
-        const scaleY = globalScale[1];
-        const offsetX = globalOffset[0];
-        const offsetY = globalOffset[1];
+        const { scaleX, scaleY, offsetX, offsetY } = calculateAxisScales(bounds);
         
         if (isFinite(scaleX) && isFinite(scaleY) && isFinite(offsetX) && isFinite(offsetY) &&
-          scaleX !== 0 && scaleY !== 0) {
+          scaleX !== 0 && scaleY !== 0 && bounds) {
+          
+          plotLineRef.current.setGlobalTransform([scaleX, scaleY], [offsetX, offsetY]);
           
           const newAxisScales = { scaleX, scaleY, offsetX, offsetY };
           updateAxisScales(newAxisScales);
@@ -466,8 +473,7 @@ export const usePlotCalculations = ({
         // 1. Apply log axis settings
         plotLineRef.current!.setLogAxis(isLogX, isLogY);
 
-        // 2. Auto-scale for the new coordinate space
-        plotLineRef.current!.autoScale();
+        // 2. Custom auto-scale will be handled in calculateAndApplyScaling()
 
         // 3. Reset zoom if transitioning to linear mode
         if (!isLogX && !isLogY && zoomController.current) {
@@ -524,18 +530,16 @@ export const usePlotCalculations = ({
     lastBackgroundContextRef.current = gl;
   }, [isDarkMode, isCanvasInitialized, glRef, plotLineRef]);
 
-  // Handle data updates with simplified autoScale (now works correctly for all coordinate spaces)
+  // Handle data updates with custom autoScale (now works correctly for all coordinate spaces)
+  // We avoid using autoScale() because it has a hardcoded bound ignoring very small ranges (1e-9)
   useEffect(() => {
     if (!plotLineRef.current || results.length === 0) return;
 
-    // Use autoScale for data updates in both linear and log space
-    // autoScale() now works correctly for all coordinate spaces.
-    // NOTE: selectedVariables is intentionally OMITTED from dependencies.
-    // When lines are toggled, we want to preserve the current zoom/pan state (X-axis).
-    // The updatePlot() function handles the visual update and calls calculateAndApplyScaling(),
-    // which intelligently adjusts the Y-axis range while respecting the current X-axis zoom.
-    // autoScale() resets everything, so we only call it when the actual data (results) changes.
-    plotLineRef.current.autoScale();
+    const bounds = plotLineRef.current.getAllDataBounds();
+    if (bounds) {
+      const { scaleX, scaleY, offsetX, offsetY } = calculateAxisScales(bounds);
+      plotLineRef.current.setGlobalTransform([scaleX, scaleY], [offsetX, offsetY]);
+    }
   }, [results, plotLineRef]);
 
 

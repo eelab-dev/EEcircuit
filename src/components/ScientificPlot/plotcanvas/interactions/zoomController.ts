@@ -460,7 +460,7 @@ export class ZoomController {
     let appliedBounds: { min: number; max: number } | null = null;
 
     // Only apply zoom if there's a meaningful selection (avoid tiny selections)
-    if (Math.abs(maxX - minX) > 1e-10) {
+    if (Math.abs(maxX - minX) > 1e-15) {
       this.customXBounds = { min: minX, max: maxX };
       this.panOffsetX = 0; // Reset pan offset when applying new zoom bounds
       appliedBounds = { min: minX, max: maxX };
@@ -581,8 +581,8 @@ export class ZoomController {
         }
       } else if (this.logAxisState.isLogX) {
         // Fallback: convert original bounds, but only if they're positive
-        dataMin = dataMin > 0 ? Math.log10(dataMin) : Math.log10(1e-10);
-        dataMax = dataMax > 0 ? Math.log10(dataMax) : Math.log10(1e-10);
+        dataMin = dataMin > 0 ? Math.log10(dataMin) : Math.log10(1e-15);
+        dataMax = dataMax > 0 ? Math.log10(dataMax) : Math.log10(1e-15);
       }
       
       // Prevent panning only in the direction that would exceed bounds
@@ -661,8 +661,8 @@ export class ZoomController {
         }
       } else if (this.logAxisState.isLogX) {
         // Fallback: convert original bounds, but only if they're positive
-        dataMin = dataMin > 0 ? Math.log10(dataMin) : Math.log10(1e-10);
-        dataMax = dataMax > 0 ? Math.log10(dataMax) : Math.log10(1e-10);
+        dataMin = dataMin > 0 ? Math.log10(dataMin) : Math.log10(1e-15);
+        dataMax = dataMax > 0 ? Math.log10(dataMax) : Math.log10(1e-15);
       }
       
       
