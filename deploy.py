@@ -38,7 +38,7 @@ def main():
         sys.exit(1)
 
     print("[1/5] Installing dependencies...")
-    run("npm install")
+    run("npm install --legacy-peer-deps")
 
     print("[2/5] Building project...")
     run("npm run build")
