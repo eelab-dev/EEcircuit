@@ -38,7 +38,7 @@ def main():
         sys.exit(1)
 
     print("[1/5] Installing dependencies...")
-    run("npm ci")
+    run("npm install")
 
     print("[2/5] Building project...")
     run("npm run build")
