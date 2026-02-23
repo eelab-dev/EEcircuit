@@ -196,9 +196,32 @@ export default function EEcircuit(): JSX.Element {
       //setParser(getParser(netList));
       store.setItem("netList", netList);
       sim.setNetList(netList);
-      const resultArray = await sim.runSim();
-      setResultArray(resultArray);
-      setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n");
+      try {
+        const resultArray = await sim.runSim();
+        const errors = await sim.getError();
+        if (errors.length > 0) {
+          errors.forEach((e) => {
+            toaster.create({
+              description: e,
+              type: "error",
+            });
+          });
+        }
+        if (resultArray.results.length === 0) {
+          toaster.create({
+            description: "Simulation returned no results. Check your netlist syntax.",
+            type: "error",
+          });
+        } else {
+          setResultArray(resultArray);
+        }
+        setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n");
+      } catch (e) {
+        toaster.create({
+          description: e instanceof Error ? e.message : String(e),
+          type: "error",
+        });
+      }
       setIsSimRunning(false);
     } else {
       //spawn worker thread

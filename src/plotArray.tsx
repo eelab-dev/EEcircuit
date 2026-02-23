@@ -92,7 +92,7 @@ function PlotArray({
     sweepSlider: false,
   });
   const [isSweep, SetIsSweep] = useState(false);
-  const [isAxis, SetIsAxis] = useState(false);
+  const [isAxis, SetIsAxis] = useState(true);
 
   const [sliderValue, SetSliderValue] = useState(0);
 
@@ -635,7 +635,7 @@ function PlotArray({
   return (
     <>
       <HStack>
-        <Checkbox defaultChecked={false} onCheckedChange={axisBoxHandle}>
+        <Checkbox defaultChecked={true} onCheckedChange={axisBoxHandle}>
           Axis
         </Checkbox>
         <Checkbox defaultChecked onCheckedChange={crosshairBoxHandle}>
@@ -692,12 +692,37 @@ function PlotArray({
       )}
 
       <Grid
-        templateRows={`1fr ${isAxis ? 1.5 : 0}em`}
+        templateRows={`${isAxis ? 1.5 : 0}em 1fr`}
         templateColumns={`${isAxis ? 5 : 0}em 1fr`}
         gap={0}
       >
         <GridItem
           rowStart={1}
+          colStart={1}
+          bg="bg.subtle"
+          borderBottom="solid 2px"
+          borderRight="solid 2px"
+        />
+        <GridItem
+          rowStart={1}
+          colStart={2}
+          bg="bg.subtle"
+          borderBottom={`${isAxis ? "solid 2px" : ""}`}
+        >
+          {isAxis ? (
+            <Axis
+              scale={wglp ? wglp.gScaleX : 1}
+              offset={wglp ? wglp.gOffsetX : 0}
+              axis="x"
+              yHeight={canvasStyle.height as string}
+              theme={theme}
+            />
+          ) : (
+            <></>
+          )}
+        </GridItem>
+        <GridItem
+          rowStart={2}
           colStart={1}
           bg="bg.subtle"
           borderRight="solid 2px"
@@ -714,7 +739,7 @@ function PlotArray({
             <></>
           )}
         </GridItem>
-        <GridItem rowStart={1} colStart={2} bg="papayawhip">
+        <GridItem rowStart={2} colStart={2} bg="papayawhip">
           <Box bg="bg.subtle">
             <canvas
               ref={canvasMain}
@@ -727,31 +752,6 @@ function PlotArray({
               onContextMenu={contextMenu}
             ></canvas>
           </Box>
-        </GridItem>
-        <GridItem
-          rowStart={2}
-          colStart={1}
-          bg="bg.subtle"
-          borderTop="solid 2px"
-          borderRight="solid 2px"
-        />
-        <GridItem
-          rowStart={2}
-          colStart={2}
-          bg="bg.subtle"
-          borderTop={`${isAxis ? "solid 2px" : ""}`}
-        >
-          {isAxis ? (
-            <Axis
-              scale={wglp ? wglp.gScaleX : 1}
-              offset={wglp ? wglp.gOffsetX : 0}
-              axis="x"
-              yHeight={canvasStyle.height as string}
-              theme={theme}
-            />
-          ) : (
-            <></>
-          )}
         </GridItem>
       </Grid>
     </>
