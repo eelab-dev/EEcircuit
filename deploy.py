@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Build and deploy EEcircuit to GitHub Pages on enterprise GitHub."""
+"""Build and deploy EEcircuit to GitHub Pages on enterprise GitHub using worktree."""
 
 import subprocess
 import sys
 import shutil
 import tempfile
+import os
 from pathlib import Path
 
 REPO_DIR = Path(__file__).parent.resolve()
@@ -28,73 +29,62 @@ def main():
         print(f"ERROR: Expected to be on 'main', but on '{current}'")
         sys.exit(1)
 
-    # Check for uncommitted changes (excluding package-lock.json)
+    # Check for uncommitted changes
     status = run("git status --porcelain")
-    dirty = [line for line in status.splitlines() if "package-lock.json" not in line]
-    if dirty:
+    if status:
         print("ERROR: You have uncommitted changes. Commit or stash them first.")
-        for line in dirty:
-            print(f"  {line}")
+        print(status)
         sys.exit(1)
 
-    print("[1/5] Building project...")
+    print("[1/4] Building project...")
     run("npm run build")
 
-    # Copy dist to temp location
     dist_dir = REPO_DIR / "dist"
     if not dist_dir.exists():
         print("ERROR: dist/ not found after build")
         sys.exit(1)
 
+    # Use a worktree to deploy
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_dist = Path(tmpdir) / "dist"
-        shutil.copytree(dist_dir, tmp_dist)
-
-        print("[3/5] Switching to gh-pages branch...")
-        run("git stash --include-untracked")
-        # Delete local gh-pages if it exists, then create fresh orphan
-        subprocess.run("git branch -D gh-pages 2>/dev/null", shell=True, cwd=REPO_DIR)
-        run("git switch --orphan gh-pages")
-        # Remove all tracked and untracked files
-        subprocess.run("git rm -rf --cached . > /dev/null 2>&1", shell=True, cwd=REPO_DIR)
+        deploy_dir = Path(tmpdir) / "deploy"
         
-        # Remove any leftover directories
-        for item in REPO_DIR.iterdir():
-            if item.name in [".git", "node_modules"]:
+        print("[2/4] Preparing deployment directory...")
+        # Remove worktree if it exists from a previous crash
+        subprocess.run(f"git worktree remove -f {deploy_dir} 2>/dev/null", shell=True, cwd=REPO_DIR)
+        
+        # Create worktree for gh-pages
+        run(f"git worktree add -B {BRANCH} {deploy_dir} origin/{BRANCH} 2>/dev/null || git worktree add --orphan {BRANCH} {deploy_dir}")
+
+        print("[3/4] Copying build output...")
+        # Clear worktree (except .git)
+        for item in deploy_dir.iterdir():
+            if item.name == ".git":
                 continue
             if item.is_dir():
                 shutil.rmtree(item)
             else:
                 item.unlink()
 
-        print("[4/5] Copying build output...")
-        for item in tmp_dist.iterdir():
-            dest = REPO_DIR / item.name
+        # Copy new build
+        for item in dist_dir.iterdir():
+            dest = deploy_dir / item.name
             if item.is_dir():
                 shutil.copytree(item, dest)
             else:
                 shutil.copy2(item, dest)
 
-        run("git add .")
-        run('git commit -m "Deploy site"')
+        # Commit and push from worktree
+        print(f"[4/4] Pushing to {REMOTE}/{BRANCH}...")
+        subprocess.run("git add .", shell=True, cwd=deploy_dir)
+        subprocess.run('git commit -m "Deploy site"', shell=True, cwd=deploy_dir)
+        subprocess.run(f"git push --force {REMOTE} {BRANCH}", shell=True, cwd=deploy_dir)
 
-        print(f"[5/5] Pushing to {REMOTE}/{BRANCH}...")
-        run(f"git push --force {REMOTE} {BRANCH}")
+        # Cleanup worktree
+        print("Cleaning up...")
+        subprocess.run(f"git worktree remove -f {deploy_dir}", shell=True, cwd=REPO_DIR)
 
-    # Switch back to main
-    print("Restoring main branch...")
-    # Remove deployed files before switching
-    for item in REPO_DIR.iterdir():
-        if item.name in [".git", "node_modules"]:
-            continue
-        if item.is_dir():
-            shutil.rmtree(item)
-        else:
-            item.unlink()
-    run("git switch main")
-    run("git stash pop")
-
-    print("\nDone! Site deployed to gh-pages branch.")
+    print("\nDone! Site deployed safely using worktrees.")
+    print("Local node_modules were not touched.")
     print("URL: https://pages.github.pie.apple.com/gaofeng-fan/EEcircuit/")
 
 
