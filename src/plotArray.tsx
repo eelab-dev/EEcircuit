@@ -601,7 +601,7 @@ function PlotArray({
 
   const canvasStyle = {
     width: "100%",
-    height: "60vh",
+    height: "40vh",
   } as React.CSSProperties;
 
   /*const handleLog10YCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {

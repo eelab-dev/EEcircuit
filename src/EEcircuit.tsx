@@ -281,6 +281,7 @@ export default function EEcircuit(): JSX.Element {
       // Run Python code
       const pyResult = await pyRunner.runPython(pythonCode);
       if (pyResult.error) {
+        setInfo(prev => prev + "\n\n[Python Error]\n" + pyResult.error);
         toaster.create({
           description: "Python error: " + pyResult.error,
           type: "error",
@@ -326,6 +327,7 @@ export default function EEcircuit(): JSX.Element {
         const resultArray = await sim.runSim();
         const errors = await sim.getError();
         if (errors.length > 0) {
+          setInfo(prev => prev + "\n\n[Simulation Error]\n" + errors.join("\n"));
           errors.forEach((e) => {
             toaster.create({
               description: e,

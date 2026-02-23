@@ -4,7 +4,7 @@ import React, { JSX } from "react";
 import { isComplex, ResultArrayType } from "./sim/simulationArray.ts";
 import { ComplexNumber } from "eecircuit-engine";
 import { CheckboxCheckedChangeDetails } from "@chakra-ui/react/checkbox";
-import { VStack } from "@chakra-ui/react";
+import { VStack, Textarea, Box } from "@chakra-ui/react";
 
 type Prop = {
   resultArray?: ResultArrayType;
@@ -155,15 +155,31 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
 
   return (
     <>
-      <VStack gap={5} align="flex-start" ml={4}>
+      <VStack gap={5} align="flex-start" ml={4} width="100%">
         {complex && (
-          <Checkbox defaultChecked={true} onCheckedChange={ckAction}>
+          <Checkbox defaultChecked={false} onCheckedChange={ckAction}>
             Convert to magnitude and phase
           </Checkbox>
         )}
         <Button type="submit" colorScheme="blue" onClick={btAction}>
-          Download
+          Download CSV
         </Button>
+        
+        {resultArray && resultArray.results.length > 0 && (
+          <Box width="95%" mt={4}>
+            <Box mb={2} fontWeight="bold" fontSize="sm">Preview:</Box>
+            <Textarea
+              readOnly={true}
+              aria-label="CSV preview"
+              bg="bg.muted"
+              fontSize="0.85em"
+              fontFamily="monospace"
+              rows={15}
+              value={printCSV(resultArray)}
+              width="100%"
+            />
+          </Box>
+        )}
       </VStack>
 
       <a ref={aLink} href={href} download={"EEcircuit.csv"} />
