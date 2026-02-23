@@ -30,10 +30,11 @@ const pyodideWorker = {
 
     // Load Pyodide from local files to bypass CSP restrictions
     try {
-      // In Vite, files in public/ are served at the root /
-      const pyodideModule = await import("/pyodide/pyodide.mjs");
+      // Use dynamic URL construction to prevent Vite from trying to resolve this during build
+      const pyodidePath = "/pyodide/pyodide.mjs";
+      const pyodideModule = await import(/* @vite-ignore */ pyodidePath);
       pyodide = await pyodideModule.loadPyodide({
-        indexURL: "/pyodide/"
+        indexURL: self.location.origin + "/pyodide/"
       });
     } catch (e) {
       console.error("Local Pyodide import failed, error details:", e);
