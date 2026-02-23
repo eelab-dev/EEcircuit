@@ -9,7 +9,8 @@
 
 import * as ComLink from "comlink";
 
-// Pyodide types
+// Pyodide types (loaded dynamically from CDN)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let pyodide: any = null;
 let isReady = false;
 
@@ -21,38 +22,34 @@ export type PythonResult = {
 };
 
 const pyodideWorker = {
-  async init(baseUrl?: string): Promise<string> {
+  /**
+   * Initialize Pyodide and install analogpy.
+   */
+  async init(): Promise<string> {
     if (isReady) return "already initialized";
 
-    try {
-      // Use the explicit enterprise path which we know is served correctly
-      const finalBase = "/gaofeng-fan/EEcircuit/";
-      const pyodideUrl = `${finalBase}pyodide/pyodide_loader.js`;
-      
-      const pyodideModule = await import(/* @vite-ignore */ pyodideUrl);
-      pyodide = await pyodideModule.loadPyodide({
-        indexURL: `${finalBase}pyodide/`
-      });
-    } catch (e) {
-      console.error("Local Pyodide import failed. Error:", e);
-      throw new Error(`Importing pyodide_loader.js failed. Error: ${e}`);
-    }
+    // Revert to reliable CDN loading for local development
+    const pyodideModule = await import(
+      /* @vite-ignore */
+      "https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.mjs"
+    );
+    pyodide = await pyodideModule.loadPyodide();
 
     // Prepare micropip
     await pyodide.loadPackage("micropip");
     const micropip = pyodide.pyimport("micropip");
 
-    // Pre-load binary packages that Pyodide supports natively
+    // Pre-load binary packages
     try {
       await pyodide.loadPackage(["numpy", "matplotlib"]);
     } catch (e) {
       console.warn("Failed to pre-load binary packages:", e);
     }
 
-    // Install pure python dependencies from PyPI
+    // Install pure python dependencies
     await micropip.install(["pyyaml", "schemdraw"]);
     
-    // Finally install analogpy (ensure it's uploaded to PyPI first!)
+    // Install analogpy
     await micropip.install("analogpy==0.2.2", {keep_going: true});
 
     isReady = true;
@@ -61,11 +58,6 @@ const pyodideWorker = {
 
   /**
    * Execute Python code and capture generated netlists.
-   *
-   * The Python code should use analogpy to build a circuit and call
-   * generate_ngspice() and/or generate_spectre(). The worker wraps
-   * the user code to capture the output of print() calls and also
-   * tries to extract netlists from the last expression.
    */
   async runPython(code: string): Promise<PythonResult> {
     if (!isReady) {
@@ -78,8 +70,6 @@ const pyodideWorker = {
     }
 
     try {
-      // Wrap user code: capture stdout (print output) and try to
-      // generate both netlists from the testbench variable.
       const wrappedCode = `
 import sys
 import io
@@ -104,7 +94,7 @@ try:
     from analogpy import generate_ngspice, generate_spectre, Testbench
     from analogpy.testbench import Testbench as _TBClass
 
-    # First look for Testbench instances (preferred over plain Circuit)
+    # First look for Testbench instances
     _candidates = [v for v in dir() if not v.startswith('_')]
     _tb = None
     for _name in reversed(_candidates):
@@ -121,34 +111,22 @@ try:
         try:
             import matplotlib
             matplotlib.use('Agg')
-            from importlib.metadata import version as _pkg_ver
-            _ver = _pkg_ver('analogpy')
             from analogpy.visualization.svg import render_schematic_svg, render_block_diagram_svg
             from analogpy.visualization.symbols import get_default_renderer, SymbolStyle
             
-            # Set detailed style as default to match PDF
             get_default_renderer().default_style = SymbolStyle.DETAILED
             
-            # For Testbench, block diagram is usually preferred as main view (matches PDF page 1)
-            # Use render_block_diagram_svg if it's a Testbench
             if hasattr(_tb, 'analyses'):
                 _svg_result = render_block_diagram_svg(_tb)
             else:
                 _svg_result = render_schematic_svg(_tb, compact=True)
         except Exception as _svg_err:
-            _ver = 'unknown'
-            try:
-                from importlib.metadata import version as _pkg_ver
-                _ver = _pkg_ver('analogpy')
-            except:
-                pass
-            _svg_result = f"<!-- SVG error (analogpy {_ver}): {_svg_err} -->"
+            _svg_result = f"<!-- SVG error: {_svg_err} -->"
     elif _captured_output.strip():
         _ngspice_result = _captured_output.strip()
 except Exception as _e:
     pass
 
-# If user printed something and we didn't find a TB, use stdout
 if not _ngspice_result and _captured_output.strip():
     _ngspice_result = _captured_output.strip()
 
@@ -157,7 +135,6 @@ if not _ngspice_result and _captured_output.strip():
 `;
 
       const result = pyodide.runPython(wrappedCode);
-      // Convert Python dict to JS object
       const jsResult = result.toJs({ dict_converter: Object.fromEntries });
       result.destroy();
 

@@ -1,14 +1,6 @@
 /**
  * PyodideRunner - manages the Pyodide Web Worker for executing
  * analogpy Python code in the browser.
- *
- * Usage:
- *   const runner = new PyodideRunner();
- *   await runner.init();
- *   const result = await runner.runPython(code);
- *   // result.ngspice  - generated ngspice netlist
- *   // result.spectre  - generated Spectre netlist
- *   // result.error    - error message if any
  */
 
 import * as ComLink from "comlink";
@@ -29,10 +21,6 @@ export class PyodideRunner {
     return this._isLoading;
   }
 
-  /**
-   * Initialize Pyodide worker and install analogpy.
-   * This downloads ~15MB of WASM, so it's deferred until first use.
-   */
   async init(): Promise<string> {
     if (this._isReady) return "already initialized";
     if (this._isLoading) return "loading in progress";
@@ -45,21 +33,13 @@ export class PyodideRunner {
     );
     this.worker = ComLink.wrap<PyodideWorkerType>(rawWorker);
 
-    // Get the base URL (including potential sub-directories like /gaofeng-fan/EEcircuit/)
-    // In Vite, import.meta.env.BASE_URL is the most reliable way.
-    // If not available, we fall back to manual detection.
-    const baseUrl = (import.meta as any).env?.BASE_URL || "/";
-    const fullBaseUrl = window.location.origin + (baseUrl.endsWith("/") ? baseUrl : baseUrl + "/");
-
-    const msg = await this.worker.init(fullBaseUrl);
+    // Call init without any complex baseUrl detection
+    const msg = await this.worker.init();
     this._isReady = true;
     this._isLoading = false;
     return msg;
   }
 
-  /**
-   * Execute Python code and return generated netlists.
-   */
   async runPython(code: string): Promise<PythonResult> {
     if (!this.worker || !this._isReady) {
       return {
