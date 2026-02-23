@@ -1,0 +1,14 @@
+<html>
+<head><title>404 Not Found</title></head>
+<body>
+<h1>404 Not Found</h1>
+<ul>
+<li>Code: NoSuchKey</li>
+<li>Message: The specified key does not exist.</li>
+<li>Key: v0.27.5/full/pyodide_py.tar</li>
+<li>RequestId: 9S0D66DF5CQD2MSX</li>
+<li>HostId: tMiZo7xgDstnCEis/mhVMjpqqjxDHO+2phm1gRMITxOKFjqAxrizXdPfxvGnjmGApXOxRgLhDQs=</li>
+</ul>
+<hr/>
+</body>
+</html>

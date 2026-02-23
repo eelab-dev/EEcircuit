@@ -28,18 +28,16 @@ const pyodideWorker = {
   async init(): Promise<string> {
     if (isReady) return "already initialized";
 
-    // Load Pyodide using a more robust method for Worker environments
-    // We'll use the standard dynamic import but add a try-catch and alternative
+    // Load Pyodide from local files to bypass CSP restrictions
     try {
-      const pyodideModule = await import("https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.mjs");
-      pyodide = await pyodideModule.loadPyodide();
+      // In Vite, files in public/ are served at the root /
+      const pyodideModule = await import("/pyodide/pyodide.mjs");
+      pyodide = await pyodideModule.loadPyodide({
+        indexURL: "/pyodide/"
+      });
     } catch (e) {
-      console.error("Standard import failed, trying alternative...", e);
-      // Fallback: Some environments prefer this
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      const loadPyodide = (await import("https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.mjs")).loadPyodide;
-      pyodide = await loadPyodide();
+      console.error("Local Pyodide import failed, error details:", e);
+      throw new Error("Importing a module script failed. Check if /pyodide/pyodide.mjs is accessible.");
     }
 
     // Prepare micropip
