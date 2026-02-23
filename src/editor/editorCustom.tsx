@@ -383,7 +383,7 @@ const EditorCustom = ({
         {
           value:
             "// First line\nfunction hello() {\n\talert('Hello world!');\n}\n// Last line",
-          language: "spice",
+          language: language || "spice",
           roundedSelection: false,
           scrollBeyondLastLine: false,
           readOnly: false,
@@ -405,6 +405,15 @@ const EditorCustom = ({
       editorCodeRef.current.layout();
     }
   }, [width, height]);
+
+  useEffect(() => {
+    if (editorCodeRef.current && isEditorCodeMounted && monacoRef.current) {
+      const model = editorCodeRef.current.getModel();
+      if (model && language) {
+        monacoRef.current.editor.setModelLanguage(model, language);
+      }
+    }
+  }, [language, isEditorCodeMounted]);
 
   useEffect(() => {
     if (editorCodeRef.current && isEditorCodeMounted) {

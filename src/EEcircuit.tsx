@@ -61,13 +61,17 @@ import {
   useColorMode,
   useColorModeValue,
 } from "./components/ui/color-mode.tsx";
+import { PyodideRunner } from "./python/pyodideRunner.ts";
+
+type EditorMode = "spice" | "python";
 
 let sim: SimArray;
+let pyRunner: PyodideRunner | null = null;
 const store = globalThis.localStorage;
 let initialSimInfo = "";
 let threadCount = 1;
 
-const circuitDefault = `Basic RLC circuit 
+const circuitDefault = `Basic RLC circuit
 .include modelcard.CMOS90
 
 r vdd 2 100.0
@@ -81,9 +85,43 @@ vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
 
 .end`;
 
-export default function EEcircuit(): JSX.Element {
-  // Create the count state.
+const pythonDefault = `from analogpy import (
+    Testbench, resistor, capacitor, inductor,
+    nmos, vsource, vpulse, Transient,
+    generate_ngspice,
+)
 
+tb = Testbench("rlc_circuit")
+tb.include("modelcard.CMOS90")
+
+vdd_net = tb.net("vdd")
+net_rc = tb.net("net_rc")
+gate = tb.net("gate")
+gnd = tb.gnd()
+
+# Passive components between vdd and net_rc
+tb.add_instance(resistor, "r", p=vdd_net, n=net_rc, r=100.0)
+tb.add_instance(inductor, "l", p=vdd_net, n=net_rc, l=1)
+tb.add_instance(capacitor, "c", p=vdd_net, n=net_rc, c=0.01, rotation=180)
+
+# NMOS transistor
+tb.add_instance(nmos, "m1", d=net_rc, g=gate, s=gnd, b=gnd,
+                model="N90", w=100e-6, l=0.09e-6)
+
+# Power supply
+tb.add_instance(vsource, "vdd", p=vdd_net, n=gnd, dc=1.8)
+
+# Input pulse (using vpulse convenience device)
+tb.add_instance(vpulse, "vin", p=gate, n=gnd,
+                val0=0, val1=1.8, delay=0,
+                rise=0.1, fall=0.1, width=15, period=30)
+
+tb.add_analysis(Transient(stop=50, step=0.1))
+
+print(generate_ngspice(tb))
+`;
+
+export default function EEcircuit(): JSX.Element {
   const [isSimLoaded, setIsSimLoaded] = React.useState(false);
   const [isSimLoading, setIsSimLoading] = React.useState(false);
   const [isSimRunning, setIsSimRunning] = React.useState(false);
@@ -96,11 +134,33 @@ export default function EEcircuit(): JSX.Element {
   const [progress, setProgress] = React.useState(0);
   const [threadCountNew, setThreadCountNew] = React.useState(1);
 
+  // Python / editor mode state
+  const [editorMode, setEditorMode] = React.useState<EditorMode>(
+    () => (store.getItem("editorMode") as EditorMode) || "spice"
+  );
+  const [pythonCode, setPythonCode] = React.useState(
+    () => store.getItem("pythonCode") || pythonDefault
+  );
+  const [generatedNgspice, setGeneratedNgspice] = React.useState("");
+  const [generatedSpectre, setGeneratedSpectre] = React.useState("");
+  const [schematicSvg, setSchematicSvg] = React.useState("");
+  const [schematicZoom, setSchematicZoom] = React.useState(1.0);
+  const [isPyLoading, setIsPyLoading] = React.useState(false);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const tabsContainerRef = React.useRef<HTMLDivElement>(null);
+
   const colorMode = useColorModeValue("light", "dark");
 
   useEffect(() => {
-    const loadedNetList = store.getItem("netList");
-    setNetList(loadedNetList ? loadedNetList : circuitDefault);
+    const loadedMode = store.getItem("editorMode") as EditorMode | null;
+    if (loadedMode === "python") {
+      setEditorMode("python");
+      const loadedPy = store.getItem("pythonCode");
+      if (loadedPy) setPythonCode(loadedPy);
+    } else {
+      const loadedNetList = store.getItem("netList");
+      setNetList(loadedNetList ? loadedNetList : circuitDefault);
+    }
 
     const loadedDisplayDataString = store.getItem("displayData");
     if (loadedDisplayDataString) {
@@ -191,11 +251,77 @@ export default function EEcircuit(): JSX.Element {
   }, []);*/
 
   const btRun = async () => {
+    // Python mode: run Python code first to generate netlist
+    if (editorMode === "python") {
+      setIsSimRunning(true);
+      store.setItem("pythonCode", pythonCode);
+
+      // Initialize Pyodide if needed
+      if (!pyRunner || !pyRunner.isReady) {
+        setIsPyLoading(true);
+        toaster.create({
+          description: "Loading Python runtime (first time only)...",
+          type: "info",
+        });
+        pyRunner = new PyodideRunner();
+        try {
+          await pyRunner.init();
+        } catch (e) {
+          toaster.create({
+            description: "Failed to load Python runtime: " + (e instanceof Error ? e.message : String(e)),
+            type: "error",
+          });
+          setIsPyLoading(false);
+          setIsSimRunning(false);
+          return;
+        }
+        setIsPyLoading(false);
+      }
+
+      // Run Python code
+      const pyResult = await pyRunner.runPython(pythonCode);
+      if (pyResult.error) {
+        toaster.create({
+          description: "Python error: " + pyResult.error,
+          type: "error",
+        });
+        setIsSimRunning(false);
+        return;
+      }
+
+      if (!pyResult.ngspice) {
+        toaster.create({
+          description: "Python code did not produce an ngspice netlist. Make sure to call generate_ngspice() or print() the netlist.",
+          type: "error",
+        });
+        setIsSimRunning(false);
+        return;
+      }
+
+      setGeneratedNgspice(pyResult.ngspice);
+      setGeneratedSpectre(pyResult.spectre);
+      const svgData = pyResult.schematicSvg || "";
+      console.log("schematicSvg length:", svgData.length, "first 100:", svgData.substring(0, 100));
+      setSchematicSvg(svgData);
+
+      // Use the generated netlist for simulation
+      setNetList(pyResult.ngspice);
+      setIsSimRunning(false);
+
+      // Now run the simulation with the generated netlist
+      await runSimulation(pyResult.ngspice);
+      return;
+    }
+
+    // SPICE mode: run directly
+    store.setItem("netList", netList);
+    await runSimulation(netList);
+  };
+
+  const runSimulation = async (netlistToRun: string) => {
     if (sim && threadCount === threadCountNew) {
       setIsSimRunning(true);
-      //setParser(getParser(netList));
-      store.setItem("netList", netList);
-      sim.setNetList(netList);
+      sim.setNetList(netlistToRun);
       try {
         const resultArray = await sim.runSim();
         const errors = await sim.getError();
@@ -236,8 +362,7 @@ export default function EEcircuit(): JSX.Element {
       setIsSimLoaded(true);
       setIsSimLoading(false);
       setProgress(0);
-      //initialSimInfo = await sim.getInfo(); //not yet working???????
-      btRun();
+      runSimulation(netlistToRun);
     }
   };
 
@@ -282,9 +407,23 @@ export default function EEcircuit(): JSX.Element {
 
   const handleEditor = React.useCallback((value: string | undefined) => {
     if (value) {
-      setNetList(value);
+      if (editorMode === "python") {
+        setPythonCode(value);
+      } else {
+        setNetList(value);
+      }
     }
-  }, []);
+  }, [editorMode]);
+
+  const handleModeSwitch = React.useCallback(() => {
+    const newMode = editorMode === "spice" ? "python" : "spice";
+    setEditorMode(newMode);
+    store.setItem("editorMode", newMode);
+    // Clear generated netlists when switching mode
+    setGeneratedNgspice("");
+    setGeneratedSpectre("");
+    setSchematicSvg("");
+  }, [editorMode]);
 
   const handleDeSelectButton = React.useCallback(() => {
     if (displayData) {
@@ -398,34 +537,53 @@ export default function EEcircuit(): JSX.Element {
     <div>
       <Box border="solid 0px" p={2}>
         <Flex width="100%">
-          <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
-            <EditorCustom
-              height="30vh"
-              width="100%"
-              language="spice"
-              value={netList}
-              valueChanged={handleEditor}
-              theme={useColorModeValue("light", "dark")}
-              key={windowSize.width}
-            />
-          </Suspense>
+          <Box width={{ base: "100%", md: "65%" }}>
+            <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
+              <EditorCustom
+                height="30vh"
+                width="100%"
+                language={editorMode === "python" ? "python" : "spice"}
+                value={editorMode === "python" ? pythonCode : netList}
+                valueChanged={handleEditor}
+                theme={useColorModeValue("light", "dark")}
+                key={`${windowSize.width}-${editorMode}`}
+              />
+            </Suspense>
+          </Box>
           {displayBreakpoint == "base" ? <></> : LineSelectBox()}
         </Flex>
       </Box>
       <Box p={1} width={{ base: "100%", md: "73%" }}>
         <Flex>
           <Button
-            colorScheme="blue"
+            colorScheme={editorMode === "python" ? "green" : "blue"}
             variant="solid"
             size="lg"
             m={1}
             onClick={btRun}
-            loading={isSimRunning || isSimLoading}
-            loadingText={isSimLoading ? "Loading 🚚" : "Running 🏃"}
+            loading={isSimRunning || isSimLoading || isPyLoading}
+            loadingText={isPyLoading ? "Loading Python..." : isSimLoading ? "Loading..." : "Running..."}
           >
             Run{" "}
             <Image
               src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F680.min.svg"
+              height="80%"
+            />
+          </Button>
+
+          <Button
+            colorScheme={editorMode === "python" ? "green" : "gray"}
+            variant={editorMode === "python" ? "solid" : "outline"}
+            size="lg"
+            m={1}
+            onClick={handleModeSwitch}
+            disabled={isSimRunning}
+          >
+            {editorMode === "python" ? "Python" : "SPICE"}
+            <Image
+              src={editorMode === "python"
+                ? "https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F40D.min.svg"
+                : "https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/26A1.min.svg"}
               height="80%"
             />
           </Button>
@@ -551,6 +709,34 @@ export default function EEcircuit(): JSX.Element {
               height="80%"
             />
           </Tabs.Trigger>
+          {editorMode === "python" && (
+            <>
+              <Tabs.Trigger
+                value="ngspice"
+                marginRight="0.5em"
+                paddingLeft="2em"
+                paddingRight="2em"
+              >
+                ngspice
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                value="spectre"
+                marginRight="0.5em"
+                paddingLeft="2em"
+                paddingRight="2em"
+              >
+                Spectre
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                value="schematic"
+                marginRight="0.5em"
+                paddingLeft="2em"
+                paddingRight="2em"
+              >
+                Schematic
+              </Tabs.Trigger>
+            </>
+          )}
         </Tabs.List>
 
         <Tabs.Content value="plot">
@@ -587,6 +773,89 @@ export default function EEcircuit(): JSX.Element {
         <Tabs.Content value="csv">
           <DownCSV resultArray={resultArray} />
         </Tabs.Content>
+
+        {editorMode === "python" && (
+          <>
+            <Tabs.Content value="ngspice">
+              <Textarea
+                readOnly={true}
+                aria-label="ngspice netlist"
+                bg="bg.muted"
+                fontSize="0.9em"
+                fontFamily="monospace"
+                rows={20}
+                value={generatedNgspice || "(Run Python code to generate ngspice netlist)"}
+              />
+            </Tabs.Content>
+
+            <Tabs.Content value="spectre">
+              <Textarea
+                readOnly={true}
+                aria-label="spectre netlist"
+                bg="bg.muted"
+                fontSize="0.9em"
+                fontFamily="monospace"
+                rows={20}
+                value={generatedSpectre || "(Run Python code to generate Spectre netlist)"}
+              />
+            </Tabs.Content>
+
+            <Tabs.Content value="schematic">
+              {schematicSvg ? (
+                schematicSvg.startsWith("<!-- SVG error") ? (
+                  <Box p={4} color="red.500">
+                    {schematicSvg.replace("<!--", "").replace("-->", "")}
+                  </Box>
+                ) : (
+                  <Box>
+                    <Flex gap={2} mb={2} align="center">
+                      <Button size="sm" onClick={() => setSchematicZoom(z => Math.min(z * 1.25, 5))}>
+                        Zoom +
+                      </Button>
+                      <Button size="sm" onClick={() => setSchematicZoom(z => Math.max(z / 1.25, 0.2))}>
+                        Zoom -
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setSchematicZoom(1.0)}>
+                        Reset
+                      </Button>
+                      <Box fontSize="sm" color="fg.muted">{Math.round(schematicZoom * 100)}%</Box>
+                    </Flex>
+                    <div
+                      style={{
+                        background: "white",
+                        padding: "16px",
+                        borderRadius: "6px",
+                        border: "1px solid #e2e8f0",
+                        overflow: "auto",
+                        maxHeight: "700px",
+                      }}
+                      onWheel={(e) => {
+                        if (e.ctrlKey || e.metaKey) {
+                          e.preventDefault();
+                          setSchematicZoom(z => {
+                            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                            return Math.min(Math.max(z * delta, 0.2), 5);
+                          });
+                        }
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${schematicZoom * 100}%`,
+                        }}
+                        dangerouslySetInnerHTML={{ __html: schematicSvg }}
+                      />
+                    </div>
+                  </Box>
+                )
+              ) : (
+                <Box p={4} color="fg.muted">
+                  (Run Python code to generate schematic)
+                </Box>
+              )}
+            </Tabs.Content>
+          </>
+        )}
       </Tabs.Root>
       <Toaster />
     </div>
