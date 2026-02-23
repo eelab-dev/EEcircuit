@@ -81,6 +81,12 @@ const zoomRect = new WebglSquare(new ColorRGBA(0.8, 0.8, 0.2, 0.25));
 const crossXLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 const crossYLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 
+// Cursor markers
+const cursorXLineA = new WebglLine(new ColorRGBA(1, 0.5, 0, 1), 1);
+const cursorYLineA = new WebglLine(new ColorRGBA(1, 0.5, 0, 1), 1);
+const cursorXLineB = new WebglLine(new ColorRGBA(0, 0.8, 1, 1), 1);
+const cursorYLineB = new WebglLine(new ColorRGBA(0, 0.8, 1, 1), 1);
+
 function PlotArray({
   resultArray: resultArray,
   displayData,
@@ -97,6 +103,10 @@ function PlotArray({
   const [sliderValue, SetSliderValue] = useState(0);
 
   const [crossXY, setCrossXY] = useState<CrossXY>({ x: 0, y: 0 });
+
+  // Cursor positions in physical coordinates
+  const [cursorA, setCursorA] = useState<CrossXY & { visible: boolean }>({ x: 0, y: 0, visible: false });
+  const [cursorB, setCursorB] = useState<CrossXY & { visible: boolean }>({ x: 0, y: 0, visible: false });
 
   const [, setZoomStatus] = useState<ZoomStatus>({
     scale: 1,
@@ -311,22 +321,36 @@ function PlotArray({
   };
 
   useEffect(() => {
+    if (!wglp) return;
+    
     wglp.removeAllLines();
-    wglp.addSurface(zoomRect); //change this to Aux !!!!!!
-    wglp.addAuxLine(crossXLine);
-    wglp.addAuxLine(crossYLine);
-
-    /* x axis is [0,1]*/
-    wglp.gOffsetX = -1;
-    wglp.gScaleX = 2;
-    console.log("😱", resultArray);
-
+    
+    // Data lines are re-added inside makeLine -> addDataLine
     if (resultArray && resultArray.results.length > 0) {
       makeLine(resultArray.results);
       scaleUpdate(findMinMaxGlobal());
     }
 
-    //console.log("line-->", wglp.linesData);
+    // Re-add auxiliary elements (these must be re-added after removeAllLines)
+    wglp.addSurface(zoomRect);
+    wglp.addAuxLine(crossXLine);
+    wglp.addAuxLine(crossYLine);
+    wglp.addAuxLine(cursorXLineA);
+    wglp.addAuxLine(cursorYLineA);
+    wglp.addAuxLine(cursorXLineB);
+    wglp.addAuxLine(cursorYLineB);
+    
+    // Sync visibility
+    cursorXLineA.visible = cursorA.visible;
+    cursorYLineA.visible = cursorA.visible;
+    cursorXLineB.visible = cursorB.visible;
+    cursorYLineB.visible = cursorB.visible;
+
+    /* x axis is [0,1]*/
+    if (!resultArray || resultArray.results.length === 0) {
+      wglp.gOffsetX = -1;
+      wglp.gScaleX = 2;
+    }
   }, [resultArray, displayData]);
 
   useEffect(() => {
@@ -385,6 +409,83 @@ function PlotArray({
     const minmax = { minY: minY, maxY: maxY, minX: minX, maxX: maxX };
     return minmax;
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "a" || e.key === "b") {
+        if (!wglp || wglp.linesData.length === 0) return;
+
+        // Find closest point among visible lines
+        let bestPoint = { x: 0, y: 0 };
+        let minDistanceSq = Infinity;
+        let found = false;
+
+        wglp.linesData.forEach((line) => {
+          if (!line.visible) return;
+
+          // Find closest point in this line (binary search would be faster, but linear is fine for now)
+          // We look for closest X first, then check Y distance
+          const numPoints = line.numPoints;
+          let localBestX = 0;
+          let localBestY = 0;
+          let localMinDX = Infinity;
+
+          for (let i = 0; i < numPoints; i++) {
+            const px = line.getX(i);
+            const py = line.getY(i);
+            const dx = Math.abs(px - crossXY.x);
+            if (dx < localMinDX) {
+              localMinDX = dx;
+              localBestX = px;
+              localBestY = py;
+            }
+          }
+
+          if (localMinDX !== Infinity) {
+            const distSq = (localBestX - crossXY.x) ** 2 + (localBestY - crossXY.y) ** 2;
+            if (distSq < minDistanceSq) {
+              minDistanceSq = distSq;
+              bestPoint = { x: localBestX, y: localBestY };
+              found = true;
+            }
+          }
+        });
+
+        if (found) {
+          if (e.key === "a") {
+            setCursorA({ ...bestPoint, visible: true });
+            // Vertical line at X
+            cursorXLineA.xy = new Float32Array([bestPoint.x, -1e10, bestPoint.x, 1e10]);
+            // Horizontal line at Y
+            cursorYLineA.xy = new Float32Array([-1e10, bestPoint.y, 1e10, bestPoint.y]);
+            cursorXLineA.visible = true;
+            cursorYLineA.visible = true;
+          } else {
+            setCursorB({ ...bestPoint, visible: true });
+            // Vertical line at X
+            cursorXLineB.xy = new Float32Array([bestPoint.x, -1e10, bestPoint.x, 1e10]);
+            // Horizontal line at Y
+            cursorYLineB.xy = new Float32Array([-1e10, bestPoint.y, 1e10, bestPoint.y]);
+            cursorXLineB.visible = true;
+            cursorYLineB.visible = true;
+          }
+        }
+      }
+      
+      // 'c' to clear cursors
+      if (e.key === "c") {
+        setCursorA(prev => ({ ...prev, visible: false }));
+        setCursorB(prev => ({ ...prev, visible: false }));
+        cursorXLineA.visible = false;
+        cursorYLineA.visible = false;
+        cursorXLineB.visible = false;
+        cursorYLineB.visible = false;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [crossXY]);
 
   const scaleUpdate = (scale: ScaleType) => {
     let diffY = 0;
@@ -652,6 +753,24 @@ function PlotArray({
           </>
         ) : (
           <></>
+        )}
+        
+        {cursorA.visible && (
+          <Tag colorScheme="orange">
+            {`A: (${unitConvert2string(cursorA.x, 3)}, ${unitConvert2string(cursorA.y, 3)})`}
+          </Tag>
+        )}
+        
+        {cursorB.visible && (
+          <Tag colorScheme="blue">
+            {`B: (${unitConvert2string(cursorB.x, 3)}, ${unitConvert2string(cursorB.y, 3)})`}
+          </Tag>
+        )}
+        
+        {cursorA.visible && cursorB.visible && (
+          <Tag colorScheme="purple">
+            {`dX: ${unitConvert2string(Math.abs(cursorB.x - cursorA.x), 3)}, dY: ${unitConvert2string(Math.abs(cursorB.y - cursorA.y), 3)}`}
+          </Tag>
         )}
         {isSweep ? (
           <Checkbox
