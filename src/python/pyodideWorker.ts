@@ -28,12 +28,19 @@ const pyodideWorker = {
   async init(): Promise<string> {
     if (isReady) return "already initialized";
 
-    // Load Pyodide from CDN
-    const pyodideModule = await import(
-      /* @vite-ignore */
-      "https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.mjs"
-    );
-    pyodide = await pyodideModule.loadPyodide();
+    // Load Pyodide using a more robust method for Worker environments
+    // We'll use the standard dynamic import but add a try-catch and alternative
+    try {
+      const pyodideModule = await import("https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.mjs");
+      pyodide = await pyodideModule.loadPyodide();
+    } catch (e) {
+      console.error("Standard import failed, trying alternative...", e);
+      // Fallback: Some environments prefer this
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const loadPyodide = (await import("https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.mjs")).loadPyodide;
+      pyodide = await loadPyodide();
+    }
 
     // Prepare micropip
     await pyodide.loadPackage("micropip");

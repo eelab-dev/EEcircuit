@@ -60,7 +60,7 @@ def main():
         run("git switch --orphan gh-pages")
         # Remove all tracked and untracked files
         subprocess.run("git rm -rf --cached . > /dev/null 2>&1", shell=True, cwd=REPO_DIR)
-        subprocess.run("git clean -fd > /dev/null 2>&1", shell=True, cwd=REPO_DIR)
+        
         # Remove any leftover directories
         for item in REPO_DIR.iterdir():
             if item.name in [".git", "node_modules"]:

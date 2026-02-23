@@ -7,11 +7,14 @@ import type {
 } from "eecircuit-engine";
 import {
   Box,
+  Button,
   CheckboxCheckedChangeDetails,
+  Flex,
   Grid,
   GridItem,
   HStack,
   SliderValueChangeDetails,
+  Spacer,
 } from "@chakra-ui/react";
 
 import { Checkbox } from "./components/ui/checkbox.tsx";
@@ -72,6 +75,7 @@ type CrossXY = {
 type PlotOptions = {
   crosshair: boolean;
   sweepSlider: boolean;
+  showPoints: boolean;
 };
 
 let wglp: WebglPlot;
@@ -82,10 +86,13 @@ const crossXLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 const crossYLine = new WebglLine(new ColorRGBA(0.1, 1, 0.1, 1), 2);
 
 // Cursor markers
-const cursorXLineA = new WebglLine(new ColorRGBA(1, 0.5, 0, 1), 1);
-const cursorYLineA = new WebglLine(new ColorRGBA(1, 0.5, 0, 1), 1);
-const cursorXLineB = new WebglLine(new ColorRGBA(0, 0.8, 1, 1), 1);
-const cursorYLineB = new WebglLine(new ColorRGBA(0, 0.8, 1, 1), 1);
+const cursorXLineA = new WebglLine(new ColorRGBA(1, 0.5, 0, 1), 2);
+const cursorYLineA = new WebglLine(new ColorRGBA(1, 0.5, 0, 1), 2);
+const cursorXLineB = new WebglLine(new ColorRGBA(0, 0.8, 1, 1), 2);
+const cursorYLineB = new WebglLine(new ColorRGBA(0, 0.8, 1, 1), 2);
+
+const dotA = new WebglSquare(new ColorRGBA(1, 0.5, 0, 1));
+const dotB = new WebglSquare(new ColorRGBA(0, 0.8, 1, 1));
 
 function PlotArray({
   resultArray: resultArray,
@@ -93,9 +100,16 @@ function PlotArray({
   theme,
 }: PlotType): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
+  const animationFrameId = useRef<number>(0);
+  
+  // Use refs for values needed in the render loop to avoid closure stales
+  const cursorARef = useRef<CrossXY & { visible: boolean }>({ x: 0, y: 0, visible: false });
+  const cursorBRef = useRef<CrossXY & { visible: boolean }>({ x: 0, y: 0, visible: false });
+
   const [plotOptions, setPlotOptions] = useState<PlotOptions>({
     crosshair: true,
     sweepSlider: false,
+    showPoints: false,
   });
   const [isSweep, SetIsSweep] = useState(false);
   const [isAxis, SetIsAxis] = useState(true);
@@ -104,9 +118,13 @@ function PlotArray({
 
   const [crossXY, setCrossXY] = useState<CrossXY>({ x: 0, y: 0 });
 
-  // Cursor positions in physical coordinates
+  // Cursor positions in physical coordinates for UI display
   const [cursorA, setCursorA] = useState<CrossXY & { visible: boolean }>({ x: 0, y: 0, visible: false });
   const [cursorB, setCursorB] = useState<CrossXY & { visible: boolean }>({ x: 0, y: 0, visible: false });
+
+  // Update refs when state changes
+  useEffect(() => { cursorARef.current = cursorA; }, [cursorA]);
+  useEffect(() => { cursorBRef.current = cursorB; }, [cursorB]);
 
   const [, setZoomStatus] = useState<ZoomStatus>({
     scale: 1,
@@ -162,11 +180,41 @@ function PlotArray({
       });
 
       const newFrame = () => {
-        wglp.update();
+        if (wglp && canvasMain.current) {
+          const canvas = canvasMain.current;
+          const aspect = canvas.width / canvas.height;
 
-        requestAnimationFrame(newFrame);
+          // Update cursor lines based on physical coordinates (matching crosshair logic)
+          const updateCursor = (c: CrossXY & { visible: boolean }, xl: WebglLine, yl: WebglLine, dot: WebglSquare) => {
+            if (!wglp || !xl || !yl || !dot) return;
+            
+            if (c.visible) {
+              // Use physical coordinates directly for lines (WebglPlot handles the scale/offset)
+              xl.xy = new Float32Array([c.x, -1e10, c.x, 1e10]);
+              yl.xy = new Float32Array([-1e10, c.y, 1e10, c.y]);
+              xl.visible = true;
+              yl.visible = true;
+              
+              // Restore the marker dot at the intersection
+              const dx = 0.02 / wglp.gScaleX;
+              const dy = (0.02 * aspect) / wglp.gScaleY;
+              dot.setSquare(c.x - dx, c.y - dy, c.x + dx, c.y + dy);
+              dot.visible = true;
+            } else {
+              xl.visible = false;
+              yl.visible = false;
+              dot.visible = false;
+            }
+          };
+
+          updateCursor(cursorARef.current, cursorXLineA, cursorYLineA, dotA);
+          updateCursor(cursorBRef.current, cursorXLineB, cursorYLineB, dotB);
+          
+          wglp.update();
+          animationFrameId.current = requestAnimationFrame(newFrame);
+        }
       };
-      requestAnimationFrame(newFrame);
+      animationFrameId.current = requestAnimationFrame(newFrame);
 
       //bug fix see https://github.com/facebook/react/issues/14856#issuecomment-586781399
       canvasMain.current.addEventListener(
@@ -180,6 +228,9 @@ function PlotArray({
     console.log("canvas->", "I am here! 🧨");
     ////bug fix see https://github.com/facebook/react/issues/14856#issuecomment-586781399
     return () => {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
       canvasMain.current?.removeEventListener("wheel", (e) => {
         e.preventDefault();
       });
@@ -230,15 +281,21 @@ function PlotArray({
       } else {
         color = new ColorRGBA(0.5, 0.5, 0.5, 1);
       }
+      
       const line = new WebglLine(color, numPoints);
+      // Tag line with metadata for easier visibility control
+      (line as any).sourceIndex = col - 1;
+      (line as any).isPoints = false;
+
       let minY = 100000;
       let maxY = -100000;
       let minPos = maxY;
       let maxNeg = minY;
 
       for (let i = 0; i < numPoints; i++) {
-        line.setX(i, data[0].values[i]);
+        const x = data[0].values[i];
         const y = data[col].values[i];
+        line.setX(i, x);
         line.setY(i, y);
         maxY = maxY > y ? maxY : y;
         minY = minY < y ? minY : y;
@@ -247,8 +304,35 @@ function PlotArray({
       }
 
       wglp.addDataLine(line);
+      
+      if (plotOptions.showPoints && canvasMain.current) {
+        const canvas = canvasMain.current;
+        const numCirclePoints = 10;
+        const pointsLine = new WebglLine(color, numPoints * numCirclePoints);
+        (pointsLine as any).sourceIndex = col - 1;
+        (pointsLine as any).isPoints = true;
+        
+        const gapX = (6 / (canvas.width / 2)) / wglp.gScaleX;
+        const gapY = (6 / (canvas.height / 2)) / wglp.gScaleY;
 
-      //console.log("📈", line);
+        for (let i = 0; i < numPoints; i++) {
+          const x = data[0].values[i];
+          const y = data[col].values[i];
+          const base = i * numCirclePoints;
+          for (let p = 0; p < numCirclePoints; p++) {
+            if (p === 0 || p === numCirclePoints - 1) {
+              pointsLine.setX(base + p, x);
+              pointsLine.setY(base + p, y);
+            } else {
+              const angle = ((p - 1) / (numCirclePoints - 3)) * Math.PI * 2;
+              pointsLine.setX(base + p, x + Math.cos(angle) * gapX);
+              pointsLine.setY(base + p, y + Math.sin(angle) * gapY);
+            }
+          }
+        }
+        wglp.addDataLine(pointsLine);
+      }
+
       lineMinMax.push({
         minY: minY,
         maxY: maxY,
@@ -325,13 +409,30 @@ function PlotArray({
     
     wglp.removeAllLines();
     
-    // Data lines are re-added inside makeLine -> addDataLine
     if (resultArray && resultArray.results.length > 0) {
       makeLine(resultArray.results);
+      
+      // Map displayData for faster lookup
+      const visibilityMap = new Map<number, boolean>();
+      displayData?.forEach((e) => {
+        visibilityMap.set(e.index, e.visible);
+      });
+
+      // Update visibility using the tagged metadata
+      const offset = isComplex(resultArray) ? 2 : 1;
+      wglp.linesData.forEach((line: any) => {
+        if (line.sourceIndex !== undefined) {
+          // Metadata sourceIndex corresponds to the variable index in displayData
+          // We need to map it back to the 'e.index' which is (sourceIndex + offset)
+          const isVisible = visibilityMap.get(line.sourceIndex + offset);
+          line.visible = isVisible !== undefined ? isVisible : true;
+        }
+      });
+      
       scaleUpdate(findMinMaxGlobal());
     }
 
-    // Re-add auxiliary elements (these must be re-added after removeAllLines)
+    // Re-add auxiliary elements
     wglp.addSurface(zoomRect);
     wglp.addAuxLine(crossXLine);
     wglp.addAuxLine(crossYLine);
@@ -339,66 +440,38 @@ function PlotArray({
     wglp.addAuxLine(cursorYLineA);
     wglp.addAuxLine(cursorXLineB);
     wglp.addAuxLine(cursorYLineB);
+    wglp.addSurface(dotA);
+    wglp.addSurface(dotB);
     
-    // Sync visibility
     cursorXLineA.visible = cursorA.visible;
     cursorYLineA.visible = cursorA.visible;
     cursorXLineB.visible = cursorB.visible;
     cursorYLineB.visible = cursorB.visible;
 
-    /* x axis is [0,1]*/
     if (!resultArray || resultArray.results.length === 0) {
       wglp.gOffsetX = -1;
       wglp.gScaleX = 2;
     }
-  }, [resultArray, displayData]);
+  }, [resultArray, displayData, plotOptions.showPoints]);
 
-  useEffect(() => {
-    //console.log("plot->DD->", displayData);
-    //console.log("plot->DD->", wglp.linesData);
-    if (resultArray && displayData) {
-      if (resultArray.sweep.length > 0) {
-        displayData.forEach((e) => {
-          for (let i = 0; i < resultArray.sweep.length; i++) {
-            //wglp.linesData[(e.index - 1) * resultsArray.sweep.length + i].visible = e.visible;
-            const offset = isComplex(resultArray) ? 2 : 1;
-            const line =
-              wglp.linesData[e.index - offset + i * displayData.length];
-            if (line) {
-              line.visible = e.visible;
-            }
-          }
-        });
-        scaleUpdate(findMinMaxGlobal());
-        //}
-      } else {
-        if (wglp.linesData.length == displayData.length) {
-          displayData.forEach((e) => {
-            //first item is time (offset=1) or frequency (offset=2)
-            const offset = isComplex(resultArray) ? 2 : 1;
-            wglp.linesData[e.index - offset].visible = e.visible;
-          });
-          scaleUpdate(findMinMaxGlobal());
-        }
-      }
-    }
-
-    //console.log("CANVAS CANVAS!!!!!!!!!", wglp.lines);
-  }, [displayData]);
+  // Remove the redundant second useEffect for visibility
 
   const findMinMaxGlobal = (): ScaleType => {
-    //???????????????????????
-
     let minY = 1e6;
     let maxY = -1e6;
     let minX = 0;
     let maxX = 1;
 
     for (let i = 0; i < wglp.linesData.length; i++) {
-      if (wglp.linesData[i].visible) {
-        const e = lineMinMax[i];
-        maxY = maxY > e.maxY ? maxY : e.maxY;
-        minY = minY < e.minY ? minY : e.minY;
+      const line = wglp.linesData[i] as any;
+      if (line.visible && !line.isPoints) {
+        // Find corresponding entry in lineMinMax
+        // lineMinMax is populated per variable, so we use sourceIndex
+        const e = lineMinMax[line.sourceIndex];
+        if (e) {
+          maxY = maxY > e.maxY ? maxY : e.maxY;
+          minY = minY < e.minY ? minY : e.minY;
+        }
       }
     }
     if (lineMinMax[0]) {
@@ -412,7 +485,8 @@ function PlotArray({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "a" || e.key === "b") {
+      const key = e.key.toLowerCase();
+      if (key === "a" || key === "b") {
         if (!wglp || wglp.linesData.length === 0) return;
 
         // Find closest point among visible lines
@@ -420,8 +494,9 @@ function PlotArray({
         let minDistanceSq = Infinity;
         let found = false;
 
-        wglp.linesData.forEach((line) => {
-          if (!line.visible) return;
+        wglp.linesData.forEach((baseLine) => {
+          if (!baseLine.visible) return;
+          const line = baseLine as WebglLine;
 
           // Find closest point in this line (binary search would be faster, but linear is fine for now)
           // We look for closest X first, then check Y distance
@@ -452,34 +527,18 @@ function PlotArray({
         });
 
         if (found) {
-          if (e.key === "a") {
+          if (key === "a") {
             setCursorA({ ...bestPoint, visible: true });
-            // Vertical line at X
-            cursorXLineA.xy = new Float32Array([bestPoint.x, -1e10, bestPoint.x, 1e10]);
-            // Horizontal line at Y
-            cursorYLineA.xy = new Float32Array([-1e10, bestPoint.y, 1e10, bestPoint.y]);
-            cursorXLineA.visible = true;
-            cursorYLineA.visible = true;
           } else {
             setCursorB({ ...bestPoint, visible: true });
-            // Vertical line at X
-            cursorXLineB.xy = new Float32Array([bestPoint.x, -1e10, bestPoint.x, 1e10]);
-            // Horizontal line at Y
-            cursorYLineB.xy = new Float32Array([-1e10, bestPoint.y, 1e10, bestPoint.y]);
-            cursorXLineB.visible = true;
-            cursorYLineB.visible = true;
           }
         }
       }
       
       // 'c' to clear cursors
-      if (e.key === "c") {
+      if (key === "c") {
         setCursorA(prev => ({ ...prev, visible: false }));
         setCursorB(prev => ({ ...prev, visible: false }));
-        cursorXLineA.visible = false;
-        cursorYLineA.visible = false;
-        cursorXLineB.visible = false;
-        cursorYLineB.visible = false;
       }
     };
 
@@ -660,6 +719,12 @@ function PlotArray({
     setPlotOptions(o);
   };
 
+  const pointsBoxHandle = (e: CheckboxCheckedChangeDetails) => {
+    const o = { ...plotOptions };
+    o.showPoints = e.checked === true;
+    setPlotOptions(o);
+  };
+
   useEffect(() => {
     crossXLine.visible = plotOptions.crosshair;
     crossYLine.visible = plotOptions.crosshair;
@@ -735,69 +800,79 @@ function PlotArray({
 
   return (
     <>
-      <HStack>
-        <Checkbox defaultChecked={true} onCheckedChange={axisBoxHandle}>
-          Axis
-        </Checkbox>
-        <Checkbox defaultChecked onCheckedChange={crosshairBoxHandle}>
-          Crosshair
-        </Checkbox>
-        {plotOptions.crosshair ? (
-          <>
-            <Tag w="7em" colorScheme="teal">
-              {`X: ${unitConvert2string(crossXY.x, 3)}`}
+      <Flex align="center" width="100%" mb={2}>
+        <HStack gap={4}>
+          <Checkbox defaultChecked={true} onCheckedChange={axisBoxHandle}>
+            Axis
+          </Checkbox>
+          <Checkbox defaultChecked onCheckedChange={crosshairBoxHandle}>
+            Crosshair
+          </Checkbox>
+          <Checkbox
+            defaultChecked={false}
+            onCheckedChange={pointsBoxHandle}
+          >
+            Points
+          </Checkbox>
+
+          <Button size="xs" colorScheme="blue" variant="outline" onClick={() => scaleUpdate(findMinMaxGlobal())}>
+            Reset View
+          </Button>
+        </HStack>
+
+        <Spacer />
+
+        <HStack gap={2}>
+          {plotOptions.crosshair && (
+            <>
+              <Tag w="7em" colorScheme="teal">
+                {`X: ${unitConvert2string(crossXY.x, 3)}`}
+              </Tag>
+              <Tag w="7em" colorScheme="teal">
+                {`Y: ${unitConvert2string(crossXY.y, 3)}`}
+              </Tag>
+            </>
+          )}
+          
+          {cursorA.visible && (
+            <Tag colorScheme="orange">
+              {`A: (${unitConvert2string(cursorA.x, 3)}, ${unitConvert2string(cursorA.y, 3)})`}
             </Tag>
-            <Tag w="7em" colorScheme="teal">
-              {`Y: ${unitConvert2string(crossXY.y, 3)}`}
+          )}
+          
+          {cursorB.visible && (
+            <Tag colorScheme="blue">
+              {`B: (${unitConvert2string(cursorB.x, 3)}, ${unitConvert2string(cursorB.y, 3)})`}
             </Tag>
-          </>
-        ) : (
-          <></>
-        )}
-        
-        {cursorA.visible && (
-          <Tag colorScheme="orange">
-            {`A: (${unitConvert2string(cursorA.x, 3)}, ${unitConvert2string(cursorA.y, 3)})`}
-          </Tag>
-        )}
-        
-        {cursorB.visible && (
-          <Tag colorScheme="blue">
-            {`B: (${unitConvert2string(cursorB.x, 3)}, ${unitConvert2string(cursorB.y, 3)})`}
-          </Tag>
-        )}
-        
-        {cursorA.visible && cursorB.visible && (
-          <Tag colorScheme="purple">
-            {`dX: ${unitConvert2string(Math.abs(cursorB.x - cursorA.x), 3)}, dY: ${unitConvert2string(Math.abs(cursorB.y - cursorA.y), 3)}`}
-          </Tag>
-        )}
-        {isSweep ? (
+          )}
+          
+          {cursorA.visible && cursorB.visible && (
+            <Tag colorScheme="purple">
+              {`dX: ${unitConvert2string(Math.abs(cursorB.x - cursorA.x), 3)}, dY: ${unitConvert2string(Math.abs(cursorB.y - cursorA.y), 3)}`}
+            </Tag>
+          )}
+
+          <Box fontSize="xs" color="fg.muted" borderLeft="solid 1px" pl={4} ml={2}>
+            Shortcuts: <b>'a'</b>/<b>'b'</b> to mark, <b>'c'</b> to clear.
+          </Box>
+        </HStack>
+      </Flex>
+
+      {isSweep ? (
+        <HStack mb={2}>
           <Checkbox
             defaultChecked={false}
             onCheckedChange={sweepCheckBoxHandle}
           >
             Sweep slider
           </Checkbox>
-        ) : (
-          <></>
-        )}
-        {plotOptions.sweepSlider && isSweep ? (
-          <>
+          {plotOptions.sweepSlider && (
             <Tag colorScheme="teal">
               {`${unitConvert2string(sliderValue, 3)}`}
             </Tag>
-          </>
-        ) : (
-          <></>
-        )}
-
-        {/*<Checkbox defaultIsChecked={false}>Neg</Checkbox>
-        <Checkbox defaultIsChecked={false}>Log10X</Checkbox>
-        <Checkbox defaultIsChecked={false} onChange={handleLog10YCheckbox}>
-          Log10Y
-        </Checkbox>*/}
-      </HStack>
+          )}
+        </HStack>
+      ) : null}
 
       {plotOptions.sweepSlider && isSweep ? (
         <Slider

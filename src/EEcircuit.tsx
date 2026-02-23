@@ -380,27 +380,16 @@ export default function EEcircuit(): JSX.Element {
 
   const change = React.useCallback(
     (name: string, check: boolean) => {
-      //const name = event;
+      if (!displayData) return;
+      
+      const newDisplayData = displayData.map(item => 
+        item.name === name ? { ...item, visible: check } : item
+      );
 
-      //index 0 is time
-
-      if (isSimLoaded && displayData) {
-        const dd = displayData;
-
-        dd.forEach((dd) => {
-          if (dd.name === name) {
-            dd.visible = check;
-            console.log("change->", check, name);
-          }
-        });
-        console.log("change->", dd);
-
-        setDisplayData([...dd]);
-        const stringDD = JSON.stringify(dd);
-        store.setItem("displayData", stringDD);
-      }
+      setDisplayData(newDisplayData);
+      store.setItem("displayData", JSON.stringify(newDisplayData));
     },
-    [displayData, isSimLoaded]
+    [displayData]
   );
 
   const handleTabChange = (index: number) => {
@@ -566,11 +555,7 @@ export default function EEcircuit(): JSX.Element {
             loading={isSimRunning || isSimLoading || isPyLoading}
             loadingText={isPyLoading ? "Loading Python..." : isSimLoading ? "Loading..." : "Running..."}
           >
-            Run{" "}
-            <Image
-              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F680.min.svg"
-              height="80%"
-            />
+            Run 🚀
           </Button>
 
           <Button
@@ -581,13 +566,7 @@ export default function EEcircuit(): JSX.Element {
             onClick={handleModeSwitch}
             disabled={isSimRunning}
           >
-            {editorMode === "python" ? "Python" : "SPICE"}
-            <Image
-              src={editorMode === "python"
-                ? "https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F40D.min.svg"
-                : "https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/26A1.min.svg"}
-              height="80%"
-            />
+            {editorMode === "python" ? "Python 🐍" : "SPICE ⚡"}
           </Button>
 
           <Spacer />
@@ -604,11 +583,7 @@ export default function EEcircuit(): JSX.Element {
                   m={1}
                   disabled={isSimRunning}
                 >
-                  {displayBreakpoint === "base" ? "" : "Settings"}{" "}
-                  <Image
-                    src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/2699.min.svg"
-                    height="80%"
-                  />
+                  {displayBreakpoint === "base" ? "" : "Settings"} ⚙️
                 </Button>
               </PopoverTrigger>
               <PopoverArrow />
@@ -640,11 +615,7 @@ export default function EEcircuit(): JSX.Element {
             onClick={btColor}
             disabled={isSimRunning}
           >
-            {displayBreakpoint === "base" ? "" : "Colorize"}{" "}
-            <Image
-              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F308.min.svg"
-              height="80%"
-            />
+            {displayBreakpoint === "base" ? "" : "Colorize"} 🌈
           </Button>
           <Button
             colorScheme="blue"
@@ -654,11 +625,7 @@ export default function EEcircuit(): JSX.Element {
             onClick={btReset}
             disabled={isSimRunning}
           >
-            {displayBreakpoint === "base" ? "" : "Reset"}{" "}
-            <Image
-              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F5D1.min.svg"
-              height="80%"
-            />
+            {displayBreakpoint === "base" ? "" : "Reset"} 🗑️
           </Button>
         </Flex>
       </Box>
@@ -681,11 +648,7 @@ export default function EEcircuit(): JSX.Element {
             paddingLeft="2em"
             paddingRight="2em"
           >
-            Plot
-            <Image
-              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4C8.min.svg"
-              maxHeight="80%"
-            />
+            Plot 📈
           </Tabs.Trigger>
           <Tabs.Trigger
             value="info"
@@ -693,11 +656,7 @@ export default function EEcircuit(): JSX.Element {
             paddingLeft="2em"
             paddingRight="2em"
           >
-            Info
-            <Image
-              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F469-200D-1F4BB.min.svg"
-              height="80%"
-            />
+            Info 👩‍💻
           </Tabs.Trigger>
           <Tabs.Trigger
             value="csv"
@@ -705,11 +664,7 @@ export default function EEcircuit(): JSX.Element {
             paddingLeft="2em"
             paddingRight="2em"
           >
-            CSV{" "}
-            <Image
-              src="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0/color/svg/1F4D1.min.svg"
-              height="80%"
-            />
+            CSV 📄
           </Tabs.Trigger>
           {editorMode === "python" && (
             <>
