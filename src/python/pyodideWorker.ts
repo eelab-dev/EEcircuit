@@ -28,29 +28,32 @@ const pyodideWorker = {
   async init(): Promise<string> {
     if (isReady) return "already initialized";
 
-    // Load Pyodide from CDN using dynamic import (module workers can't use importScripts)
+    // Load Pyodide from CDN
     const pyodideModule = await import(
       /* @vite-ignore */
       "https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.mjs"
     );
     pyodide = await pyodideModule.loadPyodide();
 
-    // Install analogpy and its dependencies from PyPI via micropip
+    // Prepare micropip
     await pyodide.loadPackage("micropip");
     const micropip = pyodide.pyimport("micropip");
-    await micropip.install("pyyaml");
-    await micropip.install("analogpy==0.2.2", {keep_going: true});
 
-    // Install visualization deps for schematic SVG generation
+    // Pre-load binary packages that Pyodide supports natively
     try {
-      await pyodide.loadPackage("matplotlib");
-      await micropip.install("schemdraw");
-    } catch {
-      // Visualization deps are optional
+      await pyodide.loadPackage(["numpy", "matplotlib"]);
+    } catch (e) {
+      console.warn("Failed to pre-load binary packages:", e);
     }
 
+    // Install pure python dependencies from PyPI
+    await micropip.install(["pyyaml", "schemdraw"]);
+    
+    // Finally install analogpy (ensure it's uploaded to PyPI first!)
+    await micropip.install("analogpy==0.2.2", {keep_going: true});
+
     isReady = true;
-    return "Pyodide ready with analogpy";
+    return "Pyodide ready with analogpy 0.2.2";
   },
 
   /**
