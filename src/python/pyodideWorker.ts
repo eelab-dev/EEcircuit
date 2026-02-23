@@ -9,8 +9,7 @@
 
 import * as ComLink from "comlink";
 
-// Pyodide types (loaded dynamically from CDN)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Pyodide types
 let pyodide: any = null;
 let isReady = false;
 
@@ -22,23 +21,21 @@ export type PythonResult = {
 };
 
 const pyodideWorker = {
-  /**
-   * Initialize Pyodide and install analogpy.
-   */
-  async init(): Promise<string> {
+  async init(baseUrl?: string): Promise<string> {
     if (isReady) return "already initialized";
 
-    // Load Pyodide from local files to bypass CSP restrictions
     try {
-      // Use dynamic URL construction to prevent Vite from trying to resolve this during build
-      const pyodidePath = "/pyodide/pyodide.mjs";
-      const pyodideModule = await import(/* @vite-ignore */ pyodidePath);
+      // Use the explicit enterprise path which we know is served correctly
+      const finalBase = "/gaofeng-fan/EEcircuit/";
+      const pyodideUrl = `${finalBase}pyodide/pyodide_loader.js`;
+      
+      const pyodideModule = await import(/* @vite-ignore */ pyodideUrl);
       pyodide = await pyodideModule.loadPyodide({
-        indexURL: self.location.origin + "/pyodide/"
+        indexURL: `${finalBase}pyodide/`
       });
     } catch (e) {
-      console.error("Local Pyodide import failed, error details:", e);
-      throw new Error("Importing a module script failed. Check if /pyodide/pyodide.mjs is accessible.");
+      console.error("Local Pyodide import failed. Error:", e);
+      throw new Error(`Importing pyodide_loader.js failed. Error: ${e}`);
     }
 
     // Prepare micropip

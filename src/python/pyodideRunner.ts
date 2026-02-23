@@ -45,7 +45,13 @@ export class PyodideRunner {
     );
     this.worker = ComLink.wrap<PyodideWorkerType>(rawWorker);
 
-    const msg = await this.worker.init();
+    // Get the base URL (including potential sub-directories like /gaofeng-fan/EEcircuit/)
+    // In Vite, import.meta.env.BASE_URL is the most reliable way.
+    // If not available, we fall back to manual detection.
+    const baseUrl = (import.meta as any).env?.BASE_URL || "/";
+    const fullBaseUrl = window.location.origin + (baseUrl.endsWith("/") ? baseUrl : baseUrl + "/");
+
+    const msg = await this.worker.init(fullBaseUrl);
     this._isReady = true;
     this._isLoading = false;
     return msg;
