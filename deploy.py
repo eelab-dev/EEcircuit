@@ -53,7 +53,7 @@ def main():
         subprocess.run(f"git worktree remove -f {deploy_dir} 2>/dev/null", shell=True, cwd=REPO_DIR)
         
         # Create worktree for gh-pages
-        run(f"git worktree add -B {BRANCH} {deploy_dir} origin/{BRANCH} 2>/dev/null || git worktree add --orphan {BRANCH} {deploy_dir}")
+        run(f"git worktree add -B {BRANCH} {deploy_dir} {REMOTE}/{BRANCH} 2>/dev/null || git worktree add --orphan {BRANCH} {deploy_dir}")
 
         print("[3/4] Copying build output...")
         # Clear worktree (except .git)
