@@ -1,10 +1,10 @@
 import { Button } from "./components/ui/button.tsx";
 import { Checkbox } from "./components/ui/checkbox.tsx";
-import React, { JSX } from "react";
+import React, { JSX, useMemo } from "react";
 import { isComplex, ResultArrayType } from "./sim/simulationArray.ts";
 import { ComplexNumber } from "eecircuit-engine";
 import { CheckboxCheckedChangeDetails } from "@chakra-ui/react/checkbox";
-import { VStack, Textarea, Box } from "@chakra-ui/react";
+import { VStack, Box, Table } from "@chakra-ui/react";
 
 type Prop = {
   resultArray?: ResultArrayType;
@@ -20,6 +20,12 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
   const [href, setHref] = React.useState("");
   const [complex, setComplex] = React.useState(false);
   const [polar, setPolar] = React.useState(false);
+
+  const convertToMagPhase = (input: ComplexNumber): ComplexPolar => {
+    const magnitude = Math.sqrt(input.real ** 2 + input.img ** 2);
+    const phase = Math.atan2(input.img, input.real) * (180 / Math.PI);
+    return { magnitude, phase };
+  };
 
   const printCSVReal = (resultArray: ResultArrayType): string => {
     let str = "";
@@ -55,22 +61,12 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
       }
       str += "\n";
     }
-
     return strTop + str;
   };
 
-  const convertToMagPhase = (input: ComplexNumber): ComplexPolar => {
-    const magnitude = Math.sqrt(input.real ** 2 + input.img ** 2);
-    const phase = Math.atan2(input.img, input.real) * (180 / Math.PI); // Convert radians to degrees
-
-    return { magnitude, phase };
-  };
-
   const printCSVComplex = (resultArray: ResultArrayType): string => {
-    console.log(resultArray);
     let str = "";
     let strTop = "";
-
     const vars = resultArray.results[0].variableNames;
     vars.forEach((name) => {
       for (let i = 0; i < resultArray.results.length; i++) {
@@ -125,14 +121,25 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
     }
   };
 
+  const csvData = useMemo(() => {
+    if (!resultArray || resultArray.results.length === 0) return { header: [], rows: [] };
+    
+    const csvContent = isComplex(resultArray) ? printCSVComplex(resultArray) : printCSVReal(resultArray);
+    const lines = csvContent.trim().split("\n");
+    if (lines.length === 0) return { header: [], rows: [] };
+
+    const header = lines[0].split(",").filter(h => h.trim() !== "");
+    const rows = lines.slice(1, 101).map(line => line.split(",").filter(c => c.trim() !== ""));
+    
+    return { header, rows, totalLines: lines.length - 1 };
+  }, [resultArray, polar]);
+
   React.useEffect(() => {
     setHref("");
     if (resultArray) {
-      setComplex(
-        isComplex(resultArray ? resultArray : { results: [], sweep: [] }),
-      );
+      setComplex(isComplex(resultArray));
     }
-  }, [resultArray, complex]);
+  }, [resultArray]);
 
   React.useEffect(() => {
     if (href.length > 0) {
@@ -149,8 +156,7 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
   };
 
   const ckAction = (details: CheckboxCheckedChangeDetails) => {
-    const e = details.checked === true ? true : false;
-    setPolar(e);
+    setPolar(details.checked === true);
   };
 
   return (
@@ -167,22 +173,42 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
         
         {resultArray && resultArray.results.length > 0 && (
           <Box width="95%" mt={4}>
-            <Box mb={2} fontWeight="bold" fontSize="sm">Preview:</Box>
-            <Textarea
-              readOnly={true}
-              aria-label="CSV preview"
-              bg="bg.muted"
-              fontSize="0.85em"
-              fontFamily="monospace"
-              rows={15}
-              value={printCSV(resultArray)}
-              width="100%"
-            />
+            <Box mb={2} fontWeight="bold" fontSize="sm">
+              Preview (Showing first {csvData.rows.length} of {csvData.totalLines} lines):
+            </Box>
+            <Box 
+              maxHeight="500px" 
+              overflow="auto" 
+              border="1px solid" 
+              borderColor="border.muted"
+              borderRadius="md"
+            >
+              <Table.Root size="sm" variant="striped" stickyHeader>
+                <Table.Header>
+                  <Table.Row bg="bg.muted">
+                    {csvData.header.map((h, i) => (
+                      <Table.ColumnHeader key={i} whiteSpace="nowrap">{h}</Table.ColumnHeader>
+                    ))}
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {csvData.rows.map((row, i) => (
+                    <Table.Row key={i}>
+                      {row.map((cell, j) => (
+                        <Table.Cell key={j} fontFamily="monospace" fontSize="xs">
+                          {cell}
+                        </Table.Cell>
+                      ))}
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Root>
+            </Box>
           </Box>
         )}
       </VStack>
 
-      <a ref={aLink} href={href} download={"EEcircuit.csv"} />
+      <a ref={aLink} href={href} download={"EEcircuit.csv"} style={{ display: "none" }} />
     </>
   );
 };
