@@ -37,10 +37,7 @@ def main():
             print(f"  {line}")
         sys.exit(1)
 
-    print("[1/5] Installing dependencies...")
-    run("npm install --legacy-peer-deps")
-
-    print("[2/5] Building project...")
+    print("[1/5] Building project...")
     run("npm run build")
 
     # Copy dist to temp location
