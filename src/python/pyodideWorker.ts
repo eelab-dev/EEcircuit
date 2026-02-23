@@ -49,8 +49,8 @@ const pyodideWorker = {
     // Install pure python dependencies from PyPI
     await micropip.install(["pyyaml", "schemdraw"]);
     
-    // Finally install analogpy (ensure it's uploaded to PyPI first!)
-    await micropip.install("analogpy==0.2.2", {keep_going: true});
+    // Finally install analogpy
+    await micropip.install("analogpy", {keep_going: true});
 
     isReady = true;
     return "Pyodide ready with analogpy 0.2.2";

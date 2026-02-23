@@ -63,7 +63,7 @@ def main():
         subprocess.run("git clean -fd > /dev/null 2>&1", shell=True, cwd=REPO_DIR)
         # Remove any leftover directories
         for item in REPO_DIR.iterdir():
-            if item.name == ".git":
+            if item.name in [".git", "node_modules"]:
                 continue
             if item.is_dir():
                 shutil.rmtree(item)
@@ -88,7 +88,7 @@ def main():
     print("Restoring main branch...")
     # Remove deployed files before switching
     for item in REPO_DIR.iterdir():
-        if item.name == ".git":
+        if item.name in [".git", "node_modules"]:
             continue
         if item.is_dir():
             shutil.rmtree(item)
