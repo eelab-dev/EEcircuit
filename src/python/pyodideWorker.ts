@@ -39,7 +39,7 @@ const pyodideWorker = {
     await pyodide.loadPackage("micropip");
     const micropip = pyodide.pyimport("micropip");
     await micropip.install("pyyaml");
-    await micropip.install("analogpy", {keep_going: true});
+    await micropip.install("analogpy==0.2.2", {keep_going: true});
 
     // Install visualization deps for schematic SVG generation
     try {
@@ -117,8 +117,18 @@ try:
             matplotlib.use('Agg')
             from importlib.metadata import version as _pkg_ver
             _ver = _pkg_ver('analogpy')
-            from analogpy.visualization.svg import render_schematic_svg
-            _svg_result = render_schematic_svg(_tb)
+            from analogpy.visualization.svg import render_schematic_svg, render_block_diagram_svg
+            from analogpy.visualization.symbols import get_default_renderer, SymbolStyle
+            
+            # Set detailed style as default to match PDF
+            get_default_renderer().default_style = SymbolStyle.DETAILED
+            
+            # For Testbench, block diagram is usually preferred as main view (matches PDF page 1)
+            # Use render_block_diagram_svg if it's a Testbench
+            if hasattr(_tb, 'analyses'):
+                _svg_result = render_block_diagram_svg(_tb)
+            else:
+                _svg_result = render_schematic_svg(_tb, compact=True)
         except Exception as _svg_err:
             _ver = 'unknown'
             try:
