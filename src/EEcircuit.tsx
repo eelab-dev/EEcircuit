@@ -149,6 +149,24 @@ export default function EEcircuit(): JSX.Element {
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const tabsContainerRef = React.useRef<HTMLDivElement>(null);
 
+  // Listen for fullscreen changes (e.g. user presses Escape)
+  useEffect(() => {
+    const handler = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  const toggleFullscreen = React.useCallback(() => {
+    if (!tabsContainerRef.current) return;
+    if (!document.fullscreenElement) {
+      tabsContainerRef.current.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }, []);
+
   const colorMode = useColorModeValue("light", "dark");
 
   useEffect(() => {
@@ -640,7 +658,18 @@ export default function EEcircuit(): JSX.Element {
         <Separator />
       </Box>
 
-      <Tabs.Root defaultValue="plot" colorScheme="teal">
+      <div
+        ref={tabsContainerRef}
+        style={{
+          background: isFullscreen ? "var(--chakra-colors-bg)" : undefined,
+          padding: isFullscreen ? "16px" : undefined,
+          overflow: isFullscreen ? "hidden" : undefined,
+          height: isFullscreen ? "100vh" : undefined,
+          display: isFullscreen ? "flex" : undefined,
+          flexDirection: isFullscreen ? "column" : undefined,
+        }}
+      >
+      <Tabs.Root defaultValue="plot" colorScheme="teal" style={isFullscreen ? { display: "flex", flexDirection: "column", flex: 1, minHeight: 0 } : undefined}>
         <Tabs.List>
           <Tabs.Trigger
             value="plot"
@@ -694,9 +723,18 @@ export default function EEcircuit(): JSX.Element {
               </Tabs.Trigger>
             </>
           )}
+          <Spacer />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={toggleFullscreen}
+            m={1}
+          >
+            {isFullscreen ? "Exit ⛶" : "⛶"}
+          </Button>
         </Tabs.List>
 
-        <Tabs.Content value="plot">
+        <Tabs.Content value="plot" style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}>
           <Suspense fallback={<Skeleton height="400px" />}>
             <PlotArray
               resultArray={resultArray}
@@ -716,48 +754,48 @@ export default function EEcircuit(): JSX.Element {
           )}
         </Tabs.Content>
 
-        <Tabs.Content value="info">
+        <Tabs.Content value="info" style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}>
           <Textarea
             readOnly={true}
             aria-label="info"
             bg="bg.muted"
             fontSize="0.9em"
-            rows={15}
+            rows={isFullscreen ? 40 : 15}
             value={info}
           />
         </Tabs.Content>
 
-        <Tabs.Content value="csv">
+        <Tabs.Content value="csv" style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}>
           <DownCSV resultArray={resultArray} />
         </Tabs.Content>
 
         {editorMode === "python" && (
           <>
-            <Tabs.Content value="ngspice">
+            <Tabs.Content value="ngspice" style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}>
               <Textarea
                 readOnly={true}
                 aria-label="ngspice netlist"
                 bg="bg.muted"
                 fontSize="0.9em"
                 fontFamily="monospace"
-                rows={20}
+                rows={isFullscreen ? 40 : 20}
                 value={generatedNgspice || "(Run Python code to generate ngspice netlist)"}
               />
             </Tabs.Content>
 
-            <Tabs.Content value="spectre">
+            <Tabs.Content value="spectre" style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}>
               <Textarea
                 readOnly={true}
                 aria-label="spectre netlist"
                 bg="bg.muted"
                 fontSize="0.9em"
                 fontFamily="monospace"
-                rows={20}
+                rows={isFullscreen ? 40 : 20}
                 value={generatedSpectre || "(Run Python code to generate Spectre netlist)"}
               />
             </Tabs.Content>
 
-            <Tabs.Content value="schematic">
+            <Tabs.Content value="schematic" style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}>
               {schematicSvg ? (
                 schematicSvg.startsWith("<!-- SVG error") ? (
                   <Box p={4} color="red.500">
@@ -784,7 +822,7 @@ export default function EEcircuit(): JSX.Element {
                         borderRadius: "6px",
                         border: "1px solid #e2e8f0",
                         overflow: "auto",
-                        maxHeight: "700px",
+                        maxHeight: isFullscreen ? "calc(100vh - 120px)" : "700px",
                       }}
                       onWheel={(e) => {
                         if (e.ctrlKey || e.metaKey) {
@@ -814,6 +852,7 @@ export default function EEcircuit(): JSX.Element {
           </>
         )}
       </Tabs.Root>
+      </div>
       <Toaster />
     </div>
   );
