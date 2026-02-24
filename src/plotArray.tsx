@@ -179,6 +179,23 @@ function PlotArray({
         powerPerformance: "high-performance",
       });
 
+      const resizeObserver = new ResizeObserver(() => {
+        if (canvasMain.current && wglp) {
+          const devicePixelRatio = window.devicePixelRatio || 1;
+          canvasMain.current.width =
+            canvasMain.current.clientWidth * devicePixelRatio;
+          canvasMain.current.height =
+            canvasMain.current.clientHeight * devicePixelRatio;
+          wglp.viewport(
+            0,
+            0,
+            canvasMain.current.width,
+            canvasMain.current.height
+          );
+        }
+      });
+      resizeObserver.observe(canvasMain.current);
+
       let lastScaleX = 0;
       let lastScaleY = 0;
 
@@ -262,6 +279,7 @@ function PlotArray({
     console.log("canvas->", "I am here! 🧨");
     ////bug fix see https://github.com/facebook/react/issues/14856#issuecomment-586781399
     return () => {
+      resizeObserver.disconnect();
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
       }
