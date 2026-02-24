@@ -62,6 +62,7 @@ import {
   useColorModeValue,
 } from "./components/ui/color-mode.tsx";
 import { PyodideRunner } from "./python/pyodideRunner.ts";
+import AiChat from "./ai/AiChat.tsx";
 
 type EditorMode = "spice" | "python";
 
@@ -723,6 +724,14 @@ export default function EEcircuit(): JSX.Element {
               </Tabs.Trigger>
             </>
           )}
+          <Tabs.Trigger
+            value="ai"
+            marginRight="0.5em"
+            paddingLeft="2em"
+            paddingRight="2em"
+          >
+            AI 🤖
+          </Tabs.Trigger>
           <Spacer />
           <Button
             size="sm"
@@ -851,6 +860,19 @@ export default function EEcircuit(): JSX.Element {
             </Tabs.Content>
           </>
         )}
+
+        <Tabs.Content
+          value="ai"
+          style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}
+        >
+          <AiChat
+            netlist={netList}
+            pythonCode={pythonCode}
+            editorMode={editorMode}
+            resultArray={resultArray}
+            displayData={displayData}
+          />
+        </Tabs.Content>
       </Tabs.Root>
       </div>
       <Toaster />
