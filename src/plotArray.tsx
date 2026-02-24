@@ -179,10 +179,44 @@ function PlotArray({
         powerPerformance: "high-performance",
       });
 
+      let lastScaleX = 0;
+      let lastScaleY = 0;
+
       const newFrame = () => {
         if (wglp && canvasMain.current) {
           const canvas = canvasMain.current;
           const aspect = canvas.width / canvas.height;
+
+          // Update markers if scale changed to keep them circular and same size
+          if (wglp.gScaleX !== lastScaleX || wglp.gScaleY !== lastScaleY) {
+            const gapX = 6 / (canvas.width / 2) / wglp.gScaleX;
+            const gapY = 6 / (canvas.height / 2) / wglp.gScaleY;
+            const numCirclePoints = 10;
+
+            wglp.linesData.forEach((line: any) => {
+              if (line.isPoints && line.originalDataX && line.originalDataY) {
+                const numPoints = line.originalDataX.length;
+                for (let i = 0; i < numPoints; i++) {
+                  const x = line.originalDataX[i];
+                  const y = line.originalDataY[i];
+                  const base = i * numCirclePoints;
+                  for (let p = 0; p < numCirclePoints; p++) {
+                    if (p === 0 || p === numCirclePoints - 1) {
+                      line.setX(base + p, x);
+                      line.setY(base + p, y);
+                    } else {
+                      const angle =
+                        ((p - 1) / (numCirclePoints - 3)) * Math.PI * 2;
+                      line.setX(base + p, x + Math.cos(angle) * gapX);
+                      line.setY(base + p, y + Math.sin(angle) * gapY);
+                    }
+                  }
+                }
+              }
+            });
+            lastScaleX = wglp.gScaleX;
+            lastScaleY = wglp.gScaleY;
+          }
 
           // Update cursor lines based on physical coordinates (matching crosshair logic)
           const updateCursor = (c: CrossXY & { visible: boolean }, xl: WebglLine, yl: WebglLine, dot: WebglSquare) => {
@@ -311,6 +345,8 @@ function PlotArray({
         const pointsLine = new WebglLine(color, numPoints * numCirclePoints);
         (pointsLine as any).sourceIndex = col - 1;
         (pointsLine as any).isPoints = true;
+        (pointsLine as any).originalDataX = data[0].values;
+        (pointsLine as any).originalDataY = data[col].values;
         
         const gapX = (6 / (canvas.width / 2)) / wglp.gScaleX;
         const gapY = (6 / (canvas.height / 2)) / wglp.gScaleY;
