@@ -4,7 +4,11 @@
 
 # analogpy
 
-analogpy is a python native circuit representation library with integrated simulation. This website provides a browser-based environment for analogpy that operates directly in your browser using [WebAssembly](https://webassembly.org/) technology. It uses [ngspice](https://sourceforge.net/p/ngspice/ngspice/) as the simulation engine. You can visualize and plot the results in the browser using the high-performance WebGL plotting library, [webgl-plot](https://github.com/danchitnis/webgl-plot), or download the data in CSV format for further analysis. Importantly, your netlist and results are processed locally, meaning they always remain within your browser and are never uploaded to a server. This project focuses on facilitating rapid analysis and sharing of circuit ideas and results within the [VLSI](https://en.wikipedia.org/wiki/Very_Large_Scale_Integration) and chip-design communities. Additionally, since EEcircuit uses a text-based netlist as input, you can utilize [Git](https://git-scm.com/) for version control to track your changes effectively.
+**analogpy** (the successor to EEcircuit) is a Python package for programmatically defining circuits using a native Python representation. It features cross-platform compatibility with the ability to generate both SPICE and Spectre netlists. This website serves as a GUI-driven simulation environment powered by **ngspice** running in the browser via WebAssembly. By supporting both analogpy-based Python code and standard SPICE netlists, it provides a seamless workflow from definition to analysis.
+
+Beyond simulation, this platform demonstrates the cutting-edge integration of AI—including **Anthropic Claude, Google Gemini, and OpenAI GPT**—directly with circuit analysis to assist in design and debugging. Results are visualized in real-time using the high-performance **webgl-plot** library or exported as CSV.
+
+To ensure complete privacy, all simulation and data processing occur locally within your browser; your netlists and results are never uploaded to a server. For professional workflows involving **NDA-restricted PDKs**, you can download and run analogpy locally to explore its full power within your secure environment. analogpy is built to facilitate rapid iteration and collaborative sharing within the VLSI and chip-design communities.
 
 ## Getting started
 
