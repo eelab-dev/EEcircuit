@@ -542,28 +542,29 @@ export default function EEcircuit(): JSX.Element {
         p={2}
         flex="0 0 auto"
         overflow="hidden"
+        display={isFullscreen ? "none" : undefined}
       >
-        <Flex width="100%" height="100%">
+        <Flex width="100%" height="30vh">
           {/* Left: text editor (60%) */}
-          <Box width={{ base: "100%", md: "60%" }} minWidth={0}>
+          <Box width={{ base: "100%", md: "60%" }} minWidth={0} height="30vh">
             <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
               <EditorCustom
-                height={isMinimized ? "50vh" : "30vh"}
+                height="30vh"
                 width="100%"
                 language={editorMode === "python" ? "python" : "spice"}
                 value={editorMode === "python" ? pythonCode : netList}
                 valueChanged={handleEditor}
                 theme={useColorModeValue("light", "dark")}
-                key={`${windowSize.width}-${editorMode}-${isMinimized}`}
+                key={`${windowSize.width}-${editorMode}`}
               />
             </Suspense>
           </Box>
           {/* Right: schematic panel (40%) — only on desktop */}
           {displayBreakpoint !== "base" && (
-            <Box width="40%" pl={2} position="relative" overflow="hidden">
+            <Box width="40%" pl={2} height="30vh" display="flex" flexDirection="column">
               {schematicSvg && !schematicSvg.startsWith("<!-- SVG error") ? (
-                <Box height="100%" display="flex" flexDirection="column">
-                  <Flex gap={1} mb={1} align="center">
+                <>
+                  <Flex gap={1} mb={1} align="center" flexShrink={0}>
                     <Button size="xs" onClick={() => setSchematicZoom(z => Math.min(z * 1.25, 5))}>+</Button>
                     <Button size="xs" onClick={() => setSchematicZoom(z => Math.max(z / 1.25, 0.2))}>-</Button>
                     <Button size="xs" variant="outline" onClick={() => setSchematicZoom(1.0)}>Reset</Button>
@@ -578,6 +579,7 @@ export default function EEcircuit(): JSX.Element {
                       borderRadius: "6px",
                       border: "1px solid #e2e8f0",
                       cursor: "grab",
+                      minHeight: 0,
                     }}
                   >
                     <div
@@ -589,7 +591,7 @@ export default function EEcircuit(): JSX.Element {
                       dangerouslySetInnerHTML={{ __html: schematicSvg }}
                     />
                   </div>
-                </Box>
+                </>
               ) : (
                 <Box
                   height="100%"
@@ -703,8 +705,8 @@ export default function EEcircuit(): JSX.Element {
         style={{
           background: isFullscreen ? "var(--chakra-colors-bg)" : undefined,
           padding: isFullscreen ? "8px" : undefined,
-          height: isFullscreen ? "calc(100vh - 60px)" : undefined,
-          maxHeight: isFullscreen ? "calc(100vh - 60px)" : undefined,
+          height: isFullscreen ? "calc(100vh - 8px)" : undefined,
+          maxHeight: isFullscreen ? "calc(100vh - 8px)" : undefined,
           display: "flex",
           flexDirection: "column",
           minHeight: 0,
@@ -793,7 +795,7 @@ export default function EEcircuit(): JSX.Element {
               theme={useColorModeValue("light", "dark")}
               checkCallBack={change}
               colorizeCallback={btColor}
-              height={isFullscreen ? "calc(100vh - 160px)" : "calc(100vh - 350px)"}
+              height={isFullscreen ? "90vh" : "40vh"}
             />
           </Suspense>
         </Tabs.Content>
