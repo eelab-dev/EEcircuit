@@ -155,10 +155,12 @@ export const EXAMPLE_QA = [
   {
     question: "What is the peak current through the inductor?",
     answer:
-      "From the simulation results, look for `i(l)` in the plot legend — ngspice saves all branch currents by default, so it is already available without any `.save` directive.\n" +
-      "Analytically: when m1 turns on and net_rc ≈ 0V, ~1.8V appears across R+L. " +
-      "At DC steady state the inductor is a short, so I_peak ≈ vdd/R = 1.8V/100Ω = **18 mA**. " +
-      "The large L=1H means the current rises very slowly (τ = L/R = 10ms), " +
-      "so within the 50s simulation window it does reach steady state.",
+      "From the simulation, the peak inductor current `i(l)` reaches approximately **231 mA** " +
+      "at t ≈ 0.4s, with a negative peak of about -118 mA at t ≈ 15.5s. " +
+      "The circuit oscillates due to the LC resonance (f₀ ≈ 1.59 Hz) and the MOSFET switching. " +
+      "The current is much larger than a naive DC estimate of vdd/R = 18 mA because the " +
+      "inductor and capacitor exchange energy during transient oscillation. " +
+      "Select `i(l)` in the plot legend to see the full waveform — ngspice saves all " +
+      "branch currents by default.",
   },
 ];
