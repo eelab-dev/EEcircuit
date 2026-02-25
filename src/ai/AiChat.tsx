@@ -227,6 +227,9 @@ export default function AiChat({
         <Button size="sm" variant="ghost" onClick={() => setShowKey((s) => !s)}>
           {showKey ? "Hide" : "Show"}
         </Button>
+        <Box fontSize="xs" color="fg.muted" whiteSpace="nowrap">
+          🔒 Key is saved locally only — never sent to this website.
+        </Box>
         <Button
           size="sm"
           variant="outline"
