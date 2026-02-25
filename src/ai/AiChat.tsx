@@ -162,7 +162,7 @@ export default function AiChat({
   };
 
   return (
-    <Flex direction="column" height="95%" gap={2}>
+    <Flex direction="column" height="90%" gap={2}>
       {/* Settings bar */}
       <Flex gap={2} align="center" flexWrap="wrap" p={2} bg="bg.muted" borderRadius="md">
         <SelectRoot
