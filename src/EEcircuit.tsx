@@ -864,6 +864,7 @@ export default function EEcircuit(): JSX.Element {
             editorMode={editorMode}
             resultArray={resultArray}
             displayData={displayData}
+            isFullscreen={isFullscreen}
           />
         </Tabs.Content>
       </Tabs.Root>

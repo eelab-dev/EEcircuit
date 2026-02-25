@@ -25,6 +25,7 @@ type Props = {
   editorMode: "spice" | "python";
   resultArray?: ResultArrayType;
   displayData?: DisplayDataType[];
+  isFullscreen?: boolean;
 };
 
 type ChatMessage = {
@@ -41,6 +42,7 @@ export default function AiChat({
   editorMode,
   resultArray,
   displayData,
+  isFullscreen,
 }: Props): JSX.Element {
   const [provider, setProvider] = useState<AiProvider>(
     () => (store.getItem("aiProvider") as AiProvider) || "openai"
@@ -162,7 +164,7 @@ export default function AiChat({
   };
 
   return (
-    <Flex direction="column" height="40vh" gap={2}>
+    <Flex direction="column" height={isFullscreen ? "70vh" : "45vh"} gap={2}>
       {/* Settings bar */}
       <Flex gap={2} align="center" flexWrap="wrap" p={2} bg="bg.muted" borderRadius="md">
         <SelectRoot
@@ -252,7 +254,7 @@ export default function AiChat({
         flexDirection="column"
         gap={3}
         minHeight="100px"
-        maxHeight="25vh"
+        maxHeight={isFullscreen ? "55vh" : "30vh"}
       >
         {messages.map((msg, i) => (
           <Flex
