@@ -797,7 +797,7 @@ export default function EEcircuit(): JSX.Element {
               selectAllCallback={handleSelectAllButton}
               selectNoneCallback={handleDeSelectButton}
               colorizeCallback={btColor}
-              height={isFullscreen ? "90vh" : "40vh"}
+              height="40vh"
             />
           </Suspense>
         </Tabs.Content>
