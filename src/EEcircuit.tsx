@@ -60,6 +60,7 @@ import { DisplayDataType, makeDD } from "./displayData.ts";
 import {
   useColorMode,
   useColorModeValue,
+  ColorModeButton,
 } from "./components/ui/color-mode.tsx";
 import { PyodideRunner } from "./python/pyodideRunner.ts";
 import AiChat from "./ai/AiChat.tsx";
@@ -610,6 +611,8 @@ export default function EEcircuit(): JSX.Element {
                 </PopoverBody>
               </PopoverContent>
             </PopoverRoot>
+
+            <ColorModeButton />
 
             <Button
               colorScheme={editorMode === "python" ? "green" : "gray"}
