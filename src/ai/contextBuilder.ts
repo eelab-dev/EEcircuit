@@ -87,8 +87,8 @@ export function buildSystemPrompt(params: {
   const { netlist, pythonCode, resultArray, displayData, editorMode } = params;
 
   const parts: string[] = [
-    "You are an expert analog circuit design assistant integrated into EEcircuit, " +
-    "a browser-based SPICE simulator. You have full access to the user's current circuit " +
+    "You are an expert analog circuit design assistant integrated into analogpy, " +
+    "a python native circuit representation library with integrated simulation. You have full access to the user's current circuit " +
     "definition, netlist, and simulation results. Answer questions concisely and precisely. " +
     "Use engineering notation (µ, n, p, k, M) and SI units where appropriate.\n" +
     "Important: ngspice saves ALL node voltages and branch currents by default when no " +

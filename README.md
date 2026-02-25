@@ -2,9 +2,9 @@
 
 (formerly EEsim.dev)
 
-# EEcircuit
+# analogpy
 
-EEcircuit is a circuit simulator based on [ngspice](https://sourceforge.net/p/ngspice/ngspice/) that operates directly in your browser using [WebAssembly](https://webassembly.org/) technology. It takes a spice-based netlist as input and produces analysis results from your simulations as output. You can visualize and plot the results in the browser using the high-performance WebGL plotting library, [webgl-plot](https://github.com/danchitnis/webgl-plot), or download the data in CSV format for further analysis. Importantly, your netlist and results are processed locally, meaning they always remain within your browser and are never uploaded to a server. This project focuses on facilitating rapid analysis and sharing of circuit ideas and results within the [VLSI](https://en.wikipedia.org/wiki/Very_Large_Scale_Integration) and chip-design communities. Additionally, since EEcircuit uses a text-based netlist as input, you can utilize [Git](https://git-scm.com/) for version control to track your changes effectively.
+analogpy is a python native circuit representation library with integrated simulation. This website provides a browser-based environment for analogpy that operates directly in your browser using [WebAssembly](https://webassembly.org/) technology. It uses [ngspice](https://sourceforge.net/p/ngspice/ngspice/) as the simulation engine. You can visualize and plot the results in the browser using the high-performance WebGL plotting library, [webgl-plot](https://github.com/danchitnis/webgl-plot), or download the data in CSV format for further analysis. Importantly, your netlist and results are processed locally, meaning they always remain within your browser and are never uploaded to a server. This project focuses on facilitating rapid analysis and sharing of circuit ideas and results within the [VLSI](https://en.wikipedia.org/wiki/Very_Large_Scale_Integration) and chip-design communities. Additionally, since EEcircuit uses a text-based netlist as input, you can utilize [Git](https://git-scm.com/) for version control to track your changes effectively.
 
 ## Getting started
 
