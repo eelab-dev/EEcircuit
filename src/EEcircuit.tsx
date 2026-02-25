@@ -540,10 +540,8 @@ export default function EEcircuit(): JSX.Element {
       <Box
         border="solid 0px"
         p={2}
-        flex={isMinimized ? "1 1 auto" : "0 0 auto"}
+        flex="0 0 auto"
         overflow="hidden"
-        transition="flex 0.2s"
-        maxHeight={isMinimized ? "calc(100vh - 80px)" : undefined}
       >
         <Flex width="100%" height="100%">
           {/* Left: text editor (60%) */}
@@ -706,11 +704,10 @@ export default function EEcircuit(): JSX.Element {
           background: isFullscreen ? "var(--chakra-colors-bg)" : undefined,
           padding: isFullscreen ? "8px" : undefined,
           height: isFullscreen ? "calc(100vh - 60px)" : undefined,
-          flex: isFullscreen ? undefined : isMinimized ? "0 0 auto" : "1 1 0",
+          maxHeight: isFullscreen ? "calc(100vh - 60px)" : undefined,
           display: "flex",
           flexDirection: "column",
           minHeight: 0,
-          maxHeight: isFullscreen ? "calc(100vh - 60px)" : undefined,
         }}
       >
       <Tabs.Root
@@ -780,15 +777,6 @@ export default function EEcircuit(): JSX.Element {
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => setIsMinimized(m => !m)}
-            m={1}
-            title={isMinimized ? "Restore tabs" : "Minimize tabs"}
-          >
-            {isMinimized ? "▲" : "▼"}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
             onClick={toggleFullscreen}
             m={1}
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
@@ -797,7 +785,7 @@ export default function EEcircuit(): JSX.Element {
           </Button>
         </Tabs.List>
 
-        <Tabs.Content value="plot" style={{ flex: 1, overflow: "hidden", minHeight: isMinimized ? 0 : "200px", display: isMinimized ? "none" : undefined }}>
+        <Tabs.Content value="plot" style={{ flex: 1, overflow: "hidden", minHeight: "200px" }}>
           <Suspense fallback={<Skeleton height="400px" />}>
             <PlotArray
               resultArray={resultArray}
@@ -810,7 +798,7 @@ export default function EEcircuit(): JSX.Element {
           </Suspense>
         </Tabs.Content>
 
-        <Tabs.Content value="info" style={{ flex: 1, overflow: "auto", minHeight: 0, display: isMinimized ? "none" : undefined }}>
+        <Tabs.Content value="info" style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
           <Textarea
             readOnly={true}
             aria-label="info"
@@ -821,13 +809,13 @@ export default function EEcircuit(): JSX.Element {
           />
         </Tabs.Content>
 
-        <Tabs.Content value="csv" style={{ flex: 1, overflow: "auto", minHeight: 0, display: isMinimized ? "none" : undefined }}>
+        <Tabs.Content value="csv" style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
           <DownCSV resultArray={resultArray} />
         </Tabs.Content>
 
         {editorMode === "python" && (
           <>
-            <Tabs.Content value="ngspice" style={{ flex: 1, overflow: "auto", minHeight: 0, display: isMinimized ? "none" : undefined }}>
+            <Tabs.Content value="ngspice" style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
               <Textarea
                 readOnly={true}
                 aria-label="ngspice netlist"
@@ -839,7 +827,7 @@ export default function EEcircuit(): JSX.Element {
               />
             </Tabs.Content>
 
-            <Tabs.Content value="spectre" style={{ flex: 1, overflow: "auto", minHeight: 0, display: isMinimized ? "none" : undefined }}>
+            <Tabs.Content value="spectre" style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
               <Textarea
                 readOnly={true}
                 aria-label="spectre netlist"
@@ -855,7 +843,7 @@ export default function EEcircuit(): JSX.Element {
 
         <Tabs.Content
           value="ai"
-          style={{ flex: 1, overflow: "auto", minHeight: 0, display: isMinimized ? "none" : undefined }}
+          style={{ flex: 1, overflow: "auto", minHeight: 0 }}
         >
           <AiChat
             netlist={netList}
