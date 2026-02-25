@@ -559,12 +559,23 @@ export default function EEcircuit(): JSX.Element {
                 mr={3}
                 borderRadius="4px"
               />
-              <Box fontWeight="bold" fontSize="sm" display={{ base: "none", lg: "block" }}>
-                pip install analogpy: Python-native circuit simulation
-              </Box>
-              <Box fontWeight="bold" fontSize="sm" display={{ base: "none", md: "block", lg: "none" }}>
-                pip install analogpy
-              </Box>
+              <Flex direction="column" display={{ base: "none", md: "flex" }}>
+                <Box
+                  fontFamily="monospace"
+                  fontSize="md"
+                  fontWeight="bold"
+                  bg="bg.muted"
+                  px={2}
+                  py={0.5}
+                  borderRadius="md"
+                  width="fit-content"
+                >
+                  pip install analogpy
+                </Box>
+                <Box fontSize="xs" fontWeight="medium" color="fg.muted" mt={0.5}>
+                  Python-native circuit simulation
+                </Box>
+              </Flex>
             </Flex>
 
             {/* Controls */}
