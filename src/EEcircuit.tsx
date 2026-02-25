@@ -151,23 +151,13 @@ export default function EEcircuit(): JSX.Element {
   const [isMinimized, setIsMinimized] = React.useState(false);
   const tabsContainerRef = React.useRef<HTMLDivElement>(null);
 
-  // Listen for fullscreen changes (e.g. user presses Escape)
-  useEffect(() => {
-    const handler = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
-  }, []);
-
   const toggleFullscreen = React.useCallback(() => {
-    if (!tabsContainerRef.current) return;
-    if (!document.fullscreenElement) {
-      tabsContainerRef.current.requestFullscreen();
-    } else {
-      document.exitFullscreen();
+    if (!isFullscreen) {
+      // Scroll the tabs container to the top of the viewport
+      tabsContainerRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, []);
+    setIsFullscreen(f => !f);
+  }, [isFullscreen]);
 
   const colorMode = useColorModeValue("light", "dark");
 
@@ -553,6 +543,7 @@ export default function EEcircuit(): JSX.Element {
         flex={isMinimized ? "1 1 auto" : "0 0 auto"}
         overflow="hidden"
         transition="flex 0.2s"
+        maxHeight={isMinimized ? "calc(100vh - 80px)" : undefined}
       >
         <Flex width="100%" height="100%">
           {/* Left: text editor (60%) */}
@@ -580,6 +571,7 @@ export default function EEcircuit(): JSX.Element {
                     <Button size="xs" variant="outline" onClick={() => setSchematicZoom(1.0)}>Reset</Button>
                     <Box fontSize="xs" color="fg.muted">{Math.round(schematicZoom * 100)}%</Box>
                   </Flex>
+                  {/* Fixed-size scrollable container — zoom changes SVG internal size only */}
                   <div
                     style={{
                       flex: 1,
@@ -587,16 +579,15 @@ export default function EEcircuit(): JSX.Element {
                       background: "white",
                       borderRadius: "6px",
                       border: "1px solid #e2e8f0",
-                    }}
-                    onWheel={(e) => {
-                      if (e.ctrlKey || e.metaKey) {
-                        e.preventDefault();
-                        setSchematicZoom(z => Math.min(Math.max(z * (e.deltaY > 0 ? 0.9 : 1.1), 0.2), 5));
-                      }
+                      cursor: "grab",
                     }}
                   >
                     <div
-                      style={{ width: `${schematicZoom * 100}%` }}
+                      style={{
+                        width: `${schematicZoom * 100}%`,
+                        minWidth: "100%",
+                        lineHeight: 0,
+                      }}
                       dangerouslySetInnerHTML={{ __html: schematicSvg }}
                     />
                   </div>
@@ -713,13 +704,13 @@ export default function EEcircuit(): JSX.Element {
         ref={tabsContainerRef}
         style={{
           background: isFullscreen ? "var(--chakra-colors-bg)" : undefined,
-          padding: isFullscreen ? "16px" : undefined,
-          overflow: isFullscreen ? "hidden" : undefined,
-          height: isFullscreen ? "100vh" : undefined,
+          padding: isFullscreen ? "8px" : undefined,
+          height: isFullscreen ? "calc(100vh - 60px)" : undefined,
           flex: isFullscreen ? undefined : isMinimized ? "0 0 auto" : "1 1 0",
           display: "flex",
           flexDirection: "column",
           minHeight: 0,
+          maxHeight: isFullscreen ? "calc(100vh - 60px)" : undefined,
         }}
       >
       <Tabs.Root
@@ -775,14 +766,6 @@ export default function EEcircuit(): JSX.Element {
               >
                 Spectre
               </Tabs.Trigger>
-              <Tabs.Trigger
-                value="schematic"
-                marginRight="0.5em"
-                paddingLeft="2em"
-                paddingRight="2em"
-              >
-                Schematic
-              </Tabs.Trigger>
             </>
           )}
           <Tabs.Trigger
@@ -822,7 +805,7 @@ export default function EEcircuit(): JSX.Element {
               theme={useColorModeValue("light", "dark")}
               checkCallBack={change}
               colorizeCallback={btColor}
-              height="100%"
+              height={isFullscreen ? "calc(100vh - 160px)" : "calc(100vh - 350px)"}
             />
           </Suspense>
         </Tabs.Content>
@@ -866,61 +849,6 @@ export default function EEcircuit(): JSX.Element {
                 rows={isFullscreen ? 40 : 20}
                 value={generatedSpectre || "(Run Python code to generate Spectre netlist)"}
               />
-            </Tabs.Content>
-
-            <Tabs.Content value="schematic" style={{ flex: 1, overflow: "auto", minHeight: 0, display: isMinimized ? "none" : undefined }}>
-              {schematicSvg ? (
-                schematicSvg.startsWith("<!-- SVG error") ? (
-                  <Box p={4} color="red.500">
-                    {schematicSvg.replace("<!--", "").replace("-->", "")}
-                  </Box>
-                ) : (
-                  <Box>
-                    <Flex gap={2} mb={2} align="center">
-                      <Button size="sm" onClick={() => setSchematicZoom(z => Math.min(z * 1.25, 5))}>
-                        Zoom +
-                      </Button>
-                      <Button size="sm" onClick={() => setSchematicZoom(z => Math.max(z / 1.25, 0.2))}>
-                        Zoom -
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => setSchematicZoom(1.0)}>
-                        Reset
-                      </Button>
-                      <Box fontSize="sm" color="fg.muted">{Math.round(schematicZoom * 100)}%</Box>
-                    </Flex>
-                    <div
-                      style={{
-                        background: "white",
-                        padding: "16px",
-                        borderRadius: "6px",
-                        border: "1px solid #e2e8f0",
-                        overflow: "auto",
-                        maxHeight: isFullscreen ? "calc(100vh - 120px)" : "700px",
-                      }}
-                      onWheel={(e) => {
-                        if (e.ctrlKey || e.metaKey) {
-                          e.preventDefault();
-                          setSchematicZoom(z => {
-                            const delta = e.deltaY > 0 ? 0.9 : 1.1;
-                            return Math.min(Math.max(z * delta, 0.2), 5);
-                          });
-                        }
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${schematicZoom * 100}%`,
-                        }}
-                        dangerouslySetInnerHTML={{ __html: schematicSvg }}
-                      />
-                    </div>
-                  </Box>
-                )
-              ) : (
-                <Box p={4} color="fg.muted">
-                  (Run Python code to generate schematic)
-                </Box>
-              )}
             </Tabs.Content>
           </>
         )}
