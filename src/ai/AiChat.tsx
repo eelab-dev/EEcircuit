@@ -251,8 +251,8 @@ export default function AiChat({
         display="flex"
         flexDirection="column"
         gap={3}
-        minHeight="300px"
-        maxHeight="500px"
+        minHeight="200px"
+        maxHeight="350px"
       >
         {messages.map((msg, i) => (
           <Flex

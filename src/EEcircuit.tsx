@@ -546,7 +546,7 @@ export default function EEcircuit(): JSX.Element {
       >
         <Flex width="100%" height="30vh">
           {/* Left: text editor (60%) */}
-          <Box width={{ base: "100%", md: "60%" }} minWidth={0} height="30vh">
+          <Box width={{ base: "100%", md: "50%" }} minWidth={0} height="30vh">
             <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
               <EditorCustom
                 height="30vh"
@@ -561,7 +561,7 @@ export default function EEcircuit(): JSX.Element {
           </Box>
           {/* Right: schematic panel (40%) — only on desktop */}
           {displayBreakpoint !== "base" && (
-            <Box width="40%" pl={2} height="30vh" display="flex" flexDirection="column">
+            <Box width="50%" pl={2} height="30vh" display="flex" flexDirection="column">
               {schematicSvg && !schematicSvg.startsWith("<!-- SVG error") ? (
                 <>
                   <Flex gap={1} mb={1} align="center" flexShrink={0}>
