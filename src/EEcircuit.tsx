@@ -794,6 +794,8 @@ export default function EEcircuit(): JSX.Element {
               displayData={displayData}
               theme={useColorModeValue("light", "dark")}
               checkCallBack={change}
+              selectAllCallback={handleSelectAllButton}
+              selectNoneCallback={handleDeSelectButton}
               colorizeCallback={btColor}
               height={isFullscreen ? "90vh" : "40vh"}
             />

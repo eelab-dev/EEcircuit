@@ -33,6 +33,8 @@ type PlotType = {
   displayData?: DisplayDataType[];
   theme: "light" | "dark";
   checkCallBack?: (name: string, checked: boolean) => void;
+  selectAllCallback?: () => void;
+  selectNoneCallback?: () => void;
   colorizeCallback?: () => void;
   height?: string;
 };
@@ -102,6 +104,8 @@ function PlotArray({
   displayData,
   theme,
   checkCallBack,
+  selectAllCallback,
+  selectNoneCallback,
   colorizeCallback,
   height: heightProp,
 }: PlotType): JSX.Element {
@@ -1042,8 +1046,8 @@ function PlotArray({
             <Flex direction="column" gap={1}>
               <Flex justify="space-between" mb={1}>
                 <HStack gap={1}>
-                  <Button size="xs" variant="ghost" onClick={() => displayData.forEach(d => checkCallBack(d.name, true))}>All</Button>
-                  <Button size="xs" variant="ghost" onClick={() => displayData.forEach(d => checkCallBack(d.name, false))}>None</Button>
+                  <Button size="xs" variant="ghost" onClick={selectAllCallback}>All</Button>
+                  <Button size="xs" variant="ghost" onClick={selectNoneCallback}>None</Button>
                 </HStack>
                 {colorizeCallback && (
                   <Button size="xs" variant="ghost" onClick={colorizeCallback}>🌈</Button>
