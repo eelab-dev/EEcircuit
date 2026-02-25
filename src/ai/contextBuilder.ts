@@ -155,8 +155,8 @@ export const EXAMPLE_QA = [
   {
     question: "What is the peak current through the inductor?",
     answer:
-      "From the simulation, the peak inductor current `i(l)` reaches approximately **231 mA** " +
-      "at t ≈ 0.4s, with a negative peak of about -118 mA at t ≈ 15.5s. " +
+      "From the simulation with the CMOS90 model, the peak inductor current `i(l)` reaches " +
+      "approximately **195 mA** at t ≈ 30s, with a negative peak of about -79 mA at t ≈ 15s. " +
       "The circuit oscillates due to the LC resonance (f₀ ≈ 1.59 Hz) and the MOSFET switching. " +
       "The current is much larger than a naive DC estimate of vdd/R = 18 mA because the " +
       "inductor and capacitor exchange energy during transient oscillation. " +
