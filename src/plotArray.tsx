@@ -955,7 +955,15 @@ function PlotArray({
       )}
 
       {/* Plot area with optional overlay legend */}
-      <Box position="relative" style={{ height: heightProp ?? "100%", minHeight: "200px" }}>
+      <Box
+        position="relative"
+        style={{
+          height: isAxis
+            ? `calc(${heightProp ?? "100%"} + 1.5em + 2px)`
+            : (heightProp ?? "100%"),
+          minHeight: "200px",
+        }}
+      >
         <Grid
           templateRows={`${isAxis ? 1.5 : 0}em 1fr`}
           templateColumns={`${isAxis ? 5 : 0}em 1fr`}
