@@ -755,22 +755,24 @@ function PlotArray({
   };
 
   function wheelEvent(e: React.WheelEvent<HTMLCanvasElement>) {
-    //e.preventDefault();
-    //const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
-    //const width = (e.target as HTMLCanvasElement).getBoundingClientRect().width;
-    //const cursorOffsetX = (2 * (e.clientX - eOffset - width / 2)) / width;
     if (e.shiftKey) {
-      //offset += e.deltaY * 0.1;
-      //wglp.gOffsetX = 0.1 * offset;
+      // Shift+scroll: Y-axis zoom
+      let scale = wglp.gScaleY;
+      if (e.deltaY < 0) {
+        scale = wglp.gScaleY + -1 * e.deltaY * (wglp.gScaleY * 0.001);
+      } else {
+        scale = wglp.gScaleY - e.deltaY * (wglp.gScaleY * 0.001);
+      }
+      wglp.gScaleY = scale;
     } else {
+      // Normal scroll: X-axis zoom
       let scale = wglp.gScaleX;
       if (e.deltaY < 0) {
         scale = wglp.gScaleX + -1 * e.deltaY * (wglp.gScaleX * 0.001);
       } else {
         scale = wglp.gScaleX - e.deltaY * (wglp.gScaleX * 0.001);
       }
-
-      wglp.gScaleX = 1 * scale;
+      wglp.gScaleX = scale;
     }
   }
 
@@ -926,7 +928,7 @@ function PlotArray({
           )}
 
           <Box fontSize="xs" color="fg.muted" borderLeft="solid 1px" pl={4} ml={2}>
-            Shortcuts: <b>'a'</b>/<b>'b'</b> to mark, <b>'c'</b> to clear.
+            Shortcuts: <b>'a'</b>/<b>'b'</b> to mark, <b>'c'</b> to clear. Scroll: X-zoom, Shift+Scroll: Y-zoom.
           </Box>
         </HStack>
       </Flex>
