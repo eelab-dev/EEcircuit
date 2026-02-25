@@ -755,22 +755,24 @@ function PlotArray({
   };
 
   function wheelEvent(e: React.WheelEvent<HTMLCanvasElement>) {
+    // On macOS, Shift+scroll swaps deltaY to deltaX, so use whichever is non-zero
+    const delta = e.shiftKey ? (e.deltaX || e.deltaY) : e.deltaY;
     if (e.shiftKey) {
       // Shift+scroll: Y-axis zoom
       let scale = wglp.gScaleY;
-      if (e.deltaY < 0) {
-        scale = wglp.gScaleY + -1 * e.deltaY * (wglp.gScaleY * 0.001);
+      if (delta < 0) {
+        scale = wglp.gScaleY + -1 * delta * (wglp.gScaleY * 0.001);
       } else {
-        scale = wglp.gScaleY - e.deltaY * (wglp.gScaleY * 0.001);
+        scale = wglp.gScaleY - delta * (wglp.gScaleY * 0.001);
       }
       wglp.gScaleY = scale;
     } else {
       // Normal scroll: X-axis zoom
       let scale = wglp.gScaleX;
-      if (e.deltaY < 0) {
-        scale = wglp.gScaleX + -1 * e.deltaY * (wglp.gScaleX * 0.001);
+      if (delta < 0) {
+        scale = wglp.gScaleX + -1 * delta * (wglp.gScaleX * 0.001);
       } else {
-        scale = wglp.gScaleX - e.deltaY * (wglp.gScaleX * 0.001);
+        scale = wglp.gScaleX - delta * (wglp.gScaleX * 0.001);
       }
       wglp.gScaleX = scale;
     }
