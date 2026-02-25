@@ -553,7 +553,7 @@ export default function EEcircuit(): JSX.Element {
             {/* Branding */}
             <Flex align="center" flexShrink={0} mr={4}>
               <Image
-                src="analogpy.jpg"
+                src="analogpy.png"
                 alt="analogpy logo"
                 height="2.5em"
                 mr={3}
