@@ -4,7 +4,9 @@
 
 # analogpy
 
-**analogpy** (the successor to EEcircuit) is a Python package for programmatically defining circuits using a native Python representation. It features cross-platform compatibility with the ability to generate both SPICE and Spectre netlists. This website serves as a GUI-driven simulation environment powered by **ngspice** running in the browser via WebAssembly. By supporting both analogpy-based Python code and standard SPICE netlists, it provides a seamless workflow from definition to analysis.
+**analogpy** leverages the browser-based simulation foundations of **EEcircuit** to provide a Python-native ecosystem for programmatically defining and analyzing circuits. While EEcircuit pioneered browser-based simulation via WebAssembly, **analogpy** elevates this technology by introducing a native Python representation that generates both SPICE and Spectre netlists.
+
+This website serves as a GUI-driven simulation environment powered by **ngspice** running in the browser via WebAssembly. By supporting both analogpy-based Python code and standard SPICE netlists, it provides a seamless workflow from definition to analysis.
 
 Beyond simulation, this platform demonstrates the cutting-edge integration of AI—including **Anthropic Claude, Google Gemini, and OpenAI GPT**—directly with circuit analysis to assist in design and debugging. Results are visualized in real-time using the high-performance **webgl-plot** library or exported as CSV.
 
