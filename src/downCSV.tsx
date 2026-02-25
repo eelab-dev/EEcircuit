@@ -208,7 +208,7 @@ const DownCSV = ({ resultArray }: Prop): JSX.Element => {
         )}
       </VStack>
 
-      <a ref={aLink} href={href} download={"EEcircuit.csv"} style={{ display: "none" }} />
+      <a ref={aLink} href={href} download={"analogpy.csv"} style={{ display: "none" }} />
     </>
   );
 };
