@@ -162,7 +162,7 @@ export default function AiChat({
   };
 
   return (
-    <Flex direction="column" height="100%" gap={2}>
+    <Flex direction="column" height="40vh" gap={2}>
       {/* Settings bar */}
       <Flex gap={2} align="center" flexWrap="wrap" p={2} bg="bg.muted" borderRadius="md">
         <SelectRoot
@@ -251,8 +251,8 @@ export default function AiChat({
         display="flex"
         flexDirection="column"
         gap={3}
-        minHeight="200px"
-        maxHeight="350px"
+        minHeight="100px"
+        maxHeight="calc(40vh - 150px)"
       >
         {messages.map((msg, i) => (
           <Flex
