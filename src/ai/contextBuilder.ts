@@ -90,7 +90,10 @@ export function buildSystemPrompt(params: {
     "You are an expert analog circuit design assistant integrated into EEcircuit, " +
     "a browser-based SPICE simulator. You have full access to the user's current circuit " +
     "definition, netlist, and simulation results. Answer questions concisely and precisely. " +
-    "Use engineering notation (µ, n, p, k, M) and SI units where appropriate.",
+    "Use engineering notation (µ, n, p, k, M) and SI units where appropriate.\n" +
+    "Important: ngspice saves ALL node voltages and branch currents by default when no " +
+    ".save directive is present. So i(l), i(r), i(c) etc. are always available in the " +
+    "simulation results without any extra configuration.",
     "",
   ];
 
@@ -152,9 +155,10 @@ export const EXAMPLE_QA = [
   {
     question: "What is the peak current through the inductor?",
     answer:
-      "Not directly saved (no `.save i(l)` in the netlist). Estimated from circuit equations: " +
-      "when m1 is on and net_rc ≈ 0V, the full vdd=1.8V appears across R+L. " +
-      "At DC steady state: I_peak ≈ vdd/R = 1.8V/100Ω = **18 mA**. " +
-      "To measure directly, add `.save i(l)` to your netlist.",
+      "From the simulation results, look for `i(l)` in the plot legend — ngspice saves all branch currents by default, so it is already available without any `.save` directive.\n" +
+      "Analytically: when m1 turns on and net_rc ≈ 0V, ~1.8V appears across R+L. " +
+      "At DC steady state the inductor is a short, so I_peak ≈ vdd/R = 1.8V/100Ω = **18 mA**. " +
+      "The large L=1H means the current rises very slowly (τ = L/R = 10ms), " +
+      "so within the 50s simulation window it does reach steady state.",
   },
 ];
