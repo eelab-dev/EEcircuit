@@ -546,7 +546,7 @@ export default function EEcircuit(): JSX.Element {
       >
         <Flex width="100%" height="30vh">
           {/* Left: text editor (60%) */}
-          <Box width={{ base: "100%", md: "50%" }} minWidth={0} height="30vh">
+          <Box width={{ base: "100%", md: "55%" }} minWidth={0} height="30vh">
             <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
               <EditorCustom
                 height="30vh"
@@ -561,7 +561,7 @@ export default function EEcircuit(): JSX.Element {
           </Box>
           {/* Right: schematic panel (40%) — only on desktop */}
           {displayBreakpoint !== "base" && (
-            <Box width="50%" pl={2} height="30vh" display="flex" flexDirection="column">
+            <Box width="45%" pl={2} height="30vh" display="flex" flexDirection="column">
               {schematicSvg && !schematicSvg.startsWith("<!-- SVG error") ? (
                 <>
                   <Flex gap={1} mb={1} align="center" flexShrink={0}>
@@ -795,7 +795,7 @@ export default function EEcircuit(): JSX.Element {
               theme={useColorModeValue("light", "dark")}
               checkCallBack={change}
               colorizeCallback={btColor}
-              height={isFullscreen ? "90vh" : "40vh"}
+              height={isFullscreen ? "90vh" : "45vh"}
             />
           </Suspense>
         </Tabs.Content>
