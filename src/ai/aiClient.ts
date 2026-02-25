@@ -18,16 +18,16 @@ export type AiConfig = {
 
 export const PROVIDER_DEFAULTS: Record<AiProvider, { models: string[]; defaultModel: string }> = {
   openai: {
-    models: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
-    defaultModel: "gpt-4o",
+    models: ["gpt-5-pro", "o3", "gpt-5"],
+    defaultModel: "gpt-5-pro",
   },
   anthropic: {
     models: ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"],
     defaultModel: "claude-sonnet-4-6",
   },
   google: {
-    models: ["gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-pro"],
-    defaultModel: "gemini-2.0-flash",
+    models: ["gemini-3.1-pro", "gemini-3.0-pro", "gemini-3.0-flash"],
+    defaultModel: "gemini-3.1-pro",
   },
 };
 
