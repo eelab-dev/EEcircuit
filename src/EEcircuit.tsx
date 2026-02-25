@@ -535,7 +535,7 @@ export default function EEcircuit(): JSX.Element {
   }, []);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       {/* Editor + Schematic panel — grows when tabs are minimized */}
       <Box
         border="solid 0px"
