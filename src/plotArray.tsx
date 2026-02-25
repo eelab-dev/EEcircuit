@@ -32,6 +32,9 @@ type PlotType = {
   resultArray?: ResultArrayType;
   displayData?: DisplayDataType[];
   theme: "light" | "dark";
+  checkCallBack?: (name: string, checked: boolean) => void;
+  colorizeCallback?: () => void;
+  height?: string;
 };
 
 type LineMinMaxType = {
@@ -98,6 +101,9 @@ function PlotArray({
   resultArray: resultArray,
   displayData,
   theme,
+  checkCallBack,
+  colorizeCallback,
+  height: heightProp,
 }: PlotType): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
   const animationFrameId = useRef<number>(0);
@@ -109,10 +115,11 @@ function PlotArray({
   const [plotOptions, setPlotOptions] = useState<PlotOptions>({
     crosshair: true,
     sweepSlider: false,
-    showPoints: false,
+    showPoints: true,
   });
   const [isSweep, SetIsSweep] = useState(false);
   const [isAxis, SetIsAxis] = useState(true);
+  const [showLegend, setShowLegend] = useState(true);
 
   const [sliderValue, SetSliderValue] = useState(0);
 
@@ -821,7 +828,7 @@ function PlotArray({
 
   const canvasStyle = {
     width: "100%",
-    height: "40vh",
+    height: heightProp ?? "100%",
   } as React.CSSProperties;
 
   /*const handleLog10YCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -863,11 +870,19 @@ function PlotArray({
             Crosshair
           </Checkbox>
           <Checkbox
-            defaultChecked={false}
+            defaultChecked={true}
             onCheckedChange={pointsBoxHandle}
           >
             Points
           </Checkbox>
+          {checkCallBack && (
+            <Checkbox
+              defaultChecked={true}
+              onCheckedChange={(e) => setShowLegend(e.checked === true)}
+            >
+              Legend
+            </Checkbox>
+          )}
 
           <Button size="xs" colorScheme="blue" variant="outline" onClick={() => scaleUpdate(findMinMaxGlobal())}>
             Reset View
@@ -887,19 +902,19 @@ function PlotArray({
               </Tag>
             </>
           )}
-          
+
           {cursorA.visible && (
             <Tag colorScheme="orange">
               {`A: (${unitConvert2string(cursorA.x, 3)}, ${unitConvert2string(cursorA.y, 3)})`}
             </Tag>
           )}
-          
+
           {cursorB.visible && (
             <Tag colorScheme="blue">
               {`B: (${unitConvert2string(cursorB.x, 3)}, ${unitConvert2string(cursorB.y, 3)})`}
             </Tag>
           )}
-          
+
           {cursorA.visible && cursorB.visible && (
             <Tag colorScheme="purple">
               {`dX: ${unitConvert2string(Math.abs(cursorB.x - cursorA.x), 3)}, dY: ${unitConvert2string(Math.abs(cursorB.y - cursorA.y), 3)}`}
@@ -939,69 +954,135 @@ function PlotArray({
         <></>
       )}
 
-      <Grid
-        templateRows={`${isAxis ? 1.5 : 0}em 1fr`}
-        templateColumns={`${isAxis ? 5 : 0}em 1fr`}
-        gap={0}
-      >
-        <GridItem
-          rowStart={1}
-          colStart={1}
-          bg="bg.subtle"
-          borderBottom="solid 2px"
-          borderRight="solid 2px"
-        />
-        <GridItem
-          rowStart={1}
-          colStart={2}
-          bg="bg.subtle"
-          borderBottom={`${isAxis ? "solid 2px" : ""}`}
+      {/* Plot area with optional overlay legend */}
+      <Box position="relative" style={{ height: heightProp ?? "100%", minHeight: "200px" }}>
+        <Grid
+          templateRows={`${isAxis ? 1.5 : 0}em 1fr`}
+          templateColumns={`${isAxis ? 5 : 0}em 1fr`}
+          gap={0}
+          height="100%"
         >
-          {isAxis ? (
-            <Axis
-              scale={wglp ? wglp.gScaleX : 1}
-              offset={wglp ? wglp.gOffsetX : 0}
-              axis="x"
-              yHeight={canvasStyle.height as string}
-              theme={theme}
-            />
-          ) : (
-            <></>
-          )}
-        </GridItem>
-        <GridItem
-          rowStart={2}
-          colStart={1}
-          bg="bg.subtle"
-          borderRight="solid 2px"
-        >
-          {isAxis ? (
-            <Axis
-              scale={wglp ? wglp.gScaleY : 1}
-              offset={wglp ? wglp.gOffsetY : 0}
-              axis="y"
-              yHeight={canvasStyle.height as string}
-              theme={theme}
-            />
-          ) : (
-            <></>
-          )}
-        </GridItem>
-        <GridItem rowStart={2} colStart={2} bg="papayawhip">
-          <Box bg="bg.subtle">
-            <canvas
-              ref={canvasMain}
-              style={canvasStyle}
-              onMouseDown={mouseDown}
-              onMouseMove={mouseMove}
-              onMouseUp={mouseUp}
-              onDoubleClick={doubleClick}
-              onWheel={wheelEvent}
-              onContextMenu={contextMenu}
-            ></canvas>
+          <GridItem
+            rowStart={1}
+            colStart={1}
+            bg="bg.subtle"
+            borderBottom="solid 2px"
+            borderRight="solid 2px"
+          />
+          <GridItem
+            rowStart={1}
+            colStart={2}
+            bg="bg.subtle"
+            borderBottom={`${isAxis ? "solid 2px" : ""}`}
+          >
+            {isAxis ? (
+              <Axis
+                scale={wglp ? wglp.gScaleX : 1}
+                offset={wglp ? wglp.gOffsetX : 0}
+                axis="x"
+                yHeight={canvasStyle.height as string}
+                theme={theme}
+              />
+            ) : (
+              <></>
+            )}
+          </GridItem>
+          <GridItem
+            rowStart={2}
+            colStart={1}
+            bg="bg.subtle"
+            borderRight="solid 2px"
+          >
+            {isAxis ? (
+              <Axis
+                scale={wglp ? wglp.gScaleY : 1}
+                offset={wglp ? wglp.gOffsetY : 0}
+                axis="y"
+                yHeight={canvasStyle.height as string}
+                theme={theme}
+              />
+            ) : (
+              <></>
+            )}
+          </GridItem>
+          <GridItem rowStart={2} colStart={2} bg="papayawhip">
+            <Box bg="bg.subtle" height="100%">
+              <canvas
+                ref={canvasMain}
+                style={canvasStyle}
+                onMouseDown={mouseDown}
+                onMouseMove={mouseMove}
+                onMouseUp={mouseUp}
+                onDoubleClick={doubleClick}
+                onWheel={wheelEvent}
+                onContextMenu={contextMenu}
+              ></canvas>
+            </Box>
+          </GridItem>
+        </Grid>
+
+        {/* Overlay legend */}
+        {checkCallBack && showLegend && displayData && displayData.length > 0 && (
+          <Box
+            position="absolute"
+            top="2em"
+            right="8px"
+            bg="bg.panel"
+            border="1px solid"
+            borderColor="border.muted"
+            borderRadius="md"
+            p={2}
+            minWidth="140px"
+            maxWidth="200px"
+            maxHeight="60%"
+            overflowY="auto"
+            boxShadow="md"
+            opacity={0.92}
+            zIndex={10}
+          >
+            <Flex direction="column" gap={1}>
+              <Flex justify="space-between" mb={1}>
+                <HStack gap={1}>
+                  <Button size="xs" variant="ghost" onClick={() => displayData.forEach(d => checkCallBack(d.name, true))}>All</Button>
+                  <Button size="xs" variant="ghost" onClick={() => displayData.forEach(d => checkCallBack(d.name, false))}>None</Button>
+                </HStack>
+                {colorizeCallback && (
+                  <Button size="xs" variant="ghost" onClick={colorizeCallback}>🌈</Button>
+                )}
+              </Flex>
+              {displayData.map((d) => (
+                <Flex key={d.name} align="center" gap={2} minWidth={0}>
+                  <Box
+                    w="12px"
+                    h="12px"
+                    borderRadius="2px"
+                    flexShrink={0}
+                    style={{
+                      backgroundColor: `rgb(${Math.round(d.color.r * 255)},${Math.round(d.color.g * 255)},${Math.round(d.color.b * 255)})`,
+                    }}
+                  />
+                  <Checkbox
+                    size="sm"
+                    checked={d.visible}
+                    onCheckedChange={(e) => checkCallBack(d.name, e.checked === true)}
+                  >
+                    <Box
+                      fontSize="xs"
+                      overflow="hidden"
+                      textOverflow="ellipsis"
+                      whiteSpace="nowrap"
+                      maxWidth="140px"
+                      title={d.name}
+                    >
+                      {d.name}
+                    </Box>
+                  </Checkbox>
+                </Flex>
+              ))}
+            </Flex>
           </Box>
-        </GridItem>
-      </Grid>
+        )}
+      </Box>
     </>
   );
 }

@@ -148,6 +148,7 @@ export default function EEcircuit(): JSX.Element {
   const [schematicZoom, setSchematicZoom] = React.useState(1.0);
   const [isPyLoading, setIsPyLoading] = React.useState(false);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const [isMinimized, setIsMinimized] = React.useState(false);
   const tabsContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Listen for fullscreen changes (e.g. user presses Escape)
@@ -544,23 +545,83 @@ export default function EEcircuit(): JSX.Element {
   }, []);
 
   return (
-    <div>
-      <Box border="solid 0px" p={2}>
-        <Flex width="100%">
-          <Box width={{ base: "100%", md: "65%" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
+      {/* Editor + Schematic panel — grows when tabs are minimized */}
+      <Box
+        border="solid 0px"
+        p={2}
+        flex={isMinimized ? "1 1 auto" : "0 0 auto"}
+        overflow="hidden"
+        transition="flex 0.2s"
+      >
+        <Flex width="100%" height="100%">
+          {/* Left: text editor (60%) */}
+          <Box width={{ base: "100%", md: "60%" }} minWidth={0}>
             <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
               <EditorCustom
-                height="30vh"
+                height={isMinimized ? "50vh" : "30vh"}
                 width="100%"
                 language={editorMode === "python" ? "python" : "spice"}
                 value={editorMode === "python" ? pythonCode : netList}
                 valueChanged={handleEditor}
                 theme={useColorModeValue("light", "dark")}
-                key={`${windowSize.width}-${editorMode}`}
+                key={`${windowSize.width}-${editorMode}-${isMinimized}`}
               />
             </Suspense>
           </Box>
-          {displayBreakpoint == "base" ? <></> : LineSelectBox()}
+          {/* Right: schematic panel (40%) — only on desktop */}
+          {displayBreakpoint !== "base" && (
+            <Box width="40%" pl={2} position="relative" overflow="hidden">
+              {schematicSvg && !schematicSvg.startsWith("<!-- SVG error") ? (
+                <Box height="100%" display="flex" flexDirection="column">
+                  <Flex gap={1} mb={1} align="center">
+                    <Button size="xs" onClick={() => setSchematicZoom(z => Math.min(z * 1.25, 5))}>+</Button>
+                    <Button size="xs" onClick={() => setSchematicZoom(z => Math.max(z / 1.25, 0.2))}>-</Button>
+                    <Button size="xs" variant="outline" onClick={() => setSchematicZoom(1.0)}>Reset</Button>
+                    <Box fontSize="xs" color="fg.muted">{Math.round(schematicZoom * 100)}%</Box>
+                  </Flex>
+                  <div
+                    style={{
+                      flex: 1,
+                      overflow: "auto",
+                      background: "white",
+                      borderRadius: "6px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                    onWheel={(e) => {
+                      if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        setSchematicZoom(z => Math.min(Math.max(z * (e.deltaY > 0 ? 0.9 : 1.1), 0.2), 5));
+                      }
+                    }}
+                  >
+                    <div
+                      style={{ width: `${schematicZoom * 100}%` }}
+                      dangerouslySetInnerHTML={{ __html: schematicSvg }}
+                    />
+                  </div>
+                </Box>
+              ) : (
+                <Box
+                  height="100%"
+                  border="1px dashed"
+                  borderColor="border.muted"
+                  borderRadius="md"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  color="fg.muted"
+                  fontSize="sm"
+                  p={4}
+                  textAlign="center"
+                >
+                  {editorMode === "python"
+                    ? "Schematic appears here after running Python code"
+                    : "Switch to Python mode to see schematic"}
+                </Box>
+              )}
+            </Box>
+          )}
         </Flex>
       </Box>
       <Box p={1} width={{ base: "100%", md: "73%" }}>
@@ -590,8 +651,7 @@ export default function EEcircuit(): JSX.Element {
 
           <Spacer />
           {
-            <PopoverRoot
-              open={open}
+            <PopoverRoot              open={open}
               onOpenChange={(e: PopoverOpenChangeDetails) => setOpen(e.open)}
             >
               <PopoverTrigger asChild>
@@ -631,16 +691,6 @@ export default function EEcircuit(): JSX.Element {
             variant="solid"
             size="lg"
             m={1}
-            onClick={btColor}
-            disabled={isSimRunning}
-          >
-            {displayBreakpoint === "base" ? "" : "Colorize"} 🌈
-          </Button>
-          <Button
-            colorScheme="blue"
-            variant="solid"
-            size="lg"
-            m={1}
             onClick={btReset}
             disabled={isSimRunning}
           >
@@ -666,11 +716,22 @@ export default function EEcircuit(): JSX.Element {
           padding: isFullscreen ? "16px" : undefined,
           overflow: isFullscreen ? "hidden" : undefined,
           height: isFullscreen ? "100vh" : undefined,
-          display: isFullscreen ? "flex" : undefined,
-          flexDirection: isFullscreen ? "column" : undefined,
+          flex: isFullscreen ? undefined : isMinimized ? "0 0 auto" : "1 1 0",
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
         }}
       >
-      <Tabs.Root defaultValue="plot" colorScheme="teal" style={isFullscreen ? { display: "flex", flexDirection: "column", flex: 1, minHeight: 0 } : undefined}>
+      <Tabs.Root
+        defaultValue="plot"
+        colorScheme="teal"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
         <Tabs.List>
           <Tabs.Trigger
             value="plot"
@@ -736,34 +797,37 @@ export default function EEcircuit(): JSX.Element {
           <Button
             size="sm"
             variant="ghost"
+            onClick={() => setIsMinimized(m => !m)}
+            m={1}
+            title={isMinimized ? "Restore tabs" : "Minimize tabs"}
+          >
+            {isMinimized ? "▲" : "▼"}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
             onClick={toggleFullscreen}
             m={1}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? "Exit ⛶" : "⛶"}
           </Button>
         </Tabs.List>
 
-        <Tabs.Content value="plot" style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}>
+        <Tabs.Content value="plot" style={{ flex: 1, overflow: "hidden", minHeight: isMinimized ? 0 : "200px", display: isMinimized ? "none" : undefined }}>
           <Suspense fallback={<Skeleton height="400px" />}>
             <PlotArray
               resultArray={resultArray}
               displayData={displayData}
               theme={useColorModeValue("light", "dark")}
+              checkCallBack={change}
+              colorizeCallback={btColor}
+              height="100%"
             />
           </Suspense>
-          {displayBreakpoint !== "base" ? (
-            <></>
-          ) : (
-            <>
-              <Spacer p={2} />
-              <Suspense fallback={<Skeleton height="100px" />}>
-                {LineSelectBox()}
-              </Suspense>
-            </>
-          )}
         </Tabs.Content>
 
-        <Tabs.Content value="info" style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}>
+        <Tabs.Content value="info" style={{ flex: 1, overflow: "auto", minHeight: 0, display: isMinimized ? "none" : undefined }}>
           <Textarea
             readOnly={true}
             aria-label="info"
@@ -774,13 +838,13 @@ export default function EEcircuit(): JSX.Element {
           />
         </Tabs.Content>
 
-        <Tabs.Content value="csv" style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}>
+        <Tabs.Content value="csv" style={{ flex: 1, overflow: "auto", minHeight: 0, display: isMinimized ? "none" : undefined }}>
           <DownCSV resultArray={resultArray} />
         </Tabs.Content>
 
         {editorMode === "python" && (
           <>
-            <Tabs.Content value="ngspice" style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}>
+            <Tabs.Content value="ngspice" style={{ flex: 1, overflow: "auto", minHeight: 0, display: isMinimized ? "none" : undefined }}>
               <Textarea
                 readOnly={true}
                 aria-label="ngspice netlist"
@@ -792,7 +856,7 @@ export default function EEcircuit(): JSX.Element {
               />
             </Tabs.Content>
 
-            <Tabs.Content value="spectre" style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}>
+            <Tabs.Content value="spectre" style={{ flex: 1, overflow: "auto", minHeight: 0, display: isMinimized ? "none" : undefined }}>
               <Textarea
                 readOnly={true}
                 aria-label="spectre netlist"
@@ -804,7 +868,7 @@ export default function EEcircuit(): JSX.Element {
               />
             </Tabs.Content>
 
-            <Tabs.Content value="schematic" style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}>
+            <Tabs.Content value="schematic" style={{ flex: 1, overflow: "auto", minHeight: 0, display: isMinimized ? "none" : undefined }}>
               {schematicSvg ? (
                 schematicSvg.startsWith("<!-- SVG error") ? (
                   <Box p={4} color="red.500">
@@ -863,7 +927,7 @@ export default function EEcircuit(): JSX.Element {
 
         <Tabs.Content
           value="ai"
-          style={isFullscreen ? { flex: 1, overflow: "auto", minHeight: 0 } : undefined}
+          style={{ flex: 1, overflow: "auto", minHeight: 0, display: isMinimized ? "none" : undefined }}
         >
           <AiChat
             netlist={netList}
