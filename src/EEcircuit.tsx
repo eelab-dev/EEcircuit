@@ -795,7 +795,7 @@ export default function EEcircuit(): JSX.Element {
               theme={useColorModeValue("light", "dark")}
               checkCallBack={change}
               colorizeCallback={btColor}
-              height={isFullscreen ? "90vh" : "45vh"}
+              height={isFullscreen ? "90vh" : "40vh"}
             />
           </Suspense>
         </Tabs.Content>

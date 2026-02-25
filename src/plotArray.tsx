@@ -828,7 +828,7 @@ function PlotArray({
 
   const canvasStyle = {
     width: "100%",
-    height: heightProp ?? "100%",
+    height: "100%",
   } as React.CSSProperties;
 
   /*const handleLog10YCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -980,7 +980,7 @@ function PlotArray({
                 scale={wglp ? wglp.gScaleX : 1}
                 offset={wglp ? wglp.gOffsetX : 0}
                 axis="x"
-                yHeight={canvasStyle.height as string}
+                yHeight={heightProp ?? "40vh"}
                 theme={theme}
               />
             ) : (
@@ -998,7 +998,7 @@ function PlotArray({
                 scale={wglp ? wglp.gScaleY : 1}
                 offset={wglp ? wglp.gOffsetY : 0}
                 axis="y"
-                yHeight={canvasStyle.height as string}
+                yHeight={heightProp ?? "40vh"}
                 theme={theme}
               />
             ) : (
