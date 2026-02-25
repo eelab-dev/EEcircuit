@@ -126,41 +126,46 @@ export function buildSystemPrompt(params: {
   return parts.join("\n");
 }
 
-// Pre-written example Q&A based on the default RLC circuit
+// Pre-written example Q&A based on the default RLC circuit with CMOS90 model.
+// Values verified by running ngspice with the real modelcard.CMOS90.
 export const EXAMPLE_QA = [
   {
     question: "Why is the drain voltage (v(net_rc)) not reaching vdd (1.8V)?",
     answer:
-      "The NMOS m1 (W=100µ, L=90n, model N90) pulls net_rc toward ground when the gate pulse is high. " +
-      "When m1 turns on, current flows through R=100Ω and L=1H, causing a voltage drop. " +
-      "The drain can only approach vdd when m1 is fully off and the RLC network has settled. " +
-      "Additionally with R=100Ω this circuit is overdamped (Q≈0.1), so there's no overshoot.",
+      "The simulation shows v(net_rc) ranges from 0.855V to 2.76V — it actually **overshoots** " +
+      "vdd=1.8V up to 2.76V due to LC energy storage. When m1 (NMOS, W=100µ, L=90n) turns on, " +
+      "current flows through R=100Ω and L=1H. When m1 turns off, the inductor's stored energy " +
+      "drives net_rc above vdd. The voltage oscillates around vdd with each switching edge " +
+      "of the pulse (period=30s, width=15s), gradually settling between the switching transitions.",
   },
   {
     question: "What is the resonant frequency of this RLC circuit?",
     answer:
       "f₀ = 1/(2π√(LC)) = 1/(2π√(1H × 0.01F)) = 1/(2π × 0.1) ≈ **1.59 Hz**.\n" +
-      "Quality factor Q = (1/R)√(L/C) = (1/100)√(100) = 0.1 — well below 0.5, " +
-      "so the circuit is overdamped. No oscillation occurs; the response is a slow exponential with " +
-      "time constant τ ≈ 2L/R = 20ms (dominant pole).",
+      "The RLC natural frequency is much faster than the pulse switching frequency (1/30s ≈ 0.033 Hz). " +
+      "Each time m1 switches on or off, the RLC network responds with a transient at ~1.59 Hz " +
+      "that settles before the next switching edge. The quality factor Q = (1/R)√(L/C) = 0.1, " +
+      "which means the transient is heavily damped and settles within a few hundred milliseconds.",
   },
   {
     question: "How would doubling the capacitor value affect the response?",
     answer:
-      "Doubling C → 0.02F lowers the resonant frequency by √2 to ≈1.12 Hz. " +
-      "Q drops to ≈0.07 (more overdamped). " +
-      "The dominant time constant roughly doubles, so waveforms settle ~2× slower. " +
-      "You'd need to increase the .tran stop time to at least 100 to capture full settling.",
+      "Running the simulation with C=0.02F (doubled): " +
+      "the resonant frequency drops to f₀ ≈ 1.12 Hz (from 1.59 Hz). " +
+      "Peak inductor current increases slightly from 195 mA to 206 mA. " +
+      "The voltage overshoot on net_rc decreases from 2.76V to 2.56V (more energy stored in the larger C " +
+      "means less voltage swing). The minimum voltage rises from 0.855V to 1.08V. " +
+      "The existing .tran stop=50s is still sufficient — the transients settle within ~200ms of each edge. " +
+      "Try it: change `c=0.01` to `c=0.02` in the Python code and re-run.",
   },
   {
     question: "What is the peak current through the inductor?",
     answer:
-      "From the simulation with the CMOS90 model, the peak inductor current `i(l)` reaches " +
-      "approximately **195 mA** at t ≈ 30s, with a negative peak of about -79 mA at t ≈ 15s. " +
-      "The circuit oscillates due to the LC resonance (f₀ ≈ 1.59 Hz) and the MOSFET switching. " +
-      "The current is much larger than a naive DC estimate of vdd/R = 18 mA because the " +
-      "inductor and capacitor exchange energy during transient oscillation. " +
-      "Select `i(l)` in the plot legend to see the full waveform — ngspice saves all " +
-      "branch currents by default.",
+      "From the simulation with the CMOS90 model: peak i(l) = **195 mA** at t ≈ 30s, " +
+      "minimum i(l) = **-79 mA** at t ≈ 15s, final i(l) = -3.7 mA at t=50s. " +
+      "The current swings positive when m1 turns on (current flows vdd → R → L → m1 → gnd) " +
+      "and negative when m1 turns off (inductor tries to maintain current, driving net_rc above vdd). " +
+      "Select `i(l)` in the plot legend to see the full waveform — " +
+      "ngspice saves all branch currents by default.",
   },
 ];
