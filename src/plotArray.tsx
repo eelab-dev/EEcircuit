@@ -828,7 +828,7 @@ function PlotArray({
 
   const canvasStyle = {
     width: "100%",
-    height: "100%",
+    height: heightProp ?? "40vh",
   } as React.CSSProperties;
 
   /*const handleLog10YCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -955,20 +955,11 @@ function PlotArray({
       )}
 
       {/* Plot area with optional overlay legend */}
-      <Box
-        position="relative"
-        style={{
-          height: isAxis
-            ? `calc(${heightProp ?? "100%"} + 1.5em + 2px)`
-            : (heightProp ?? "100%"),
-          minHeight: "200px",
-        }}
-      >
+      <Box position="relative">
         <Grid
           templateRows={`${isAxis ? 1.5 : 0}em 1fr`}
           templateColumns={`${isAxis ? 5 : 0}em 1fr`}
           gap={0}
-          height="100%"
         >
           <GridItem
             rowStart={1}
@@ -988,7 +979,7 @@ function PlotArray({
                 scale={wglp ? wglp.gScaleX : 1}
                 offset={wglp ? wglp.gOffsetX : 0}
                 axis="x"
-                yHeight={heightProp ?? "40vh"}
+                yHeight={canvasStyle.height as string}
                 theme={theme}
               />
             ) : (
@@ -1006,7 +997,7 @@ function PlotArray({
                 scale={wglp ? wglp.gScaleY : 1}
                 offset={wglp ? wglp.gOffsetY : 0}
                 axis="y"
-                yHeight={heightProp ?? "40vh"}
+                yHeight={canvasStyle.height as string}
                 theme={theme}
               />
             ) : (
