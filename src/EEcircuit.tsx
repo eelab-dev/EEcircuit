@@ -629,6 +629,7 @@ export default function EEcircuit(): JSX.Element {
               size="md"
               onClick={btReset}
               disabled={isSimRunning}
+              mr={20}
             >
               Clear 🗑️
             </Button>
