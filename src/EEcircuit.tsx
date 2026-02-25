@@ -566,7 +566,7 @@ export default function EEcircuit(): JSX.Element {
                 <>
                   <Flex gap={1} mb={1} align="center" flexShrink={0}>
                     <Button size="xs" onClick={() => setSchematicZoom(z => Math.min(z * 1.25, 5))}>+</Button>
-                    <Button size="xs" onClick={() => setSchematicZoom(z => Math.max(z / 1.25, 1.0))}>-</Button>
+                    <Button size="xs" onClick={() => setSchematicZoom(z => Math.max(z / 1.25, 0.2))}>-</Button>
                     <Button size="xs" variant="outline" onClick={() => setSchematicZoom(1.0)}>Reset</Button>
                     <Box fontSize="xs" color="fg.muted">{Math.round(schematicZoom * 100)}%</Box>
                   </Flex>
