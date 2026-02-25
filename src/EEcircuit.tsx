@@ -545,6 +545,100 @@ export default function EEcircuit(): JSX.Element {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      {/* Top Header Row: Branding + Controls */}
+      {!isFullscreen && (
+        <Box p={1} width="100%" borderBottom="1px solid" borderColor="border.muted">
+          <Flex align="center" gap={2}>
+            {/* Branding */}
+            <Flex align="center" flexShrink={0} mr={4}>
+              <Image
+                src="analogpy.jpg"
+                alt="analogpy logo"
+                height="2.5em"
+                mr={3}
+                borderRadius="4px"
+              />
+              <Box fontWeight="bold" fontSize="sm" display={{ base: "none", lg: "block" }}>
+                pip install analogpy: A python native circuit representation library with integrated simulation
+              </Box>
+              <Box fontWeight="bold" fontSize="sm" display={{ base: "none", md: "block", lg: "none" }}>
+                pip install analogpy
+              </Box>
+            </Flex>
+
+            {/* Controls */}
+            <Button
+              colorScheme={editorMode === "python" ? "green" : "blue"}
+              variant="solid"
+              size="md"
+              onClick={btRun}
+              loading={isSimRunning || isSimLoading || isPyLoading}
+              loadingText={isPyLoading ? "Loading Python..." : isSimLoading ? "Loading..." : "Running..."}
+            >
+              Run 🚀
+            </Button>
+
+            <PopoverRoot
+              open={open}
+              onOpenChange={(e: PopoverOpenChangeDetails) => setOpen(e.open)}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  px={1}
+                  disabled={isSimRunning}
+                  title="Simulation Settings"
+                >
+                  ⚙️
+                </Button>
+              </PopoverTrigger>
+              <PopoverArrow />
+              <PopoverContent p={5}>
+                <PopoverBody>
+                  <PopoverTitle>Threads</PopoverTitle>
+                  <Box>
+                    <NumberInputRoot
+                      max={20}
+                      defaultValue={threadCount.toString()}
+                      min={1}
+                      onValueChange={handleThreadChange}
+                    >
+                      <NumberInputField />
+                    </NumberInputRoot>
+                  </Box>
+                </PopoverBody>
+              </PopoverContent>
+            </PopoverRoot>
+
+            <Button
+              colorScheme={editorMode === "python" ? "green" : "gray"}
+              variant={editorMode === "python" ? "solid" : "outline"}
+              size="md"
+              onClick={handleModeSwitch}
+              disabled={isSimRunning}
+            >
+              {editorMode === "python" ? "Python 🐍" : "SPICE ⚡"}
+            </Button>
+
+            <Spacer />
+            
+            <Button
+              colorScheme="blue"
+              variant="ghost"
+              size="md"
+              onClick={btReset}
+              disabled={isSimRunning}
+            >
+              Clear 🗑️
+            </Button>
+          </Flex>
+          <ProgressRoot value={progress} size="xs" mt={1}>
+            <ProgressBar />
+          </ProgressRoot>
+        </Box>
+      )}
+
       {/* Editor + Schematic panel — grows when tabs are minimized */}
       <Box
         border="solid 0px"
@@ -576,7 +670,7 @@ export default function EEcircuit(): JSX.Element {
                   <Flex gap={1} mb={1} align="center" flexShrink={0}>
                     <Button size="xs" onClick={() => setSchematicZoom(z => Math.min(z * 1.25, 5))}>+</Button>
                     <Button size="xs" onClick={() => setSchematicZoom(z => Math.max(z / 1.25, 0.2))}>-</Button>
-                    <Button size="xs" variant="outline" onClick={() => setSchematicZoom(1.0)}>Reset</Button>
+                    <Button size="xs" variant="outline" onClick={() => setSchematicZoom(1.0)}>100%</Button>
                     <Box fontSize="xs" color="fg.muted">{Math.round(schematicZoom * 100)}%</Box>
                   </Flex>
                   {/* Fixed-size scrollable container — zoom changes SVG internal size only */}
@@ -623,90 +717,6 @@ export default function EEcircuit(): JSX.Element {
             </Box>
           )}
         </Flex>
-      </Box>
-      <Box p={1} width={{ base: "100%", md: "73%" }}>
-        <Flex>
-          <Button
-            colorScheme={editorMode === "python" ? "green" : "blue"}
-            variant="solid"
-            size="lg"
-            m={1}
-            onClick={btRun}
-            loading={isSimRunning || isSimLoading || isPyLoading}
-            loadingText={isPyLoading ? "Loading Python..." : isSimLoading ? "Loading..." : "Running..."}
-          >
-            Run 🚀
-          </Button>
-
-          <Button
-            colorScheme={editorMode === "python" ? "green" : "gray"}
-            variant={editorMode === "python" ? "solid" : "outline"}
-            size="lg"
-            m={1}
-            onClick={handleModeSwitch}
-            disabled={isSimRunning}
-          >
-            {editorMode === "python" ? "Python 🐍" : "SPICE ⚡"}
-          </Button>
-
-          <Spacer />
-          {
-            <PopoverRoot              open={open}
-              onOpenChange={(e: PopoverOpenChangeDetails) => setOpen(e.open)}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  colorScheme="blue"
-                  variant="solid"
-                  size="lg"
-                  m={1}
-                  disabled={isSimRunning}
-                >
-                  {displayBreakpoint === "base" ? "" : "Settings"} ⚙️
-                </Button>
-              </PopoverTrigger>
-              <PopoverArrow />
-              <PopoverContent p={5}>
-                <PopoverBody>
-                  <PopoverTitle>Threads</PopoverTitle>
-
-                  <Box>
-                    {
-                      <NumberInputRoot
-                        max={20}
-                        defaultValue={threadCount.toString()}
-                        min={1}
-                        onValueChange={handleThreadChange}
-                      >
-                        <NumberInputField />
-                      </NumberInputRoot>
-                    }
-                  </Box>
-                </PopoverBody>
-              </PopoverContent>
-            </PopoverRoot>
-          }
-          <Button
-            colorScheme="blue"
-            variant="solid"
-            size="lg"
-            m={1}
-            onClick={btReset}
-            disabled={isSimRunning}
-          >
-            {displayBreakpoint === "base" ? "" : "Reset"} 🗑️
-          </Button>
-        </Flex>
-      </Box>
-
-      <Box p={1}>
-        <ProgressRoot value={progress}>
-          <ProgressBar />
-        </ProgressRoot>
-      </Box>
-
-      <Box p={2}>
-        <Separator />
       </Box>
 
       <div
