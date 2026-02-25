@@ -648,12 +648,12 @@ export default function EEcircuit(): JSX.Element {
         overflow="hidden"
         display={isFullscreen ? "none" : undefined}
       >
-        <Flex width="100%" height="30vh">
+        <Flex width="100%" height="40vh">
           {/* Left: text editor (60%) */}
-          <Box width={{ base: "100%", md: "55%" }} minWidth={0} height="30vh">
-            <Suspense fallback={<Skeleton height="30vh" width="100%" />}>
+          <Box width={{ base: "100%", md: "55%" }} minWidth={0} height="40vh">
+            <Suspense fallback={<Skeleton height="40vh" width="100%" />}>
               <EditorCustom
-                height="30vh"
+                height="40vh"
                 width="100%"
                 language={editorMode === "python" ? "python" : "spice"}
                 value={editorMode === "python" ? pythonCode : netList}
@@ -665,7 +665,7 @@ export default function EEcircuit(): JSX.Element {
           </Box>
           {/* Right: schematic panel (40%) — only on desktop */}
           {displayBreakpoint !== "base" && (
-            <Box width="45%" pl={2} height="30vh" display="flex" flexDirection="column">
+            <Box width="45%" pl={2} height="40vh" display="flex" flexDirection="column">
               {schematicSvg && !schematicSvg.startsWith("<!-- SVG error") ? (
                 <>
                   <Flex gap={1} mb={1} align="center" flexShrink={0}>
@@ -801,6 +801,7 @@ export default function EEcircuit(): JSX.Element {
             variant="ghost"
             onClick={toggleFullscreen}
             m={1}
+            mr={20}
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? "Exit ⛶" : "⛶"}
