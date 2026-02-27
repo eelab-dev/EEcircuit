@@ -28,6 +28,13 @@ import { isComplex, ResultArrayType } from "./sim/simulationArray.ts";
 import { DisplayDataType, mapD2W } from "./displayData.ts";
 import { changeIntensity } from "./colors.ts";
 
+type CursorState = {
+  x: number;
+  y: number;
+  visible: boolean;
+  name: string;
+};
+
 type PlotType = {
   resultArray?: ResultArrayType;
   displayData?: DisplayDataType[];
@@ -37,6 +44,8 @@ type PlotType = {
   selectNoneCallback?: () => void;
   colorizeCallback?: () => void;
   height?: string;
+  initialCursors?: { a: CursorState; b: CursorState; m: CursorState };
+  onCursorsChange?: (a: CursorState, b: CursorState, m: CursorState) => void;
 };
 
 type LineMinMaxType = {
@@ -95,9 +104,12 @@ const cursorXLineA = new WebglLine(new ColorRGBA(1, 0.5, 0, 1), 2);
 const cursorYLineA = new WebglLine(new ColorRGBA(1, 0.5, 0, 1), 2);
 const cursorXLineB = new WebglLine(new ColorRGBA(0, 0.8, 1, 1), 2);
 const cursorYLineB = new WebglLine(new ColorRGBA(0, 0.8, 1, 1), 2);
+const cursorXLineM = new WebglLine(new ColorRGBA(0.1, 0.9, 0.3, 1), 2);
+const cursorYLineM = new WebglLine(new ColorRGBA(0.1, 0.9, 0.3, 1), 2);
 
 const dotA = new WebglSquare(new ColorRGBA(1, 0.5, 0, 1));
 const dotB = new WebglSquare(new ColorRGBA(0, 0.8, 1, 1));
+const dotM = new WebglSquare(new ColorRGBA(0.1, 0.9, 0.3, 1));
 
 function PlotArray({
   resultArray: resultArray,
@@ -108,6 +120,8 @@ function PlotArray({
   selectNoneCallback,
   colorizeCallback,
   height: heightProp,
+  initialCursors,
+  onCursorsChange,
 }: PlotType): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
   const canvasGrid = useRef<HTMLCanvasElement>(null);
@@ -115,8 +129,9 @@ function PlotArray({
   const prevResultArrayRef = useRef<typeof resultArray>(undefined);
   
   // Use refs for values needed in the render loop to avoid closure stales
-  const cursorARef = useRef<CrossXY & { visible: boolean; name: string }>({ x: 0, y: 0, visible: false, name: "" });
-  const cursorBRef = useRef<CrossXY & { visible: boolean; name: string }>({ x: 0, y: 0, visible: false, name: "" });
+  const cursorARef = useRef<CursorState>({ x: 0, y: 0, visible: false, name: "" });
+  const cursorBRef = useRef<CursorState>({ x: 0, y: 0, visible: false, name: "" });
+  const cursorMRef = useRef<CursorState>({ x: 0, y: 0, visible: false, name: "" });
 
   const [plotOptions, setPlotOptions] = useState<PlotOptions>({
     crosshair: true,
@@ -133,12 +148,14 @@ function PlotArray({
   const [crossXY, setCrossXY] = useState<CrossXY>({ x: 0, y: 0 });
 
   // Cursor positions in physical coordinates for UI display
-  const [cursorA, setCursorA] = useState<CrossXY & { visible: boolean; name: string }>({ x: 0, y: 0, visible: false, name: "" });
-  const [cursorB, setCursorB] = useState<CrossXY & { visible: boolean; name: string }>({ x: 0, y: 0, visible: false, name: "" });
+  const [cursorA, setCursorA] = useState<CursorState>(() => initialCursors?.a ?? { x: 0, y: 0, visible: false, name: "" });
+  const [cursorB, setCursorB] = useState<CursorState>(() => initialCursors?.b ?? { x: 0, y: 0, visible: false, name: "" });
+  const [cursorM, setCursorM] = useState<CursorState>(() => initialCursors?.m ?? { x: 0, y: 0, visible: false, name: "" });
 
   // Update refs when state changes
-  useEffect(() => { cursorARef.current = cursorA; }, [cursorA]);
-  useEffect(() => { cursorBRef.current = cursorB; }, [cursorB]);
+  useEffect(() => { cursorARef.current = cursorA; onCursorsChange?.(cursorA, cursorBRef.current, cursorMRef.current); }, [cursorA]);
+  useEffect(() => { cursorBRef.current = cursorB; onCursorsChange?.(cursorARef.current, cursorB, cursorMRef.current); }, [cursorB]);
+  useEffect(() => { cursorMRef.current = cursorM; onCursorsChange?.(cursorARef.current, cursorBRef.current, cursorM); }, [cursorM]);
 
   const [zoomStatus, setZoomStatus] = useState<ZoomStatus>({
     scale: 1,
@@ -213,7 +230,6 @@ function PlotArray({
 
       let lastScaleX = 0;
       let lastScaleY = 0;
-
       const newFrame = () => {
         if (wglp && canvasMain.current) {
           const canvas = canvasMain.current;
@@ -275,6 +291,7 @@ function PlotArray({
 
           updateCursor(cursorARef.current, cursorXLineA, cursorYLineA, dotA);
           updateCursor(cursorBRef.current, cursorXLineB, cursorYLineB, dotB);
+          updateCursor(cursorMRef.current, cursorXLineM, cursorYLineM, dotM);
 
           wglp.update();
           animationFrameId.current = requestAnimationFrame(newFrame);
@@ -536,13 +553,18 @@ function PlotArray({
     wglp.addAuxLine(cursorYLineA);
     wglp.addAuxLine(cursorXLineB);
     wglp.addAuxLine(cursorYLineB);
+    wglp.addAuxLine(cursorXLineM);
+    wglp.addAuxLine(cursorYLineM);
     wglp.addSurface(dotA);
     wglp.addSurface(dotB);
+    wglp.addSurface(dotM);
 
     cursorXLineA.visible = cursorA.visible;
     cursorYLineA.visible = cursorA.visible;
     cursorXLineB.visible = cursorB.visible;
     cursorYLineB.visible = cursorB.visible;
+    cursorXLineM.visible = cursorM.visible;
+    cursorYLineM.visible = cursorM.visible;
 
     if (!resultArray || resultArray.results.length === 0) {
       wglp.gOffsetX = -1;
@@ -582,7 +604,7 @@ function PlotArray({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
-      if (key === "a" || key === "b") {
+      if (key === "a" || key === "b" || key === "m") {
         if (!wglp || wglp.linesData.length === 0) return;
 
         // Find closest point among visible lines
@@ -629,21 +651,33 @@ function PlotArray({
         if (found) {
           if (key === "a") {
             setCursorA({ ...bestPoint, visible: true, name: bestName });
-          } else {
+          } else if (key === "b") {
             setCursorB({ ...bestPoint, visible: true, name: bestName });
+          } else {
+            setCursorM({ ...bestPoint, visible: true, name: bestName });
           }
         }
       }
-      
+
       // 'c' to clear cursors
       if (key === "c") {
         setCursorA(prev => ({ ...prev, visible: false }));
+        setCursorB(prev => ({ ...prev, visible: false }));
+        setCursorM(prev => ({ ...prev, visible: false }));
         setCursorB(prev => ({ ...prev, visible: false }));
       }
 
       // 'f' to reset view
       if (key === "f") {
         scaleUpdate(findMinMaxGlobal());
+      }
+
+      // '[' to zoom out, ']' to zoom in (X axis, centered on current view)
+      if (key === "[" || key === "]") {
+        const factor = key === "]" ? 1.2 : 1 / 1.2;
+        const center = -wglp.gOffsetX / wglp.gScaleX;
+        wglp.gScaleX *= factor;
+        wglp.gOffsetX = -center * wglp.gScaleX;
       }
     };
 
@@ -797,24 +831,41 @@ function PlotArray({
   function wheelEvent(e: React.WheelEvent<HTMLCanvasElement>) {
     // On macOS, Shift+scroll swaps deltaY to deltaX, so use whichever is non-zero
     const delta = e.shiftKey ? (e.deltaX || e.deltaY) : e.deltaY;
+
+    const canvas = canvasMain.current;
+    if (!canvas) return;
+
+    // Convert mouse position to normalized canvas coordinates (-1 to +1)
+    const rect = canvas.getBoundingClientRect();
+    const mouseNormX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const mouseNormY = 1 - ((e.clientY - rect.top) / rect.height) * 2;
+
     if (e.shiftKey) {
-      // Shift+scroll: Y-axis zoom
-      let scale = wglp.gScaleY;
+      // Shift+scroll: Y-axis zoom centered on mouse Y position
+      const oldScaleY = wglp.gScaleY;
+      let newScaleY = oldScaleY;
       if (delta < 0) {
-        scale = wglp.gScaleY + -1 * delta * (wglp.gScaleY * 0.001);
+        newScaleY = oldScaleY + -1 * delta * (oldScaleY * 0.001);
       } else {
-        scale = wglp.gScaleY - delta * (wglp.gScaleY * 0.001);
+        newScaleY = oldScaleY - delta * (oldScaleY * 0.001);
       }
-      wglp.gScaleY = scale;
+      // Keep data point under mouse fixed: mouseNormY = dataY * newScaleY + newOffsetY
+      const dataY = (mouseNormY - wglp.gOffsetY) / oldScaleY;
+      wglp.gScaleY = newScaleY;
+      wglp.gOffsetY = mouseNormY - dataY * newScaleY;
     } else {
-      // Normal scroll: X-axis zoom
-      let scale = wglp.gScaleX;
+      // Normal scroll: X-axis zoom centered on mouse X position
+      const oldScaleX = wglp.gScaleX;
+      let newScaleX = oldScaleX;
       if (delta < 0) {
-        scale = wglp.gScaleX + -1 * delta * (wglp.gScaleX * 0.001);
+        newScaleX = oldScaleX + -1 * delta * (oldScaleX * 0.001);
       } else {
-        scale = wglp.gScaleX - delta * (wglp.gScaleX * 0.001);
+        newScaleX = oldScaleX - delta * (oldScaleX * 0.001);
       }
-      wglp.gScaleX = scale;
+      // Keep data point under mouse fixed: mouseNormX = dataX * newScaleX + newOffsetX
+      const dataX = (mouseNormX - wglp.gOffsetX) / oldScaleX;
+      wglp.gScaleX = newScaleX;
+      wglp.gOffsetX = mouseNormX - dataX * newScaleX;
     }
   }
 
@@ -923,14 +974,6 @@ function PlotArray({
           >
             Points
           </Checkbox>
-          {checkCallBack && (
-            <Checkbox
-              checked={showLegend}
-              onCheckedChange={(e) => setShowLegend(e.checked === true)}
-            >
-              Legend
-            </Checkbox>
-          )}
 
           <Button size="xs" colorScheme="blue" variant="outline" onClick={() => scaleUpdate(findMinMaxGlobal())}>
             Reset View (f)
@@ -962,9 +1005,10 @@ function PlotArray({
                   <Box fontWeight="bold">Keyboard Shortcuts</Box>
                   <Button size="xs" variant="ghost" onClick={() => setShowShortcuts(false)}>✕</Button>
                 </Flex>
-                <Box><b>a</b> / <b>b</b> — place cursor A / B on nearest curve</Box>
+                <Box><b>a</b> / <b>b</b> / <b>m</b> — place cursor A / B / M on nearest curve</Box>
                 <Box><b>c</b> — clear cursors</Box>
                 <Box><b>f</b> — reset view</Box>
+                <Box><b>[</b> / <b>]</b> — zoom out / zoom in (X axis)</Box>
                 <Box><b>Scroll</b> — zoom X axis</Box>
                 <Box><b>Shift + Scroll</b> — zoom Y axis</Box>
                 <Box><b>Right-click drag</b> — pan</Box>
@@ -988,22 +1032,13 @@ function PlotArray({
             </>
           )}
 
-          {cursorA.visible && (
-            <Tag colorScheme="orange">
-              {`A${cursorA.name ? ` [${cursorA.name}]` : ""}: (${unitConvert2string(cursorA.x, 3)}, ${unitConvert2string(cursorA.y, 3)})`}
-            </Tag>
-          )}
-
-          {cursorB.visible && (
-            <Tag colorScheme="blue">
-              {`B${cursorB.name ? ` [${cursorB.name}]` : ""}: (${unitConvert2string(cursorB.x, 3)}, ${unitConvert2string(cursorB.y, 3)})`}
-            </Tag>
-          )}
-
-          {cursorA.visible && cursorB.visible && (
-            <Tag colorScheme="purple">
-              {`dX: ${unitConvert2string(Math.abs(cursorB.x - cursorA.x), 3)}, dY: ${unitConvert2string(Math.abs(cursorB.y - cursorA.y), 3)}`}
-            </Tag>
+          {checkCallBack && (
+            <Checkbox
+              checked={showLegend}
+              onCheckedChange={(e) => setShowLegend(e.checked === true)}
+            >
+              Legend
+            </Checkbox>
           )}
         </HStack>
       </Flex>
@@ -1101,6 +1136,45 @@ function PlotArray({
                 ref={canvasGrid}
                 style={{ ...canvasStyle, position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
               />
+              {(cursorA.visible || cursorB.visible || cursorM.visible) && (
+                <Box
+                  position="absolute"
+                  bottom={2}
+                  right={2}
+                  pointerEvents="none"
+                  fontSize="xs"
+                  fontFamily="mono"
+                  display="flex"
+                  flexDirection="row"
+                  alignItems="center"
+                  gap="4px"
+                >
+                  {cursorA.visible && (
+                    <Box bg="orange.400" color="white" px={2} py="1px" borderRadius="sm">
+                      {`A${cursorA.name ? ` [${cursorA.name}]` : ""}: (${unitConvert2string(cursorA.x, 3)}, ${unitConvert2string(cursorA.y, 3)})`}
+                    </Box>
+                  )}
+                  {cursorB.visible && (
+                    <Box bg="blue.400" color="white" px={2} py="1px" borderRadius="sm">
+                      {`B${cursorB.name ? ` [${cursorB.name}]` : ""}: (${unitConvert2string(cursorB.x, 3)}, ${unitConvert2string(cursorB.y, 3)})`}
+                    </Box>
+                  )}
+                  {cursorA.visible && cursorB.visible && (() => {
+                    const dx = cursorB.x - cursorA.x;
+                    const dy = cursorB.y - cursorA.y;
+                    return (
+                      <Box bg="purple.500" color="white" px={2} py="1px" borderRadius="sm">
+                        {`dX: ${unitConvert2string(Math.abs(dx), 3)}, dY: ${unitConvert2string(Math.abs(dy), 3)}, dy/dx: ${unitConvert2string(dx !== 0 ? dy / dx : Infinity, 3)}`}
+                      </Box>
+                    );
+                  })()}
+                  {cursorM.visible && (
+                    <Box bg="green.400" color="white" px={2} py="1px" borderRadius="sm">
+                      {`M${cursorM.name ? ` [${cursorM.name}]` : ""}: (${unitConvert2string(cursorM.x, 3)}, ${unitConvert2string(cursorM.y, 3)})`}
+                    </Box>
+                  )}
+                </Box>
+              )}
             </Box>
           </GridItem>
         </Grid>
@@ -1169,6 +1243,9 @@ function PlotArray({
                   )}
                   {cursorB.visible && cursorB.name === d.name && (
                     <Box w="8px" h="8px" borderRadius="50%" flexShrink={0} bg="blue.400" title="Cursor B" />
+                  )}
+                  {cursorM.visible && cursorM.name === d.name && (
+                    <Box w="8px" h="8px" borderRadius="50%" flexShrink={0} bg="green.400" title="Cursor M" />
                   )}
                 </Flex>
               ))}

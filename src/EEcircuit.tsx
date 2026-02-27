@@ -158,7 +158,14 @@ export default function EEcircuit(): JSX.Element {
   const [schematicZoom, setSchematicZoom] = React.useState(1.0);
   const [isPyLoading, setIsPyLoading] = React.useState(false);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const [isEditorMax, setIsEditorMax] = React.useState(false);
+  const [isSchematicMax, setIsSchematicMax] = React.useState(false);
   const [isMinimized, setIsMinimized] = React.useState(false);
+  const cursorStateRef = React.useRef({
+    a: { x: 0, y: 0, visible: false, name: "" },
+    b: { x: 0, y: 0, visible: false, name: "" },
+    m: { x: 0, y: 0, visible: false, name: "" },
+  });
   const tabsContainerRef = React.useRef<HTMLDivElement>(null);
 
   const toggleFullscreen = React.useCallback(() => {
@@ -661,24 +668,48 @@ export default function EEcircuit(): JSX.Element {
         overflow="hidden"
         display={isFullscreen ? "none" : undefined}
       >
-        <Flex width="100%" height="40vh">
-          {/* Left: text editor (60%) */}
-          <Box width={{ base: "100%", md: "55%" }} minWidth={0} height="40vh">
+        <Flex width="100%" height={isEditorMax || isSchematicMax ? "80vh" : "40vh"}>
+          {/* Left: text editor */}
+          <Box
+            width={isSchematicMax ? "0%" : (isEditorMax ? "100%" : { base: "100%", md: "55%" })}
+            display={isSchematicMax ? "none" : undefined}
+            minWidth={0}
+            height={isEditorMax || isSchematicMax ? "80vh" : "40vh"}
+            position="relative"
+          >
+            <Button
+              size="xs"
+              variant="ghost"
+              position="absolute"
+              top={1}
+              right={1}
+              zIndex={10}
+              title={isEditorMax ? "Collapse editor" : "Expand editor"}
+              onClick={() => { setIsEditorMax(v => !v); setIsSchematicMax(false); }}
+            >
+              {isEditorMax ? "Collapse ⛶" : "Max ⛶"}
+            </Button>
             <Suspense fallback={<Skeleton height="40vh" width="100%" />}>
               <EditorCustom
-                height="40vh"
+                height={isEditorMax || isSchematicMax ? "80vh" : "40vh"}
                 width="100%"
                 language={editorMode === "python" ? "python" : "spice"}
                 value={editorMode === "python" ? pythonCode : netList}
                 valueChanged={handleEditor}
                 theme={useColorModeValue("light", "dark")}
-                key={`${windowSize.width}-${editorMode}`}
+                key={`${windowSize.width}-${editorMode}-${isEditorMax}`}
               />
             </Suspense>
           </Box>
-          {/* Right: schematic panel (40%) — only on desktop */}
+          {/* Right: schematic panel — only on desktop */}
           {displayBreakpoint !== "base" && (
-            <Box width="45%" pl={2} height="40vh" display="flex" flexDirection="column">
+            <Box
+              width={isEditorMax ? "0%" : (isSchematicMax ? "100%" : "45%")}
+              display={isEditorMax ? "none" : "flex"}
+              pl={isSchematicMax ? 0 : 2}
+              height={isEditorMax || isSchematicMax ? "80vh" : "40vh"}
+              flexDirection="column"
+            >
               {schematicSvg && !schematicSvg.startsWith("<!-- SVG error") ? (
                 <>
                   <Flex gap={1} mb={1} align="center" flexShrink={0}>
@@ -686,6 +717,15 @@ export default function EEcircuit(): JSX.Element {
                     <Button size="xs" onClick={() => setSchematicZoom(z => Math.max(z / 1.25, 0.2))}>-</Button>
                     <Button size="xs" variant="outline" onClick={() => setSchematicZoom(1.0)}>100%</Button>
                     <Box fontSize="xs" color="fg.muted">{Math.round(schematicZoom * 100)}%</Box>
+                    <Spacer />
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      title={isSchematicMax ? "Collapse schematic" : "Expand schematic"}
+                      onClick={() => { setIsSchematicMax(v => !v); setIsEditorMax(false); }}
+                    >
+                      {isSchematicMax ? "Collapse ⛶" : "Max ⛶"}
+                    </Button>
                   </Flex>
                   {/* Fixed-size scrollable container — zoom changes SVG internal size only */}
                   <div
@@ -833,6 +873,8 @@ export default function EEcircuit(): JSX.Element {
               selectNoneCallback={handleDeSelectButton}
               colorizeCallback={btColor}
               height={isFullscreen ? "80vh" : "38vh"}
+              initialCursors={cursorStateRef.current}
+              onCursorsChange={(a, b, m) => { cursorStateRef.current = { a, b, m }; }}
             />
           </Suspense>
         </Tabs.Content>
