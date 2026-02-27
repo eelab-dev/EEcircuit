@@ -21,3 +21,4 @@ test-results
 playwright-report
 .DS_Store
 deploy_github_npm.py
+switch_git_remote.py

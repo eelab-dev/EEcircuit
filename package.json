@@ -42,12 +42,14 @@
     "vite-tsconfig-paths": "^5.1.4"
   },
   "dependencies": {
+    "-": "^0.0.1",
     "@chakra-ui/react": "^3.27.1",
     "@emotion/react": "^11.14.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.1",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
+    "baseline-browser-mapping": "^2.10.0",
     "comlink": "^4.4.2",
     "eecircuit-engine": "^1.5.6",
     "monaco-editor": "^0.54.0",
