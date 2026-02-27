@@ -142,6 +142,9 @@ function PlotArray({
   const [isAxis, SetIsAxis] = useState(true);
   const [showLegend, setShowLegend] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<{ type: "curve" | "cursor"; name: string } | null>(null);
+  const selectedItemRef = useRef<{ type: "curve" | "cursor"; name: string } | null>(null);
+  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
 
   const [sliderValue, SetSliderValue] = useState(0);
 
@@ -293,6 +296,23 @@ function PlotArray({
           updateCursor(cursorBRef.current, cursorXLineB, cursorYLineB, dotB);
           updateCursor(cursorMRef.current, cursorXLineM, cursorYLineM, dotM);
 
+          // Highlight selected curve by brightening its color
+          const sel = selectedItemRef.current;
+          wglp.linesData.forEach((baseLine: any) => {
+            if (!baseLine._origColor) return;
+            const orig = baseLine._origColor;
+            if (sel?.type === "curve" && sel.name === baseLine._name) {
+              baseLine.color = new ColorRGBA(
+                Math.min(orig.r * 2.5, 1),
+                Math.min(orig.g * 2.5, 1),
+                Math.min(orig.b * 2.5, 1),
+                1
+              );
+            } else {
+              baseLine.color = new ColorRGBA(orig.r, orig.g, orig.b, orig.a);
+            }
+          });
+
           wglp.update();
           animationFrameId.current = requestAnimationFrame(newFrame);
         }
@@ -392,9 +412,11 @@ function PlotArray({
       }
       
       const line = new WebglLine(color, numPoints);
-      // Tag line with metadata for easier visibility control
+      // Tag line with metadata for easier visibility control and selection
       (line as any).sourceIndex = col - 1;
       (line as any).isPoints = false;
+      (line as any)._origColor = { r: color.r, g: color.g, b: color.b, a: color.a };
+      (line as any)._name = displayData?.[col - 1]?.name ?? "";
 
       let minY = 100000;
       let maxY = -100000;
@@ -664,7 +686,6 @@ function PlotArray({
         setCursorA(prev => ({ ...prev, visible: false }));
         setCursorB(prev => ({ ...prev, visible: false }));
         setCursorM(prev => ({ ...prev, visible: false }));
-        setCursorB(prev => ({ ...prev, visible: false }));
       }
 
       // 'f' to reset view
@@ -678,6 +699,25 @@ function PlotArray({
         const center = -wglp.gOffsetX / wglp.gScaleX;
         wglp.gScaleX *= factor;
         wglp.gOffsetX = -center * wglp.gScaleX;
+      }
+
+      // Delete — remove selected item
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const sel = selectedItemRef.current;
+        if (sel?.type === "cursor") {
+          if (sel.name === "A") setCursorA(prev => ({ ...prev, visible: false }));
+          else if (sel.name === "B") setCursorB(prev => ({ ...prev, visible: false }));
+          else if (sel.name === "M") setCursorM(prev => ({ ...prev, visible: false }));
+          setSelectedItem(null);
+        } else if (sel?.type === "curve" && checkCallBack) {
+          checkCallBack(sel.name, false);
+          setSelectedItem(null);
+        }
+      }
+
+      // Escape — deselect
+      if (e.key === "Escape") {
+        setSelectedItem(null);
       }
     };
 
@@ -712,13 +752,13 @@ function PlotArray({
 
   const mouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    const eOffset = (e.target as HTMLCanvasElement).getBoundingClientRect().x;
-    //console.log(e.clientX - eOffset); //offset from the edge of the element
+    const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
+    const eOffset = rect.x;
 
     if (e.button == 0) {
       (e.target as HTMLCanvasElement).style.cursor = "pointer";
-      const width = (e.target as HTMLCanvasElement).getBoundingClientRect()
-        .width;
+      const width = rect.width;
+      const height = rect.height;
       const cursorDownX = (2 * (e.clientX - eOffset - width / 2)) / width;
       setMouseZoom({
         started: true,
@@ -726,6 +766,67 @@ function PlotArray({
         cursorOffsetX: 0,
       });
       zoomRect.visible = true;
+
+      // Click-to-select: check cursors first, then curves
+      if (wglp) {
+        const normX = ((e.clientX - rect.left) / width) * 2 - 1;
+        const normY = 1 - ((e.clientY - rect.top) / height) * 2;
+        const dataX = (normX - wglp.gOffsetX) / wglp.gScaleX;
+        const dataY = (normY - wglp.gOffsetY) / wglp.gScaleY;
+
+        // Threshold: 15px in screen space
+        const threshX = 15 / (width / 2) / wglp.gScaleX;
+        const threshY = 15 / (height / 2) / wglp.gScaleY;
+
+        // Check cursor dots first (larger hit area)
+        const cursors: Array<{ key: string; state: CursorState }> = [
+          { key: "A", state: cursorARef.current },
+          { key: "B", state: cursorBRef.current },
+          { key: "M", state: cursorMRef.current },
+        ];
+        let hitCursor: string | null = null;
+        for (const { key, state } of cursors) {
+          if (state.visible && Math.abs(dataX - state.x) < threshX * 2 && Math.abs(dataY - state.y) < threshY * 2) {
+            hitCursor = key;
+            break;
+          }
+        }
+        if (hitCursor) {
+          setSelectedItem({ type: "cursor", name: hitCursor });
+          return;
+        }
+
+        // Check curves: find closest point by X, then check Y within threshold
+        let bestName = "";
+        let bestYDist = Infinity;
+        wglp.linesData.forEach((baseLine: any) => {
+          if (!baseLine.visible) return;
+          const line = baseLine as WebglLine;
+          const numPoints = line.numPoints;
+          // Find the point with closest X
+          let closestYAtX = Infinity;
+          let minDX = Infinity;
+          for (let i = 0; i < numPoints; i++) {
+            const dx = Math.abs(line.getX(i) - dataX);
+            if (dx < minDX) {
+              minDX = dx;
+              closestYAtX = line.getY(i);
+            }
+          }
+          if (minDX < threshX) {
+            const yDist = Math.abs(closestYAtX - dataY);
+            if (yDist < threshY && yDist < bestYDist) {
+              bestYDist = yDist;
+              bestName = baseLine._name ?? "";
+            }
+          }
+        });
+        if (bestName) {
+          setSelectedItem({ type: "curve", name: bestName });
+        } else {
+          setSelectedItem(null);
+        }
+      }
     }
     if (e.button == 2) {
       (e.target as HTMLCanvasElement).style.cursor = "grabbing";
@@ -824,8 +925,6 @@ function PlotArray({
 
   const doubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    scaleUpdate(findMinMaxGlobal());
-    setZoomStatus({ scale: wglp.gScaleX, offset: wglp.gOffsetX });
   };
 
   function wheelEvent(e: React.WheelEvent<HTMLCanvasElement>) {
@@ -976,7 +1075,7 @@ function PlotArray({
           </Checkbox>
 
           <Button size="xs" colorScheme="blue" variant="outline" onClick={() => scaleUpdate(findMinMaxGlobal())}>
-            Reset View (f)
+            Fit (f)
           </Button>
 
           <Box position="relative">
@@ -1007,12 +1106,14 @@ function PlotArray({
                 </Flex>
                 <Box><b>a</b> / <b>b</b> / <b>m</b> — place cursor A / B / M on nearest curve</Box>
                 <Box><b>c</b> — clear cursors</Box>
-                <Box><b>f</b> — reset view</Box>
+                <Box><b>f</b> — fit view</Box>
                 <Box><b>[</b> / <b>]</b> — zoom out / zoom in (X axis)</Box>
+                <Box><b>Click curve/cursor</b> — select it (highlights)</Box>
+                <Box><b>Delete</b> — remove selected curve/cursor</Box>
+                <Box><b>Esc</b> — deselect</Box>
                 <Box><b>Scroll</b> — zoom X axis</Box>
                 <Box><b>Shift + Scroll</b> — zoom Y axis</Box>
                 <Box><b>Right-click drag</b> — pan</Box>
-                <Box><b>Double-click</b> — reset view</Box>
               </Box>
             )}
           </Box>
@@ -1136,6 +1237,41 @@ function PlotArray({
                 ref={canvasGrid}
                 style={{ ...canvasStyle, position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
               />
+              {selectedItem && (() => {
+                let bg = "yellow.400";
+                let color = "black";
+                if (selectedItem.type === "cursor") {
+                  bg = selectedItem.name === "A" ? "orange.400" : selectedItem.name === "B" ? "blue.400" : "green.400";
+                  color = "white";
+                } else {
+                  // Match the curve's own color
+                  const line = wglp?.linesData.find((l: any) => l._name === selectedItem.name) as any;
+                  if (line?._origColor) {
+                    const { r, g, b } = line._origColor;
+                    bg = `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
+                    // Use white text for dark colors, black for light
+                    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+                    color = luminance < 0.5 ? "white" : "black";
+                  }
+                }
+                return (
+                  <Box
+                    position="absolute"
+                    bottom={2}
+                    left={2}
+                    pointerEvents="none"
+                    fontSize="xs"
+                    fontFamily="mono"
+                  >
+                    <Box
+                      px={2} py="1px" borderRadius="sm"
+                      style={{ backgroundColor: bg, color }}
+                    >
+                      {selectedItem.type === "cursor" ? `Cursor ${selectedItem.name}` : `"${selectedItem.name}"`} selected — Del to remove · Esc to deselect
+                    </Box>
+                  </Box>
+                );
+              })()}
               {(cursorA.visible || cursorB.visible || cursorM.visible) && (
                 <Box
                   position="absolute"
