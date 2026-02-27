@@ -22,3 +22,6 @@ playwright-report
 .DS_Store
 deploy_github_npm.py
 switch_git_remote.py
+TODO_filesystem.md
+TODO_AI.md
+TODO_spectre_PDK.md

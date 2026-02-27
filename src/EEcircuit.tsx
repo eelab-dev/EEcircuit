@@ -163,7 +163,6 @@ export default function EEcircuit(): JSX.Element {
 
   const toggleFullscreen = React.useCallback(() => {
     if (!isFullscreen) {
-      // Scroll the tabs container to the top of the viewport
       tabsContainerRef.current?.scrollIntoView({ behavior: "smooth" });
     }
     setIsFullscreen(f => !f);
@@ -643,7 +642,7 @@ export default function EEcircuit(): JSX.Element {
               size="md"
               onClick={btReset}
               disabled={isSimRunning}
-              mr={20}
+              title="Clear simulation results"
             >
               Clear 🗑️
             </Button>
@@ -818,13 +817,14 @@ export default function EEcircuit(): JSX.Element {
             mr={20}
             title={isFullscreen ? "Collapse plot back to normal view" : "Expand plot to full screen"}
           >
-            {isFullscreen ? "Exit ⛶" : "Max ⛶"}
+            {isFullscreen ? "Collapse ⛶" : "Max ⛶"}
           </Button>
         </Tabs.List>
 
-        <Tabs.Content value="plot" style={{ flex: 1, overflow: "hidden", minHeight: "200px", display: "flex", flexDirection: "column" }}>
+        <Tabs.Content value="plot" style={{ flex: 1, overflow: "hidden", minHeight: "200px" }}>
           <Suspense fallback={<Skeleton height="400px" />}>
             <PlotArray
+              key={isFullscreen ? "fullscreen" : "normal"}
               resultArray={resultArray}
               displayData={displayData}
               theme={useColorModeValue("light", "dark")}
@@ -832,7 +832,7 @@ export default function EEcircuit(): JSX.Element {
               selectAllCallback={handleSelectAllButton}
               selectNoneCallback={handleDeSelectButton}
               colorizeCallback={btColor}
-              height={isFullscreen ? "calc(100vh - 56px)" : "40vh"}
+              height={isFullscreen ? "80vh" : "38vh"}
             />
           </Suspense>
         </Tabs.Content>

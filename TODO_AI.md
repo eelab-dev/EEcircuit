@@ -143,3 +143,52 @@ In `src/ai/AiChat.tsx`:
 - The proxy only supports OpenAI for the free tier (simpler, single key to manage)
 - Anthropic and Google remain available for users with their own keys
 - Add CORS restriction to only allow requests from the EEcircuit GitHub Pages domain
+
+---
+
+## Monetization
+
+The AI feature has two natural revenue angles:
+
+### 1. AI question credits (pay-per-use)
+
+Beyond the 3 free questions/day, sell credit packs:
+
+| Tier | Price | Credits |
+|---|---|---|
+| Free | $0 | 3/day |
+| Starter | $5 | 100 credits |
+| Pro | $20 | 500 credits |
+| Unlimited | $15/month | Unlimited |
+
+Each "credit" = one AI question. Implementation: Stripe one-time payment or
+subscription → store credit balance in Vercel KV keyed by user ID.
+
+### 2. Domain-specific analog AI (premium model)
+
+Fine-tune or prompt-engineer a model specifically for analog circuit design:
+- Trained on SPICE netlists, analog design textbooks, application notes
+- Understands analogpy syntax natively
+- Can suggest component values, explain simulation results, debug convergence
+
+Charge a premium for this specialized model vs. the generic GPT/Claude free tier.
+Users who pay get routed to the fine-tuned model; free tier uses the standard model.
+
+### 3. AI-assisted PDK-aware design (long-term)
+
+Combine with the Spectre/PDK cloud compute (see TODO_spectre_PDK.md):
+- AI suggests sizing for a specific process node (e.g. TSMC N28)
+- Automatically generates a simulation-ready netlist
+- Runs the simulation on cloud backend
+- Returns results with AI interpretation
+
+This closes the loop: design → simulate → explain, all in one session.
+Bundle pricing: AI credits + simulation credits in one subscription.
+
+### Implementation path
+
+1. Add user accounts (Auth0 or Clerk) — prerequisite for all paid tiers
+2. Integrate Stripe for credit purchases
+3. Store credit balance in Vercel KV
+4. Route free vs. paid users to different model endpoints
+5. Dashboard: show remaining credits, purchase history

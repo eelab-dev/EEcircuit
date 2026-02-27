@@ -110,6 +110,7 @@ function PlotArray({
   height: heightProp,
 }: PlotType): JSX.Element {
   const canvasMain = useRef<HTMLCanvasElement>(null);
+  const canvasGrid = useRef<HTMLCanvasElement>(null);
   const animationFrameId = useRef<number>(0);
   
   // Use refs for values needed in the render loop to avoid closure stales
@@ -137,7 +138,7 @@ function PlotArray({
   useEffect(() => { cursorARef.current = cursorA; }, [cursorA]);
   useEffect(() => { cursorBRef.current = cursorB; }, [cursorB]);
 
-  const [, setZoomStatus] = useState<ZoomStatus>({
+  const [zoomStatus, setZoomStatus] = useState<ZoomStatus>({
     scale: 1,
     offset: 0,
   });
@@ -179,6 +180,7 @@ function PlotArray({
   }, [theme]);
 
   useEffect(() => {
+    let resizeObserver: ResizeObserver;
     if (canvasMain.current) {
       const devicePixelRatio = window.devicePixelRatio || 1;
       canvasMain.current.width =
@@ -190,7 +192,7 @@ function PlotArray({
         powerPerformance: "high-performance",
       });
 
-      const resizeObserver = new ResizeObserver(() => {
+      resizeObserver = new ResizeObserver(() => {
         if (canvasMain.current && wglp) {
           const devicePixelRatio = window.devicePixelRatio || 1;
           canvasMain.current.width =
@@ -271,7 +273,7 @@ function PlotArray({
 
           updateCursor(cursorARef.current, cursorXLineA, cursorYLineA, dotA);
           updateCursor(cursorBRef.current, cursorXLineB, cursorYLineB, dotB);
-          
+
           wglp.update();
           animationFrameId.current = requestAnimationFrame(newFrame);
         }
@@ -290,7 +292,7 @@ function PlotArray({
     console.log("canvas->", "I am here! 🧨");
     ////bug fix see https://github.com/facebook/react/issues/14856#issuecomment-586781399
     return () => {
-      resizeObserver.disconnect();
+      resizeObserver?.disconnect();
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
       }
@@ -306,6 +308,31 @@ function PlotArray({
       offset: wglp.gOffsetX / wglp.gScaleX,
     });
   }, [mouseDrag]);
+
+  // Redraw Canvas 2D grid whenever zoom/pan or scale changes
+  useEffect(() => {
+    const canvas = canvasGrid.current;
+    if (!canvas || !wglp) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = theme === "light" ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)";
+    ctx.lineWidth = 1;
+    const NUM_GRID = 5;
+    for (let i = 0; i < NUM_GRID; i++) {
+      const norm = -1 + (2 / (NUM_GRID + 1)) * (i + 1);
+      // norm is in WebGL clip space (-1..1); convert to canvas pixel coords
+      const px = ((norm + 1) / 2) * canvas.width;
+      const py = ((1 - norm) / 2) * canvas.height;
+      // vertical line
+      ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, canvas.height); ctx.stroke();
+      // horizontal line
+      ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(canvas.width, py); ctx.stroke();
+    }
+  }, [zoomStatus, theme, canvasGrid]);
 
   /////////////////////////////////////////////////////////////////////
 
@@ -507,7 +534,7 @@ function PlotArray({
     wglp.addAuxLine(cursorYLineB);
     wglp.addSurface(dotA);
     wglp.addSurface(dotB);
-    
+
     cursorXLineA.visible = cursorA.visible;
     cursorYLineA.visible = cursorA.visible;
     cursorXLineB.visible = cursorB.visible;
@@ -885,7 +912,7 @@ function PlotArray({
           </Checkbox>
           {checkCallBack && (
             <Checkbox
-              defaultChecked={true}
+              checked={showLegend}
               onCheckedChange={(e) => setShowLegend(e.checked === true)}
             >
               Legend
@@ -1013,7 +1040,7 @@ function PlotArray({
             )}
           </GridItem>
           <GridItem rowStart={2} colStart={2} bg="papayawhip">
-            <Box bg="bg.subtle" height="100%">
+            <Box bg="bg.subtle" height="100%" position="relative">
               <canvas
                 ref={canvasMain}
                 style={canvasStyle}
@@ -1024,6 +1051,10 @@ function PlotArray({
                 onWheel={wheelEvent}
                 onContextMenu={contextMenu}
               ></canvas>
+              <canvas
+                ref={canvasGrid}
+                style={{ ...canvasStyle, position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
+              />
             </Box>
           </GridItem>
         </Grid>
@@ -1053,9 +1084,12 @@ function PlotArray({
                   <Button size="xs" variant="ghost" onClick={selectAllCallback}>All</Button>
                   <Button size="xs" variant="ghost" onClick={selectNoneCallback}>None</Button>
                 </HStack>
-                {colorizeCallback && (
-                  <Button size="xs" variant="ghost" onClick={colorizeCallback}>🌈</Button>
-                )}
+                <HStack gap={1}>
+                  {colorizeCallback && (
+                    <Button size="xs" variant="ghost" onClick={colorizeCallback}>🌈</Button>
+                  )}
+                  <Button size="xs" variant="ghost" onClick={() => setShowLegend(false)} title="Close legend">✕</Button>
+                </HStack>
               </Flex>
               {displayData.map((d) => (
                 <Flex key={d.name} align="center" gap={2} minWidth={0}>
