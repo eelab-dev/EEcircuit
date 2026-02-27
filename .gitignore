@@ -20,3 +20,4 @@ tests/repos
 test-results
 playwright-report
 .DS_Store
+deploy_github_npm.py
