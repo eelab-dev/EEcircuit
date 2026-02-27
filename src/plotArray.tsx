@@ -112,10 +112,11 @@ function PlotArray({
   const canvasMain = useRef<HTMLCanvasElement>(null);
   const canvasGrid = useRef<HTMLCanvasElement>(null);
   const animationFrameId = useRef<number>(0);
+  const prevResultArrayRef = useRef<typeof resultArray>(undefined);
   
   // Use refs for values needed in the render loop to avoid closure stales
-  const cursorARef = useRef<CrossXY & { visible: boolean }>({ x: 0, y: 0, visible: false });
-  const cursorBRef = useRef<CrossXY & { visible: boolean }>({ x: 0, y: 0, visible: false });
+  const cursorARef = useRef<CrossXY & { visible: boolean; name: string }>({ x: 0, y: 0, visible: false, name: "" });
+  const cursorBRef = useRef<CrossXY & { visible: boolean; name: string }>({ x: 0, y: 0, visible: false, name: "" });
 
   const [plotOptions, setPlotOptions] = useState<PlotOptions>({
     crosshair: true,
@@ -125,14 +126,15 @@ function PlotArray({
   const [isSweep, SetIsSweep] = useState(false);
   const [isAxis, SetIsAxis] = useState(true);
   const [showLegend, setShowLegend] = useState(true);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const [sliderValue, SetSliderValue] = useState(0);
 
   const [crossXY, setCrossXY] = useState<CrossXY>({ x: 0, y: 0 });
 
   // Cursor positions in physical coordinates for UI display
-  const [cursorA, setCursorA] = useState<CrossXY & { visible: boolean }>({ x: 0, y: 0, visible: false });
-  const [cursorB, setCursorB] = useState<CrossXY & { visible: boolean }>({ x: 0, y: 0, visible: false });
+  const [cursorA, setCursorA] = useState<CrossXY & { visible: boolean; name: string }>({ x: 0, y: 0, visible: false, name: "" });
+  const [cursorB, setCursorB] = useState<CrossXY & { visible: boolean; name: string }>({ x: 0, y: 0, visible: false, name: "" });
 
   // Update refs when state changes
   useEffect(() => { cursorARef.current = cursorA; }, [cursorA]);
@@ -498,12 +500,12 @@ function PlotArray({
 
   useEffect(() => {
     if (!wglp) return;
-    
+
     wglp.removeAllLines();
-    
+
     if (resultArray && resultArray.results.length > 0) {
       makeLine(resultArray.results);
-      
+
       // Map displayData for faster lookup
       const visibilityMap = new Map<number, boolean>();
       displayData?.forEach((e) => {
@@ -514,14 +516,16 @@ function PlotArray({
       const offset = isComplex(resultArray) ? 2 : 1;
       wglp.linesData.forEach((line: any) => {
         if (line.sourceIndex !== undefined) {
-          // Metadata sourceIndex corresponds to the variable index in displayData
-          // We need to map it back to the 'e.index' which is (sourceIndex + offset)
           const isVisible = visibilityMap.get(line.sourceIndex + offset);
           line.visible = isVisible !== undefined ? isVisible : true;
         }
       });
-      
-      scaleUpdate(findMinMaxGlobal());
+
+      // Only reset view when new simulation data arrives, not on visibility/color/points changes
+      if (resultArray !== prevResultArrayRef.current) {
+        scaleUpdate(findMinMaxGlobal());
+        prevResultArrayRef.current = resultArray;
+      }
     }
 
     // Re-add auxiliary elements
@@ -583,6 +587,7 @@ function PlotArray({
 
         // Find closest point among visible lines
         let bestPoint = { x: 0, y: 0 };
+        let bestName = "";
         let minDistanceSq = Infinity;
         let found = false;
 
@@ -590,8 +595,6 @@ function PlotArray({
           if (!baseLine.visible) return;
           const line = baseLine as WebglLine;
 
-          // Find closest point in this line (binary search would be faster, but linear is fine for now)
-          // We look for closest X first, then check Y distance
           const numPoints = line.numPoints;
           let localBestX = 0;
           let localBestY = 0;
@@ -613,6 +616,11 @@ function PlotArray({
             if (distSq < minDistanceSq) {
               minDistanceSq = distSq;
               bestPoint = { x: localBestX, y: localBestY };
+              // Resolve signal name from displayData via sourceIndex
+              const srcIdx = (line as any).sourceIndex;
+              const offset = isComplex(resultArray) ? 2 : 1;
+              const dd = displayData?.find(d => d.index === srcIdx + offset);
+              bestName = dd ? dd.name : "";
               found = true;
             }
           }
@@ -620,9 +628,9 @@ function PlotArray({
 
         if (found) {
           if (key === "a") {
-            setCursorA({ ...bestPoint, visible: true });
+            setCursorA({ ...bestPoint, visible: true, name: bestName });
           } else {
-            setCursorB({ ...bestPoint, visible: true });
+            setCursorB({ ...bestPoint, visible: true, name: bestName });
           }
         }
       }
@@ -631,6 +639,11 @@ function PlotArray({
       if (key === "c") {
         setCursorA(prev => ({ ...prev, visible: false }));
         setCursorB(prev => ({ ...prev, visible: false }));
+      }
+
+      // 'f' to reset view
+      if (key === "f") {
+        scaleUpdate(findMinMaxGlobal());
       }
     };
 
@@ -920,8 +933,45 @@ function PlotArray({
           )}
 
           <Button size="xs" colorScheme="blue" variant="outline" onClick={() => scaleUpdate(findMinMaxGlobal())}>
-            Reset View
+            Reset View (f)
           </Button>
+
+          <Box position="relative">
+            <Button size="xs" variant="outline" onClick={() => setShowShortcuts(s => !s)}>
+              Shortcuts
+            </Button>
+            {showShortcuts && (
+              <Box
+                position="absolute"
+                top="110%"
+                left={0}
+                zIndex={100}
+                bg="bg.panel"
+                border="1px solid"
+                borderColor="border.muted"
+                borderRadius="md"
+                boxShadow="md"
+                p={3}
+                minWidth="260px"
+                maxHeight="220px"
+                overflowY="auto"
+                fontSize="xs"
+                lineHeight="1.8"
+              >
+                <Flex justify="space-between" align="center" mb={2}>
+                  <Box fontWeight="bold">Keyboard Shortcuts</Box>
+                  <Button size="xs" variant="ghost" onClick={() => setShowShortcuts(false)}>✕</Button>
+                </Flex>
+                <Box><b>a</b> / <b>b</b> — place cursor A / B on nearest curve</Box>
+                <Box><b>c</b> — clear cursors</Box>
+                <Box><b>f</b> — reset view</Box>
+                <Box><b>Scroll</b> — zoom X axis</Box>
+                <Box><b>Shift + Scroll</b> — zoom Y axis</Box>
+                <Box><b>Right-click drag</b> — pan</Box>
+                <Box><b>Double-click</b> — reset view</Box>
+              </Box>
+            )}
+          </Box>
         </HStack>
 
         <Spacer />
@@ -940,13 +990,13 @@ function PlotArray({
 
           {cursorA.visible && (
             <Tag colorScheme="orange">
-              {`A: (${unitConvert2string(cursorA.x, 3)}, ${unitConvert2string(cursorA.y, 3)})`}
+              {`A${cursorA.name ? ` [${cursorA.name}]` : ""}: (${unitConvert2string(cursorA.x, 3)}, ${unitConvert2string(cursorA.y, 3)})`}
             </Tag>
           )}
 
           {cursorB.visible && (
             <Tag colorScheme="blue">
-              {`B: (${unitConvert2string(cursorB.x, 3)}, ${unitConvert2string(cursorB.y, 3)})`}
+              {`B${cursorB.name ? ` [${cursorB.name}]` : ""}: (${unitConvert2string(cursorB.x, 3)}, ${unitConvert2string(cursorB.y, 3)})`}
             </Tag>
           )}
 
@@ -955,10 +1005,6 @@ function PlotArray({
               {`dX: ${unitConvert2string(Math.abs(cursorB.x - cursorA.x), 3)}, dY: ${unitConvert2string(Math.abs(cursorB.y - cursorA.y), 3)}`}
             </Tag>
           )}
-
-          <Box fontSize="xs" color="fg.muted" borderLeft="solid 1px" pl={4} ml={2}>
-            Shortcuts: <b>'a'</b>/<b>'b'</b> to mark, <b>'c'</b> to clear. Scroll: X-zoom, Shift+Scroll: Y-zoom.
-          </Box>
         </HStack>
       </Flex>
 
@@ -1118,6 +1164,12 @@ function PlotArray({
                       {d.name}
                     </Box>
                   </Checkbox>
+                  {cursorA.visible && cursorA.name === d.name && (
+                    <Box w="8px" h="8px" borderRadius="50%" flexShrink={0} bg="orange.400" title="Cursor A" />
+                  )}
+                  {cursorB.visible && cursorB.name === d.name && (
+                    <Box w="8px" h="8px" borderRadius="50%" flexShrink={0} bg="blue.400" title="Cursor B" />
+                  )}
                 </Flex>
               ))}
             </Flex>
