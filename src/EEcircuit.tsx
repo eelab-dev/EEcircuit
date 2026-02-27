@@ -816,13 +816,13 @@ export default function EEcircuit(): JSX.Element {
             onClick={toggleFullscreen}
             m={1}
             mr={20}
-            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            title={isFullscreen ? "Collapse plot back to normal view" : "Expand plot to full screen"}
           >
-            {isFullscreen ? "Exit ⛶" : "⛶"}
+            {isFullscreen ? "Exit ⛶" : "Max ⛶"}
           </Button>
         </Tabs.List>
 
-        <Tabs.Content value="plot" style={{ flex: 1, overflow: "hidden", minHeight: "200px" }}>
+        <Tabs.Content value="plot" style={{ flex: 1, overflow: "hidden", minHeight: "200px", display: "flex", flexDirection: "column" }}>
           <Suspense fallback={<Skeleton height="400px" />}>
             <PlotArray
               resultArray={resultArray}
@@ -832,7 +832,7 @@ export default function EEcircuit(): JSX.Element {
               selectAllCallback={handleSelectAllButton}
               selectNoneCallback={handleDeSelectButton}
               colorizeCallback={btColor}
-              height={isFullscreen ? "70vh" : "40vh"}
+              height={isFullscreen ? "calc(100vh - 56px)" : "40vh"}
             />
           </Suspense>
         </Tabs.Content>
