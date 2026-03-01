@@ -67,13 +67,17 @@ type ScaleType = {
 type MouseDrag = {
   started: boolean;
   dragInitialX: number;
+  dragInitialY: number;
   dragOffsetOld: number;
+  dragOffsetOldY: number;
 };
 
 type MouseZoom = {
   started: boolean;
   cursorDownX: number;
+  cursorDownY: number;
   cursorOffsetX: number;
+  cursorOffsetY: number;
   zoomOut: boolean;
 };
 
@@ -169,17 +173,21 @@ function PlotArray({
   const [mouseZoom, setMouseZoom] = useState<MouseZoom>({
     started: false,
     cursorDownX: 0,
+    cursorDownY: 0,
     cursorOffsetX: 0,
+    cursorOffsetY: 0,
     zoomOut: false,
   });
   const [mouseDrag, setMouseDrag] = useState<MouseDrag>({
     started: false,
     dragInitialX: 0,
+    dragInitialY: 0,
     dragOffsetOld: 0,
+    dragOffsetOldY: 0,
   });
   // Left-drag pan: track start position to distinguish click vs drag
-  const leftDragRef = useRef<{ started: boolean; dragInitialX: number; dragOffsetOld: number; startClientX: number; isDragging: boolean }>({
-    started: false, dragInitialX: 0, dragOffsetOld: 0, startClientX: 0, isDragging: false,
+  const leftDragRef = useRef<{ started: boolean; dragInitialX: number; dragInitialY: number; dragOffsetOld: number; dragOffsetOldY: number; startClientX: number; startClientY: number; isDragging: boolean; isZooming: boolean; longPressTimer: ReturnType<typeof setTimeout> | null }>({
+    started: false, dragInitialX: 0, dragInitialY: 0, dragOffsetOld: 0, dragOffsetOldY: 0, startClientX: 0, startClientY: 0, isDragging: false, isZooming: false, longPressTimer: null,
   });
   // Right-drag continuous zoom-out: track last X position and anchor data point
   const rightDragRef = useRef<{ started: boolean; lastClientX: number; anchorDataX: number; anchorNormX: number }>({
@@ -767,15 +775,15 @@ function PlotArray({
     const width = rect.width;
     const height = rect.height;
 
-    // Shared select logic for left (0) and right (2) click
+    // Shared select logic — only updates selection if something is hit, never deselects
     const trySelect = () => {
       if (!wglp) return;
       const normX = ((e.clientX - rect.left) / width) * 2 - 1;
       const normY = 1 - ((e.clientY - rect.top) / height) * 2;
       const dataX = (normX - wglp.gOffsetX) / wglp.gScaleX;
       const dataY = (normY - wglp.gOffsetY) / wglp.gScaleY;
-      const threshX = 15 / (width / 2) / wglp.gScaleX;
-      const threshY = 15 / (height / 2) / wglp.gScaleY;
+      const threshX = 25 / (width / 2) / wglp.gScaleX;
+      const threshY = 25 / (height / 2) / wglp.gScaleY;
 
       // Check cursor dots first
       const cursors: Array<{ key: string; state: CursorState }> = [
@@ -790,53 +798,57 @@ function PlotArray({
         }
       }
 
-      // Check curves
+      // Check curves — convert to screen pixels, find closest named non-points line
+      const toScreenX = (dx: number) => (dx * wglp.gScaleX + wglp.gOffsetX + 1) / 2 * width;
+      const toScreenY = (dy: number) => (1 - (dy * wglp.gScaleY + wglp.gOffsetY)) / 2 * height;
+      const clickScreenX = (e.clientX - rect.left);
+      const clickScreenY = (e.clientY - rect.top);
       let bestName = "";
-      let bestDist = 1;
+      let bestDist = Infinity;
       wglp.linesData.forEach((baseLine: any) => {
         if (!baseLine.visible) return;
+        if (baseLine.isPoints) return;
+        if (!baseLine._name) return;
         const line = baseLine as WebglLine;
         for (let i = 0; i < line.numPoints; i++) {
-          const px = (line.getX(i) - dataX) / threshX;
-          const py = (line.getY(i) - dataY) / threshY;
-          const dist = px * px + py * py;
+          const sx = toScreenX(line.getX(i)) - clickScreenX;
+          const sy = toScreenY(line.getY(i)) - clickScreenY;
+          const dist = sx * sx + sy * sy;
           if (dist < bestDist) { bestDist = dist; bestName = baseLine._name ?? ""; }
         }
       });
-      setSelectedItem(bestName ? { type: "curve", name: bestName } : null);
+      if (bestName) setSelectedItem({ type: "curve", name: bestName });
     };
 
-    // Left click: potential select (on short click) or pan (on drag)
+    // Left click: selection only
     if (e.button == 0) {
-      (e.target as HTMLCanvasElement).style.cursor = "grab";
       leftDragRef.current = {
         started: true,
-        dragInitialX: (e.clientX - eOffset) * devicePixelRatio,
-        dragOffsetOld: wglp.gOffsetX,
-        startClientX: e.clientX,
-        isDragging: false,
+        dragInitialX: 0, dragInitialY: 0, dragOffsetOld: 0, dragOffsetOldY: 0,
+        startClientX: e.clientX, startClientY: e.clientY,
+        isDragging: false, isZooming: false, longPressTimer: null,
       };
     }
 
-    // Right click: potential select (on short click) or zoom-out (on drag)
+    // Right click: X-axis zoom-in rectangle + select
     if (e.button == 2) {
-      (e.target as HTMLCanvasElement).style.cursor = "zoom-out";
-      const normX = ((e.clientX - rect.left) / width) * 2 - 1;
-      const anchorDataX = wglp ? (normX - wglp.gOffsetX) / wglp.gScaleX : 0;
-      rightDragRef.current = { started: true, lastClientX: e.clientX, anchorDataX, anchorNormX: normX };
-      // Store click position to detect short click vs drag
-      rightDragRef.current = { ...rightDragRef.current, lastClientX: e.clientX };
-      (rightDragRef.current as any).startClientX = e.clientX;
-      (rightDragRef.current as any).isDragging = false;
+      (e.target as HTMLCanvasElement).style.cursor = "crosshair";
+      const cursorDownX = (2 * (e.clientX - eOffset - width / 2)) / width;
+      setMouseZoom({ started: true, cursorDownX, cursorDownY: 0, cursorOffsetX: 0, cursorOffsetY: 0, zoomOut: false });
+      zoomRect.visible = true;
       trySelect();
     }
 
-    // Middle click: pan
+    // Middle click: pan X+Y
     if (e.button == 1) {
       (e.target as HTMLCanvasElement).style.cursor = "grabbing";
-      const dragInitialX = (e.clientX - eOffset) * devicePixelRatio;
-      const dragOffsetOld = wglp.gOffsetX;
-      setMouseDrag({ started: true, dragInitialX, dragOffsetOld });
+      setMouseDrag({
+        started: true,
+        dragInitialX: (e.clientX - eOffset) * devicePixelRatio,
+        dragInitialY: (e.clientY - rect.top) * devicePixelRatio,
+        dragOffsetOld: wglp.gOffsetX,
+        dragOffsetOldY: wglp.gOffsetY,
+      });
     }
   };
 
@@ -852,7 +864,9 @@ function PlotArray({
       setMouseZoom({
         started: true,
         cursorDownX: mouseZoom.cursorDownX,
-        cursorOffsetX: cursorOffsetX,
+        cursorDownY: 0,
+        cursorOffsetX,
+        cursorOffsetY: 0,
         zoomOut: mouseZoom.zoomOut,
       });
       const z1 = (mouseZoom.cursorDownX - wglp.gOffsetX) / wglp.gScaleX;
@@ -870,45 +884,15 @@ function PlotArray({
       ]);*/
       zoomRect.visible = true;
     }
-    // Left-drag pan (activates after 5px movement)
-    if (leftDragRef.current.started) {
-      const totalDragPx = Math.abs(e.clientX - leftDragRef.current.startClientX);
-      if (totalDragPx > 5) {
-        leftDragRef.current.isDragging = true;
-      }
-      if (leftDragRef.current.isDragging) {
-        (e.target as HTMLCanvasElement).style.cursor = "grabbing";
-        const moveX = (e.clientX - xOffset) * devicePixelRatio - leftDragRef.current.dragInitialX;
-        wglp.gOffsetX = moveX / width + leftDragRef.current.dragOffsetOld;
-      }
-    }
-
     /************Mouse Drag Event (middle click) ********* */
     if (mouseDrag.started) {
-      const moveX =
-        (e.clientX - xOffset) * devicePixelRatio - mouseDrag.dragInitialX;
-      const offsetX = moveX / width;
-      wglp.gOffsetX = offsetX + mouseDrag.dragOffsetOld;
+      const moveX = (e.clientX - xOffset) * devicePixelRatio - mouseDrag.dragInitialX;
+      const moveY = (e.clientY - yOffSet) * devicePixelRatio - mouseDrag.dragInitialY;
+      wglp.gOffsetX = moveX / width + mouseDrag.dragOffsetOld;
+      wglp.gOffsetY = -(moveY / height) + mouseDrag.dragOffsetOldY;
     }
 
-    /************Right-drag continuous zoom-out********* */
-    if (rightDragRef.current.started && wglp) {
-      const dx = e.clientX - rightDragRef.current.lastClientX;
-      if (Math.abs(dx) > 0) {
-        const factor = Math.pow(1.005, dx);
-        const newScaleX = wglp.gScaleX / factor;
-        wglp.gOffsetX = rightDragRef.current.anchorNormX - rightDragRef.current.anchorDataX * newScaleX;
-        wglp.gScaleX = newScaleX;
-        rightDragRef.current.lastClientX = e.clientX;
-      }
-      // Update cursor: right = zoom out, left = zoom in
-      (e.target as HTMLCanvasElement).style.cursor = dx >= 0 ? "zoom-out" : "zoom-in";
-      // Show rect spanning the visible data range
-      const leftEdge = (-1 - wglp.gOffsetX) / wglp.gScaleX;
-      const rightEdge = (1 - wglp.gOffsetX) / wglp.gScaleX;
-      zoomRect.setSquare(leftEdge, -1000, rightEdge, 1000);
-      zoomRect.visible = true;
-    }
+    /************Right-drag: zoom rect (handled by mouseZoom state) ********* */
     /*****************cross hair************** */
 
     const canvas = canvasMain.current;
@@ -936,57 +920,69 @@ function PlotArray({
     const width = rect.width;
     const height = rect.height;
 
-    // Left click up: if short click (not dragged), fire select
-    if (e.button == 0 && leftDragRef.current.started) {
-      if (!leftDragRef.current.isDragging && wglp) {
-        const normX = ((e.clientX - rect.left) / width) * 2 - 1;
-        const normY = 1 - ((e.clientY - rect.top) / height) * 2;
-        const dataX = (normX - wglp.gOffsetX) / wglp.gScaleX;
-        const dataY = (normY - wglp.gOffsetY) / wglp.gScaleY;
-        const threshX = 15 / (width / 2) / wglp.gScaleX;
-        const threshY = 15 / (height / 2) / wglp.gScaleY;
-
-        // Check cursors
-        let hit = false;
-        for (const { key, state } of [
-          { key: "A", state: cursorARef.current },
-          { key: "B", state: cursorBRef.current },
-          { key: "M", state: cursorMRef.current },
-        ] as Array<{ key: string; state: CursorState }>) {
-          if (state.visible && Math.abs(dataX - state.x) < threshX * 2 && Math.abs(dataY - state.y) < threshY * 2) {
-            setSelectedItem({ type: "cursor", name: key });
-            hit = true;
-            break;
-          }
-        }
-        if (!hit) {
-          let bestName = "";
-          let bestDist = 1;
-          wglp.linesData.forEach((baseLine: any) => {
-            if (!baseLine.visible) return;
-            const line = baseLine as WebglLine;
-            for (let i = 0; i < line.numPoints; i++) {
-              const px = (line.getX(i) - dataX) / threshX;
-              const py = (line.getY(i) - dataY) / threshY;
-              const dist = px * px + py * py;
-              if (dist < bestDist) { bestDist = dist; bestName = baseLine._name ?? ""; }
-            }
-          });
-          setSelectedItem(bestName ? { type: "curve", name: bestName } : null);
+    // Left click up: select only
+    if (e.button == 0 && leftDragRef.current.started && wglp) {
+      const normX = ((e.clientX - rect.left) / width) * 2 - 1;
+      const normY = 1 - ((e.clientY - rect.top) / height) * 2;
+      const dataX = (normX - wglp.gOffsetX) / wglp.gScaleX;
+      const dataY = (normY - wglp.gOffsetY) / wglp.gScaleY;
+      const threshX = 25 / (width / 2) / wglp.gScaleX;
+      const threshY = 25 / (height / 2) / wglp.gScaleY;
+      let hit = false;
+      for (const { key, state } of [
+        { key: "A", state: cursorARef.current },
+        { key: "B", state: cursorBRef.current },
+        { key: "M", state: cursorMRef.current },
+      ] as Array<{ key: string; state: CursorState }>) {
+        if (state.visible && Math.abs(dataX - state.x) < threshX * 2 && Math.abs(dataY - state.y) < threshY * 2) {
+          setSelectedItem({ type: "cursor", name: key });
+          hit = true;
+          break;
         }
       }
+      if (!hit) {
+        const toScreenX = (dx: number) => (dx * wglp.gScaleX + wglp.gOffsetX + 1) / 2 * width;
+        const toScreenY = (dy: number) => (1 - (dy * wglp.gScaleY + wglp.gOffsetY)) / 2 * height;
+        const clickScreenX = e.clientX - rect.left;
+        const clickScreenY = e.clientY - rect.top;
+        let bestName = "";
+        let bestDist = Infinity;
+        wglp.linesData.forEach((baseLine: any) => {
+          if (!baseLine.visible) return;
+          if (baseLine.isPoints) return;
+          if (!baseLine._name) return;
+          const line = baseLine as WebglLine;
+          for (let i = 0; i < line.numPoints; i++) {
+            const sx = toScreenX(line.getX(i)) - clickScreenX;
+            const sy = toScreenY(line.getY(i)) - clickScreenY;
+            const dist = sx * sx + sy * sy;
+            if (dist < bestDist) { bestDist = dist; bestName = baseLine._name ?? ""; }
+          }
+        });
+        console.log(`[SELECT] result="${bestName}" bestDist=${Math.sqrt(bestDist).toFixed(1)}px`);
+        if (bestName) setSelectedItem({ type: "curve", name: bestName });
+      }
       leftDragRef.current.started = false;
-      leftDragRef.current.isDragging = false;
     }
 
-    // Stop right-drag zoom-out
+    // Stop right-click zoom rect — X-axis zoom only
     if (e.button == 2) {
-      rightDragRef.current.started = false;
-      zoomRect.visible = false;
+      if (mouseZoom.started) {
+        const cursorUpX = (2 * (e.clientX - rect.left - width / 2)) / width;
+        const dragDistX = Math.abs(cursorUpX - mouseZoom.cursorDownX);
+        if (dragDistX > 0.03) {
+          const zoomFactor = dragDistX / (2 * wglp.gScaleX);
+          const offsetFactor = (mouseZoom.cursorDownX + cursorUpX - 2 * wglp.gOffsetX) / (2 * wglp.gScaleX);
+          wglp.gScaleX = 1 / zoomFactor;
+          wglp.gOffsetX = -offsetFactor / zoomFactor;
+        }
+        setMouseZoom({ started: false, cursorDownX: 0, cursorDownY: 0, cursorOffsetX: 0, cursorOffsetY: 0, zoomOut: false });
+        zoomRect.visible = false;
+      }
     }
 
     // Stop middle-click pan
-    setMouseDrag({ started: false, dragInitialX: 0, dragOffsetOld: 0 });
+    setMouseDrag({ started: false, dragInitialX: 0, dragInitialY: 0, dragOffsetOld: 0, dragOffsetOldY: 0 });
     (e.target as HTMLCanvasElement).style.cursor = "grab";
     zoomRect.visible = false;
   };
@@ -1181,12 +1177,9 @@ function PlotArray({
                 <Box><b>Esc</b> — deselect</Box>
                 <Box><b>Scroll</b> — zoom X axis</Box>
                 <Box><b>Shift + Scroll</b> — zoom Y axis</Box>
-                <Box><b>Left-click</b> — select curve/cursor</Box>
-                <Box><b>Left-click drag</b> — pan</Box>
-                <Box><b>Right-click</b> — select curve/cursor</Box>
-                <Box><b>Right-click drag right</b> — zoom out</Box>
-                <Box><b>Right-click drag left</b> — zoom in</Box>
-                <Box><b>Middle-click drag</b> — pan</Box>
+                <Box><b>Left-click</b> — select curve/marker</Box>
+                <Box><b>Right-click drag</b> — zoom in X axis</Box>
+                <Box><b>Middle-click drag</b> — pan X+Y</Box>
               </Box>
             )}
           </Box>
@@ -1338,7 +1331,7 @@ function PlotArray({
                       px={2} py="1px" borderRadius="sm"
                       style={{ backgroundColor: bg, color }}
                     >
-                      {selectedItem.type === "cursor" ? `Cursor ${selectedItem.name}` : `"${selectedItem.name}"`} selected — Del to remove · Esc to deselect
+                      {selectedItem.type === "cursor" ? `Marker ${selectedItem.name}` : `"${selectedItem.name}"`} selected — Del to remove · Esc to deselect
                     </Box>
                   </Box>
                 );
