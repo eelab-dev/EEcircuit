@@ -160,6 +160,7 @@ export default function EEcircuit(): JSX.Element {
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const [isEditorMax, setIsEditorMax] = React.useState(false);
   const [isSchematicMax, setIsSchematicMax] = React.useState(false);
+  const [isEditorWide, setIsEditorWide] = React.useState(false);
   const [isMinimized, setIsMinimized] = React.useState(false);
   const cursorStateRef = React.useRef({
     a: { x: 0, y: 0, visible: false, name: "" },
@@ -676,36 +677,27 @@ export default function EEcircuit(): JSX.Element {
         overflow="hidden"
         display={isFullscreen ? "none" : undefined}
       >
-        {/* Editor/Schematic toolbar */}
-        <Flex mb={1} gap={2} align="center">
-          <Button
-            size="xs"
-            variant={isEditorMax ? "solid" : "outline"}
-            onClick={() => { setIsEditorMax(v => !v); setIsSchematicMax(false); }}
-            title={isEditorMax ? "Collapse editor back to split view" : "Expand editor to full width (hide schematic)"}
-          >
-            {isEditorMax ? "◀ Collapse" : "Expand Editor ▶"}
-          </Button>
-          {displayBreakpoint !== "base" && (
-            <Button
-              size="xs"
-              variant={isSchematicMax ? "solid" : "outline"}
-              onClick={() => { setIsSchematicMax(v => !v); setIsEditorMax(false); }}
-              title={isSchematicMax ? "Collapse schematic back to split view" : "Expand schematic to full width (hide editor)"}
-            >
-              {isSchematicMax ? "▶ Collapse" : "◀ Expand Schematic"}
-            </Button>
-          )}
-        </Flex>
         <Flex width="100%" height={isEditorMax || isSchematicMax ? "80vh" : "40vh"}>
           {/* Left: text editor */}
           <Box
-            width={isSchematicMax ? "0%" : (isEditorMax ? "100%" : { base: "100%", md: "55%" })}
+            width={isSchematicMax ? "0%" : (isEditorMax || isEditorWide ? "100%" : { base: "100%", md: "55%" })}
             display={isSchematicMax ? "none" : undefined}
             minWidth={0}
             height={isEditorMax || isSchematicMax ? "80vh" : "40vh"}
             position="relative"
           >
+            <Button
+              size="xs"
+              variant="ghost"
+              position="absolute"
+              top={1}
+              right={1}
+              zIndex={10}
+              title={isEditorWide ? "Collapse editor (restore schematic)" : "Expand editor to use schematic space"}
+              onClick={() => setIsEditorWide(v => !v)}
+            >
+              {isEditorWide ? "◀" : "▶"}
+            </Button>
             <Suspense fallback={<Skeleton height="40vh" width="100%" />}>
               <EditorCustom
                 height={isEditorMax || isSchematicMax ? "80vh" : "40vh"}
@@ -714,15 +706,15 @@ export default function EEcircuit(): JSX.Element {
                 value={editorMode === "python" ? pythonCode : netList}
                 valueChanged={handleEditor}
                 theme={useColorModeValue("light", "dark")}
-                key={`${windowSize.width}-${editorMode}-${isEditorMax}`}
+                key={`${windowSize.width}-${editorMode}-${isEditorMax}-${isEditorWide}`}
               />
             </Suspense>
           </Box>
           {/* Right: schematic panel — only on desktop */}
           {displayBreakpoint !== "base" && (
             <Box
-              width={isEditorMax ? "0%" : (isSchematicMax ? "100%" : "45%")}
-              display={isEditorMax ? "none" : "flex"}
+              width={isEditorMax || isEditorWide ? "0%" : (isSchematicMax ? "100%" : "45%")}
+              display={isEditorMax || isEditorWide ? "none" : "flex"}
               pl={isSchematicMax ? 0 : 2}
               height={isEditorMax || isSchematicMax ? "80vh" : "40vh"}
               flexDirection="column"

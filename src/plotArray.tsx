@@ -1393,8 +1393,8 @@ function PlotArray({
             borderColor="border.muted"
             borderRadius="md"
             p={2}
-            minWidth="220px"
-            maxWidth="300px"
+            minWidth={showColorEditor ? "280px" : "140px"}
+            maxWidth={showColorEditor ? "360px" : "200px"}
             maxHeight="60%"
             overflowY="auto"
             boxShadow="md"
