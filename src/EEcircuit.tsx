@@ -225,43 +225,23 @@ export default function EEcircuit(): JSX.Element {
     if (resultArray && resultArray.results.length > 0) {
       const newDD = makeDD(resultArray.results[0], colorMode);
       const tempDD = [] as DisplayDataType[];
-      newDD.forEach((newData, i) => {
-        let match = false;
+      newDD.forEach((newData) => {
         let visible = true;
-        let color = getColor(colorMode);
 
         if (displayData) {
           displayData.forEach((oldData) => {
-            //account for new color type
-            if (newData.name === oldData.name && oldData.color) {
-              match = true;
+            if (newData.name === oldData.name) {
               visible = oldData.visible;
-              color = oldData.color;
             }
           });
-          if (match) {
-            tempDD.push({
-              name: newData.name,
-              index: newData.index,
-              visible: visible,
-              color: color,
-            });
-          } else {
-            tempDD.push({
-              name: newData.name,
-              index: newData.index,
-              visible: true,
-              color: newData.color,
-            });
-          }
-        } else {
-          tempDD.push({
-            name: newData.name,
-            index: newData.index,
-            visible: true,
-            color: newData.color,
-          });
         }
+
+        tempDD.push({
+          name: newData.name,
+          index: newData.index,
+          visible,
+          color: newData.color, // always use freshly computed HSL color
+        });
       });
       setDisplayData([...tempDD]);
     }
