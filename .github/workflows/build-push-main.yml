@@ -28,6 +28,8 @@ jobs:
 
       - name: Build locally
         run: npm run build
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps

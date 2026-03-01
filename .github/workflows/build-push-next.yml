@@ -42,6 +42,7 @@ jobs:
       - name: Build Local for Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          NODE_OPTIONS: "--max-old-space-size=4096"
         run: npx vercel build --prod --token "$VERCEL_TOKEN"
 
       - name: Deploy to Vercel
