@@ -1393,8 +1393,8 @@ function PlotArray({
             borderColor="border.muted"
             borderRadius="md"
             p={2}
-            minWidth={showColorEditor ? "280px" : "140px"}
-            maxWidth={showColorEditor ? "360px" : "200px"}
+            minWidth="140px"
+            maxWidth="200px"
             maxHeight="60%"
             overflowY="auto"
             boxShadow="md"
@@ -1408,85 +1408,44 @@ function PlotArray({
                   <Button size="xs" variant="ghost" onClick={selectNoneCallback}>None</Button>
                 </HStack>
                 <HStack gap={1}>
-                  {colorizeCallback && (
-                    <Box position="relative">
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        title="Edit curve colors"
-                        onClick={() => setShowColorEditor(s => !s)}
-                      >🎨</Button>
-                      {showColorEditor && displayData && (
-                        <Box
-                          position="absolute"
-                          top="110%"
-                          right={0}
-                          zIndex={200}
-                          bg="bg.panel"
-                          border="1px solid"
-                          borderColor="border.muted"
-                          borderRadius="md"
-                          boxShadow="md"
-                          p={3}
-                          minWidth="220px"
-                          maxHeight="260px"
-                          overflowY="auto"
-                          fontSize="xs"
-                        >
-                          <Flex justify="space-between" align="center" mb={2}>
-                            <Box fontWeight="bold">Curve Colors</Box>
-                            <Button size="xs" variant="ghost" onClick={() => setShowColorEditor(false)}>✕</Button>
-                          </Flex>
-                          {displayData.map((d) => {
-                            const hex = "#" +
-                              Math.round(d.color.r * 255).toString(16).padStart(2, "0") +
-                              Math.round(d.color.g * 255).toString(16).padStart(2, "0") +
-                              Math.round(d.color.b * 255).toString(16).padStart(2, "0");
-                            return (
-                              <Flex key={d.name} align="center" gap={2} mb={1}>
-                                <input
-                                  type="color"
-                                  value={hex}
-                                  style={{ width: "28px", height: "20px", padding: 0, border: "none", cursor: "pointer", background: "none" }}
-                                  onChange={(e) => {
-                                    const v = e.target.value;
-                                    const r = parseInt(v.slice(1, 3), 16) / 255;
-                                    const g = parseInt(v.slice(3, 5), 16) / 255;
-                                    const b = parseInt(v.slice(5, 7), 16) / 255;
-                                    onColorChange?.(d.name, { r, g, b });
-                                  }}
-                                />
-                                <Box
-                                  overflow="hidden"
-                                  textOverflow="ellipsis"
-                                  whiteSpace="nowrap"
-                                  maxWidth="160px"
-                                  title={d.name}
-                                  color="fg"
-                                >
-                                  {d.name}
-                                </Box>
-                              </Flex>
-                            );
-                          })}
-                        </Box>
-                      )}
-                    </Box>
-                  )}
                   <Button size="xs" variant="ghost" onClick={() => setShowLegend(false)} title="Close legend">✕</Button>
                 </HStack>
               </Flex>
               {displayData.map((d) => (
                 <Flex key={d.name} align="center" gap={2} minWidth={0}>
                   <Box
-                    w="12px"
-                    h="12px"
+                    w="14px"
+                    h="14px"
                     borderRadius="2px"
                     flexShrink={0}
-                    style={{
-                      backgroundColor: `rgb(${Math.round(d.color.r * 255)},${Math.round(d.color.g * 255)},${Math.round(d.color.b * 255)})`,
-                    }}
-                  />
+                    position="relative"
+                    title="Click to change color"
+                    style={{ cursor: "pointer" }}
+                  >
+                    <Box
+                      position="absolute"
+                      inset={0}
+                      borderRadius="2px"
+                      style={{
+                        backgroundColor: `rgb(${Math.round(d.color.r * 255)},${Math.round(d.color.g * 255)},${Math.round(d.color.b * 255)})`,
+                      }}
+                    />
+                    <input
+                      type="color"
+                      value={"#" +
+                        Math.round(d.color.r * 255).toString(16).padStart(2, "0") +
+                        Math.round(d.color.g * 255).toString(16).padStart(2, "0") +
+                        Math.round(d.color.b * 255).toString(16).padStart(2, "0")}
+                      style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer", padding: 0, border: "none" }}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const r = parseInt(v.slice(1, 3), 16) / 255;
+                        const g = parseInt(v.slice(3, 5), 16) / 255;
+                        const b = parseInt(v.slice(5, 7), 16) / 255;
+                        onColorChange?.(d.name, { r, g, b });
+                      }}
+                    />
+                  </Box>
                   <Checkbox
                     size="sm"
                     checked={d.visible}

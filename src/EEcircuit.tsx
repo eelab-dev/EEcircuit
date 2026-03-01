@@ -693,22 +693,22 @@ export default function EEcircuit(): JSX.Element {
               top={1}
               right={1}
               zIndex={10}
-              title={isEditorWide ? "Collapse editor (restore schematic)" : "Expand editor to use schematic space"}
-              onClick={() => setIsEditorWide(v => !v)}
+              title={isEditorMax ? "Collapse editor" : "Expand editor"}
+              onClick={() => { setIsEditorMax(v => !v); setIsSchematicMax(false); setIsEditorWide(false); }}
             >
-              {isEditorWide ? "◀" : "▶"}
+              {isEditorMax ? "Collapse ⛶" : "Max ⛶"}
             </Button>
             <Button
               size="xs"
               variant="ghost"
               position="absolute"
               top={1}
-              right={8}
+              right={20}
               zIndex={10}
-              title={isEditorMax ? "Collapse editor" : "Expand editor"}
-              onClick={() => { setIsEditorMax(v => !v); setIsSchematicMax(false); setIsEditorWide(false); }}
+              title={isEditorWide ? "Collapse editor (restore schematic)" : "Expand editor to use schematic space"}
+              onClick={() => setIsEditorWide(v => !v)}
             >
-              {isEditorMax ? "Collapse ⛶" : "Max ⛶"}
+              {isEditorWide ? "◀" : "▶"}
             </Button>
             <Suspense fallback={<Skeleton height="40vh" width="100%" />}>
               <EditorCustom
