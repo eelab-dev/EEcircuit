@@ -2,7 +2,7 @@
  * map display data to webgl-plot lines
  */
 
-import { ColorType, getColor } from "./colors.ts";
+import { ColorType, getColorByIndex } from "./colors.ts";
 import type { ResultType } from "eecircuit-engine";
 import { isComplex, ResultArrayType } from "./sim/simulationArray.ts";
 
@@ -20,7 +20,6 @@ export const mapD2W = (
   resultArray: ResultArrayType
 ): number => {
   const offset = isComplex(resultArray) ? 2 : 1;
-  //const sweepLength = resultArray.sweep.length;
   return displayIndex - offset + sweepIndex * displayDataArray.length;
 };
 
@@ -30,9 +29,12 @@ export const makeDD = (
 ): DisplayDataType[] => {
   const dd = [] as DisplayDataType[];
   if (res.dataType == "complex") {
+    const signalCount = res.variableNames.filter((_, i) => i > 0).length;
+    let sigIdx = 0;
     res.variableNames.forEach((name, index) => {
       if (index > 0) {
-        const color1 = getColor(colorMode);
+        const color1 = getColorByIndex(sigIdx, signalCount, colorMode);
+        sigIdx++;
         dd.push({
           name: name + " (mag)",
           index: 2 * index,
@@ -48,18 +50,19 @@ export const makeDD = (
       }
     });
   } else {
+    const total = res.variableNames.filter((_, i) => i > 0).length;
+    let sigIdx = 0;
     res.variableNames.forEach((name, index) => {
       if (index > 0) {
         dd.push({
           name: name,
           index: index,
           visible: true,
-          color: getColor(colorMode),
+          color: getColorByIndex(sigIdx++, total, colorMode),
         });
       }
     });
   }
 
-  console.log("makeDD->", dd);
   return dd;
 };

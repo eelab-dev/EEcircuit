@@ -262,7 +262,6 @@ export default function EEcircuit(): JSX.Element {
           });
         }
       });
-      console.log("makeDD->", tempDD);
       setDisplayData([...tempDD]);
     }
   }, [resultArray]);
