@@ -11,7 +11,7 @@
     "vercel": "vercel",
     "serve": "serve dist",
     "dev": "vite",
-    "build": "vite build",
+    "build": "node --max-old-space-size=4096 node_modules/.bin/vite build",
     "preview": "vite preview",
     "check": "tsc --noEmit"
   },
