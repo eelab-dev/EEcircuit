@@ -24,7 +24,7 @@ jobs:
         run: npx --yes npm-check-updates -u
 
       - name: Install Dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build locally
         run: npm run build
