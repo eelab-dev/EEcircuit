@@ -483,9 +483,18 @@ export default function EEcircuit(): JSX.Element {
       }
 
       setDisplayData(d);
-      //setResultArray({results:[...results], sweep:[...resultArray.sweep]});
     }
   }, [displayData]);
+
+  const handleColorChange = React.useCallback(
+    (name: string, color: { r: number; g: number; b: number }) => {
+      if (!displayData) return;
+      setDisplayData(displayData.map(item =>
+        item.name === name ? { ...item, color } : item
+      ));
+    },
+    [displayData]
+  );
 
   const LineSelectBox = (): JSX.Element => {
     return (
@@ -871,6 +880,7 @@ export default function EEcircuit(): JSX.Element {
               selectAllCallback={handleSelectAllButton}
               selectNoneCallback={handleDeSelectButton}
               colorizeCallback={btColor}
+              onColorChange={handleColorChange}
               height={isFullscreen ? "80vh" : "38vh"}
               initialCursors={cursorStateRef.current}
               onCursorsChange={(a, b, m) => { cursorStateRef.current = { a, b, m }; }}
