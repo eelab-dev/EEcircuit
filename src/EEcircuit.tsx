@@ -698,6 +698,18 @@ export default function EEcircuit(): JSX.Element {
             >
               {isEditorWide ? "◀" : "▶"}
             </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              position="absolute"
+              top={1}
+              right={8}
+              zIndex={10}
+              title={isEditorMax ? "Collapse editor" : "Expand editor"}
+              onClick={() => { setIsEditorMax(v => !v); setIsSchematicMax(false); setIsEditorWide(false); }}
+            >
+              {isEditorMax ? "Collapse ⛶" : "Max ⛶"}
+            </Button>
             <Suspense fallback={<Skeleton height="40vh" width="100%" />}>
               <EditorCustom
                 height={isEditorMax || isSchematicMax ? "80vh" : "40vh"}
@@ -726,6 +738,15 @@ export default function EEcircuit(): JSX.Element {
                     <Button size="xs" onClick={() => setSchematicZoom(z => Math.max(z / 1.25, 0.2))}>-</Button>
                     <Button size="xs" variant="outline" onClick={() => setSchematicZoom(1.0)}>100%</Button>
                     <Box fontSize="xs" color="fg.muted">{Math.round(schematicZoom * 100)}%</Box>
+                    <Spacer />
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      title={isSchematicMax ? "Collapse schematic" : "Expand schematic"}
+                      onClick={() => { setIsSchematicMax(v => !v); setIsEditorMax(false); setIsEditorWide(false); }}
+                    >
+                      {isSchematicMax ? "Collapse ⛶" : "Max ⛶"}
+                    </Button>
                   </Flex>
                   {/* Fixed-size scrollable container — zoom changes SVG internal size only */}
                   <div
