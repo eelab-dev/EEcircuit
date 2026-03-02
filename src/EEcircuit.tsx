@@ -358,7 +358,7 @@ export default function EEcircuit(): JSX.Element {
           : "";
         // Build a representative ngspice command from the netlist title line
         const netlistTitle = netlistToRun.split("\n")[0].trim().replace(/\s+/g, "_") || "circuit";
-        const fakeCmd = `$ ngspice -b ${netlistTitle}.scs\n`;
+        const fakeCmd = `$ ngspice ${netlistTitle}.sp\n`;
         setInfo(pyPrefix + fakeCmd + "\n" + initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n");
       } catch (e) {
         toaster.create({
