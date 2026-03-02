@@ -96,37 +96,37 @@ const pythonDefault = `from analogpy import (
 tb = Testbench("rlc_circuit")
 tb.include("modelcard.CMOS90")
 
-vdd_net = tb.net("vdd")
-net_rc = tb.net("net_rc")
-gate = tb.net("gate")
-gnd = tb.gnd()
+vdd_net = tb.add_net("vdd")
+net_rlc = tb.add_net("net_rlc")
+gate    = tb.add_net("gate")
+gnd     = tb.add_gnd()
 
-# Passive components between vdd and net_rc
-tb.add_instance(resistor, "r", p=vdd_net, n=net_rc, r=100.0)
-tb.add_instance(inductor, "l", p=vdd_net, n=net_rc, l=1)
-tb.add_instance(capacitor, "c", p=vdd_net, n=net_rc, c=0.01)
+# Passive components
+r_inst  = tb.add_instance(resistor,  "r", p=vdd_net, n=net_rlc, r=100.0)
+l_inst  = tb.add_instance(inductor,  "l", p=vdd_net, n=net_rlc, l=1)
+c_inst  = tb.add_instance(capacitor, "c", p=vdd_net, n=net_rlc, c=0.01)
 
 # NMOS transistor
-tb.add_instance(nmos, "m1", d=net_rc, g=gate, s=gnd, b=gnd,
+m1_inst = tb.add_instance(nmos, "m1", d=net_rlc, g=gate, s=gnd, b=gnd,
                 model="N90", w=100e-6, l=0.09e-6,
-                schematic_position={'relative_to': 'l', 'x_shift': 0.5, 'y_shift': -2},
+                schematic_position={'relative_to': l_inst.name, 'x_shift': 0.5, 'y_shift': -2},
 )
 
-# Power supply
-tb.add_instance(vsource, "vdd", p=vdd_net, n=gnd, dc=1.8)
-
-# Input pulse (using vpulse convenience device)
-tb.add_instance(vpulse, "vin", p=gate, n=gnd,
+# Input pulse
+vin_inst = tb.add_instance(vpulse, "vin", p=gate, n=gnd,
                 val0=0, val1=1.8, delay=0,
                 rise=0.1, fall=0.1, width=15, period=30,
-                schematic_position={'relative_to': 'm1', 'x_shift': -2, 'y_shift': -1},)
+                schematic_position={'relative_to': m1_inst.name, 'x_shift': -2, 'y_shift': -1},)
+
+# Power supply
+vdd_inst = tb.add_instance(vsource, "vdd", p=vdd_net, n=gnd, dc=1.8)
 
 tb.add_analysis(Transient(stop=50, step=0.05))
 
 tb.draw_wires('gate')
 tb.draw_wires('vdd', only=[('r', 'p'), ('l', 'p')])
 tb.draw_wires('vdd', only=[('l', 'p'), ('c', 'p')])
-tb.draw_wires('net_rc')
+tb.draw_wires('net_rlc')
 
 print(generate_ngspice(tb))
 print(generate_spectre(tb))
