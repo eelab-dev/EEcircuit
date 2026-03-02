@@ -75,38 +75,13 @@ const pyodideWorker = {
 import sys
 import io
 
-# Capture stdout
+# Capture stdout (print() output goes here)
 _stdout_capture = io.StringIO()
 sys.stdout = _stdout_capture
 
 _ngspice_result = ""
 _spectre_result = ""
 _svg_result = ""
-
-# Patch generate_ngspice / generate_spectre in the analogpy module so that
-# any call — whether via "from analogpy import ..." or "analogpy.generate_*" —
-# automatically registers the result without extra boilerplate.
-try:
-    import analogpy as _analogpy
-    from analogpy import generate_ngspice as _real_gen_ngspice
-    from analogpy import generate_spectre as _real_gen_spectre
-
-    def generate_ngspice(tb):
-        global _ngspice_result
-        result = _real_gen_ngspice(tb)
-        _ngspice_result = result
-        return result
-
-    def generate_spectre(tb):
-        global _spectre_result
-        result = _real_gen_spectre(tb)
-        _spectre_result = result
-        return result
-
-    _analogpy.generate_ngspice = generate_ngspice
-    _analogpy.generate_spectre = generate_spectre
-except Exception:
-    pass
 
 # ---- User code ----
 ${code}
@@ -116,9 +91,10 @@ ${code}
 sys.stdout = sys.__stdout__
 _captured_output = _stdout_capture.getvalue()
 
-# Fallback: if user never called generate_ngspice/generate_spectre,
-# auto-detect the last Testbench in scope.
+# Auto-detect Testbench and generate netlists for simulation
 try:
+    from analogpy import generate_ngspice as _gen_ng
+    from analogpy import generate_spectre as _gen_sp
     from analogpy.testbench import Testbench as _TBClass
     _tb = None
     for _name in reversed([v for v in dir() if not v.startswith('_')]):
@@ -127,14 +103,12 @@ try:
             _tb = _obj
             break
     if _tb is not None:
-        if not _ngspice_result:
-            _ngspice_result = _real_gen_ngspice(_tb)
-        if not _spectre_result:
-            _spectre_result = _real_gen_spectre(_tb)
+        _ngspice_result = _gen_ng(_tb)
+        _spectre_result = _gen_sp(_tb)
 except Exception:
     pass
 
-# Auto-generate SVG schematic (user does not call this)
+# Auto-generate SVG schematic
 try:
     from analogpy.testbench import Testbench as _TBClass2
     _tb2 = None
@@ -153,7 +127,7 @@ try:
 except Exception as _svg_err:
     _svg_result = f"<!-- SVG error: {_svg_err} -->"
 
-# Last-resort: use raw stdout if nothing else produced a netlist
+# Last resort: use raw stdout if auto-detect produced nothing
 if not _ngspice_result and _captured_output.strip():
     _ngspice_result = _captured_output.strip()
 
