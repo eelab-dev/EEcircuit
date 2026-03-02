@@ -356,7 +356,10 @@ export default function EEcircuit(): JSX.Element {
         const pyPrefix = pythonOutputRef.current
           ? `[Python output]\n${pythonOutputRef.current}\n`
           : "";
-        setInfo(pyPrefix + initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n");
+        // Build a representative ngspice command from the netlist title line
+        const netlistTitle = netlistToRun.split("\n")[0].trim().replace(/\s+/g, "_") || "circuit";
+        const fakeCmd = `$ ngspice -b ${netlistTitle}.scs\n`;
+        setInfo(pyPrefix + fakeCmd + "\n" + initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n");
       } catch (e) {
         toaster.create({
           description: e instanceof Error ? e.message : String(e),
