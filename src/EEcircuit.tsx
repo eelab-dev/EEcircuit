@@ -89,7 +89,7 @@ vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
 
 const pythonDefault = `from analogpy import (
     Testbench, resistor, capacitor, inductor,
-    nmos, vsource, vpulse, Transient,
+    nmos, vsource, vpulse, Transient, DC,
     generate_ngspice, generate_spectre,
 )
 
@@ -123,6 +123,7 @@ vdd_inst = tb.add_instance(vsource, "vdd", p=vdd_net, n=gnd, dc=1.8,
                            schematic_position={'relative_to': "vin", 'x_shift': -5, 'y_shift': 0})
 
 tb.add_analysis(Transient(stop=50, step=0.05))
+tb.add_analysis(DC())
 
 tb.draw_wires('gate')
 tb.draw_wires('vdd')
