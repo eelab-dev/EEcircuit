@@ -141,6 +141,7 @@ export default function EEcircuit(): JSX.Element {
   const [netList, setNetList] = React.useState(circuitDefault);
   const [displayData, setDisplayData] = React.useState<DisplayDataType[]>();
   const [tabIndex, setTabIndex] = React.useState(0);
+  const [activeTab, setActiveTab] = React.useState("plot");
   const [sweep, setSweep] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   const [threadCountNew, setThreadCountNew] = React.useState(1);
@@ -288,9 +289,11 @@ export default function EEcircuit(): JSX.Element {
       // Run Python code
       const pyResult = await pyRunner.runPython(pythonCode);
       if (pyResult.error) {
-        setInfo(prev => prev + "\n\n[Python Error]\n" + pyResult.error);
+        const errMsg = `[Python Error]\n${pyResult.error}`;
+        setInfo(errMsg);
+        setActiveTab("info");
         toaster.create({
-          description: "Python error: " + pyResult.error,
+          description: "Python error — see Info tab for details",
           type: "error",
         });
         setIsSimRunning(false);
@@ -298,8 +301,11 @@ export default function EEcircuit(): JSX.Element {
       }
 
       if (!pyResult.ngspice) {
+        const errMsg = "[Python Error]\nCode did not produce an ngspice netlist.\nMake sure to call print(generate_ngspice(tb)) or add a Testbench named 'tb'.";
+        setInfo(errMsg);
+        setActiveTab("info");
         toaster.create({
-          description: "Python code did not produce an ngspice netlist. Make sure to call generate_ngspice() or print() the netlist.",
+          description: "No netlist generated — see Info tab",
           type: "error",
         });
         setIsSimRunning(false);
@@ -338,6 +344,7 @@ export default function EEcircuit(): JSX.Element {
         const errors = await sim.getError();
         if (errors.length > 0) {
           setInfo(prev => prev + "\n\n[Simulation Error]\n" + errors.join("\n"));
+          setActiveTab("info");
           errors.forEach((e) => {
             toaster.create({
               description: e,
@@ -352,6 +359,11 @@ export default function EEcircuit(): JSX.Element {
           });
         } else {
           setResultArray(resultArray);
+          toaster.create({
+            description: `Simulation complete ✓`,
+            type: "success",
+          });
+          setActiveTab("plot");
         }
         const pyPrefix = pythonOutputRef.current
           ? `[Python output]\n${pythonOutputRef.current}\n`
@@ -797,7 +809,8 @@ export default function EEcircuit(): JSX.Element {
         }}
       >
       <Tabs.Root
-        defaultValue="plot"
+        value={activeTab}
+        onValueChange={(details) => setActiveTab(details.value)}
         colorScheme="teal"
         style={{
           display: "flex",
