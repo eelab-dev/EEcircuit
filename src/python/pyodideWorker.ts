@@ -18,6 +18,7 @@ export type PythonResult = {
   ngspice: string;
   spectre: string;
   schematicSvg: string;
+  stdout: string;
   error: string;
 };
 
@@ -78,60 +79,85 @@ import io
 _stdout_capture = io.StringIO()
 sys.stdout = _stdout_capture
 
-# User code
+_ngspice_result = ""
+_spectre_result = ""
+_svg_result = ""
+
+# Patch generate_ngspice / generate_spectre in the analogpy module so that
+# any call — whether via "from analogpy import ..." or "analogpy.generate_*" —
+# automatically registers the result without extra boilerplate.
+try:
+    import analogpy as _analogpy
+    from analogpy import generate_ngspice as _real_gen_ngspice
+    from analogpy import generate_spectre as _real_gen_spectre
+
+    def generate_ngspice(tb):
+        global _ngspice_result
+        result = _real_gen_ngspice(tb)
+        _ngspice_result = result
+        return result
+
+    def generate_spectre(tb):
+        global _spectre_result
+        result = _real_gen_spectre(tb)
+        _spectre_result = result
+        return result
+
+    _analogpy.generate_ngspice = generate_ngspice
+    _analogpy.generate_spectre = generate_spectre
+except Exception:
+    pass
+
+# ---- User code ----
 ${code}
+# ---- End user code ----
 
 # Restore stdout
 sys.stdout = sys.__stdout__
 _captured_output = _stdout_capture.getvalue()
 
-# Try to find testbench and generate netlists
-_ngspice_result = ""
-_spectre_result = ""
-_svg_result = ""
-
+# Fallback: if user never called generate_ngspice/generate_spectre,
+# auto-detect the last Testbench in scope.
 try:
-    from analogpy import generate_ngspice, generate_spectre, Testbench
     from analogpy.testbench import Testbench as _TBClass
-
-    # First look for Testbench instances
-    _candidates = [v for v in dir() if not v.startswith('_')]
     _tb = None
-    for _name in reversed(_candidates):
+    for _name in reversed([v for v in dir() if not v.startswith('_')]):
         _obj = eval(_name)
         if isinstance(_obj, _TBClass):
             _tb = _obj
             break
-
     if _tb is not None:
-        _ngspice_result = generate_ngspice(_tb)
-        _spectre_result = generate_spectre(_tb)
-
-        # Try to generate schematic SVG
-        try:
-            import matplotlib
-            matplotlib.use('Agg')
-            from analogpy.visualization.svg import render_schematic_svg, render_block_diagram_svg
-            from analogpy.visualization.symbols import get_default_renderer, SymbolStyle
-            
-            get_default_renderer().default_style = SymbolStyle.DETAILED
-            
-            if hasattr(_tb, 'analyses'):
-                _svg_result = render_block_diagram_svg(_tb)
-            else:
-                _svg_result = render_schematic_svg(_tb, compact=True)
-        except Exception as _svg_err:
-            _svg_result = f"<!-- SVG error: {_svg_err} -->"
-    elif _captured_output.strip():
-        _ngspice_result = _captured_output.strip()
-except Exception as _e:
+        if not _ngspice_result:
+            _ngspice_result = _real_gen_ngspice(_tb)
+        if not _spectre_result:
+            _spectre_result = _real_gen_spectre(_tb)
+except Exception:
     pass
 
+# Auto-generate SVG schematic (user does not call this)
+try:
+    from analogpy.testbench import Testbench as _TBClass2
+    _tb2 = None
+    for _name2 in reversed([v for v in dir() if not v.startswith('_')]):
+        _obj2 = eval(_name2)
+        if isinstance(_obj2, _TBClass2):
+            _tb2 = _obj2
+            break
+    if _tb2 is not None:
+        import matplotlib
+        matplotlib.use('Agg')
+        from analogpy.visualization.svg import render_block_diagram_svg
+        from analogpy.visualization.symbols import get_default_renderer, SymbolStyle
+        get_default_renderer().default_style = SymbolStyle.DETAILED
+        _svg_result = render_block_diagram_svg(_tb2)
+except Exception as _svg_err:
+    _svg_result = f"<!-- SVG error: {_svg_err} -->"
+
+# Last-resort: use raw stdout if nothing else produced a netlist
 if not _ngspice_result and _captured_output.strip():
     _ngspice_result = _captured_output.strip()
 
-# Return results as a dict
-{"ngspice": _ngspice_result, "spectre": _spectre_result, "schematicSvg": _svg_result, "error": ""}
+{"ngspice": _ngspice_result, "spectre": _spectre_result, "schematicSvg": _svg_result, "stdout": _captured_output, "error": ""}
 `;
 
       const result = pyodide.runPython(wrappedCode);
@@ -142,6 +168,7 @@ if not _ngspice_result and _captured_output.strip():
         ngspice: jsResult.ngspice || "",
         spectre: jsResult.spectre || "",
         schematicSvg: jsResult.schematicSvg || "",
+        stdout: jsResult.stdout || "",
         error: "",
       };
     } catch (e: unknown) {
@@ -150,6 +177,7 @@ if not _ngspice_result and _captured_output.strip():
         ngspice: "",
         spectre: "",
         schematicSvg: "",
+        stdout: "",
         error: errorMsg,
       };
     }

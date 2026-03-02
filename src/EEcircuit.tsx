@@ -90,7 +90,7 @@ vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
 const pythonDefault = `from analogpy import (
     Testbench, resistor, capacitor, inductor,
     nmos, vsource, vpulse, Transient,
-    generate_ngspice,
+    generate_ngspice, generate_spectre,
 )
 
 tb = Testbench("rlc_circuit")
@@ -104,7 +104,6 @@ gnd = tb.gnd()
 # Passive components between vdd and net_rc
 tb.add_instance(resistor, "r", p=vdd_net, n=net_rc, r=100.0)
 tb.add_instance(inductor, "l", p=vdd_net, n=net_rc, l=1)
-# tb.add_instance(capacitor, "c", p=vdd_net, n=net_rc, c=0.01, rotation=180)
 tb.add_instance(capacitor, "c", p=vdd_net, n=net_rc, c=0.01)
 
 # NMOS transistor
@@ -129,7 +128,8 @@ tb.draw_wires('vdd', only=[('r', 'p'), ('l', 'p')])
 tb.draw_wires('vdd', only=[('l', 'p'), ('c', 'p')])
 tb.draw_wires('net_rc')
 
-#print(generate_ngspice(tb))
+print(generate_ngspice(tb))
+print(generate_spectre(tb))
 `;
 
 export default function EEcircuit(): JSX.Element {
@@ -162,6 +162,7 @@ export default function EEcircuit(): JSX.Element {
   const [isSchematicMax, setIsSchematicMax] = React.useState(false);
   const [isEditorWide, setIsEditorWide] = React.useState(false);
   const [isMinimized, setIsMinimized] = React.useState(false);
+  const pythonOutputRef = React.useRef<string>("");
   const cursorStateRef = React.useRef({
     a: { x: 0, y: 0, visible: false, name: "" },
     b: { x: 0, y: 0, visible: false, name: "" },
@@ -311,6 +312,9 @@ export default function EEcircuit(): JSX.Element {
       console.log("schematicSvg length:", svgData.length, "first 100:", svgData.substring(0, 100));
       setSchematicSvg(svgData);
 
+      // Store Python stdout for the Info tab
+      pythonOutputRef.current = pyResult.stdout || "";
+
       // Use the generated netlist for simulation
       setNetList(pyResult.ngspice);
       setIsSimRunning(false);
@@ -349,7 +353,10 @@ export default function EEcircuit(): JSX.Element {
         } else {
           setResultArray(resultArray);
         }
-        setInfo(initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n");
+        const pyPrefix = pythonOutputRef.current
+          ? `[Python output]\n${pythonOutputRef.current}\n`
+          : "";
+        setInfo(pyPrefix + initialSimInfo + "\n\n" + (await sim.getInfo()) + "\n\n");
       } catch (e) {
         toaster.create({
           description: e instanceof Error ? e.message : String(e),
