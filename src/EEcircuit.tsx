@@ -112,15 +112,15 @@ m1_inst = tb.add_instance(nmos, "m1", d=net_rlc, g=gate, s=gnd, b=gnd,
                           model="N90", w=100e-6, l=0.09e-6,
                           schematic_position={'relative_to': l_inst.name, 'x_shift': 0.5, 'y_shift': -2})
 
+# Power supply
+vdd_inst = tb.add_instance(vsource, "vdd", p=vdd_net, n=gnd, dc=1.8,
+                           schematic_position={'relative_to': "vin", 'x_shift': -4, 'y_shift': 0})
 # Input pulse
 vin_inst = tb.add_instance(vpulse, "vin", p=gate, n=gnd,
                            val0=0, val1=1.8, delay=0,
                            rise=0.1, fall=0.1, width=15, period=30,
                            schematic_position={'relative_to': m1_inst.name, 'x_shift': -2, 'y_shift': -1})
 
-# Power supply
-vdd_inst = tb.add_instance(vsource, "vdd", p=vdd_net, n=gnd, dc=1.8,
-                           schematic_position={'relative_to': "vin", 'x_shift': -5, 'y_shift': 0})
 
 tb.add_analysis(Transient(stop=50, step=0.05))
 tb.add_analysis(DC())
@@ -129,9 +129,6 @@ tb.draw_wires('gate')
 tb.draw_wires('vdd')
 tb.draw_wires('net_rlc')
 tb.draw_wires('0')
-
-print(generate_ngspice(tb))
-print(generate_spectre(tb))
 `;
 
 export default function EEcircuit(): JSX.Element {
