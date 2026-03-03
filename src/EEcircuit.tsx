@@ -147,7 +147,7 @@ export default function EEcircuit(): JSX.Element {
 
   // Python / editor mode state
   const [editorMode, setEditorMode] = React.useState<EditorMode>(
-    () => (store.getItem("editorMode") as EditorMode) || "spice"
+    () => (store.getItem("editorMode") as EditorMode) || "python"
   );
   const [pythonCode, setPythonCode] = React.useState(
     () => store.getItem("pythonCode") || pythonDefault
