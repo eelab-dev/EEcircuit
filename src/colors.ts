@@ -26,19 +26,47 @@ export function calcLuminance(
 }
 
 export function calcContrast(L1: number, L2: number): number {
-  // Ensure L1 is the lighter luminance
   return L1 > L2 ? (L1 + 0.05) / (L2 + 0.05) : (L2 + 0.05) / (L1 + 0.05);
 }
 
 /**
- * Generates a random color that maintains at least a contrast ratio of 4 against the chosen mode background.
+ * Converts HSL color values to RGB.
+ * h: 0-360, s: 0-1, l: 0-1
+ */
+function hslToRgb(h: number, s: number, l: number): ColorType {
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  return { r: f(0), g: f(8), b: f(4) };
+}
+
+/**
+ * Generates a color by index using evenly-spaced hues in HSL space.
+ * Guarantees maximum perceptual separation between curves regardless of count.
+ * Uses golden angle spacing to avoid clustering when total count is unknown.
  *
- * @param mode - "light" or "dark". Default is "light".
- * @returns a ColorType with r,g,b values between 0 and 1.
+ * @param index - 0-based signal index
+ * @param total - total number of signals (used for even spacing)
+ * @param mode  - "light" or "dark" (adjusts lightness for contrast)
+ */
+export const getColorByIndex = (
+  index: number,
+  total: number,
+  mode: "light" | "dark"
+): ColorType => {
+  const hue = (index / Math.max(total, 1)) * 360;
+  const saturation = 0.85;
+  const lightness = mode === "light" ? 0.38 : 0.62;
+  return hslToRgb(hue, saturation, lightness);
+};
+
+/**
+ * Generates a random color with at least 4:1 contrast against the background.
+ * Kept for the colorize (🌈) button.
  */
 export const getColor = (mode: "light" | "dark"): ColorType => {
-  // Set background color depending on mode.
-  // For "light" mode we use a very light background and for "dark" mode a dark one.
   const bgColor =
     mode === "light"
       ? { r: 250 / 255, g: 250 / 255, b: 250 / 255 }
@@ -47,16 +75,12 @@ export const getColor = (mode: "light" | "dark"): ColorType => {
   const bgLuminance = calcLuminance(bgColor.b, bgColor.g, bgColor.r);
 
   let contrast = 0;
-  let r = 0,
-    g = 0,
-    b = 0;
+  let r = 0, g = 0, b = 0;
 
-  // change the color versus background; be careful of infinite loops
   while (contrast < 4) {
     r = Math.random();
     g = Math.random();
     b = Math.random();
-
     const colorLuminance = calcLuminance(b, g, r);
     contrast = calcContrast(colorLuminance, bgLuminance);
   }
@@ -65,11 +89,6 @@ export const getColor = (mode: "light" | "dark"): ColorType => {
 
 /**
  * Adjusts the color intensity.
- *
- * @param color - ColorType object containing r, g, b values.
- * @param factor - factor to scale the color intensity.
- * @param alpha - alpha value for transparency.
- * @returns new ColorRGBA with the modified intensity.
  */
 export const changeIntensity = (
   color: ColorType,

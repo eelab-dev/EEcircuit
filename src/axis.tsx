@@ -79,6 +79,26 @@ const Axis = ({
     }
   }, [scale, offset]);
 
+  // Re-measure canvas when yHeight changes (e.g. fullscreen toggle)
+  useEffect(() => {
+    if (axis !== "y") return;
+    const timer = setTimeout(() => {
+      const canvas = canvasRef.current;
+      if (!canvas || !ctx) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = canvas.clientWidth * dpr;
+      canvas.height = canvas.clientHeight * dpr;
+      const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const fontSize = 0.85 * rootFontSize * dpr;
+      ctx.font = `${fontSize}px Courier New`;
+      ctx.fillStyle = theme === "light" ? "black" : "white";
+      ctx.strokeStyle = theme === "light" ? "black" : "white";
+      setCanvasSize({ width: canvas.width, height: canvas.height });
+      updateY(ctx, canvas.width, canvas.height);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [yHeight]);
+
   const updateX = (
     ctx2d: CanvasRenderingContext2D,
     width: number,

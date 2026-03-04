@@ -4,7 +4,11 @@
 
 # EEcircuit
 
-EEcircuit is a circuit simulator based on [ngspice](https://sourceforge.net/p/ngspice/ngspice/) that operates directly in your browser using [WebAssembly](https://webassembly.org/) technology. It takes a spice-based netlist as input and produces analysis results from your simulations as output. You can visualize and plot the results in the browser using the high-performance WebGL plotting library, [webgl-plot](https://github.com/danchitnis/webgl-plot), or download the data in CSV format for further analysis. Importantly, your netlist and results are processed locally, meaning they always remain within your browser and are never uploaded to a server. This project focuses on facilitating rapid analysis and sharing of circuit ideas and results within the [VLSI](https://en.wikipedia.org/wiki/Very_Large_Scale_Integration) and chip-design communities. Additionally, since EEcircuit uses a text-based netlist as input, you can utilize [Git](https://git-scm.com/) for version control to track your changes effectively.
+EEcircuit is a circuit simulator based on ngspice that operates directly in your browser using WebAssembly technology. It takes a spice-based netlist as input and produces analysis results from your simulations as output. You can visualize and plot the results in the browser using the high-performance WebGL plotting library, **webgl-plot**, or download the data in CSV format for further analysis. Importantly, your netlist and results are processed locally, meaning they always remain within your browser and are never uploaded to a server. This project focuses on facilitating rapid analysis and sharing of circuit ideas and results within the VLSI and chip-design communities. Additionally, since EEcircuit uses a text-based netlist as input, you can utilize Git for version control to track your changes effectively.
+
+### What's new
+
+The plot viewer has been significantly enhanced with an advanced interactive experience: three independent measurement cursors (**A**, **B**, **M**) can be placed on any curve via keyboard shortcuts, with delta readouts in the legend. Each curve now has a **per-curve color picker** accessible directly from the legend. Zoom and pan have been reworked — scroll to zoom the X axis, Shift+Scroll for the Y axis, right-click drag for rectangle zoom, and middle-click drag to pan. A full keyboard shortcut system covers cursor placement, view fit, zoom steps, and item deletion. The platform also demonstrates AI-assisted circuit design and debugging through integration with **Anthropic Claude**, **Google Gemini**, and **OpenAI GPT**.
 
 ## Getting started
 
@@ -34,7 +38,26 @@ vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
 
 ## Usage
 
-Use your mouse to pan & zoom on the plot. left click for area **zoom** and right click hold and drag for **pan**. To reset the view **double click**.
+### Plot controls
+
+| Action | Result |
+|--------|--------|
+| **Scroll** | Zoom X axis |
+| **Shift + Scroll** | Zoom Y axis |
+| **Right-click drag** | Zoom in on X axis (rectangle select) |
+| **Middle-click drag** | Pan X + Y |
+| **Left-click** | Select curve or cursor marker |
+
+### Keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| `a` / `b` / `m` | Place cursor A / B / M on nearest curve |
+| `c` | Clear all cursors |
+| `f` | Fit view (reset zoom) |
+| `[` / `]` | Zoom out / zoom in (X axis) |
+| `Delete` | Remove selected curve or cursor |
+| `Esc` | Deselect |
 
 ## Documentation
 

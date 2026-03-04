@@ -98,7 +98,7 @@ export async function testEEcircuit(page: Page, url: string) {
   const resp = await page.goto(url, { waitUntil: 'networkidle' });
   console.log('Page.goto response status:', resp?.status(), 'url:', resp?.url());
 
-  await expect(page).toHaveTitle(/EEcircuit/);
+  await expect(page).toHaveTitle(/analogpy/);
 
   // Now perform UI actions
   await page.getByRole('button', { name: 'Run' }).click();

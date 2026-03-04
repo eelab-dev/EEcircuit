@@ -16,7 +16,9 @@ jobs:
           node-version: "20"
 
       - name: Install npm packages
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build
         run: npm run build
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
