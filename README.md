@@ -2,15 +2,13 @@
 
 (formerly EEsim.dev)
 
-# analogpy
+# EEcircuit
 
-**analogpy** leverages the browser-based simulation foundations of **EEcircuit** to provide a Python-native ecosystem for programmatically defining and analyzing circuits. While EEcircuit pioneered browser-based simulation via WebAssembly, **analogpy** elevates this technology by introducing a native Python representation that generates both SPICE and Spectre netlists.
+EEcircuit is a circuit simulator based on ngspice that operates directly in your browser using WebAssembly technology. It takes a spice-based netlist as input and produces analysis results from your simulations as output. You can visualize and plot the results in the browser using the high-performance WebGL plotting library, **webgl-plot**, or download the data in CSV format for further analysis. Importantly, your netlist and results are processed locally, meaning they always remain within your browser and are never uploaded to a server. This project focuses on facilitating rapid analysis and sharing of circuit ideas and results within the VLSI and chip-design communities. Additionally, since EEcircuit uses a text-based netlist as input, you can utilize Git for version control to track your changes effectively.
 
-This website serves as a GUI-driven simulation environment powered by **ngspice** running in the browser via WebAssembly. By supporting both analogpy-based Python code and standard SPICE netlists, it provides a seamless workflow from definition to analysis.
+### What's new
 
-Beyond simulation, this platform demonstrates the cutting-edge integration of AI—including **Anthropic Claude, Google Gemini, and OpenAI GPT**—directly with circuit analysis to assist in design and debugging. Results are visualized in real-time using the high-performance **webgl-plot** library or exported as CSV.
-
-To ensure complete privacy, all simulation and data processing occur locally within your browser; your netlists and results are never uploaded to a server. For professional workflows involving **NDA-restricted PDKs**, you can download and run analogpy locally to explore its full power within your secure environment. analogpy is built to facilitate rapid iteration and collaborative sharing within the VLSI and chip-design communities.
+The plot viewer has been significantly enhanced with an advanced interactive experience: three independent measurement cursors (**A**, **B**, **M**) can be placed on any curve via keyboard shortcuts, with delta readouts in the legend. Each curve now has a **per-curve color picker** accessible directly from the legend. Zoom and pan have been reworked — scroll to zoom the X axis, Shift+Scroll for the Y axis, right-click drag for rectangle zoom, and middle-click drag to pan. A full keyboard shortcut system covers cursor placement, view fit, zoom steps, and item deletion. The platform also demonstrates AI-assisted circuit design and debugging through integration with **Anthropic Claude**, **Google Gemini**, and **OpenAI GPT**.
 
 ## Getting started
 
@@ -40,7 +38,26 @@ vin 1 0 0 pulse (0 1.8 0 0.1 0.1 15 30)
 
 ## Usage
 
-Use your mouse to pan & zoom on the plot. left click for area **zoom** and right click hold and drag for **pan**. To reset the view **double click**.
+### Plot controls
+
+| Action | Result |
+|--------|--------|
+| **Scroll** | Zoom X axis |
+| **Shift + Scroll** | Zoom Y axis |
+| **Right-click drag** | Zoom in on X axis (rectangle select) |
+| **Middle-click drag** | Pan X + Y |
+| **Left-click** | Select curve or cursor marker |
+
+### Keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| `a` / `b` / `m` | Place cursor A / B / M on nearest curve |
+| `c` | Clear all cursors |
+| `f` | Fit view (reset zoom) |
+| `[` / `]` | Zoom out / zoom in (X axis) |
+| `Delete` | Remove selected curve or cursor |
+| `Esc` | Deselect |
 
 ## Documentation
 
