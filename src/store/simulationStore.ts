@@ -9,6 +9,7 @@ import { chang90 } from "../Simulate/subcircuits/chang90";
 import { addAcParameterToSource } from "../utils/sourceDetection";
 import { correctNgspiceUnits } from "../utils/unitCorrection";
 import { buildToBePlottedCommands } from "../utils/toBePlotted";
+import { extractValidNetsAndComponents } from "../utils/netlistUtils";
 
 // Define the store interface that includes both simulation and tab slices
 interface StoreWithTab {
@@ -338,8 +339,28 @@ export const createSimulationSlice: StateCreator<
     }
 
     // Add plot commands (.save) if any
-    const { toBePlotted } = get() as unknown as { toBePlotted: ToBePlotted[] }; 
-    const plotCommands = buildToBePlottedCommands(toBePlotted || []);
+    const { toBePlotted, setToBePlotted } = get() as unknown as { toBePlotted: ToBePlotted[], setToBePlotted: (items: ToBePlotted[]) => void }; 
+    let currentToBePlotted = toBePlotted || [];
+
+    if (currentToBePlotted.length > 0) {
+      const { nets: validNets, components: validComponents } = extractValidNetsAndComponents(processedNetlist);
+      
+      const filteredToBePlotted = currentToBePlotted.filter((item) => {
+        if (item.type === "voltage") {
+          return validNets.has(item.netName);
+        } else if (item.type === "current") {
+          return validComponents.has(item.componentName);
+        }
+        return false;
+      });
+
+      if (filteredToBePlotted.length !== currentToBePlotted.length) {
+        setToBePlotted(filteredToBePlotted);
+        currentToBePlotted = filteredToBePlotted;
+      }
+    }
+
+    const plotCommands = buildToBePlottedCommands(currentToBePlotted);
     if (plotCommands && plotCommands.trim()) {
       netlistSections.push(plotCommands);
     }
