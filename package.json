@@ -7,8 +7,6 @@
   "scripts": {
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\"",
     "lint": "prettier --check \"src/**/*.{js,jsx,ts,tsx}\"",
-    "vercel-prod": "vercel --prod",
-    "vercel": "vercel",
     "serve": "serve dist",
     "dev": "vite",
     "build": "vite build",
@@ -37,9 +35,9 @@
     "simple-git": "^3.28.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.0",
-    "vercel": "^48.2.9",
     "vite": "^7.1.9",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "wrangler": "^4.71.0"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.27.1",
