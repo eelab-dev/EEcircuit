@@ -1,5 +1,0 @@
-{
-  "framework": "vite",
-  "buildCommand": "vite build && ./copy_workers.sh",
-  "devCommand": "vite"
-}

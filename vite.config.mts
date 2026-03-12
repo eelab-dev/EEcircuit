@@ -1,23 +1,23 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
 
 export default defineConfig({
   resolve: {
     preserveSymlinks: true,
+    tsconfigPaths: true,
   },
   build: {
     emptyOutDir: true,
     // Configure worker options here:
     rollupOptions: {
-      output: {},
     },
   },
-  plugins: [react({
-    babel: {
-      plugins: ['babel-plugin-react-compiler'],
-    },
-  }), tsconfigPaths()],
+  plugins: [react(), babel({
+    presets: [reactCompilerPreset()],
+    include: /\.[jt]sx?$/,
+    exclude: [/node_modules/, /\.worker\.ts$/],
+  })],
   optimizeDeps: {
     // Exclude local packages to enable HMR during development
     exclude: ["eecircuit-schematic"],
