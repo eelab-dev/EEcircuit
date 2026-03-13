@@ -13,6 +13,7 @@ test('record modifying transistor parameters', async ({ page }) => {
   // 2. Wait for app readiness
   await page.waitForTimeout(2000); // Initial load wait
   await page.locator('#schematic-canvas').waitFor({ state: 'attached' });
+  await helper.initMapping();
 
   // 3. Load Demo Circuit
   const newSchematicBtn = page.getByLabel('New Schematic').first();
@@ -76,14 +77,12 @@ test('record modifying transistor parameters', async ({ page }) => {
   await helper.smoothMoveTo(targetX + 150, targetY + 150);
   await page.waitForTimeout(1500);
   
-  // Save the video to the specific folder
-  const video = page.video();
-  
-  // Closing the page forces the video stream to flush immediately,
-  // reducing save time from ~20s to ~3s.
-  await page.close();
+  // Wait a bit to ensure the final frame is captured before Playwright auto-closes
+  await page.waitForTimeout(500);
+});
 
-  if (video) {
-    await video.saveAs('tests/videos/modifying-parameters.webm');
-  }
+test.afterEach(async ({ page }, testInfo) => {
+  await page.close();
+  const title = testInfo.title.replace(/[\s/\\:]+/g, '-').toLowerCase();
+  await page.video()?.saveAs(`test-videos/${title}.webm`);
 });

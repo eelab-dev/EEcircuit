@@ -13,6 +13,7 @@ test('record component placement', async ({ page }) => {
   // 2. Wait for app readiness
   await page.waitForTimeout(2000); // Initial load wait
   await page.locator('#schematic-canvas').waitFor({ state: 'attached' });
+  await helper.initMapping();
 
   // 3. Move to and click Add Component menu
   const addCompBtn = page.getByRole('button', { name: /Add Component/i });
@@ -45,14 +46,12 @@ test('record component placement', async ({ page }) => {
   // 6. Show the placed component for a moment
   await page.waitForTimeout(1000); 
 
-  // Save the video to the specific folder
-  const video = page.video();
-  
-  // Closing the page forces the video stream to flush immediately,
-  // reducing save time from ~20s to ~3s.
-  await page.close();
+  // Wait a bit to ensure the final frame is captured before Playwright auto-closes
+  await page.waitForTimeout(500);
+});
 
-  if (video) {
-    await video.saveAs('videos/placing_component.webm');
-  }
+test.afterEach(async ({ page }, testInfo) => {
+  await page.close();
+  const title = testInfo.title.replace(/[\s/\\:]+/g, '-').toLowerCase();
+  await page.video()?.saveAs(`test-videos/${title}.webm`);
 });

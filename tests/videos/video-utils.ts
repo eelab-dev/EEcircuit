@@ -4,6 +4,10 @@ export class VideoHelper {
   private page: Page;
   public currentX = 0;
   public currentY = 0;
+  private A: number | null = null;
+  private B: number | null = null;
+  private C: number | null = null;
+  private D: number | null = null;
 
   constructor(page: Page) {
     this.page = page;
@@ -209,7 +213,7 @@ export class VideoHelper {
       throw new Error(`Could not read coordinates at ${roundedX}, ${roundedY}`);
   };
 
-  async mapSchematicToScreen(targetSchX: number, targetSchY: number) {
+  async initMapping() {
       const canvas = this.page.locator('canvas').first();
       const box = await canvas.boundingBox();
       if (!box) {
@@ -226,40 +230,22 @@ export class VideoHelper {
       const p2 = await this.readCoordsAt(centerSX + deltaScreen, centerSY - deltaScreen); // Y axis visually goes up when decreasing pixels
 
       // sch = A * screen + C
-      const A = (p2.schX - p1.schX) / deltaScreen;
-      const B = (p2.schY - p1.schY) / -deltaScreen;
+      this.A = (p2.schX - p1.schX) / deltaScreen;
+      this.B = (p2.schY - p1.schY) / -deltaScreen;
 
-      const C = p1.schX - A * centerSX;
-      const D = p1.schY - B * centerSY;
+      this.C = p1.schX - this.A * centerSX;
+      this.D = p1.schY - this.B * centerSY;
+      
+      console.log(`Initialized Mapping - A: ${this.A}, B: ${this.B}, C: ${this.C}, D: ${this.D}`);
+  }
 
-      let targetX = Math.round((targetSchX - C) / A);
-      let targetY = Math.round((targetSchY - D) / B);
-      
-      // Verification Step
-      const verify = await this.readCoordsAt(targetX, targetY);
-      console.log(`Calculated Mapping - A: ${A}, B: ${B}, C: ${C}, D: ${D}`);
-      console.log(`Targeting Screen X: ${targetX}, Y: ${targetY} -> Measured Coords X: ${verify.schX}, Y: ${verify.schY}`);
-      
-      if (verify.schX !== targetSchX || verify.schY !== targetSchY) {
-          // If we slightly missed because of pixel snapping, we do a strictly bounded 3x3 search to find the closest pixel that guarantees the true readout
-          console.log('Slight algebraic miss due to snapping, applying 3x3 pixel grid search fallback...');
-          let fineFound = false;
-          for (let py = targetY - 15; py <= targetY + 15 && !fineFound; py += 5) {
-             for (let px = targetX - 15; px <= targetX + 15 && !fineFound; px += 5) {
-                 const testCoords = await this.readCoordsAt(px, py);
-                 if (testCoords.schX === targetSchX && testCoords.schY === targetSchY) {
-                     targetX = px;
-                     targetY = py;
-                     fineFound = true;
-                     console.log(`Found true exact coordinate at Screen X: ${targetX}, Y: ${targetY}`);
-                     break;
-                 }
-             }
-          }
-          if (!fineFound) {
-              throw new Error(`Calculated target is wrong! Expected ${targetSchX}, ${targetSchY} but got ${verify.schX}, ${verify.schY}.`);
-          }
+  async mapSchematicToScreen(targetSchX: number, targetSchY: number) {
+      if (this.A === null || this.B === null || this.C === null || this.D === null) {
+          throw new Error("Mapping not initialized. Call initMapping() first.");
       }
+
+      let targetX = Math.round((targetSchX - this.C) / this.A);
+      let targetY = Math.round((targetSchY - this.D) / this.B);
       
       return { x: targetX, y: targetY };
   }

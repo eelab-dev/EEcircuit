@@ -13,6 +13,7 @@ test('record wiring resistors', async ({ page }) => {
   // 2. Wait for app readiness
   await page.waitForTimeout(2000); 
   await page.locator('#schematic-canvas').waitFor({ state: 'attached' });
+  await helper.initMapping();
 
   const addCompBtn = page.getByRole('button', { name: /Add Component/i });
   const resistorItem = page.getByText('resistor', { exact: true });
@@ -202,11 +203,10 @@ test('record wiring resistors', async ({ page }) => {
   // Move away slightly so the user can see the final wired circuit
   await helper.smoothMoveTo(pos2.x + 150, pos2.y + 150);
   await page.waitForTimeout(1500);
+});
 
-  const video = page.video();
+test.afterEach(async ({ page }, testInfo) => {
   await page.close();
-
-  if (video) {
-    await video.saveAs('test-results/wiring.webm');
-  }
+  const title = testInfo.title.replace(/[\s/\\:]+/g, '-').toLowerCase();
+  await page.video()?.saveAs(`test-videos/${title}.webm`);
 });
