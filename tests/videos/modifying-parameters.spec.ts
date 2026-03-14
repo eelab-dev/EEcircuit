@@ -6,6 +6,7 @@ test('record modifying transistor parameters', async ({ page }) => {
   
   const helper = new VideoHelper(page);
   await helper.initCursor();
+  await helper.initKeyboardDisplay();
 
   // 1. Open the app with clean slate and dark mode
   await page.goto('http://localhost:5173/?theme=dark&clean=true');
