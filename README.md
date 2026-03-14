@@ -7,7 +7,7 @@ EEcircuit is a circuit simulator based on [ngspice](https://sourceforge.net/p/ng
 
 ## Usage
 
-For a short user guide, go to [User Guide](https://github.com/eelab-dev/EEcircuit/blob/gen2/user.md).
+For a user guide, go to [help.EEcircuit.com](https://help.eecircuit.com).
 
 Watch the launch [presentation video](https://www.youtube.com/watch?v=GFpjMzT08XQ) 📺
 
