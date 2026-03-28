@@ -32,7 +32,7 @@
     "playwright": "^1.58.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.55.0",
-    "vite": "^8.0.0",
+    "vite": "^8.0.2",
     "wrangler": "^4.72.0"
   },
   "dependencies": {
@@ -42,8 +42,8 @@
     "@types/lodash.debounce": "^4.0.9",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "eecircuit-engine": "^1.6.0",
-    "eecircuit-schematic": "file:../eecircuit-schematic",
+    "eecircuit-engine": "file:../EEcircuit-engine",
+    "eecircuit-schematic": "file:../EEcircuit-schematic",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.577.0",
     "monaco-editor": "^0.55.1",
