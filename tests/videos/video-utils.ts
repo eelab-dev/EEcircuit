@@ -356,8 +356,8 @@ export class VideoHelper {
           throw new Error("Mapping not initialized. Call initMapping() first.");
       }
 
-      let targetX = Math.round((targetSchX - this.C) / this.A);
-      let targetY = Math.round((targetSchY - this.D) / this.B);
+      const targetX = Math.round((targetSchX - this.C) / this.A);
+      const targetY = Math.round((targetSchY - this.D) / this.B);
       
       return { x: targetX, y: targetY };
   }

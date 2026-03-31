@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { VideoHelper } from './video-utils';
 
 test('record wiring resistors', async ({ page }) => {
