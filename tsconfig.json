@@ -9,9 +9,12 @@
     "module": "esnext",
     "moduleResolution": "Bundler",
     "jsx": "preserve",
-    "baseUrl": "./",
+    "paths": {
+      "src/*": ["./src/*"]
+    },
     /* Additional Options */
     "strict": true,
+    "types": ["node"],
     /* Strict Any Type Checks */
     "noImplicitAny": true,
     "noImplicitReturns": true,
