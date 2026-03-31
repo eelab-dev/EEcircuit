@@ -9,11 +9,11 @@ import {
   Smartphone,
   Sun,
   Moon,
-  Github,
   Expand,
   SquareX,
   Settings,
   FilePlus,
+  Info,
 } from "lucide-react";
 import StatusIcon from "./StatusIcon";
 
@@ -28,6 +28,7 @@ interface HeaderButtonsProps {
   fullscreen: boolean;
   fullscreenHandler: () => void;
   setShowConfigDialog: (show: boolean) => void;
+  setShowAboutDialog: (show: boolean) => void;
 }
 
 const HeaderButtons: React.FC<HeaderButtonsProps> = ({
@@ -41,6 +42,7 @@ const HeaderButtons: React.FC<HeaderButtonsProps> = ({
   fullscreen,
   fullscreenHandler,
   setShowConfigDialog,
+  setShowAboutDialog,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -205,21 +207,19 @@ const HeaderButtons: React.FC<HeaderButtonsProps> = ({
         mx={1}
       />
 
-      {/* GitHub Button */}
+      {/* About/Info Button */}
       <Tooltip
         showArrow
-        content="Visit EEcircuit on GitHub"
+        content="About EEcircuit"
         positioning={{ placement: "bottom" }}
       >
         <IconButton
-          aria-label="Visit EEcircuit on GitHub"
+          aria-label="About EEcircuit"
           size="sm"
           variant="ghost"
-          onClick={() =>
-            window.open("https://github.com/eelab-dev/EEcircuit", "_blank")
-          }
+          onClick={() => setShowAboutDialog(true)}
         >
-          <Github size={16} />
+          <Info size={16} />
         </IconButton>
       </Tooltip>
     </Flex>

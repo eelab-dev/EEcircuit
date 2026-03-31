@@ -55,6 +55,9 @@ const NewSchematicDialog = React.lazy(loadNewSchematicDialog);
 const loadSettingsDialog = () => import("./components/Settings/SettingsDialog");
 const SettingsDialog = React.lazy(loadSettingsDialog);
 
+const loadAboutDialog = () => import("./components/AboutDialog");
+const AboutDialog = React.lazy(loadAboutDialog);
+
 const TabPanelSkeleton: React.FC<{ label: string }> = ({ label }) => (
   <Flex
     flex={1}
@@ -118,10 +121,11 @@ const EEcircuitApp: React.FC = () => {
   // Simulation config dialog state
   const [showConfigDialog, setShowConfigDialog] = React.useState(false);
 
+  // About dialog state
+  const [showAboutDialog, setShowAboutDialog] = React.useState(false);
+
   // Preload heavier modules after first paint to improve perceived load on slow devices
   React.useEffect(() => {
-
-
     void loadSimulationEditorComponent();
     void loadPlotComponent();
 
@@ -129,7 +133,9 @@ const EEcircuitApp: React.FC = () => {
       void loadHeaderButtons();
       void loadNewSchematicDialog();
       void loadSettingsDialog();
+      void loadAboutDialog();
     };
+
 
     let idleHandle: number | undefined;
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
@@ -755,6 +761,7 @@ const EEcircuitApp: React.FC = () => {
               fullscreen={fullscreen}
               fullscreenHandler={fullscreenHandler}
               setShowConfigDialog={setShowConfigDialog}
+              setShowAboutDialog={setShowAboutDialog}
             />
           </React.Suspense>
         </Flex>
@@ -782,6 +789,7 @@ const EEcircuitApp: React.FC = () => {
                 fullscreen={fullscreen}
                 fullscreenHandler={fullscreenHandler}
                 setShowConfigDialog={setShowConfigDialog}
+                setShowAboutDialog={setShowAboutDialog}
               />
             </React.Suspense>
           </Flex>
@@ -940,6 +948,15 @@ const EEcircuitApp: React.FC = () => {
           <SettingsDialog
             open={showConfigDialog}
             onClose={() => setShowConfigDialog(false)}
+          />
+        )}
+      </React.Suspense>
+
+      <React.Suspense fallback={null}>
+        {showAboutDialog && (
+          <AboutDialog
+            isOpen={showAboutDialog}
+            onClose={() => setShowAboutDialog(false)}
           />
         )}
       </React.Suspense>
