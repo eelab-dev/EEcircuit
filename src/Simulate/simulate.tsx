@@ -80,6 +80,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       if (!hasAutoSwitchedToPlot) {
         setIsPlottingTabEnabled(true);
         setMainTabValue("plot");
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setHasAutoSwitchedToPlot(true);
       }
       setIsSimulationButtonLoading(false);
@@ -121,7 +122,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     }
 
     setIsSimulationButtonLoading(true);
-    let readEngineErrors: (() => string[]) | undefined;
     try {
       // Always clear previous results, optionally reset selections and plot state
       const {
@@ -199,7 +199,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
       }
     } catch (error) {
       console.error("Simulation error:", error);
-      const engineErrors = readEngineErrors ? readEngineErrors() : [];
+      const engineErrors: string[] = [];
       notifySimulationErrors(
         engineErrors,
         error instanceof Error ? error.message : "Unknown simulation error"

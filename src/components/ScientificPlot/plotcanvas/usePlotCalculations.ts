@@ -465,6 +465,7 @@ export const usePlotCalculations = ({
   const handleAxisTransition = useCallback(() => {
     if (!plotLineRef.current || !glRef.current || isTransitioningRef.current) return;
 
+    // eslint-disable-next-line react-hooks/immutability
     isTransitioningRef.current = true;
 
     // Batch all axis mode changes in a single React transition

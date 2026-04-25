@@ -119,7 +119,7 @@ export function parseBracketOperation(netlist: string): ParseResult {
       values
     };
   } catch (error) {
-    throw new Error(`Failed to parse bracket operation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to parse bracket operation: ${error instanceof Error ? error.message : 'Unknown error'}`, { cause: error });
   }
 }
 

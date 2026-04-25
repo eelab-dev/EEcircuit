@@ -18,7 +18,7 @@ export const extractValidNetsAndComponents = (
     components.add(compName);
 
     const firstChar = compName.length > 0 ? compName[0] : "";
-    let numNodes = 0;
+    let numNodes: number;
 
     if (firstChar && ["R", "L", "C", "V", "I", "D"].includes(firstChar)) {
       numNodes = 2;

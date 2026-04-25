@@ -10,7 +10,7 @@ export const unitConvert2string = (n: number, fractDigits?: number): string => {
 
   const nLog10 = Math.log10(Math.abs(n));
 
-  let nLog10Near = 0;
+  let nLog10Near: number;
   if (nLog10 >= 3) {
     nLog10Near = Math.floor(nLog10 / 3) * 3;
   } else if (nLog10 >= 0) {
@@ -55,7 +55,7 @@ export const unitConvert2string = (n: number, fractDigits?: number): string => {
 
   const reminder = n / Math.pow(10, nLog10Near);
 
-  let final = "";
+  let final: string;
 
   if (unit == "") {
     final = n.toExponential(fractDigits);
@@ -103,3 +103,4 @@ export const unitConvert2float = (input: string): number => {
   // No suffix
   return parseFloat(trimmed);
 };
+

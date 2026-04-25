@@ -137,6 +137,7 @@ const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
         });
         
         if (currentConfigIndex >= 0) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setSelectedConfigIndex(currentConfigIndex);
           onFullConfigChange(simulationConfig);
         }

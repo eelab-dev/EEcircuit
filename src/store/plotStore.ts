@@ -270,16 +270,16 @@ export const createPlotSlice: StateCreator<
       // Primary Detection Mechanism: selectedSimType or Netlist Check
       const { netList, selectedSimType } = currentState;
       
-      let isNoiseSimulation = false;
-      let isACSimulation = false;
+      let isACSimulation: boolean;
+      let isNoiseSimulation: boolean;
 
       if (selectedSimType && selectedSimType !== "None") {
-          isNoiseSimulation = selectedSimType === "Noise";
           isACSimulation = selectedSimType === "AC";
+          isNoiseSimulation = selectedSimType === "Noise";
       } else {
           // Fallback to netlist parsing
-          isNoiseSimulation = /^\s*\.noise\s+/im.test(netList);
           isACSimulation = /^\s*\.ac\s+/im.test(netList);
+          isNoiseSimulation = /^\s*\.noise\s+/im.test(netList);
       }
 
 
@@ -301,7 +301,7 @@ export const createPlotSlice: StateCreator<
       
       // Determine which variables to select based on previous user selections
       let variablesToSelect: string[];
-      let canvas1Variables: string[] = [];
+      let canvas1Variables: string[];
       let canvas2Variables: string[] = [];
       let numCanvases = currentState.numCanvases; // Preserve existing canvas mode
       let isACModeActive = false;
