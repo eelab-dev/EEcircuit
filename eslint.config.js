@@ -4,6 +4,12 @@ import tseslint from "typescript-eslint";
 import pluginReact from "eslint-plugin-react";
 import { defineConfig } from "eslint/config";
 import reactHooks from "eslint-plugin-react-hooks";
+import fs from "node:fs";
+
+// workaround for eslint-plugin-react compat with eslint 10
+// read react version from package.json to avoid hardcoding
+const pkg = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"));
+const reactVersion = pkg.dependencies.react.replace(/[\^~]/, "");
 
 export default defineConfig([
   {
@@ -41,7 +47,7 @@ export default defineConfig([
     ...pluginReact.configs.flat.recommended,
     files: ["src/**/*.{jsx,tsx}", "tests/**/*.{jsx,tsx}"],
     settings: {
-      react: { version: "detect" },
+      react: { version: reactVersion },
     },
   },
   reactHooks.configs.flat["recommended-latest"],
