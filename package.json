@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint",
     "check": "tsc --noEmit && tsc -p tests/tsconfig.json --noEmit && eslint .",
+    "test": "playwright test --project=chrome --workers=1",
     "deploy": "wrangler deploy"
   },
   "author": "Danial Chitnis",

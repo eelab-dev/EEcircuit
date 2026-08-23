@@ -274,12 +274,14 @@ const Schematic: React.FC<SchematicProps> = ({
 
       // Mark canvas as being initialized
       initializingCanvasRef.current = canvas;
+      canvas.dataset.canvasReady = "false";
 
       try {
         // Initialize canvas with eecircuit - resolves when canvas is ready
         await eeSch.initCanvas(canvas, msgCallback);
         initializedCanvasRef.current = canvas;
         initializingCanvasRef.current = null; // Clear initializing flag
+        canvas.dataset.canvasReady = "true";
         console.log("Canvas initialization completed and ready");
 
         // Send input profile command now that canvas is ready
@@ -313,6 +315,7 @@ const Schematic: React.FC<SchematicProps> = ({
       } catch (error) {
         console.error("Canvas initialization failed:", error);
         initializingCanvasRef.current = null; // Clear initializing flag on error
+        canvas.dataset.canvasReady = "false";
         return false;
       }
 
@@ -559,6 +562,7 @@ const Schematic: React.FC<SchematicProps> = ({
       console.log("Creating new canvas element");
       canvas = document.createElement("canvas");
       canvas.id = "schematic-canvas";
+      canvas.dataset.canvasReady = "false";
       canvas.style.width = "100%";
       canvas.style.height = "100%";
       canvas.style.display = "block";
@@ -673,6 +677,7 @@ const Schematic: React.FC<SchematicProps> = ({
       console.log("Creating new canvas for resize");
       const newCanvas = document.createElement("canvas");
       newCanvas.id = "schematic-canvas";
+      newCanvas.dataset.canvasReady = "false";
       newCanvas.style.width = "100%";
       newCanvas.style.height = "100%";
       newCanvas.style.display = "block";

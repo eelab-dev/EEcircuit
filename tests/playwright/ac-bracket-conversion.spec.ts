@@ -6,7 +6,11 @@ test('verify ac bracket mode conversion with test file', async ({ page }) => {
   
   // 1. Load the test-circuit-ac.json file
   await page.goto('http://localhost:5173/');
-  await page.waitForTimeout(1000);
+  await expect(page.locator('#schematic-canvas')).toHaveAttribute(
+    'data-canvas-ready',
+    'true',
+    { timeout: 10000 },
+  );
 
   // 2. Load Test Circuit File (AC)
   console.log('Step: Load Test Circuit File');
