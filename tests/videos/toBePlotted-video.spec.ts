@@ -13,7 +13,7 @@ test.beforeAll(async ({ browser }) => {
   const context = await browser.newContext({ recordVideo: undefined });
   const page = await context.newPage();
   
-  await page.goto('http://localhost:5173/?theme=dark');
+  await page.goto('/?theme=dark');
   await page.waitForTimeout(500); 
   const schematicCanvas = page.locator('#schematic-canvas');
   await schematicCanvas.waitFor({ state: 'attached' });
@@ -74,7 +74,7 @@ test('record to be plotted video', async ({ page }) => {
   await helper.initKeyboardDisplay();
 
   // 1. Open the app with default circuit and dark mode
-  await page.goto('http://localhost:5173/?theme=dark');
+  await page.goto('/?theme=dark');
 
   // 2. Wait for app readiness
   await page.waitForTimeout(500); 

@@ -24,11 +24,10 @@ temp
 .next
 
 copilot-instructions.md
-tsconfig.tsbuildinfo
-
 AGENTS.md
+CODE_AUDIT.md
 issues.md
-bracket-ops.md
+tsconfig.tsbuildinfo
 
 .agent
 test-videos

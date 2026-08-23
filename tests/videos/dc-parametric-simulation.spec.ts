@@ -9,7 +9,7 @@ test('record dc parametric simulation', async ({ page }) => {
   await helper.initKeyboardDisplay();
 
   // 1. Open the app with default circuit and dark mode
-  await page.goto('http://localhost:5173/?theme=dark');
+  await page.goto('/?theme=dark');
 
   // 2. Wait for app readiness
   await page.waitForTimeout(2000); 

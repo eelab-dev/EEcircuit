@@ -1,9 +1,8 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test("To Be Plotted variables are updated when schematic nets change", async ({ page }) => {
   // 1. Load the application
-  await page.goto("http://localhost:5173/");
-  await page.waitForTimeout(1000); // Wait for initial load
+  await page.goto("/");
 
   // Wait for the schematic canvas to be ready
   const schematicCanvas = page.locator("canvas#schematic-canvas");
@@ -13,7 +12,6 @@ test("To Be Plotted variables are updated when schematic nets change", async ({ 
   await page.getByLabel("New Schematic").first().click();
   await page.getByRole("button", { name: "Load Demo" }).click();
   await expect(page.getByRole("dialog")).toBeHidden({ timeout: 5000 });
-  await page.waitForTimeout(1000); // Allow demo to render
 
   // 3. Go to Simulate tab to generate netlist
   const simulateBtn = page.getByRole("button", { name: /Simulate/i }).first();
@@ -46,7 +44,12 @@ test("To Be Plotted variables are updated when schematic nets change", async ({ 
   for (let dy = -100; dy <= 100; dy += 20) {
     for (let dx = -100; dx <= 100; dx += 20) {
       await page.mouse.move(cx + dx, cy + dy);
-      await page.waitForTimeout(50); // Give React time to update the bottom bar
+      await page.waitForFunction(() => {
+        return Array.from(document.querySelectorAll("button")).some((button) => {
+          const text = button.textContent ?? "";
+          return /.* - \d+/.test(text) && !text.includes("X:");
+        });
+      }, undefined, { timeout: 100 }).catch(() => undefined);
       
       // Look for a button in the bottom bar that has a dash (e.g., "output - 2")
       // excluding the coordinate button "X:  0, Y:  0"
@@ -77,9 +80,8 @@ test("To Be Plotted variables are updated when schematic nets change", async ({ 
 
   // Click the found net
   await page.mouse.move(targetX, targetY);
-  await page.waitForTimeout(100);
   await page.mouse.click(targetX, targetY);
-  await page.waitForTimeout(500);
+  await expect(page.getByText(/Selected \(1\):/)).toBeVisible({ timeout: 5000 });
 
   // Exit "To be plotted" mode
   await page.keyboard.press("Escape");
@@ -87,11 +89,9 @@ test("To Be Plotted variables are updated when schematic nets change", async ({ 
   // 5. Verify it's in the plot list
   // Go to Simulate tab
   await page.getByRole("tab", { name: /simulation/i }).first().click();
-  await page.waitForTimeout(500);
 
   // Open the "To Be Plotted" dropdown to view the items
   await page.getByRole("button", { name: /To Be Plotted/ }).click();
-  await page.waitForTimeout(200);
   
   // The exact net name should be in the dropdown
   await expect(page.getByRole("menuitem", { name: new RegExp(`Remove .*${foundNetName}.* from To Be Plotted`, 'i') })).toBeVisible();
@@ -115,7 +115,6 @@ test("To Be Plotted variables are updated when schematic nets change", async ({ 
   // Switch back to simulate to regenerate netlist
   // The old "to be plotted" variable should be removed automatically
   await page.getByRole("button", { name: /Simulate/i }).first().click();
-  await page.waitForTimeout(500);
 
   // The dropdown shouldn't have the old net anymore
   // In fact, if we renamed the only plotted net, the menu might go back to "To Be Plotted" without the dropdown

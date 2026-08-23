@@ -31,6 +31,7 @@ import { SimulationType } from "./types/commonTypes";
 import { dialogTheme } from "./styles/uiThemes.ts";
 import { handleFullscreen } from "./utils/fullscreenUtils.tsx";
 import { filterInternalSignals } from "./components/ScientificPlot/utils/resultFiltering";
+import { validateEEcircuitFile } from "./utils/eeCircuitFileValidator";
 
 const loadSchematicComponent = () => import("./schematic/schematic.tsx");
 const Schematic = React.lazy(loadSchematicComponent);
@@ -123,6 +124,7 @@ const EEcircuitApp: React.FC = () => {
 
   // About dialog state
   const [showAboutDialog, setShowAboutDialog] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
 
   // Preload heavier modules after first paint to improve perceived load on slow devices
   React.useEffect(() => {
@@ -227,9 +229,14 @@ const EEcircuitApp: React.FC = () => {
   } = useAppStore();
 
   // Ref to store promise resolver for schematic save operations (keep this as it's for async operations)
-  const schematicSaveResolverRef = useRef<
-    ((data: SchematicType) => void) | null
-  >(null);
+  const saveRequestIdRef = useRef(0);
+  const activeSaveRequestRef = useRef<{
+    id: number;
+    resolve: (data: SchematicType) => void;
+    reject: (error: Error) => void;
+    timeout: ReturnType<typeof setTimeout>;
+  } | null>(null);
+  const saveInProgressRef = useRef(false);
 
   // Ref for the tabs container to handle drag and drop
   const tabsContainerRef = useRef<HTMLDivElement>(null);
@@ -240,9 +247,11 @@ const EEcircuitApp: React.FC = () => {
       setCurrentSchematic(schematicData); // Store in Zustand store
 
       // If there's a pending save operation, resolve it with the new data
-      if (schematicSaveResolverRef.current) {
-        schematicSaveResolverRef.current(schematicData);
-        schematicSaveResolverRef.current = null; // Clear the resolver
+      const request = activeSaveRequestRef.current;
+      if (request) {
+        activeSaveRequestRef.current = null;
+        clearTimeout(request.timeout);
+        request.resolve(schematicData);
       }
     },
     [setCurrentSchematic]
@@ -337,6 +346,24 @@ const EEcircuitApp: React.FC = () => {
     );
   }, []);
 
+  const waitForCanvasReady = React.useCallback((): Promise<void> => {
+    if (document.querySelector('[data-canvas-ready="true"]')) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const timeout = globalThis.setTimeout(() => {
+        observer.disconnect();
+        reject(new Error("Schematic canvas did not become ready in time."));
+      }, 5000);
+      const observer = new MutationObserver(() => {
+        if (document.querySelector('[data-canvas-ready="true"]')) {
+          globalThis.clearTimeout(timeout);
+          observer.disconnect();
+          resolve();
+        }
+      });
+      observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ["data-canvas-ready"] });
+    });
+  }, []);
+
   // Unified file processing used by both drag-and-drop and the Open button
   const processSchematicFile = React.useCallback(
     async (file: File) => {
@@ -362,29 +389,25 @@ const EEcircuitApp: React.FC = () => {
         setIsSchematicLoading(true);
         setSchematicLoadingMessage("Processing file...");
 
-        const content = await file.text();
-        const parsedContent: EEcircuitFile = JSON.parse(content);
-
-        // check the schema version is correct
-        if (parsedContent.schema !== "EEcircuitV1") {
-          console.error(
-            "Invalid schema version. Please drop a valid EEcircuit file."
-          );
-          setDragBox(false);
-          setIsSchematicLoading(false);
-          return;
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error("File is too large. EEcircuit files must be smaller than 10 MiB.");
         }
+        const content = await file.text();
+        let parsedJson: unknown;
+        try {
+          parsedJson = JSON.parse(content);
+        } catch {
+          throw new Error("The selected file is not valid JSON.");
+        }
+        const validation = validateEEcircuitFile(parsedJson);
+        if (!validation.valid) throw new Error(validation.error);
+        const parsedContent = validation.file;
 
         if (parsedContent.schematic) {
           setSchematicLoadingMessage("Loading schematic...");
 
-          // Ensure minimum loading time for better UX (run both operations in parallel)
-          await Promise.all([
-            loadSchematic(parsedContent.schematic),
-            new Promise((resolve) => setTimeout(resolve, 400)), // Minimum 400ms visible time
-          ]);
-
-          setIsSchematicLoading(false);
+          await waitForCanvasReady();
+          await loadSchematic(parsedContent.schematic);
         }
 
         // Restore simulation configurations if they exist
@@ -415,6 +438,7 @@ const EEcircuitApp: React.FC = () => {
           setSimulationConfig(undefined);
           setSelectedSimType("None");
         }
+        setIsSchematicLoading(false);
       } catch (error) {
         console.error("Failed to load schematic from file:", error);
         setDragBox(false);
@@ -431,6 +455,7 @@ const EEcircuitApp: React.FC = () => {
       setDragBox,
       setIsSchematicLoading,
       setSchematicLoadingMessage,
+      waitForCanvasReady,
     ]
   );
 
@@ -505,38 +530,40 @@ const EEcircuitApp: React.FC = () => {
   const waitForSchematicExport =
     React.useCallback((): Promise<SchematicType> => {
       return new Promise((resolve, reject) => {
-        // Set up a timeout as a fallback (much shorter than before)
+        const id = ++saveRequestIdRef.current;
+        // Five seconds is the fallback for a canvas that fails to answer.
         const timeout = setTimeout(() => {
-          schematicSaveResolverRef.current = null;
+          if (activeSaveRequestRef.current?.id === id) {
+            activeSaveRequestRef.current = null;
+          }
           reject(new Error("Schematic export timeout - no response received"));
         }, 5000); // 5 second fallback timeout
 
-        // Store the resolver to be called when schematic data is received
-        schematicSaveResolverRef.current = (data: SchematicType) => {
-          clearTimeout(timeout);
-          resolve(data);
-        };
+        activeSaveRequestRef.current = { id, resolve, reject, timeout };
       });
     }, []);
 
   // Handler for saving the EEcircuit file
   const handleSaveFile = React.useCallback(async () => {
+    if (saveInProgressRef.current) return;
+    saveInProgressRef.current = true;
+    setIsSaving(true);
     try {
       // Switch to schematic tab if not already there to ensure canvas is active
       if (mainTabValue !== "schematic") {
         setMainTabValue("schematic");
-        // Wait for tab switch to complete
-        await new Promise((resolve) => setTimeout(resolve, 500));
       }
+      await waitForCanvasReady();
 
-      // Trigger schematic export and wait for the response
+      // Install the resolver before triggering export so synchronous responses
+      // cannot be lost.
+      const exportPromise = waitForSchematicExport();
       sendCommand({
         command: "export",
         exportType: "schematic",
       });
 
-      // Wait for schematic data using promise-based approach (no fixed timeout!)
-      const latestSchematicData = await waitForSchematicExport();
+      const latestSchematicData = await exportPromise;
 
       const validSimConfigs = allSimulationConfigs.filter(
         (config: SimulationType) => config.type !== "None"
@@ -578,11 +605,15 @@ const EEcircuitApp: React.FC = () => {
     } catch (error) {
       console.error("Failed to save file:", error);
       alert("Failed to save file. Please try again.");
+    } finally {
+      saveInProgressRef.current = false;
+      setIsSaving(false);
     }
   }, [
     allSimulationConfigs,
     mainTabValue,
     waitForSchematicExport,
+    waitForCanvasReady,
     setMainTabValue,
   ]); // Added setMainTabValue
 
@@ -752,6 +783,7 @@ const EEcircuitApp: React.FC = () => {
           <React.Suspense fallback={<HeaderButtonsSkeleton />}>
             <HeaderButtons
               handleSaveFile={handleSaveFile}
+              isSaving={isSaving}
               onOpenFile={processSchematicFile}
               setShowNewSchematicDialog={setShowNewSchematicDialog}
               isDarkMode={isDarkMode}
@@ -780,6 +812,7 @@ const EEcircuitApp: React.FC = () => {
 
               <HeaderButtons
                 handleSaveFile={handleSaveFile}
+                isSaving={isSaving}
                 onOpenFile={processSchematicFile}
                 setShowNewSchematicDialog={setShowNewSchematicDialog}
                 isDarkMode={isDarkMode}

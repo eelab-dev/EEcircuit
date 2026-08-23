@@ -63,7 +63,7 @@ The store is now split into the following modules:
 **Responsibility:** Plot data management and variable selection
 
 - `isToBePlottedMode`: Whether the to-be-plotted selection mode is active
-- `toBePlotted`: Variables marked for plotting
+- `toBePlotted`: Transient schematic-net selections; not part of saved files
 - `selectedVariables`: Currently selected plot variables
 - `hoveredVariable`: Currently hovered variable
 
@@ -108,7 +108,7 @@ export const useAppStore = create<AppStore>()((...a) => ({
 
 ## Clean Architecture
 
-This modular approach provides a clean, maintainable architecture without any backward compatibility layers. Components should access the store directly using specific selectors.
+This modular approach provides a clean, maintainable architecture without any backward compatibility layers. Components should access the store directly using specific selectors. Bracket results update progressively, worker sessions cancel and ignore stale or timed-out responses, and reset-selection selects every output variable from the current result. Plot zoom/pan is preserved only when the ordered X-plus-output schema is unchanged.
 
 ## Benefits
 

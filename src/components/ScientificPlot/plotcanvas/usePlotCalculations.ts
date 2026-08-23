@@ -345,7 +345,7 @@ export const usePlotCalculations = ({
       // This ensures identical axis scaling between dual canvases since they process the same X-axis data
 
       // Set original data bounds for zoom controller by calculating from line data
-      if (zoomController.current && !zoomController.current.hasOriginalDataBounds() && lineDataRef.current) {
+      if (zoomController.current && lineDataRef.current) {
         // Calculate bounds manually from line data for consistency
         let dataMinX = Infinity;
         let dataMaxX = -Infinity;
@@ -353,7 +353,7 @@ export const usePlotCalculations = ({
 
         lineDataRef.current.forEach(line => {
           const extendedLine = line as ExtendedLineConfig;
-          if (extendedLine.variableName && selectedVariables.includes(extendedLine.variableName)) {
+          if (extendedLine.variableName) {
             const points = line.points;
             for (let i = 0; i < points.length; i += 2) {
               const x = points[i];
@@ -647,27 +647,6 @@ export const usePlotCalculations = ({
 
 
 
-    plotLineRef.current.draw();
-
-    // Draw crosshair if visible
-    if (showCrosshair && crosshairRef.current) {
-      crosshairRef.current.draw();
-    }
-
-    // Draw snap circle if in snap mode
-    if (showCrosshair && crosshairSnapToLines && snapCircleRef.current) {
-      snapCircleRef.current.draw();
-    }
-
-    // Draw zoom components if zooming
-    if (
-      zoomController.current?.getIsZooming() &&
-      zoomLinesRef.current &&
-      zoomRegionRef.current
-    ) {
-      zoomLinesRef.current.draw();
-      zoomRegionRef.current.draw();
-    }
   }, [
     glRef,
     plotLineRef,

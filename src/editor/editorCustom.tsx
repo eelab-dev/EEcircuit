@@ -6,6 +6,20 @@ import * as MonacoEditor from "monaco-editor";
 import "./useWorker.ts";
 //import * as monaco from "monaco-editor";
 
+let spiceLanguageServicesRegistered = false;
+const spiceLanguageDisposables: Array<{ dispose: () => void }> = [];
+
+export function disposeSpiceLanguageServices(): void {
+  while (spiceLanguageDisposables.length > 0) {
+    spiceLanguageDisposables.pop()?.dispose();
+  }
+  spiceLanguageServicesRegistered = false;
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(disposeSpiceLanguageServices);
+}
+
 // https://www.gitmemory.com/issue/microsoft/monaco-editor/1423/530617327
 interface MonarchLanguageConfiguration
   extends MonacoEditor.languages.IMonarchLanguage {
@@ -38,7 +52,7 @@ const EditorCustom = ({
   height,
   options,
 }: EditorCustomType) => {
-  const [isMonacoReady, setIsMonacoReady] = useState(true);
+  const [isMonacoReady, setIsMonacoReady] = useState(false);
   const editorCodeRef =
     useRef<MonacoEditor.editor.IStandaloneCodeEditor | null>(null);
   const editorRef = useRef<typeof MonacoEditor.editor | null>(null);
@@ -47,6 +61,7 @@ const EditorCustom = ({
   const initialEditorThemeRef = useRef<string>(
     theme === "light" ? "vs" : "vs-dark"
   );
+  const initialEditorValueRef = useRef(value);
 
   useEffect(() => {
     const f = () => {
@@ -59,6 +74,7 @@ const EditorCustom = ({
       
       editorRef.current = monacoEditor.editor;
 
+      if (!spiceLanguageServicesRegistered) {
       monacoEditor.languages.register({ id: "spice" });
       monacoEditor.languages.setMonarchTokensProvider("spice", {
         defaultToken: "invalid",
@@ -165,7 +181,7 @@ const EditorCustom = ({
           {
             label: ".include",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "The Lodash library exported as Node.js modules.",
+            documentation: "Include an external SPICE model or netlist file.",
             insertText: "include ${1:model_file} ",
             insertTextRules:
               monacoEditor.languages.CompletionItemInsertTextRule
@@ -175,7 +191,7 @@ const EditorCustom = ({
           {
             label: ".tran",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "The Lodash library exported as Node.js modules.",
+            documentation: "Run a transient analysis with a time step and stop time.",
             insertText: "tran ${1:step} ${2:max_time} ",
             insertTextRules:
               monacoEditor.languages.CompletionItemInsertTextRule
@@ -185,7 +201,7 @@ const EditorCustom = ({
           {
             label: ".dc",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "Sweep a voltage or current source over a range.",
             insertText:
               "dc ${1:source} ${2:min_voltage} ${3:max_voltage} ${4:step} ",
             insertTextRules:
@@ -196,7 +212,7 @@ const EditorCustom = ({
           /*{
             label: ".dc (sweep)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "Run an AC frequency sweep.",
             insertText:
               "dc ${1:source_1st} ${2:min_voltage} ${3:max_voltage} ${4:step} ${5:source_2nd} ${6:min_voltage} ${7:max_voltage} ${8:step} ",
             insertTextRules: monacoEditor.languages.CompletionItemInsertTextRule.InsertAsSnippet,
@@ -205,7 +221,7 @@ const EditorCustom = ({
           {
             label: ".ac",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "Select voltages or currents to save in the simulation output.",
             insertText:
               "ac ${1:dec | oct | lin} ${2:number_point} ${3:fstart} ${4:fstop} ",
             insertTextRules:
@@ -216,7 +232,7 @@ const EditorCustom = ({
           {
             label: ".save",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "Define a reusable SPICE parameter.",
             insertText: "save ${1:v(node) | i(node)}",
             insertTextRules:
               monacoEditor.languages.CompletionItemInsertTextRule
@@ -226,7 +242,7 @@ const EditorCustom = ({
           {
             label: ".parameter",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "Define a voltage-controlled voltage source.",
             insertText: "parameter ${1:x} = ${2:y}",
             insertTextRules:
               monacoEditor.languages.CompletionItemInsertTextRule
@@ -248,7 +264,7 @@ const EditorCustom = ({
           {
             label: "R (resistor)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "SPICE component syntax and parameters.",
             insertText: "R${1:number} ${2:node1} ${3:node2} ${4:value}",
             insertTextRules:
               monacoEditor.languages.CompletionItemInsertTextRule
@@ -258,7 +274,7 @@ const EditorCustom = ({
           {
             label: "C (capacitor)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "SPICE component syntax and parameters.",
             insertText: "C${1:number} ${2:node1} ${3:node2} ${4:value}",
             insertTextRules:
               monacoEditor.languages.CompletionItemInsertTextRule
@@ -268,7 +284,7 @@ const EditorCustom = ({
           {
             label: "L (inductance)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "SPICE component syntax and parameters.",
             insertText: "L${1:number} ${2:node1} ${3:node2} ${4:value}",
             insertTextRules:
               monacoEditor.languages.CompletionItemInsertTextRule
@@ -278,7 +294,7 @@ const EditorCustom = ({
           {
             label: "M (mosfet)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "SPICE component syntax and parameters.",
             insertText:
               "M${1:number} ${2:d} ${3:g} ${4:s} ${5:b} ${6:model} W=${7:w} L=${8:l} ",
             insertTextRules:
@@ -289,7 +305,7 @@ const EditorCustom = ({
           {
             label: "V (voltage source)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "SPICE component syntax and parameters.",
             insertText: "V${1:number} ${2:node1} ${3:node2} ${4:dc_voltage}",
             insertTextRules:
               monacoEditor.languages.CompletionItemInsertTextRule
@@ -299,7 +315,7 @@ const EditorCustom = ({
           {
             label: "V (voltage source - pulsed)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "SPICE component syntax and parameters.",
             insertText:
               "V${1:number} ${2:node1} ${3:node2} pulse (${4:v1} ${5:v2} ${6:time_delay} ${7:rise_time} ${8:fall_time} ${9:width} ${10:period} ${11:phase})",
             insertTextRules:
@@ -310,7 +326,7 @@ const EditorCustom = ({
           {
             label: "V (voltage source - sinusoidal)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "SPICE component syntax and parameters.",
             insertText:
               "V${1:number} ${2:node1} ${3:node2} SIN (${4:offset_voltage} ${5:amplitude} ${6:frequency} ${7:delay} ${8:damping_factor} ${9:phase})",
             insertTextRules:
@@ -321,7 +337,7 @@ const EditorCustom = ({
           {
             label: "I (current source)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "SPICE component syntax and parameters.",
             insertText: "I${1:number} ${2:node1} ${3:node2} ${4:dc_current}",
             insertTextRules:
               monacoEditor.languages.CompletionItemInsertTextRule
@@ -331,7 +347,7 @@ const EditorCustom = ({
           {
             label: "I (current source - pulsed)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "SPICE component syntax and parameters.",
             insertText:
               "I${1:number} ${2:node1} ${3:node2} ${4:dc_current} pulse (${5:i1} ${6:i2} ${7:time_delay} ${8:rise_time} ${9:fall_time} ${10:width} ${11:period} ${12:phase})",
             insertTextRules:
@@ -342,7 +358,7 @@ const EditorCustom = ({
           {
             label: "G (VCCS)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "SPICE component syntax and parameters.",
             insertText:
               "G${1:number} ${2:n+} ${3:n-} ${4:nc+} ${5:nc-} ${6:value}",
             insertTextRules:
@@ -353,7 +369,7 @@ const EditorCustom = ({
           {
             label: "E (VCVS)",
             kind: monacoEditor.languages.CompletionItemKind.Function,
-            documentation: "Fast, unopinionated, minimalist web framework",
+            documentation: "SPICE component syntax and parameters.",
             insertText:
               "E${1:number} ${2:n+} ${3:n-} ${4:nc+} ${5:nc-} ${6:value}",
             insertTextRules:
@@ -364,7 +380,7 @@ const EditorCustom = ({
         ];
       };
 
-      monacoEditor.languages.registerCompletionItemProvider("spice", {
+      spiceLanguageDisposables.push(monacoEditor.languages.registerCompletionItemProvider("spice", {
         triggerCharacters: ["."],
         provideCompletionItems: function (
           model: MonacoEditor.editor.ITextModel,
@@ -400,7 +416,9 @@ const EditorCustom = ({
             suggestions: createDependencyProposalsDotCommands(range),
           };
         },
-      });
+      }));
+      spiceLanguageServicesRegistered = true;
+      }
 
       setIsMonacoReady(true);
     };
@@ -414,8 +432,7 @@ const EditorCustom = ({
       editorCodeRef.current = monacoRef.current.editor.create(
         containerRef.current,
         {
-          value:
-            "// First line\nfunction hello() {\n\talert('Hello world!');\n}\n// Last line",
+          value: initialEditorValueRef.current ?? "",
           language: "spice",
           roundedSelection: false,
           scrollBeyondLastLine: false,
@@ -493,7 +510,7 @@ const EditorCustom = ({
     return () => {
       disposable.dispose();
     };
-  }, [language, monacoEvent]);
+  }, [language, monacoEvent, isMonacoReady]);
 
   useEffect(() => {
     if (!editorRef.current || !editorCodeRef.current) {

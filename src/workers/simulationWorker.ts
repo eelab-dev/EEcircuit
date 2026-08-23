@@ -2,9 +2,13 @@ import { Simulation, ResultType } from "eecircuit-engine";
 
 interface WorkerMessage {
   netlist: string;
+  sessionId: string;
+  requestId: string;
 }
 
 interface WorkerResponse {
+  sessionId: string;
+  requestId: string;
   success: boolean;
   result?: ResultType;
   errorMessage?: string;
@@ -21,7 +25,7 @@ async function initializeSimulation(): Promise<void> {
   }
 }
 
-async function runSimulation(netlist: string): Promise<WorkerResponse> {
+async function runSimulation(netlist: string, sessionId: string, requestId: string): Promise<WorkerResponse> {
   try {
     await initializeSimulation();
     
@@ -50,6 +54,8 @@ async function runSimulation(netlist: string): Promise<WorkerResponse> {
 
       if (!hasData || !hasVariables || !hasDataPoints) {
         return {
+          sessionId,
+          requestId,
           success: false,
           errorMessage: 'Simulation completed but returned empty results',
           errorDetails: errorMessages
@@ -57,12 +63,16 @@ async function runSimulation(netlist: string): Promise<WorkerResponse> {
       }
 
       return {
+        sessionId,
+        requestId,
         success: true,
         result,
         errorDetails: errorMessages
       };
     } else {
       return {
+        sessionId,
+        requestId,
         success: false,
         errorMessage: 'Simulation failed to run',
         errorDetails: errorMessages
@@ -72,6 +82,8 @@ async function runSimulation(netlist: string): Promise<WorkerResponse> {
     const errorMessages =
       (typeof simulation?.getError === "function" ? simulation?.getError() : []) ?? [];
     return {
+      sessionId,
+      requestId,
       success: false,
       errorMessage: error instanceof Error ? error.message : 'Unknown simulation error',
       errorDetails: errorMessages
@@ -81,17 +93,19 @@ async function runSimulation(netlist: string): Promise<WorkerResponse> {
 
 // Handle messages from main thread
 self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
-  const { netlist } = event.data;
+  const { netlist, sessionId, requestId } = event.data;
   
-  if (!netlist) {
+  if (!netlist || !sessionId || !requestId) {
     self.postMessage({
+      sessionId,
+      requestId,
       success: false,
-      errorMessage: 'No netlist provided'
+      errorMessage: 'A netlist, sessionId, and requestId are required'
     } as WorkerResponse);
     return;
   }
 
-  const response = await runSimulation(netlist);
+  const response = await runSimulation(netlist, sessionId, requestId);
   self.postMessage(response);
 });
 
@@ -99,6 +113,8 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
 self.addEventListener('error', (error) => {
   console.error('Simulation worker error:', error);
   self.postMessage({
+    sessionId: "unknown",
+    requestId: "unknown",
     success: false,
     errorMessage: `Worker error: ${error.message}`
   } as WorkerResponse);
@@ -108,7 +124,9 @@ self.addEventListener('error', (error) => {
 self.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection in simulation worker:', event.reason);
   self.postMessage({
+    sessionId: "unknown",
+    requestId: "unknown",
     success: false,
-    errorMessage: `Unhandled promise rejection: ${event.reason}`
+    errorMessage: `Unhandled promise rejection: ${event.reason instanceof Error ? event.reason.message : String(event.reason)}`
   } as WorkerResponse);
 });

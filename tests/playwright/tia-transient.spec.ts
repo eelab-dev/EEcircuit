@@ -1,17 +1,13 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import path from 'path';
 
 test('verify tia transient simulation', async ({ page }) => {
   // 1. Initial Setup
-  await page.goto('http://localhost:5173/');
-  await page.waitForTimeout(1000);
+  await page.goto('/');
 
   // 2. Load Test Circuit File (TIA)
   console.log('Step: Load Test Circuit File');
-  const fileInputs = await page.locator('input[type="file"]').all();
-  for (const input of fileInputs) {
-      await input.setInputFiles(path.resolve('tests/test-circuit-tia.json'));
-  }
+  await page.locator('input[type="file"]').first().setInputFiles(path.resolve('tests/test-circuit-tia.json'));
   
   // 3. Click Simulate Button
   console.log('Step: Click Simulate Button');
@@ -55,6 +51,4 @@ test('verify tia transient simulation', async ({ page }) => {
   
   console.log('Verification Complete');
   
-  // Wait 5s as requested
-  await page.waitForTimeout(5000);
 });

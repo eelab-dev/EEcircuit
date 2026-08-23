@@ -225,7 +225,50 @@ export class ZoomController {
    * - Confusing empty areas to the left/right of actual plot data
    */
   setOriginalDataBounds(min: number, max: number): void {
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min >= max) {
+      this.originalDataBounds = null;
+      this.customXBounds = null;
+      this.panOffsetX = 0;
+      this.notifyZoomStateChange();
+      return;
+    }
+
     this.originalDataBounds = { min, max };
+
+    if (!this.customXBounds) return;
+
+    const current = this.getZoomBounds();
+    const span = current ? current.max - current.min : NaN;
+    const hasValidOverlap = current && Number.isFinite(current.min) && Number.isFinite(current.max) &&
+      Number.isFinite(span) && span > 0 && current.max > min && current.min < max;
+    if (!hasValidOverlap || span > max - min) {
+      this.customXBounds = null;
+      this.panOffsetX = 0;
+      this.notifyZoomStateChange();
+      return;
+    }
+
+    const clampedMin = Math.min(Math.max(current.min, min), max - span);
+    this.customXBounds = { min: clampedMin, max: clampedMin + span };
+    this.panOffsetX = 0;
+    this.notifyZoomStateChange();
+  }
+
+  getOriginalDataBounds(): { min: number; max: number } | null {
+    return this.originalDataBounds ? { ...this.originalDataBounds } : null;
+  }
+
+  getPanOffset(): number {
+    return this.panOffsetX;
+  }
+
+  /** Reset view state when the result schema changes. */
+  resetForNewResult(): void {
+    this.clearZoomState();
+    this.customXBounds = null;
+    this.originalDataBounds = null;
+    this.panOffsetX = 0;
+    this.isApplyingExternalPanOffset = false;
   }
 
   /**
@@ -693,10 +736,11 @@ export class ZoomController {
   cleanup(): void {
     this.clearZoomState();
     this.customXBounds = null;
+    this.originalDataBounds = null;
     this.panOffsetX = 0; // Reset pan offset on cleanup
-
-    // Don't null the refs as they might be reused
-    console.log("ZoomController: Cleaned up");
+    this.onZoomStateChangeCb = null;
+    this.onPanOffsetChangeCb = null;
+    this.onWebglRedrawCb = null;
   }
 
   /**

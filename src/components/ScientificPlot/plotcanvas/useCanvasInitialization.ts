@@ -57,6 +57,7 @@ export const useCanvasInitialization = ({
   const lineDataRef = useRef<ExtendedLineConfig[]>([]);
   const lineThicknessRef = useRef(lineThickness);
   const colorMapRef = useRef<Map<string, PlotColor>>(new Map());
+  const previousResultSchemaRef = useRef<string | null>(null);
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
 
   // Keep lineThicknessRef updated
@@ -94,6 +95,12 @@ export const useCanvasInitialization = ({
   // Initialize canvas and WebGL plot only once when results change
   useEffect(() => {
     if (!canvasRef.current || results.length === 0) return;
+
+    const resultSchema = JSON.stringify(results[0]?.variableNames ?? []);
+    if (previousResultSchemaRef.current !== null && previousResultSchemaRef.current !== resultSchema) {
+      zoomController.current.resetForNewResult();
+    }
+    previousResultSchemaRef.current = resultSchema;
 
     let cancelled = false;
     const canvas = canvasRef.current;
@@ -177,17 +184,6 @@ export const useCanvasInitialization = ({
 
       zoomRegionRef.current.initPolygons([zoomRegion]);
 
-      // Initialize zoom controller with the WebGL components
-      if (canvasRef.current && zoomLinesRef.current && zoomRegionRef.current) {
-        zoomController.current.initialize(
-          zoomLinesRef.current,
-          zoomRegionRef.current,
-          canvasRef.current,
-          themeIsDarkMode,
-          plotLineRef.current
-        );
-      }
-
       const firstResult = results[0];
       if (!firstResult) {
         console.error("No results available for canvas initialization");
@@ -221,6 +217,16 @@ export const useCanvasInitialization = ({
         glRef.current,
         totalLines
       );
+
+      if (canvasRef.current && zoomLinesRef.current && zoomRegionRef.current) {
+        zoomController.current.initialize(
+          zoomLinesRef.current,
+          zoomRegionRef.current,
+          canvasRef.current,
+          themeIsDarkMode,
+          plotLineRef.current
+        );
+      }
 
       // Prepare line data for all variables (excluding X-axis at index 0)
       const allLineData: LineConfig[] = [];
@@ -374,8 +380,22 @@ export const useCanvasInitialization = ({
         plotLineRef.current.cleanup();
         plotLineRef.current = null;
       }
+      crosshairRef.current?.cleanup();
+      snapCircleRef.current?.cleanup();
+      zoomLinesRef.current?.cleanup();
+      zoomRegionRef.current?.cleanup();
+      crosshairRef.current = null;
+      snapCircleRef.current = null;
+      zoomLinesRef.current = null;
+      zoomRegionRef.current = null;
+      glRef.current = null;
+      lineDataRef.current = [];
     };
   }, [results, initSnapCircle, isDarkMode]);
+
+  useEffect(() => () => {
+    zoomController.current.cleanup();
+  }, []);
 
   // Handle line thickness changes efficiently
   useEffect(() => {

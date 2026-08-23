@@ -25,36 +25,41 @@ jobs:
         with:
           repository: eelab-dev/EEcircuit
           ref: next # Checkout the "next" branch
+          path: EEcircuit
 
-      - name: Update Dependencies
-        run: npx --yes npm-check-updates -u
+      - name: Checkout local schematic dependency
+        uses: actions/checkout@v4
+        with:
+          repository: eelab-dev/EEcircuit-schematic
+          path: EEcircuit-schematic
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Install locked dependencies
+        run: npm ci
+        working-directory: EEcircuit
 
-      - name: Update engine to next version
-        run: npm install eecircuit-engine@next
+      - name: Audit dependencies
+        run: npm audit
+        working-directory: EEcircuit
 
       - name: Build Project with Vite
         run: npm run build
+        working-directory: EEcircuit
 
       - name: Deploy to Vercel
         run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: EEcircuit
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
+        working-directory: EEcircuit
 
       - name: Run Playwright tests
-        run: npx playwright test -g "EEcircuit Next"
+        run: xvfb-run -a npx playwright test --project=chrome --workers=1 -g "EEcircuit Next"
+        working-directory: EEcircuit
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report
-          path: playwright-report/
+          path: EEcircuit/playwright-report/
           retention-days: 30
-
-      # auto commit
-      - uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: Auto updates after tests

@@ -1,7 +1,4 @@
-import { test, expect } from '@playwright/test';
-
-// Configurable delay for visual verification (in milliseconds)
-const VISUAL_DELAY = 1000;
+import { test, expect } from './fixtures';
 
 test('Log button interaction', async ({ page }) => {
   // Enable console logging with filter
@@ -13,15 +10,13 @@ test('Log button interaction', async ({ page }) => {
   });
 
   // 1. Open the app (Use correct port 5173)
-  await page.goto('http://localhost:5173/');
-  await page.waitForTimeout(VISUAL_DELAY); 
+  await page.goto('/');
 
   // 2. Load Demo Circuit (Schematic Tab)
   console.log('Step: Load Demo Circuit');
   await page.getByLabel('New Schematic').first().click();
   await page.getByRole('button', { name: 'Load Demo' }).click();
   await expect(page.getByRole('dialog')).toBeHidden({ timeout: 5000 });
-  await page.waitForTimeout(VISUAL_DELAY); 
   console.log('Demo Loaded');
 
   // 3. Click Simulate Button 
@@ -30,7 +25,6 @@ test('Log button interaction', async ({ page }) => {
   
   // Verify we are on Simulate tab 
   await expect(page.getByText('Simulation Configuration', { exact: false }).first()).toBeVisible({ timeout: 10000 });
-  await page.waitForTimeout(VISUAL_DELAY);
   console.log('Transited to Simulate Tab');
 
   // 4. Select Transient (if not already)
@@ -46,7 +40,6 @@ test('Log button interaction', async ({ page }) => {
   // Explicitly config Transient to ensure valid simulation
   await page.getByLabel('Stop Time').fill('10m');
   await page.getByLabel('Time Step').fill('100u');
-  await page.waitForTimeout(VISUAL_DELAY);
   
   console.log('Transient Selected & Configured');
 
@@ -61,7 +54,6 @@ test('Log button interaction', async ({ page }) => {
   
   // Wait for sidebar
   await expect(page.getByText('Plot Variables')).toBeVisible({ timeout: 20000 });
-  await page.waitForTimeout(VISUAL_DELAY);
   console.log('Transited to Plot Tab');
 
   // 7. Test Log Buttons
@@ -78,13 +70,11 @@ test('Log button interaction', async ({ page }) => {
   await logXBtn.click();
   // Verify pressed state
   await expect(logXBtn).toHaveAttribute('aria-pressed', 'true');
-  await page.waitForTimeout(VISUAL_DELAY);
   console.log('Log X Toggled ON');
   
   // Click to toggle OFF
   await logXBtn.click();
   await expect(logXBtn).toHaveAttribute('aria-pressed', 'false');
-  await page.waitForTimeout(VISUAL_DELAY);
   console.log('Log X Toggled OFF');
 
   // Test Log Y Button (Single Canvas)
@@ -95,7 +85,6 @@ test('Log button interaction', async ({ page }) => {
       await expect(logYBtn).toHaveAttribute('aria-pressed', 'false');
       await logYBtn.click();
       await expect(logYBtn).toHaveAttribute('aria-pressed', 'true');
-      await page.waitForTimeout(VISUAL_DELAY);
       console.log('Log Y Toggled ON');
   } else {
       console.log('Log Y button not visible (might be dual mode?)');
@@ -117,7 +106,6 @@ test('Log button interaction', async ({ page }) => {
   
   // Switch to Dual
   await dualBtn.click();
-  await page.waitForTimeout(VISUAL_DELAY);
   console.log('Switched to Dual');
   
   // Verify dual mode elements
@@ -135,7 +123,6 @@ test('Log button interaction', async ({ page }) => {
   await expect(logY1Btn).toHaveAttribute('aria-pressed', 'false');
   await logY1Btn.click();
   await expect(logY1Btn).toHaveAttribute('aria-pressed', 'true');
-  await page.waitForTimeout(VISUAL_DELAY);
   console.log('Log Y1 Toggled ON');
   await logY1Btn.click(); // Toggle back off
   
@@ -143,13 +130,11 @@ test('Log button interaction', async ({ page }) => {
   await expect(logY2Btn).toHaveAttribute('aria-pressed', 'false');
   await logY2Btn.click();
   await expect(logY2Btn).toHaveAttribute('aria-pressed', 'true');
-  await page.waitForTimeout(VISUAL_DELAY);
   console.log('Log Y2 Toggled ON');
   await logY2Btn.click(); // Toggle back off
   
   // Switch back to Single
   await singleBtn.click();
-  await page.waitForTimeout(VISUAL_DELAY);
   console.log('Switched back to Single');
   
   // Verify return to single mode state

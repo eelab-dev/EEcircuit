@@ -19,6 +19,7 @@ import StatusIcon from "./StatusIcon";
 
 interface HeaderButtonsProps {
   handleSaveFile: () => void;
+  isSaving: boolean;
   onOpenFile: (file: File) => void;
   setShowNewSchematicDialog: (show: boolean) => void;
   isDarkMode: boolean;
@@ -33,6 +34,7 @@ interface HeaderButtonsProps {
 
 const HeaderButtons: React.FC<HeaderButtonsProps> = ({
   handleSaveFile,
+  isSaving,
   onOpenFile,
   setShowNewSchematicDialog,
   isDarkMode,
@@ -112,6 +114,7 @@ const HeaderButtons: React.FC<HeaderButtonsProps> = ({
           size="sm"
           variant="ghost"
           onClick={handleSaveFile}
+          disabled={isSaving}
         >
           <Download size={16} />
         </IconButton>

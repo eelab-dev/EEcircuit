@@ -1,107 +1,32 @@
 import { ResultType } from "eecircuit-engine";
 
-/**
- * Export simulation results to CSV format
- * @param results - Array of simulation results
- * @param filename - Optional filename for the downloaded file
- */
-export const exportResultsToCSV = (
-  results: ResultType[],
-  filename = "simulation_results.csv"
-): void => {
-  if (!results || results.length === 0) {
-    console.warn("No results to export");
-    return;
+export function escapeCsvField(value: unknown): string {
+  const text = String(value ?? "");
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+export const resultsToCSVString = (results: ResultType[]): string | null => {
+  const result = results[0];
+  if (!result?.data || !result.variableNames) return null;
+  const rows = [result.variableNames.map(escapeCsvField).join(",")];
+  const pointCount = Math.max(0, ...result.data.map((dataSet) => dataSet.values?.length ?? 0));
+  for (let index = 0; index < pointCount; index++) {
+    rows.push(result.data.map((dataSet) => escapeCsvField(dataSet.values?.[index])).join(","));
   }
-
-  const result = results[0]!; // Use first result
-  if (!result!.data || !result!.variableNames) {
-    console.warn("Invalid result data");
-    return;
-  }
-
-  // Create CSV header
-  const headers = result!.variableNames.join(",");
-  
-  // Create CSV rows
-  const rows: string[] = [];
-  const numDataPoints = result!.data[0]?.values?.length || 0;
-  
-  for (let i = 0; i < numDataPoints; i++) {
-    const row: string[] = [];
-    result!.data.forEach((dataSet) => {
-      if (dataSet!.values && i < dataSet!.values.length) {
-        row.push(dataSet!.values[i]!.toString());
-      } else {
-        row.push("");
-      }
-    });
-    rows.push(row.join(","));
-  }
-
-  // Combine header and rows
-  const csvContent = [headers, ...rows].join("\n");
-
-  // Create and download file
-  downloadCSV(csvContent, filename);
+  return `${rows.join("\r\n")}\r\n`;
 };
 
-/**
- * Download CSV content as a file
- * @param csvContent - The CSV content as a string
- * @param filename - The filename for the download
- */
-const downloadCSV = (csvContent: string, filename: string): void => {
+export const exportResultsToCSV = (results: ResultType[], filename = "simulation_results.csv"): void => {
+  const csvContent = resultsToCSVString(results);
+  if (!csvContent) return;
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
-  
-  link.setAttribute("href", url);
-  link.setAttribute("download", filename);
+  link.href = url;
+  link.download = filename;
   link.style.visibility = "hidden";
-  
   document.body.appendChild(link);
   link.click();
-  document.body.removeChild(link);
-  
-  // Clean up the object URL
+  link.remove();
   URL.revokeObjectURL(url);
-};
-
-/**
- * Convert simulation results to CSV string format
- * @param results - Array of simulation results
- * @returns CSV content as string
- */
-export const resultsToCSVString = (results: ResultType[]): string | null => {
-  if (!results || results.length === 0) {
-    return null;
-  }
-
-  const result = results[0]!; // Use first result
-  if (!result!.data || !result!.variableNames) {
-    return null;
-  }
-
-  // Create CSV header
-  const headers = result!.variableNames.join(",");
-  
-  // Create CSV rows
-  const rows: string[] = [];
-  const numDataPoints = result!.data[0]?.values?.length || 0;
-  
-  for (let i = 0; i < numDataPoints; i++) {
-    const row: string[] = [];
-    result!.data.forEach((dataSet) => {
-      if (dataSet!.values && i < dataSet!.values.length) {
-        row.push(dataSet!.values[i]!.toString());
-      } else {
-        row.push("");
-      }
-    });
-    rows.push(row.join(","));
-  }
-
-  // Combine header and rows
-  return [headers, ...rows].join("\n");
 };

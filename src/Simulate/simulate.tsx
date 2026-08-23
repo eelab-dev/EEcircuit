@@ -46,6 +46,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
   // Local state for UI management
   const [netListToSim, setNetListToSim] = useState(netList);
+  const netListToSimRef = React.useRef(netList);
   const lastSimulationConfigRef = React.useRef<SimulationType | undefined>(undefined);
   const lastGeneratedNetlistRef = React.useRef<string | null>(null);
   const [isSimulationButtonLoading, setIsSimulationButtonLoading] = useState(false);
@@ -54,6 +55,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   const handleEditor = React.useCallback((value: string | undefined) => {
     if (value !== undefined) {
       setNetListToSim(value);
+      netListToSimRef.current = value;
     }
   }, []);
 
@@ -65,6 +67,7 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     if (hasNetlistChanged) {
       lastGeneratedNetlistRef.current = netList;
       setNetListToSim(netList);
+      netListToSimRef.current = netList;
       if (netListNeedsRefresh) {
         acknowledgeNetListRefresh();
       }
@@ -140,7 +143,9 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
       if (selectedSimType === "None") {
         // If simulation config is None, use the editor content directly
-        activeNetlist = netListToSim;
+        // Read the ref so a Run click immediately after the last Monaco input
+        // cannot observe the previous React render's value.
+        activeNetlist = netListToSimRef.current;
         // Sync store to match what's in the editor
         setNetList(activeNetlist);
       } else {

@@ -8,11 +8,14 @@ export interface SimulationWorkerResult {
   errorDetails?: string[];
   parameterValue: string;
   parameterIndex: number;
+  timedOut?: boolean;
+  cancelled?: boolean;
 }
 
 export interface ParallelSimulationOptions {
   maxWorkers?: number;
   timeout?: number; // milliseconds
+  signal?: AbortSignal;
   onProgress?: (
     completed: number,
     total: number,
@@ -49,6 +52,7 @@ class GlobalSimulationWorkerPool {
   private busyWorkers: Set<Worker> = new Set();
   private workerToThreadId: Map<Worker, number> = new Map();
   private isInitialized: boolean = false;
+  private initializationPromise: Promise<void> | null = null;
   private maxWorkers: number;
 
   private constructor(maxWorkers: number = DEFAULT_MAX_WORKERS) {
@@ -64,33 +68,29 @@ class GlobalSimulationWorkerPool {
 
   async initialize(): Promise<void> {
     if (this.isInitialized) {
-      console.log(`✓ Reusing ${this.workers.length} persistent simulation workers (startup overhead avoided)`);
       return;
     }
+    if (this.initializationPromise) return this.initializationPromise;
 
-    // Create workers
-    for (let i = 0; i < this.maxWorkers; i++) {
-      try {
-        // Create a web worker that imports and uses eecircuit-engine
-        const worker = new Worker(
-          new URL("../workers/simulationWorker.ts", import.meta.url),
-          { type: "module" }
-        );
-
-        this.workers.push(worker);
-        this.availableWorkers.push(worker);
-        this.workerToThreadId.set(worker, i); // Map worker to thread ID
-      } catch (error) {
-        console.warn(`Failed to create worker ${i}:`, error);
+    this.initializationPromise = (async () => {
+      for (let i = 0; i < this.maxWorkers; i++) {
+        try {
+          const worker = new Worker(new URL("../workers/simulationWorker.ts", import.meta.url), { type: "module" });
+          this.workers.push(worker);
+          this.availableWorkers.push(worker);
+          this.workerToThreadId.set(worker, i);
+        } catch (error) {
+          console.warn(`Failed to create worker ${i}:`, error);
+        }
       }
+      if (this.workers.length === 0) throw new Error("Failed to create any simulation workers");
+      this.isInitialized = true;
+    })();
+    try {
+      await this.initializationPromise;
+    } finally {
+      this.initializationPromise = null;
     }
-
-    if (this.workers.length === 0) {
-      throw new Error("Failed to create any simulation workers");
-    }
-
-    this.isInitialized = true;
-    console.log(`🚀 Initialized ${this.workers.length} persistent simulation workers (first-time setup)`);
   }
 
   getAvailableWorker(): Worker | null {
@@ -108,15 +108,34 @@ class GlobalSimulationWorkerPool {
     }
   }
 
-  resetForNewSession(): void {
-    // Move all busy workers back to available (in case of interruption)
-    this.busyWorkers.forEach(worker => {
-      this.availableWorkers.push(worker);
-    });
-    this.busyWorkers.clear();
+  async reconfigure(maxWorkers: number): Promise<void> {
+    const requested = Math.max(1, Math.floor(maxWorkers));
+    const desired = Math.min(requested, navigator.hardwareConcurrency || 4);
+    if (desired === this.maxWorkers && this.isInitialized) return;
+    this.maxWorkers = desired;
+    if (this.busyWorkers.size > 0) return;
+    if (this.isInitialized) this.terminate(false);
+    await this.initialize();
   }
 
-  terminate(): void {
+  replaceWorker(worker: Worker): void {
+    const threadId = this.workerToThreadId.get(worker) ?? -1;
+    this.workers = this.workers.filter((candidate) => candidate !== worker);
+    this.availableWorkers = this.availableWorkers.filter((candidate) => candidate !== worker);
+    this.busyWorkers.delete(worker);
+    this.workerToThreadId.delete(worker);
+    worker.terminate();
+    try {
+      const replacement = new Worker(new URL("../workers/simulationWorker.ts", import.meta.url), { type: "module" });
+      this.workers.push(replacement);
+      this.availableWorkers.push(replacement);
+      this.workerToThreadId.set(replacement, threadId >= 0 ? threadId : this.workers.length - 1);
+    } catch (error) {
+      console.warn("Failed to replace simulation worker:", error);
+    }
+  }
+
+  terminate(resetSingleton = true): void {
     this.workers.forEach((worker) => {
       worker.terminate();
     });
@@ -125,7 +144,8 @@ class GlobalSimulationWorkerPool {
     this.busyWorkers.clear();
     this.workerToThreadId.clear();
     this.isInitialized = false;
-    GlobalSimulationWorkerPool.instance = null;
+    this.initializationPromise = null;
+    if (resetSingleton) GlobalSimulationWorkerPool.instance = null;
   }
 
   getThreadId(worker: Worker): number {
@@ -142,6 +162,47 @@ class GlobalSimulationWorkerPool {
 
   get initialized(): boolean {
     return this.isInitialized;
+  }
+}
+
+interface ActiveSimulationSession {
+  id: string;
+  controller: AbortController;
+  done: Promise<void>;
+  resolveDone: () => void;
+}
+
+let activeSession: ActiveSimulationSession | null = null;
+
+async function runLatestSession<T>(
+  operation: (session: ActiveSimulationSession) => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
+  if (activeSession) {
+    activeSession.controller.abort();
+    await activeSession.done;
+  }
+
+  const controller = new AbortController();
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+  let resolveDone: () => void = () => undefined;
+  const done = new Promise<void>((resolve) => { resolveDone = resolve; });
+  const session: ActiveSimulationSession = {
+    id: crypto.randomUUID(),
+    controller,
+    done,
+    resolveDone,
+  };
+  activeSession = session;
+
+  try {
+    return await operation(session);
+  } finally {
+    session.resolveDone();
+    if (activeSession === session) activeSession = null;
   }
 }
 
@@ -172,36 +233,40 @@ export async function runSimulationInWorker(
   netlist: string,
   parameterValue: string,
   parameterIndex: number,
-  timeout: number = DEFAULT_TIMEOUT
+  timeout: number = DEFAULT_TIMEOUT,
+  sessionId: string = crypto.randomUUID(),
+  requestId: string = crypto.randomUUID(),
+  signal?: AbortSignal,
 ): Promise<SimulationWorkerResult> {
   return new Promise((resolve) => {
     let resolved = false;
 
-    const handleMessage = (event: MessageEvent) => {
+    const finish = (result: SimulationWorkerResult) => {
       if (resolved) return;
       resolved = true;
-
       clearTimeout(timeoutId);
       worker.removeEventListener("message", handleMessage);
       worker.removeEventListener("error", handleError);
+      signal?.removeEventListener("abort", handleAbort);
+      resolve(result);
+    };
 
-      const {
-        success,
-        result,
-        errorMessage,
-        errorDetails,
-      } = event.data as {
+    const handleMessage = (event: MessageEvent) => {
+      if (resolved) return;
+      const message = event.data as {
+        sessionId?: string;
+        requestId?: string;
         success: boolean;
         result?: ResultType;
         errorMessage?: string;
         errorDetails?: string[];
       };
-
-      resolve({
-        success,
-        result,
-        errorMessage,
-        errorDetails,
+      if (message.sessionId !== sessionId || message.requestId !== requestId) return;
+      finish({
+        success: message.success,
+        result: message.result,
+        errorMessage: message.errorMessage,
+        errorDetails: message.errorDetails,
         parameterValue,
         parameterIndex,
       });
@@ -209,44 +274,52 @@ export async function runSimulationInWorker(
 
     const handleError = (error: ErrorEvent) => {
       if (resolved) return;
-      resolved = true;
-
-      clearTimeout(timeoutId);
-      worker.removeEventListener("message", handleMessage);
-      worker.removeEventListener("error", handleError);
-
-      resolve({
+      finish({
         success: false,
         errorMessage: `Worker error: ${error.message}`,
         parameterValue,
         parameterIndex,
+        timedOut: false,
       });
     };
 
     const handleTimeout = () => {
       if (resolved) return;
-      resolved = true;
-
-      worker.removeEventListener("message", handleMessage);
-      worker.removeEventListener("error", handleError);
-
-      resolve({
+      finish({
         success: false,
         errorMessage: `Simulation timeout after ${timeout}ms`,
         parameterValue,
         parameterIndex,
+        timedOut: true,
+      });
+    };
+
+    const handleAbort = () => {
+      if (resolved) return;
+      finish({
+        success: false,
+        errorMessage: "Simulation cancelled",
+        parameterValue,
+        parameterIndex,
+        cancelled: true,
       });
     };
 
     // Set up event listeners
     worker.addEventListener("message", handleMessage);
     worker.addEventListener("error", handleError);
+    signal?.addEventListener("abort", handleAbort, { once: true });
 
     // Set up timeout
     const timeoutId = setTimeout(handleTimeout, timeout) as unknown as number;
 
+    if (signal?.aborted) {
+      handleAbort();
+      return;
+    }
+
     // Send netlist to worker
-    worker.postMessage({ netlist });
+    worker.postMessage({ netlist, sessionId, requestId });
   });
 }
 
@@ -255,29 +328,25 @@ export async function runSimulationInWorker(
  */
 export async function runSingleSimulation(
   netlist: string,
-  timeout: number = DEFAULT_TIMEOUT
+  timeout: number = DEFAULT_TIMEOUT,
+  signal?: AbortSignal,
 ): Promise<SimulationWorkerResult> {
-  const workerPool = GlobalSimulationWorkerPool.getInstance();
-  await workerPool.initialize();
-  
-  workerPool.resetForNewSession();
-  
-  const worker = workerPool.getAvailableWorker();
-  if (!worker) {
-    throw new Error("No simulation workers available");
-  }
-
-  try {
-    return await runSimulationInWorker(
-      worker,
-      netlist,
-      "", // No parameter value
-      0,  // Parameter index 0
-      timeout
-    );
-  } finally {
-    workerPool.releaseWorker(worker);
-  }
+  return runLatestSession(async (session) => {
+    const workerPool = GlobalSimulationWorkerPool.getInstance(1);
+    await workerPool.reconfigure(1);
+    await workerPool.initialize();
+    const worker = workerPool.getAvailableWorker();
+    if (!worker) throw new Error("No simulation workers available");
+    try {
+      const result = await runSimulationInWorker(worker, netlist, "", 0, timeout, session.id, crypto.randomUUID(), session.controller.signal);
+      if (result.timedOut || result.cancelled) workerPool.replaceWorker(worker);
+      else workerPool.releaseWorker(worker);
+      return result;
+    } catch (error) {
+      workerPool.replaceWorker(worker);
+      throw error;
+    }
+  }, signal);
 }
 
 /**
@@ -287,19 +356,31 @@ export async function runParallelSimulation(
   netlist: string,
   options: ParallelSimulationOptions = {}
 ): Promise<ParallelSimulationResult> {
+  return runLatestSession(
+    (session) => runParallelSimulationInternal(netlist, { ...options, signal: session.controller.signal }, session),
+    options.signal,
+  );
+}
+
+async function runParallelSimulationInternal(
+  netlist: string,
+  options: ParallelSimulationOptions = {},
+  session: ActiveSimulationSession,
+): Promise<ParallelSimulationResult> {
   const {
     maxWorkers = DEFAULT_MAX_WORKERS,
     timeout = DEFAULT_TIMEOUT,
     onProgress,
     onResult,
     onThreadUpdate,
+    signal,
   } = options;
 
   try {
     // First, expand the netlist
     const expansionResult = expandNetlist(netlist);
 
-    if (!expansionResult.hasExpansion || !expansionResult.expandedNetlists) {
+    if (!expansionResult.hasExpansion || !expansionResult.parameterValues || !expansionResult.expandAt) {
       return {
         success: false,
         results: [],
@@ -310,29 +391,16 @@ export async function runParallelSimulation(
       };
     }
 
-    const { expandedNetlists } = expansionResult;
-    const totalSimulations = expandedNetlists.length;
-
-    // [DEBUG][ParallelSimulation] Print all expanded netlist configs for verification
-    // This helps verify the bracket expansion produced the correct set of netlists
-    console.log(
-      "[DEBUG][ParallelSimulation] Expanded netlist configs:",
-      expandedNetlists.map((e) => e.netlist)
-    );
+    const { parameterValues, expandAt } = expansionResult;
+    const totalSimulations = parameterValues.length;
 
     // Get global worker pool instance
     const workerPool = GlobalSimulationWorkerPool.getInstance(maxWorkers);
+    await workerPool.reconfigure(maxWorkers);
     await workerPool.initialize();
     
-    // Reset pool state for new simulation session
-    workerPool.resetForNewSession();
-
-    console.log(
-      `Starting ${totalSimulations} parallel simulations with ${workerPool.totalCount} workers`
-    );
-
     const results: SimulationWorkerResult[] = [];
-    const pendingSimulations = [...expandedNetlists];
+    const pendingIndexes = parameterValues.map((_, index) => index);
     const runningSimulations = new Map<
       Worker,
       Promise<SimulationWorkerResult>
@@ -340,10 +408,13 @@ export async function runParallelSimulation(
 
     // Process simulations
     const processNext = async (): Promise<void> => {
-      while (pendingSimulations.length > 0 || runningSimulations.size > 0) {
+      while (pendingIndexes.length > 0 || runningSimulations.size > 0) {
+        if (signal?.aborted || session.controller.signal.aborted) {
+          pendingIndexes.length = 0;
+        }
         // Start new simulations if workers are available
-        while (pendingSimulations.length > 0 && workerPool.availableCount > 0) {
-          const expandedNetlist = pendingSimulations.shift()!;
+        while (pendingIndexes.length > 0 && workerPool.availableCount > 0 && !session.controller.signal.aborted) {
+          const expandedNetlist = expandAt(pendingIndexes.shift()!);
           const worker = workerPool.getAvailableWorker()!;
           const threadId = workerPool.getThreadId(worker);
 
@@ -360,7 +431,10 @@ export async function runParallelSimulation(
             expandedNetlist.netlist,
             expandedNetlist.parameterValue,
             expandedNetlist.parameterIndex,
-            timeout
+            timeout,
+            session.id,
+            crypto.randomUUID(),
+            session.controller.signal,
           );
 
           runningSimulations.set(worker, simulationPromise);
@@ -384,11 +458,14 @@ export async function runParallelSimulation(
 
           // Remove the completed simulation
           runningSimulations.delete(worker);
-          workerPool.releaseWorker(worker);
+          if (result.timedOut || result.cancelled) workerPool.replaceWorker(worker);
+          else workerPool.releaseWorker(worker);
           results.push(result);
 
+          if (result.cancelled && session.controller.signal.aborted) continue;
+
           // Notify thread completed this simulation
-          if (onThreadUpdate) {
+          if (onThreadUpdate && !session.controller.signal.aborted) {
             onThreadUpdate(threadId, "complete", {
               parameterValue: result.parameterValue,
               parameterIndex: result.parameterIndex,
@@ -396,10 +473,10 @@ export async function runParallelSimulation(
           }
 
           // Call progress and result callbacks
-          if (onResult) {
+          if (onResult && !session.controller.signal.aborted) {
             onResult(result);
           }
-          if (onProgress) {
+          if (onProgress && !session.controller.signal.aborted) {
             onProgress(results.length, totalSimulations, results);
           }
         }
@@ -413,24 +490,13 @@ export async function runParallelSimulation(
     const successfulSimulations = results.filter((r) => r.success).length;
     const failedSimulations = results.length - successfulSimulations;
 
-    console.log(
-      `Parallel simulation completed: ${successfulSimulations} successful, ${failedSimulations} failed`
-    );
-    console.log(
-      "Successful parameter values:",
-      results.filter((r) => r.success).map((r) => r.parameterValue)
-    );
-    console.log(
-      "Failed parameter values:",
-      results.filter((r) => !r.success).map((r) => r.parameterValue)
-    );
-
     return {
       success: successfulSimulations > 0,
       results: results.sort((a, b) => a.parameterIndex - b.parameterIndex), // Sort by parameter index
       totalSimulations,
       successfulSimulations,
       failedSimulations,
+      errorMessage: session.controller.signal.aborted ? "Simulation superseded or cancelled" : undefined,
     };
   } catch (error) {
     console.error("Parallel simulation failed:", error);

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Input Profile Detection', () => {
     test('should detect iPad desktop mode as touchscreen', async ({ page }) => {
@@ -13,7 +13,7 @@ test.describe('Input Profile Detection', () => {
             // Ensure not mobile UA effectively (default is usually desktop-like in playwright unless configured)
         });
 
-        await page.goto('http://localhost:5173/');
+        await page.goto('/');
         
         // Check the UI for the input profile icon/text
         // The header button has aria-label="Current input profile: touchscreen - Click to cycle"
@@ -32,7 +32,7 @@ test.describe('Input Profile Detection', () => {
             });
         });
 
-        await page.goto('http://localhost:5173/');
+        await page.goto('/');
 
         const toggleButton = page.getByRole('button', { name: /Current input profile: trackpad/i });
         await expect(toggleButton).toBeVisible();
@@ -47,7 +47,7 @@ test.describe('Input Profile Detection', () => {
             });
         });
 
-        await page.goto('http://localhost:5173/');
+        await page.goto('/');
 
         const toggleButton = page.getByRole('button', { name: /Current input profile: touchscreen/i });
         await expect(toggleButton).toBeVisible();

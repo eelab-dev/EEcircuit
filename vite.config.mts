@@ -2,6 +2,9 @@ import { defineConfig } from "vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const configDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   resolve: {
@@ -9,7 +12,7 @@ export default defineConfig({
       // Monaco's package exports do not resolve its deep ESM worker paths
       // reliably with Vite's dependency resolver.
       "monaco-editor/esm/vs": path.resolve(
-        process.cwd(),
+        configDirectory,
         "node_modules/monaco-editor/esm/vs"
       ),
     },
@@ -18,9 +21,6 @@ export default defineConfig({
   },
   build: {
     emptyOutDir: true,
-    // Configure worker options here:
-    rollupOptions: {
-    },
   },
   plugins: [react(), babel({
     presets: [reactCompilerPreset()],

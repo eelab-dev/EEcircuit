@@ -1,14 +1,11 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Page } from './fixtures';
 import path from 'path';
 
 const loadExCircuit = async (page: Page) => {
   console.log('Step: Load Test Circuit File');
-  await page.goto('http://localhost:5173/');
-  await page.waitForTimeout(1000);
-  const fileInputs = await page.locator('input[type="file"]').all();
-  for (const input of fileInputs) {
-      await input.setInputFiles(path.resolve('tests/test-circuit-tia.json'));
-  }
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('input[type="file"]').first().setInputFiles(path.resolve('tests/test-circuit-tia.json'));
   // Go to Simulate Tab
   const simulateBtn = page.getByLabel("Simulate Circuit");
   await expect(simulateBtn).toBeEnabled({ timeout: 10000 });
@@ -36,7 +33,6 @@ const runNoise = async (page: Page, round: number) => {
   await page.getByLabel('Start Frequency').fill('1');
   await page.getByLabel('Stop Frequency').fill('1G');
   
-  await page.waitForTimeout(500);
   await expect(runBtn).toBeEnabled();
   await runBtn.click();
 
@@ -44,8 +40,6 @@ const runNoise = async (page: Page, round: number) => {
   const plotTab = page.getByRole('tab', { name: 'Plot' });
   await expect(plotTab).toBeVisible();
   
-  // Wait for plot
-  await page.waitForTimeout(2000);
   await expect(page.getByText('onoise_spectrum')).toBeVisible({timeout: 10000});
   
   // Verify Single Plot: 'Log Y' should be visible, 'Log Y1' should NOT be visible
@@ -60,8 +54,6 @@ const runNoise = async (page: Page, round: number) => {
   await expect(logXBtn).toHaveAttribute('aria-pressed', 'true');
   await expect(logYBtn).toHaveAttribute('aria-pressed', 'true');
   
-  // Wait for 5 seconds for visual check
-  await page.waitForTimeout(5000);
 };
 
 const runTransient = async (page: Page, round: number) => {
@@ -96,18 +88,15 @@ const runTransient = async (page: Page, round: number) => {
   await expect(logXBtn).toHaveAttribute('aria-pressed', 'false');
   await expect(logYBtn).toHaveAttribute('aria-pressed', 'false');
 
-  // Wait for 5 seconds for visual check
-  await page.waitForTimeout(5000);
 };
 
 const runAC = async (page: Page) => {
   console.log('Step: Configure and Run AC Simulation');
   const runBtn = page.getByRole('button', { name: /Run Simulation|Run/i });
   
-  await page.locator('.chakra-toast').evaluateAll((toasts: HTMLElement[]) => toasts.forEach(t => t.remove())); // clear toasts
   await page.getByRole('tab', { name: 'Simulation' }).click();
   
-  await page.locator('.chakra-radio-card__itemText').filter({ hasText: 'AC' }).click();
+  await page.getByText('AC', { exact: true }).click();
   
   // Wait for config form
   await expect(page.getByLabel('Start Frequency')).toBeVisible();
@@ -118,10 +107,7 @@ const runAC = async (page: Page) => {
   await page.getByLabel('Stop Frequency').fill('1000M');
   await page.getByLabel('Steps Number').fill('20');
 
-  await page.waitForTimeout(5000);
-  
   await expect(runBtn).toBeEnabled();
-  await page.locator('.chakra-toast').evaluateAll((toasts: HTMLElement[]) => toasts.forEach(t => t.remove()));
   
   await runBtn.click();
 
@@ -146,8 +132,6 @@ const runAC = async (page: Page) => {
   await expect(logY1Btn).toHaveAttribute('aria-pressed', 'true');
   await expect(logY2Btn).toHaveAttribute('aria-pressed', 'false');
 
-  // Wait for 5 seconds for visual check
-  await page.waitForTimeout(5000);
 };
 
 test('verify simulation robustness across Noise -> Transient -> AC -> Noise -> Transient transitions', async ({ page }) => {
@@ -166,5 +150,4 @@ test('verify simulation robustness across Noise -> Transient -> AC -> Noise -> T
   await runNoise(page, 2);
   await runTransient(page, 2);
 
-  await page.waitForTimeout(5000);
 });

@@ -1,11 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('schematic controls visibility', async ({ page }) => {
   // 1. Open the app
-  await page.goto('http://localhost:5173/');
+  await page.goto('/');
 
-  // 2. Wait for app readiness
-  await page.waitForTimeout(2000);
   await page.locator('#schematic-canvas').waitFor({ state: 'attached' });
 
   // 3. Test Move Mode Controls
@@ -18,8 +16,6 @@ test('schematic controls visibility', async ({ page }) => {
   // The list displays component types. We find "resistor" text.
   await page.getByText('resistor', { exact: true }).click();
   
-  // Wait for a brief moment for component to be added
-  await page.waitForTimeout(1000);
   
   // Click in the center of the canvas where the component should be
   const canvas = page.locator('canvas').first();

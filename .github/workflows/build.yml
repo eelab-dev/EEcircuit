@@ -11,12 +11,40 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: EEcircuit
+      - uses: actions/checkout@v4
+        with:
+          repository: eelab-dev/EEcircuit-schematic
+          path: EEcircuit-schematic
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
 
       - name: Install npm packages
-        run: npm install
+        run: npm ci
+        working-directory: EEcircuit
+
+      - name: Audit npm packages
+        run: npm audit
+        working-directory: EEcircuit
+
+      - name: Check source and tests
+        run: npm run check
+        working-directory: EEcircuit
+
+      - name: Run unit tests
+        run: npm run test:unit
+        working-directory: EEcircuit
+
+      - name: Install Chrome for Playwright
+        run: npx playwright install --with-deps chrome
+        working-directory: EEcircuit
+
+      - name: Run headed Chrome tests
+        run: xvfb-run -a npm test
+        working-directory: EEcircuit
 
       - name: Build
         run: npm run build
+        working-directory: EEcircuit

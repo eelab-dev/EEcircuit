@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('strict verify ac plot signal separation', async ({ page }) => {
   // Enable console logging with filter
@@ -10,15 +10,13 @@ test('strict verify ac plot signal separation', async ({ page }) => {
   });
 
   // 1. Open the app
-  await page.goto('http://localhost:5173/');
-  await page.waitForTimeout(1000); // Wait for initial load
+  await page.goto('/');
 
   // 2. Load Demo Circuit (Schematic Tab)
   console.log('Step: Load Demo Circuit');
   await page.getByLabel('New Schematic').first().click();
   await page.getByRole('button', { name: 'Load Demo' }).click();
   await expect(page.getByRole('dialog')).toBeHidden({ timeout: 5000 });
-  await page.waitForTimeout(1000); // Allow demo to render
   console.log('Demo Loaded');
 
   // 3. Click Simulate Button (Transition to Simulate Tab)
@@ -119,5 +117,4 @@ test('strict verify ac plot signal separation', async ({ page }) => {
   await expect(phaseVar).toBeVisible();
 
   console.log('Verification Complete');
-  await page.waitForTimeout(5000);
 });

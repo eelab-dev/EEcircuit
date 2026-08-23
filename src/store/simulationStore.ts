@@ -10,6 +10,10 @@ import { addAcParameterToSource } from "../utils/sourceDetection";
 import { correctNgspiceUnits } from "../utils/unitCorrection";
 import { buildToBePlottedCommands } from "../utils/toBePlotted";
 import { extractValidNetsAndComponents } from "../utils/netlistUtils";
+import { ProgressiveResultAggregator } from "../simulation/resultAggregator";
+import { isSubcircuitEnd, isSubcircuitStart, parseSpiceLine } from "../utils/spiceLineParser";
+
+let latestParallelRunId = 0;
 
 // Define the store interface that includes both simulation and tab slices
 interface StoreWithTab {
@@ -278,21 +282,22 @@ export const createSimulationSlice: StateCreator<
     const lines = processedNetlist.split("\n");
     const requiredModels = new Set<string>();
     const definedSubckts = new Set<string>();
+    let inSubcircuit = false;
 
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) continue;
-      const parts = trimmed.split(/\s+/);
-      if (parts.length === 0) continue;
-      const firstToken = parts[0]!.toUpperCase();
-      if (firstToken.startsWith("X")) {
-        const modelName = parts[parts.length - 1];
-        if (modelName) requiredModels.add(modelName);
-      }
-      if (firstToken === ".SUBCKT") {
+      if (isSubcircuitStart(trimmed)) {
+        inSubcircuit = true;
+        const parts = trimmed.split(/\s+/);
         const subcktName = parts[1];
         if (subcktName) definedSubckts.add(subcktName);
+        continue;
       }
+      if (isSubcircuitEnd(trimmed)) { inSubcircuit = false; continue; }
+      if (inSubcircuit) continue;
+      const parsed = parseSpiceLine(trimmed);
+      if (parsed?.type === "X" && parsed.subcircuitName) requiredModels.add(parsed.subcircuitName);
     }
 
     const modelsToAppend: string[] = [];
@@ -384,6 +389,8 @@ export const createSimulationSlice: StateCreator<
   },
 
   runParallelSimulation: async (netlist: string) => {
+    const runId = ++latestParallelRunId;
+    const isCurrentRun = () => runId === latestParallelRunId;
     const { findFirstBracketOperation } = await import(
       "../utils/bracketParser"
     );
@@ -426,12 +433,16 @@ export const createSimulationSlice: StateCreator<
 
       actions.setBracketOperation(bracketOp);
       actions.setParallelSimulationRunning(true);
+      const appActions = get() as unknown as { handleNewResults: (res: ResultType[]) => void };
+      const progressiveAggregator = new ProgressiveResultAggregator(bracketOp, (aggregated) => {
+        if (aggregated && isCurrentRun()) appActions.handleNewResults([aggregated as ResultType]);
+      });
 
       // Initialize threads first to get the worker count
       const maxWorkers = (get() as unknown as { maxWebWorkers?: number }).maxWebWorkers || 4;
       const { expandNetlist } = await import("../utils/netlistExpander");
       const expansionResult = expandNetlist(netlist);
-      const totalSims = expansionResult.expandedNetlists?.length || 0;
+      const totalSims = expansionResult.parameterValues?.length || 0;
 
       actions.initializeThreads(
         Math.min(maxWorkers, navigator.hardwareConcurrency || 4),
@@ -442,6 +453,7 @@ export const createSimulationSlice: StateCreator<
       const result = await runParallelSimulation(netlist, {
         maxWorkers: maxWorkers,
         onProgress: (completed, total, results) => {
+          if (!isCurrentRun()) return;
           const successful = results.filter((r) => r.success).length;
           const failed = results.length - successful;
           actions.updateParallelSimulationProgress({
@@ -451,10 +463,12 @@ export const createSimulationSlice: StateCreator<
             failed,
           });
         },
-        onResult: () => {
-          // Individual results are handled for progress tracking only
+        onResult: (simulationResult) => {
+          if (!isCurrentRun()) return;
+          progressiveAggregator.addResult(simulationResult);
         },
         onThreadUpdate: (threadId, status, currentSim) => {
+          if (!isCurrentRun()) return;
           if (status === "start") {
             actions.updateThreadProgress(threadId, {
               isRunning: true,
@@ -480,6 +494,8 @@ export const createSimulationSlice: StateCreator<
           }
         },
       });
+
+      if (!isCurrentRun() || result.errorMessage === "Simulation superseded or cancelled") return;
 
       actions.setParallelSimulationResults(result);
 
@@ -510,10 +526,9 @@ export const createSimulationSlice: StateCreator<
       }
 
       if (result.success && result.results.length > 0) {
-        // Aggregate results for plotting 
+        // Reconcile the final ordered aggregate after all callbacks have run.
         const aggregated = aggregateParallelResults(result.results, bracketOp);
         if (aggregated) {
-          const appActions = get() as unknown as { handleNewResults: (res: ResultType[]) => void };
           appActions.handleNewResults([aggregated as ResultType]);
         }
       }
@@ -526,7 +541,7 @@ export const createSimulationSlice: StateCreator<
       );
     } finally {
       const actions = get() as SimulationSlice;
-      actions.setParallelSimulationRunning(false);
+      if (isCurrentRun()) actions.setParallelSimulationRunning(false);
     }
   },
 });

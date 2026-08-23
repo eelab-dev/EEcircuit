@@ -9,6 +9,10 @@ export interface ExpandedNetlist {
 export interface NetlistExpansionResult {
   hasExpansion: boolean;
   originalNetlist: string;
+  /** Values are retained; complete substituted netlists are created on demand. */
+  parameterValues?: string[];
+  expandAt?: (parameterIndex: number) => ExpandedNetlist;
+  /** @deprecated Use parameterValues and expandAt to avoid retaining full netlists. */
   expandedNetlists?: ExpandedNetlist[];
   bracketOperation?: BracketOperation;
   error?: string;
@@ -31,23 +35,21 @@ export function expandNetlist(netlist: string): NetlistExpansionResult {
     
     const { bracketOperation, values } = parseResult;
     
-    // Generate expanded netlists by substituting each value
-    console.log(`Expanding bracket operation [${bracketOperation.start}:${bracketOperation.step}:${bracketOperation.stop}] into ${values.length} values:`, values);
-    
-    const expandedNetlists: ExpandedNetlist[] = values.map((value, index) => {
-      const expandedNetlist = netlist.replace(bracketOperation.originalText, value);
-      
-      return {
-        netlist: expandedNetlist,
-        parameterValue: value,
-        parameterIndex: index
-      };
-    });
-    
     return {
       hasExpansion: true,
       originalNetlist: netlist,
-      expandedNetlists,
+      parameterValues: values,
+      expandAt: (parameterIndex) => {
+        const parameterValue = values[parameterIndex];
+        if (parameterValue === undefined) {
+          throw new Error(`Invalid bracket parameter index: ${parameterIndex}`);
+        }
+        return {
+          netlist: netlist.replace(bracketOperation.originalText, parameterValue),
+          parameterValue,
+          parameterIndex,
+        };
+      },
       bracketOperation
     };
   } catch (error) {
@@ -117,13 +119,6 @@ export function canExpandNetlist(netlist: string): { canExpand: boolean; reason?
       return {
         canExpand: false,
         reason: 'Bracket operation would generate zero netlists'
-      };
-    }
-    
-    if (analysis.estimatedExpansionCount > 1000) {
-      return {
-        canExpand: false,
-        reason: `Bracket operation would generate ${analysis.estimatedExpansionCount} netlists, which exceeds the maximum limit of 1000`
       };
     }
     

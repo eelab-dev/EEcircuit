@@ -217,13 +217,16 @@ export const createPlotSlice: StateCreator<
     emphasizedPlotIndex: 0,
   }),
 
-  resetVariableSelections: () => set({
-    selectedVariables: [],
+  resetVariableSelections: () => set((state: PlotSlice & StoreWithTabAndSimulation) => {
+    const availableVariables = state.results[0]?.variableNames.slice(1) ?? [];
+    return {
+    selectedVariables: availableVariables,
     hoveredVariable: null,
-    canvas1SelectedVariables: [],
-    canvas2SelectedVariables: [],
+    canvas1SelectedVariables: availableVariables,
+    canvas2SelectedVariables: availableVariables,
     canvas1HoveredVariable: null,
     canvas2HoveredVariable: null,
+    };
   }),
 
   resetPlotState: () => set({

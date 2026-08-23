@@ -1,11 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import path from 'path';
 
 test('verify ac bracket mode conversion with test file', async ({ page }) => {
   test.setTimeout(60000);
   
   // 1. Load the test-circuit-ac.json file
-  await page.goto('http://localhost:5173/');
+  await page.goto('/');
   await expect(page.locator('#schematic-canvas')).toHaveAttribute(
     'data-canvas-ready',
     'true',
@@ -14,10 +14,7 @@ test('verify ac bracket mode conversion with test file', async ({ page }) => {
 
   // 2. Load Test Circuit File (AC)
   console.log('Step: Load Test Circuit File');
-  const fileInputs = await page.locator('input[type="file"]').all();
-  for (const input of fileInputs) {
-      await input.setInputFiles(path.resolve('tests/test-circuit-ac.json'));
-  }
+  await page.locator('input[type="file"]').first().setInputFiles(path.resolve('tests/test-circuit-ac.json'));
   
   // 3. Click Simulate Button
   console.log('Step: Click Simulate Button');
@@ -40,7 +37,6 @@ test('verify ac bracket mode conversion with test file', async ({ page }) => {
   
   // Wait for Plot Variables list
   await expect(page.getByText(/Plot Variables/i).first()).toBeVisible({ timeout: 20000 });
-  await page.waitForTimeout(3000);
 
   // 6. Select only V(output) mag and phase
   console.log('Step: Deselect all signals (Click None)');
@@ -49,7 +45,6 @@ test('verify ac bracket mode conversion with test file', async ({ page }) => {
   for (let i = 0; i < noneCount; i++) {
     await noneButtons.nth(i).click();
   }
-  await page.waitForTimeout(1000);
 
   // Use the exact names found in the dump
   // Magnitude section
@@ -66,7 +61,6 @@ test('verify ac bracket mode conversion with test file', async ({ page }) => {
   
   // 7. Final Verification
   console.log('Step: Final Verification');
-  await page.waitForTimeout(2000);
 
   // Magnitude and Phase headers should be visible
   await expect(page.getByText('Magnitude', { exact: true }).first()).toBeVisible({ timeout: 10000 });

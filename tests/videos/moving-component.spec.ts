@@ -9,7 +9,7 @@ test('record moving component', async ({ page }) => {
   await helper.initKeyboardDisplay();
 
   // 1. Open the app with clean slate and dark mode
-  await page.goto('http://localhost:5173/?theme=dark&clean=true');
+  await page.goto('/?theme=dark&clean=true');
 
   // 2. Wait for app readiness
   await page.waitForTimeout(2000); 

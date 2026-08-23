@@ -1,15 +1,13 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import * as path from 'path';
 
 test('verify internal signal filtering', async ({ page }) => {
   // 1. Open the app
-  await page.goto('http://localhost:5173/');
+  await page.goto('/');
 
   // 2. Upload tests/test-subcircuit.json
   const filePath = path.join(process.cwd(), 'tests', 'test-subcircuit.json');
   
-  // Wait for the app to load
-  await page.waitForTimeout(1000);
 
   // Enable console logging
   page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));

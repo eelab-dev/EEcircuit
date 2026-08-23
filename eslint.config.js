@@ -23,6 +23,10 @@ export default defineConfig([
       "node_modules/**",
       ".claude/**",
       ".github/**",
+      "test-results/**",
+      "playwright-report/**",
+      "coverage/**",
+      "test-videos/**",
     ], // ✅ ignore these folders completely
   },
 

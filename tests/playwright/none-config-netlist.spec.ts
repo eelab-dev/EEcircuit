@@ -1,11 +1,11 @@
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test("None simulation config should respect manual edits and not inject content", async ({
   page,
 }) => {
   // 1. Load the application
-  await page.goto("http://localhost:5173/");
+  await page.goto("/");
   await page.waitForSelector("text=Schematic");
 
   // 2. Go to Simulation tab (defaults to None)
@@ -32,8 +32,6 @@ test("None simulation config should respect manual edits and not inject content"
   const runButton = page.getByRole("button", { name: "Run Simulation" });
   await runButton.click();
 
-  // Wait a bit for potential (unwanted) regeneration
-  await page.waitForTimeout(1000);
 
   // 5. Verify content is still our manual content
   // If the bug exists, it will have regenerated from schematic (overwriting our edits)
@@ -43,7 +41,7 @@ test("None simulation config should respect manual edits and not inject content"
   expect(normalizedContent).toContain("* Manual Netlist");
   
   // Verify no error toast appears
-  await expect(page.locator(".chakra-toast")).toBeHidden();
+  await expect(page.getByRole("status")).toBeHidden();
   expect(normalizedContent).not.toContain(".include modelcard.ptm"); // Default preamble should not be re-injected if we removed it
 
   // Wait for simulation to finish (which switches to Plot tab)
@@ -56,7 +54,6 @@ test("None simulation config should respect manual edits and not inject content"
   // 6. Test switching behavior
   // Switch to Transient
   await page.getByText("Transient", { exact: true }).click();
-  await page.waitForTimeout(500); // Wait for generation
   
   const contentTran = (await page.locator(".view-lines").textContent()) || "";
   const normalizedTran = contentTran.replace(/\u00a0/g, " ");
@@ -66,7 +63,6 @@ test("None simulation config should respect manual edits and not inject content"
   const noneRadio = page.getByRole("radio", { name: "None" });
   await expect(noneRadio).toBeVisible();
   await noneRadio.click({ force: true });
-  await page.waitForTimeout(500);
 
   // 7. Verify content is UNCHANGED (should still be the Transient netlist)
   // The user requirement: "leave as it is"
@@ -78,12 +74,10 @@ test("None simulation config should respect manual edits and not inject content"
   // 8. Test Transient Simulation (as requested by user)
   // Switch back to Transient
   await page.getByText("Transient", { exact: true }).click();
-  await page.waitForTimeout(500);
 
   // Set valid Transient parameters to ensure simulation success
   await page.getByLabel("Stop Time").fill("10m");
   await page.getByLabel("Time Step").fill("10u");
-  await page.waitForTimeout(200); // Wait for debounce/state update
 
   // Click Run Simulation again
   await page.getByRole("button", { name: "Run Simulation" }).click();

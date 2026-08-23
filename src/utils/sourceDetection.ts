@@ -1,3 +1,5 @@
+import { isSubcircuitEnd, isSubcircuitStart, parseSpiceLine } from "./spiceLineParser";
+
 /**
  * Source Detection Utility for SPICE Netlists
  * 
@@ -18,22 +20,20 @@ export function detectSourcesFromNetlist(netlist: string | undefined): string[] 
 
   const sources: Set<string> = new Set();
   const lines = netlist.split('\n');
+  let inSubcircuit = false;
 
   for (const line of lines) {
     const trimmedLine = line.trim();
+    if (isSubcircuitStart(trimmedLine)) { inSubcircuit = true; continue; }
+    if (isSubcircuitEnd(trimmedLine)) { inSubcircuit = false; continue; }
+    if (inSubcircuit) continue;
     
     // Skip empty lines and comments
     if (!trimmedLine || trimmedLine.startsWith('*') || trimmedLine.startsWith('.')) {
       continue;
     }
 
-    // Split line into components (space-separated)
-    const parts = trimmedLine.split(/\s+/);
-    if (parts.length === 0) {
-      continue;
-    }
-
-    const componentName = parts[0];
+    const componentName = parseSpiceLine(trimmedLine)?.componentName;
     
     // Check if component starts with V or I (voltage/current source)
     // Support both uppercase and lowercase: V1, Vin, v1, vin, I1, Iin, i1, iin

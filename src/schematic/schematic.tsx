@@ -76,6 +76,7 @@ const Schematic: React.FC<SchematicProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const initializedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const initializingCanvasRef = useRef<HTMLCanvasElement | null>(null); // Track canvas currently being initialized
+  const canvasGenerationRef = useRef(0);
   const lastContainerSizeRef = useRef<{ width: number; height: number }>({
     width: 0,
     height: 0,
@@ -273,12 +274,16 @@ const Schematic: React.FC<SchematicProps> = ({
       });
 
       // Mark canvas as being initialized
+      const generation = ++canvasGenerationRef.current;
       initializingCanvasRef.current = canvas;
       canvas.dataset.canvasReady = "false";
 
       try {
         // Initialize canvas with eecircuit - resolves when canvas is ready
         await eeSch.initCanvas(canvas, msgCallback);
+        if (generation !== canvasGenerationRef.current || canvasRef.current !== canvas) {
+          return false;
+        }
         initializedCanvasRef.current = canvas;
         initializingCanvasRef.current = null; // Clear initializing flag
         canvas.dataset.canvasReady = "true";
@@ -314,7 +319,7 @@ const Schematic: React.FC<SchematicProps> = ({
         }
       } catch (error) {
         console.error("Canvas initialization failed:", error);
-        initializingCanvasRef.current = null; // Clear initializing flag on error
+        if (generation === canvasGenerationRef.current) initializingCanvasRef.current = null;
         canvas.dataset.canvasReady = "false";
         return false;
       }
@@ -457,6 +462,7 @@ const Schematic: React.FC<SchematicProps> = ({
                 );
                 containerRef.current.removeChild(canvasRef.current);
                 // Reset refs
+                canvasGenerationRef.current += 1;
                 initializedCanvasRef.current = null;
                 initializingCanvasRef.current = null;
                 canvasRef.current = null;
@@ -668,6 +674,7 @@ const Schematic: React.FC<SchematicProps> = ({
         console.log("Removing existing canvas for resize recreation");
         container.removeChild(canvasRef.current);
         // Reset refs
+        canvasGenerationRef.current += 1;
         initializedCanvasRef.current = null;
         initializingCanvasRef.current = null;
         canvasRef.current = null;
