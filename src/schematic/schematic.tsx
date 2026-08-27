@@ -1,21 +1,18 @@
 /**
- * The fit-to-screen should happen only once at the app initialization
- * before any user interaction. This should happen after canvas ready message is received.
- *
- * During resize, the canvas should be recreated. this is webgl offscreen
- * canvas. otherwise the aspect ration will be wrong
- *
- * During the tab change the canvas should not recreated
- *
- * Be careful as there is cross contamination between these effect,
- * for example tab change could wrongly trigger resize.
+ * Schematic editor integration for the instance-scoped v2 API.
  */
-
-import React, { useEffect, useRef, useCallback, useState } from "react";
-import * as eeSch from "eecircuit-schematic";
-import { Schematic as SchematicType } from "eecircuit-schematic";
+import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import {
+  createSchematicEditor,
+  Schematic as SchematicType,
+  SchematicValidationError,
+  type AvailableComponent,
+  type EditorEvent,
+  type PointerInfo,
+  type SelectedItem,
+  type SchematicEditor,
+} from "eecircuit-schematic";
 import { Box, Float } from "@chakra-ui/react";
-import debounce from "lodash.debounce";
 
 import Actions from "./actions";
 import CanvasControls from "./CanvasControls";
@@ -24,9 +21,7 @@ import Properties from "./properties";
 import BottomBar from "./bottombar";
 import ExportImageDialog from "./ExportImageDialog";
 import ShortcutsDialog from "./ShortcutsDialog";
-import { ToBePlotted } from "src/types/commonTypes";
 import { useAppStore } from "../store/appStore";
-import { getRecommendedInputProfile } from "../utils/deviceDetection";
 import {
   formatToBePlottedLabel,
   parseTerminalPointerInfo,
@@ -34,723 +29,371 @@ import {
 } from "../utils/toBePlotted";
 import { dialogTheme, schCanvasMessageTheme } from "../styles/uiThemes";
 import { toaster } from "../components/ui/toaster";
+import { SchematicEditorContext } from "./editorContext";
+import { demoSchematic } from "./demoSchematic";
 
 type SchematicProps = {
-  // Only props that are NOT available in the store
   onCanvasResized?: () => void;
   onSchematicDataChange?: (schematicData: SchematicType) => void;
 };
 
-const Schematic: React.FC<SchematicProps> = ({
-  onCanvasResized,
-  onSchematicDataChange,
-}) => {
-  // Get state and actions directly from Zustand store - no prop fallbacks needed
-  const isDarkMode = useAppStore((state) => state.isDarkMode);
-  const hasViewedSchematic = useAppStore((state) => state.hasViewedSchematic);
-  const setHasViewedSchematic = useAppStore(
-    (state) => state.setHasViewedSchematic
-  );
-  const setCurrentSchematic = useAppStore((state) => state.setCurrentSchematic);
+export type SchematicHandle = {
+  loadSchematic: (schematic: unknown) => Promise<void>;
+  getSchematic: () => Promise<SchematicType>;
+  clear: () => Promise<void>;
+};
 
-  const isToBePlottedMode = useAppStore((state) => state.isToBePlottedMode);
-  const toBePlotted = useAppStore((state) => state.toBePlotted);
-  const addToBePlotted = useAppStore((state) => state.addToBePlotted);
-  const exitToBePlottedMode = useAppStore(
-    (state) => state.exitToBePlottedMode
-  );
+const blankSchematic: SchematicType = { componentInstances: [], wires: [] };
 
-  // Use store actions directly
-  const handlePlotItemSelected = addToBePlotted;
-  const handleExitToBePlottedMode = exitToBePlottedMode;
+/**
+ * v1 files occasionally contain floating-point transform noise, legacy
+ * two-terminal rotation numbering, or junction metadata that does not satisfy
+ * v2's stricter topology checks. Keep the on-disk format unchanged while
+ * making those historical files loadable by the v2 editor.
+ */
+const normalizeLegacySchematic = (value: unknown): unknown => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const root = structuredClone(value) as { componentInstances?: unknown; wires?: unknown };
+  const junctionOccurrences = new Set<string>();
+  const junctionPositions: Array<{ x: number; y: number }> = [];
+  if (Array.isArray(root.wires)) {
+    for (const wire of root.wires) {
+      if (!wire || typeof wire !== "object") continue;
+      const item = wire as { startLocation?: unknown; endLocation?: unknown; absolutePath?: unknown };
+      if (Array.isArray(item.absolutePath)) {
+        item.absolutePath = item.absolutePath.map((point) => {
+          if (!point || typeof point !== "object") return point;
+          const p = point as { x?: unknown; y?: unknown };
+          return {
+            ...p,
+            x: typeof p.x === "number" && Math.abs(p.x) < 1e-9 ? 0 : p.x,
+            y: typeof p.y === "number" && Math.abs(p.y) < 1e-9 ? 0 : p.y,
+          };
+        });
+      }
+      for (const side of ["startLocation", "endLocation"] as const) {
+        const location = item[side];
+        if (!location || typeof location !== "object") continue;
+        const loc = location as { type?: unknown; prop?: { instanceName?: unknown; terminalName?: unknown; junctionPosition?: { x?: unknown; y?: unknown } } };
+        if (loc.type === "junction" && loc.prop &&
+            typeof loc.prop.junctionPosition?.x === "number" && typeof loc.prop.junctionPosition?.y === "number") {
+          const position = loc.prop.junctionPosition;
+          const key = `${position.x},${position.y}`;
+          if (junctionOccurrences.has(key)) item[side] = undefined;
+          else {
+            junctionOccurrences.add(key);
+            junctionPositions.push({ x: position.x as number, y: position.y as number });
+          }
+        } else if (loc.type === "terminal") {
+          // Computed v2 terminal positions are rounded to the schematic grid,
+          // so implicit endpoint matching is more reliable than v1's explicit
+          // locations (which may carry stale rotation numbering).
+          item[side] = undefined;
+        }
+      }
+    }
+  }
+  if (Array.isArray(root.wires)) {
+    for (const position of junctionPositions) {
+      const hasPassingWire = root.wires.some((wire) => {
+        if (!wire || typeof wire !== "object") return false;
+        const path = (wire as { absolutePath?: unknown }).absolutePath;
+        if (!Array.isArray(path)) return false;
+        for (let index = 1; index < path.length; index++) {
+          const start = path[index - 1] as { x?: unknown; y?: unknown };
+          const end = path[index] as { x?: unknown; y?: unknown };
+          if (start.x === end.x && start.x === position.x && typeof start.y === "number" && typeof end.y === "number" &&
+              position.y > Math.min(start.y, end.y) && position.y < Math.max(start.y, end.y)) return true;
+          if (start.y === end.y && start.y === position.y && typeof start.x === "number" && typeof end.x === "number" &&
+              position.x > Math.min(start.x, end.x) && position.x < Math.max(start.x, end.x)) return true;
+        }
+        return false;
+      });
+      if (!hasPassingWire) {
+        (root.wires as unknown[]).push({
+          absolutePath: [{ x: position.x - 1, y: position.y }, { x: position.x + 1, y: position.y }],
+        });
+      }
+    }
+  }
+  return root;
+};
 
-  // Enhanced onSchematicDataChange to also update store
-  const handleSchematicDataChange = React.useCallback(
-    (schematicData: SchematicType) => {
+const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
+  ({ onSchematicDataChange }, ref) => {
+    const isDarkMode = useAppStore((state) => state.isDarkMode);
+    const inputProfile = useAppStore((state) => state.inputProfile);
+    const editorMode = useAppStore((state) => state.editorMode);
+    const hasViewedSchematic = useAppStore((state) => state.hasViewedSchematic);
+    const setHasViewedSchematic = useAppStore((state) => state.setHasViewedSchematic);
+    const setCurrentSchematic = useAppStore((state) => state.setCurrentSchematic);
+    const currentSchematic = useAppStore((state) => state.currentSchematic);
+    const isToBePlottedMode = useAppStore((state) => state.isToBePlottedMode);
+    const toBePlotted = useAppStore((state) => state.toBePlotted);
+    const addToBePlotted = useAppStore((state) => state.addToBePlotted);
+    const handleExitToBePlottedMode = useAppStore((state) => state.exitToBePlottedMode);
+    const { addMessage, messages } = useAppStore();
+
+    const containerRef = useRef<HTMLDivElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(null);
+    const [editor, setEditor] = useState<SchematicEditor | null>(null);
+    const editorRef = useRef<SchematicEditor | null>(null);
+    const editorReadyPromiseRef = useRef<Promise<void> | null>(null);
+    const isTabVisibleRef = useRef(true);
+    const hasViewedSchematicRef = useRef(hasViewedSchematic);
+    const initialThemeRef = useRef(isDarkMode);
+    const initialInputProfileRef = useRef(inputProfile);
+    const [coord, setCoord] = useState({ x: 0, y: 0 });
+    const [pointerInfo, setPointerInfo] = useState<PointerInfo>(null);
+    const [selectedItem, setSelectedItem] = useState<SelectedItem>({ type: "none" });
+    const [availableComponents, setAvailableComponents] = useState<AvailableComponent[]>([]);
+    const [propertiesDismissed, setPropertiesDismissed] = useState(false);
+    const [showExportImageDialog, setShowExportImageDialog] = useState(false);
+    const [svgContent, setSvgContent] = useState<string | null>(null);
+    const [loadingSvg, setLoadingSvg] = useState(false);
+    const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
+    const [canvasMessage, setCanvasMessage] = useState<{ text: string; type: "error" | "warning" } | null>(null);
+    const isToBePlottedModeRef = useRef(isToBePlottedMode);
+    const pointerInfoRef = useRef<PointerInfo>(null);
+    const lastHitPointerInfoRef = useRef<PointerInfo>(null);
+    const lastHitPointerAtRef = useRef(0);
+    const handlePlotItemSelectedRef = useRef(addToBePlotted);
+    const handleSchematicDataChangeRef = useRef(onSchematicDataChange);
+    const initialSchematicRef = useRef<SchematicType>(
+      new URLSearchParams(window.location.search).get("clean") === "true"
+        ? blankSchematic
+        : currentSchematic ?? demoSchematic,
+    );
+
+    useEffect(() => {
+      isToBePlottedModeRef.current = isToBePlottedMode;
+      handlePlotItemSelectedRef.current = addToBePlotted;
+      handleSchematicDataChangeRef.current = onSchematicDataChange;
+    }, [addToBePlotted, isToBePlottedMode, onSchematicDataChange]);
+
+    const handleSchematicDataChange = useCallback((schematicData: SchematicType) => {
       setCurrentSchematic(schematicData);
-      onSchematicDataChange?.(schematicData);
-    },
-    [setCurrentSchematic, onSchematicDataChange]
-  );
-  const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const initializedCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const initializingCanvasRef = useRef<HTMLCanvasElement | null>(null); // Track canvas currently being initialized
-  const canvasGenerationRef = useRef(0);
-  const lastContainerSizeRef = useRef<{ width: number; height: number }>({
-    width: 0,
-    height: 0,
-  });
-  const isTabVisibleRef = useRef<boolean>(true); // Track tab visibility without causing effect re-runs
-  const hasInitializedOnceRef = useRef<boolean>(false); // Track if app has been initialized for the first time
-  const hasFitToScreenExecutedRef = useRef<boolean>(false); // Track if fit-to-screen has ever been executed (prevents multiple executions)
-  const isProcessingFitToScreenRef = useRef<boolean>(false); // Track if fit-to-screen is currently being processed
-  const isTabChangeInProgressRef = useRef<boolean>(false); // Track if tab change is in progress to prevent resize interference
+      handleSchematicDataChangeRef.current?.(schematicData);
+    }, [setCurrentSchematic]);
 
-  // Note: No localStorage needed - component doesn't actually unmount/remount on tab changes
-  // Tab visibility is handled via CSS display, same as simulate and plot tabs
+    const reportEditorError = useCallback((operation: string, error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Schematic ${operation} failed:`, error);
+      addMessage({ text: message, type: "error", category: "Schematic", mLevel: "user" });
+      setCanvasMessage({ text: message, type: "error" });
+    }, [addMessage]);
 
-  const [coord, setCoord] = useState({ x: 0, y: 0 });
-  const [pointerInfo, setPointerInfo] = useState<eeSch.PointerInfo>(null);
-  const [selectedItem, setSelectedItem] = useState<eeSch.SelectedItem>({
-    type: "none",
-  } as eeSch.SelectedItem);
-
-  const [availableComponents, setAvailableComponents] = useState<
-    eeSch.AvailableComponent[]
-  >([]);
-  const [propertiesDismissed, setPropertiesDismissed] = useState(false);
-
-
-
-  const { addMessage, messages } = useAppStore();
-
-  const [canvasHeight] = useState(0);
-  const [showExportImageDialog, setShowExportImageDialog] = useState(false);
-  const [svgContent, setSvgContent] = useState<string | null>(null);
-  const [loadingSvg, setLoadingSvg] = useState(false);
-  const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
-  const [canvasMessage, setCanvasMessage] = useState<{
-    text: string;
-    type: "error" | "warning";
-  } | null>(null);
-
-  // Color mode values - must be called at top level to avoid hooks order issues
-
-  // Use refs to access current values in msgCallback without causing re-renders
-  const isToBePlottedModeRef = useRef(isToBePlottedMode);
-  const handlePlotItemSelectedRef = useRef(handlePlotItemSelected);
-  const pointerInfoRef = useRef<eeSch.PointerInfo>(null);
-  const handleSchematicDataChangeRef = useRef(handleSchematicDataChange);
-
-  // Update refs when values change
-  useEffect(() => {
-    isToBePlottedModeRef.current = isToBePlottedMode;
-  }, [isToBePlottedMode]);
-
-  useEffect(() => {
-    handlePlotItemSelectedRef.current = handlePlotItemSelected;
-  }, [handlePlotItemSelected]);
-
-  useEffect(() => {
-    handleSchematicDataChangeRef.current = handleSchematicDataChange;
-  }, [handleSchematicDataChange]);
-
-  const msgCallback = useCallback(
-    (msg: eeSch.MsgSchToApp) => {
+    const msgCallback = useCallback((msg: EditorEvent) => {
       switch (msg.type) {
+        case "change":
+          handleSchematicDataChange(msg.schematic);
+          break;
         case "pointerCoords":
-          setCoord({ x: msg.pointerCoords.x, y: msg.pointerCoords.y });
+          setCoord(msg.pointerCoords);
           break;
         case "pointerInfo":
           setPointerInfo(msg.pointerInfo);
           pointerInfoRef.current = msg.pointerInfo;
+          if (msg.pointerInfo) {
+            lastHitPointerInfoRef.current = msg.pointerInfo;
+            lastHitPointerAtRef.current = Date.now();
+          }
           break;
         case "selectedItem":
-          if (msg.selectedItem !== undefined) {
-            setSelectedItem(msg.selectedItem);
-            setPropertiesDismissed(false);
-
-            // Handle to-be-plotted selection mode - use refs to get current values
-            if (
-              isToBePlottedModeRef.current &&
-              handlePlotItemSelectedRef.current
-            ) {
-              const pointerInfo = pointerInfoRef.current;
-              if (!pointerInfo) {
-                break;
-              }
-
-              if (pointerInfo.type === "wire" || pointerInfo.type === "junction") {
-                const netName = pointerInfo.name?.trim() || "unknown";
-                const plotItem: ToBePlotted = {
-                  type: "voltage",
-                  netName,
-                };
-                handlePlotItemSelectedRef.current(plotItem);
-              } else if (pointerInfo.type === "terminal") {
-                const parsed = parseTerminalPointerInfo(pointerInfo.name);
-                if (!parsed) {
-                  break;
-                }
+          setSelectedItem(msg.selectedItem);
+          setPropertiesDismissed(false);
+          if (isToBePlottedModeRef.current || useAppStore.getState().isToBePlottedMode) {
+            if (msg.selectedItem.type === "wire" || msg.selectedItem.type === "junction") {
+              handlePlotItemSelectedRef.current({ type: "voltage", netName: msg.selectedItem.netName.trim() || "unknown" });
+              break;
+            }
+            const pointer = pointerInfoRef.current ??
+              (Date.now() - lastHitPointerAtRef.current < 500 ? lastHitPointerInfoRef.current : null);
+            if (pointer?.type === "wire" || pointer?.type === "junction") {
+              handlePlotItemSelectedRef.current({ type: "voltage", netName: pointer.name?.trim() || "unknown" });
+            } else if (pointer?.type === "terminal") {
+              const parsed = parseTerminalPointerInfo(pointer.name);
+              if (parsed) {
                 const corrected = normalizeTerminalSelection(parsed);
-                const plotItem: ToBePlotted = {
-                  type: "current",
-                  componentName: corrected.componentName,
-                  terminalName: corrected.terminalName,
-                };
-                handlePlotItemSelectedRef.current(plotItem);
+                handlePlotItemSelectedRef.current({ type: "current", componentName: corrected.componentName, terminalName: corrected.terminalName });
               }
             }
           }
-          break;
-        case "netList":
-          // Netlist messages are handled via eeSch.getNetList() promise resolution.
-          // Intentionally ignore here to avoid double navigation.
           break;
         case "availableComponents":
           setAvailableComponents(msg.availableComponents);
           break;
         case "info":
-          addMessage({
-            text: msg.msg,
-            type: msg.mType === "error" || msg.mType === "warning" ? msg.mType : "info",
-            category: "Schematic",
-            mLevel: msg.mLevel,
-          });
-          if (msg.mType === "error" || msg.mType === "warning") {
-            setCanvasMessage({ text: msg.msg, type: msg.mType });
-          }
+          addMessage({ text: msg.msg, type: msg.mType, category: "Schematic", mLevel: msg.mLevel });
+          if (msg.mType !== "info") setCanvasMessage({ text: msg.msg, type: msg.mType });
           break;
-        case "svg":
-          setSvgContent(msg.svg);
-          setLoadingSvg(false);
+        case "error":
+          addMessage({ text: msg.msg, type: msg.mType, category: "Schematic", mLevel: msg.mLevel });
+          setCanvasMessage({ text: msg.msg, type: msg.mType === "error" ? "error" : "warning" });
           break;
-        case "savedSchematic":
-          // Call the callback to uplift schematic data to parent
-          if (handleSchematicDataChangeRef.current) {
-            handleSchematicDataChangeRef.current(msg.schematic);
-          }
+        case "fatalError":
+          addMessage({ text: msg.message, type: "error", category: "Schematic", mLevel: "dev" });
+          setCanvasMessage({ text: msg.message, type: "error" });
           break;
         case "liveWireStatus":
-          if (!msg.status.isValid && msg.status.reason) {
-            setCanvasMessage({ text: msg.status.reason, type: "warning" });
-          } else if (msg.status.isValid) {
-            setCanvasMessage(null);
-          }
+          setCanvasMessage(msg.status.isValid || !msg.status.reason ? null : { text: msg.status.reason, type: "warning" });
           break;
         case "schematicEditorActivity":
-          {
-            const { setIsWiring, setIsMoving } = useAppStore.getState();
-            if (msg.activity === "wiring") {
-              setIsWiring?.(true);
-              setIsMoving?.(false);
-            } else if (msg.activity === "moving") {
-              setIsWiring?.(false);
-              setIsMoving?.(true);
-            } else {
-              setIsWiring?.(false);
-              setIsMoving?.(false);
-            }
+          useAppStore.getState().setIsWiring(msg.activity === "wiring");
+          useAppStore.getState().setIsMoving(msg.activity === "moving");
+          break;
+        case "status":
+          if (msg.status === "worker-error") {
+            addMessage({ text: "Schematic worker stopped unexpectedly.", type: "error", category: "Schematic", mLevel: "dev" });
           }
           break;
+        default:
+          break;
       }
-    },
-    [
-      // Note: Save functionality moved to EEcircuit component - no simulation config dependencies needed
-      // Removed direct prop dependencies to prevent callback recreation
-      // Store-prioritized values are now accessed via refs for stability
-      // Also removed onSchematicDataChange to use ref for stability
-      addMessage,
-    ]
-  );
+    }, [addMessage, handleSchematicDataChange]);
 
-  // Helper function to safely initialize canvas only once
-  const safeInitCanvas = useCallback(
-    async (canvas: HTMLCanvasElement) => {
-      if (initializedCanvasRef.current === canvas) {
-        console.log("Canvas already initialized, skipping...");
-        return false; // Already initialized
-      }
+    const setCanvasRef = useCallback((node: HTMLCanvasElement | null) => {
+      canvasRef.current = node;
+      setCanvasElement(node);
+    }, []);
 
-      if (initializingCanvasRef.current === canvas) {
-        console.log("Canvas initialization already in progress, skipping...");
-        return false; // Already initializing
-      }
-
-      // Check canvas dimensions before initialization
-      const rect = canvas.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) {
-        console.log("Canvas dimensions are zero, skipping initialization:", {
-          width: rect.width,
-          height: rect.height,
-        });
-        return false;
-      }
-
-      console.log("Initializing canvas with eecircuit library...", {
-        width: rect.width,
-        height: rect.height,
-      });
-
-      // Mark canvas as being initialized
-      const generation = ++canvasGenerationRef.current;
-      initializingCanvasRef.current = canvas;
-      canvas.dataset.canvasReady = "false";
-
-      try {
-        // Initialize canvas with eecircuit - resolves when canvas is ready
-        await eeSch.initCanvas(canvas, msgCallback);
-        if (generation !== canvasGenerationRef.current || canvasRef.current !== canvas) {
-          return false;
-        }
-        initializedCanvasRef.current = canvas;
-        initializingCanvasRef.current = null; // Clear initializing flag
-        canvas.dataset.canvasReady = "true";
-        console.log("Canvas initialization completed and ready");
-
-        // Send input profile command now that canvas is ready
-        const inputProfile = getRecommendedInputProfile();
-        console.log("Sending input profile to canvas:", inputProfile);
-        eeSch.sendCommand({
-          command: "setInputProfile",
-          profile: inputProfile,
-        });
-
-        // Sync initial theme to schematic based on current preference
+    useImperativeHandle(ref, () => ({
+      loadSchematic: async (schematic) => {
+        await editorReadyPromiseRef.current;
+        if (!editorRef.current) throw new Error("Schematic editor is not ready");
         try {
-          eeSch.setTheme(isDarkMode ? "dark" : "light");
-        } catch (err) {
-          console.warn(
-            "[DEBUG-theme-sync] setTheme after canvas init failed:",
-            err,
-          );
+          await editorRef.current.loadSchematic(schematic);
+        } catch (error) {
+          if (!(error instanceof SchematicValidationError)) throw error;
+          await editorRef.current.loadSchematic(normalizeLegacySchematic(schematic));
         }
+        await editorRef.current.fitView();
+        setHasViewedSchematic(true);
+      },
+      getSchematic: async () => {
+        await editorReadyPromiseRef.current;
+        if (!editorRef.current) throw new Error("Schematic editor is not ready");
+        return editorRef.current.getSchematic();
+      },
+      clear: async () => {
+        await editorReadyPromiseRef.current;
+        if (!editorRef.current) throw new Error("Schematic editor is not ready");
+        await editorRef.current.clear();
+      },
+    }), [setHasViewedSchematic]);
 
-        // Apply clean slate if requested via URL
-        if (typeof window !== "undefined") {
-          const params = new URLSearchParams(window.location.search);
-          if (params.get("clean") === "true") {
-            console.log("Applying clean slate from URL parameter...");
-            // Use eecircuit-schematic to clear
-            // Note: passing empty arrays as SchematicType
-            eeSch.loadSchematic({ componentInstances: [], wires: [], nodes: [] } as unknown as SchematicType);
+    useEffect(() => {
+      if (!canvasElement) return;
+      let cancelled = false;
+      let instance: SchematicEditor | undefined;
+      let resolveReady: () => void = () => undefined;
+      editorReadyPromiseRef.current = new Promise<void>((resolve) => {
+        resolveReady = resolve;
+      });
+      canvasElement.dataset.canvasReady = "false";
+      const initialize = async () => {
+        try {
+          instance = await createSchematicEditor({
+            canvas: canvasElement,
+            initialSchematic: initialSchematicRef.current,
+            theme: initialThemeRef.current ? "dark" : "light",
+            inputProfile: initialInputProfileRef.current,
+            onEvent: msgCallback,
+          });
+          if (cancelled) {
+            await instance.destroy();
+            return;
           }
-        }
-      } catch (error) {
-        console.error("Canvas initialization failed:", error);
-        if (generation === canvasGenerationRef.current) initializingCanvasRef.current = null;
-        canvas.dataset.canvasReady = "false";
-        return false;
-      }
-
-      // Handle fit-to-screen for initial app initialization ONLY
-      // Use hasViewedSchematic instead of shouldFitToScreen to avoid timing issues
-      if (
-        !hasViewedSchematic &&
-        !hasFitToScreenExecutedRef.current &&
-        !isTabChangeInProgressRef.current &&
-        isTabVisibleRef.current
-      ) {
-        console.log(
-          "Performing fit-to-screen after canvas ready for INITIAL APP INITIALIZATION ONLY"
-        );
-        eeSch.sendCommand({ command: "view", viewType: "fit" });
-        hasFitToScreenExecutedRef.current = true; // Mark fit-to-screen as executed
-        isProcessingFitToScreenRef.current = true; // Mark as processing to prevent resize interference
-        hasInitializedOnceRef.current = true; // Mark as initialized only after fit-to-screen
-        setHasViewedSchematic(true); // Mark as viewed so fit-to-screen won't happen again
-        console.log(
-          "Fit-to-screen command sent successfully for INITIAL APP INITIALIZATION"
-        );
-
-        // Clear the processing flag on next frame to allow normal operation
-        requestAnimationFrame(() => {
-          console.log(
-            "Clearing fit-to-screen processing flag after command execution"
-          );
-          isProcessingFitToScreenRef.current = false;
-        });
-      }
-      // Only mark as initialized if no special actions are pending and this is visible tab
-      else if (!hasInitializedOnceRef.current && isTabVisibleRef.current) {
-        console.log(
-          "Canvas ready for first time with no special actions, marking as initialized"
-        );
-        hasInitializedOnceRef.current = true;
-      }
-
-      // Reset initialization flag when canvas is recreated
-      // But ONLY if this is a resize operation, not a tab change
-      if (
-        !isTabChangeInProgressRef.current &&
-        hasFitToScreenExecutedRef.current
-      ) {
-        console.log(
-          "Canvas recreated due to resize - resetting hasInitializedOnceRef but keeping fit-to-screen flag"
-        );
-        hasInitializedOnceRef.current = false;
-        // NEVER reset hasFitToScreenExecutedRef during resize - it should only happen once at app startup
-        console.log(
-          "Canvas recreation during resize - fit-to-screen will NOT be triggered again"
-        );
-      } else if (isTabChangeInProgressRef.current) {
-        console.log(
-          "Canvas initialization during tab change - keeping existing flags"
-        );
-      }
-
-      return true; // Successfully initialized
-    },
-    [msgCallback, hasViewedSchematic, setHasViewedSchematic, isDarkMode]
-  );
-
-  // Effect to handle tab visibility changes - simplified approach like simulate/plot tabs
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Simple visibility observer to detect when tab becomes visible
-    const visibilityObserver = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0]!;
-        const isVisible = entry!.isIntersecting && entry!.intersectionRatio > 0;
-        const wasVisible = isTabVisibleRef.current;
-
-        console.log("Tab visibility changed:", isVisible, "was:", wasVisible);
-
-        // Mark tab change in progress to prevent resize interference
-        if (isVisible !== wasVisible) {
-          console.log("Tab change detected, marking in progress");
-          isTabChangeInProgressRef.current = true;
-
-          // Clear the tab change flag after a short delay to allow stabilization
-          setTimeout(() => {
-            console.log("Tab change completed, clearing flag");
-            isTabChangeInProgressRef.current = false;
-          }, 300); // 300ms delay to allow tab transition to complete
-        }
-
-        isTabVisibleRef.current = isVisible;
-
-        // When tab becomes visible, ensure canvas is ready (same logic as other tabs)
-        // Only initialize if canvas exists but hasn't been initialized for this canvas instance
-        if (
-          isVisible &&
-          canvasRef.current &&
-          initializedCanvasRef.current !== canvasRef.current
-        ) {
-          console.log("Tab became visible, ensuring canvas is ready");
-          safeInitCanvas(canvasRef.current);
-        }
-
-        // Check if container size changed while tab was hidden - if so, force canvas recreation
-        if (isVisible && !wasVisible && canvasRef.current) {
-          const rect = containerRef.current?.getBoundingClientRect();
-          if (rect) {
-            const currentWidth = Math.round(rect.width);
-            const currentHeight = Math.round(rect.height);
-            const lastSize = lastContainerSizeRef.current;
-
-            // Check if size changed significantly while tab was hidden
-            const widthDiff = Math.abs(currentWidth - lastSize.width);
-            const heightDiff = Math.abs(currentHeight - lastSize.height);
-            const RESIZE_THRESHOLD = 5;
-
-            if (
-              widthDiff >= RESIZE_THRESHOLD ||
-              heightDiff >= RESIZE_THRESHOLD
-            ) {
-              console.log(
-                `Tab became visible with different container size (${currentWidth}x${currentHeight} vs ${lastSize.width}x${lastSize.height}), forcing canvas recreation`
-              );
-
-              // Update the last known size
-              lastContainerSizeRef.current = {
-                width: currentWidth,
-                height: currentHeight,
-              };
-
-              // Remove existing canvas
-              if (
-                canvasRef.current &&
-                containerRef.current &&
-                canvasRef.current.parentNode === containerRef.current
-              ) {
-                console.log(
-                  "Removing existing canvas for size change recreation"
-                );
-                containerRef.current.removeChild(canvasRef.current);
-                // Reset refs
-                canvasGenerationRef.current += 1;
-                initializedCanvasRef.current = null;
-                initializingCanvasRef.current = null;
-                canvasRef.current = null;
-              }
-
-              // Create new canvas with current container dimensions
-              console.log("Creating new canvas for size change");
-              const newCanvas = document.createElement("canvas");
-              newCanvas.id = "schematic-canvas";
-              newCanvas.style.width = "100%";
-              newCanvas.style.height = "100%";
-              newCanvas.style.display = "block";
-              newCanvas.style.border = "solid 1px gray";
-
-              // Add to container and update ref
-              if (containerRef.current) {
-                containerRef.current.appendChild(newCanvas);
-                canvasRef.current = newCanvas;
-
-                // Initialize the new canvas
-                safeInitCanvas(newCanvas);
-              }
+          setEditor(instance);
+          editorRef.current = instance;
+          resolveReady();
+          canvasElement.dataset.canvasReady = "true";
+          handleSchematicDataChange(await instance.getSchematic());
+          if (!hasViewedSchematicRef.current) {
+            await instance.fitView();
+            if (!cancelled) {
+              hasViewedSchematicRef.current = true;
+              setHasViewedSchematic(true);
             }
           }
+        } catch (error) {
+          if (!cancelled) {
+            canvasElement.dataset.canvasReady = "false";
+            resolveReady();
+            reportEditorError("initialization", error);
+          }
         }
-      },
-      { threshold: 0.1 }
-    );
-
-    visibilityObserver.observe(container);
-
-    return () => {
-      visibilityObserver.disconnect();
-    };
-  }, [safeInitCanvas]); // Canvas initialization handled internally by safeInitCanvas
-
-  // Handle keyboard events for the to-be-plotted selection mode
-  useEffect(() => {
-    if (!isToBePlottedMode) return;
-
-    // Ensure we're in select mode when the to-be-plotted workflow is active
-    eeSch.sendCommand({ command: "mode", modeType: "select" });
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" || event.key === "§") {
-        event.preventDefault();
-        handleExitToBePlottedMode?.();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isToBePlottedMode, handleExitToBePlottedMode]);
-
-  // Centralized keyboard handling (except to-be-plotted ESC flow)
-  useSchematicKeyboard({
-    containerRef,
-    canvasRef,
-    isTabVisibleRef,
-    isToBePlottedModeRef,
-    onOpenShortcutsDialog: () => setShowShortcutsDialog(true),
-    onResetAllModes: () => {
-      const resetModes = useAppStore.getState().resetSchematicModes;
-      resetModes();
-    },
-    onSetWireMode: (enable) => {
-      const setEditorMode = useAppStore.getState().setEditorMode;
-      setEditorMode(enable ? "wire" : "none");
-    },
-    onSetDeleteMode: (enable) => {
-      const setEditorMode = useAppStore.getState().setEditorMode;
-      setEditorMode(enable ? "delete" : "none");
-    },
-    onSetMoveMode: (enable) => {
-      const setEditorMode = useAppStore.getState().setEditorMode;
-      setEditorMode(enable ? "move" : "none");
-    },
-    onSetTextMode: (enable) => {
-      const setEditorMode = useAppStore.getState().setEditorMode;
-      setEditorMode(enable ? "text" : "none");
-    },
-  });
-
-  // Initialize the canvas and set up the message callback
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Check if canvas already exists to avoid recreation
-    let canvas = document.getElementById(
-      "schematic-canvas"
-    ) as HTMLCanvasElement;
-
-    console.log(
-      "Canvas creation effect - checking for existing canvas:",
-      !!canvas
-    );
-
-    if (!canvas) {
-      // Create the canvas element only if it doesn't exist
-      console.log("Creating new canvas element");
-      canvas = document.createElement("canvas");
-      canvas.id = "schematic-canvas";
-      canvas.dataset.canvasReady = "false";
-      canvas.style.width = "100%";
-      canvas.style.height = "100%";
-      canvas.style.display = "block";
-      canvas.style.border = "solid 1px gray"; // Initial border for visibility
-
-      // Don't initialize yet - let the resize handler do it
-      canvasRef.current = canvas;
-      container.appendChild(canvas);
-      console.log("New canvas appended to container");
-    } else {
-      // Canvas exists, just update the ref
-      console.log("Using existing canvas, updating ref");
-      canvasRef.current = canvas;
-    }
-
-    // Cleanup function - don't remove canvas as it should persist across tab switches
-    return () => {
-      // Canvas should persist across tab switches, no cleanup needed
-    };
-  }, []);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleResize = () => {
-      if (!containerRef.current) return;
-
-      // Don't interfere with fit-to-screen operation - wait for it to complete
-      if (isProcessingFitToScreenRef.current) {
-        console.log(
-          "Skipping resize - fit-to-screen is currently being processed"
-        );
-        return;
-      }
-
-      // Don't trigger resize during tab changes to prevent cross-contamination
-      if (isTabChangeInProgressRef.current) {
-        console.log("Skipping resize - tab change is in progress");
-        return;
-      }
-
-      // Only process resize if tab is actually visible
-      if (!isTabVisibleRef.current) {
-        console.log("Skipping resize - tab not visible");
-        return;
-      }
-
-      // Check if the container is actually visible (not hidden by tabs)
-      const rect = containerRef.current.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) {
-        console.log("Skipping resize - container not visible (0 dimensions)");
-        return;
-      }
-
-      // Check if size actually changed to avoid unnecessary recreation
-      const currentWidth = Math.round(rect.width);
-      const currentHeight = Math.round(rect.height);
-      const lastSize = lastContainerSizeRef.current;
-
-      // Skip if this is the first measurement (initialization case)
-      if (lastSize.width === 0 && lastSize.height === 0) {
-        console.log(
-          "First size measurement, storing initial size:",
-          currentWidth,
-          "x",
-          currentHeight
-        );
-        lastContainerSizeRef.current = {
-          width: currentWidth,
-          height: currentHeight,
-        };
-        return;
-      }
-
-      // Only recreate if there's a significant size change (more than 5px)
-      const widthDiff = Math.abs(currentWidth - lastSize.width);
-      const heightDiff = Math.abs(currentHeight - lastSize.height);
-      const RESIZE_THRESHOLD = 5; // Only recreate for changes larger than 5px
-
-      if (widthDiff < RESIZE_THRESHOLD && heightDiff < RESIZE_THRESHOLD) {
-        console.log(
-          `Skipping resize - size change too small (${widthDiff}x${heightDiff})`
-        );
-        return;
-      }
-
-      // Update the last known size
-      lastContainerSizeRef.current = {
-        width: currentWidth,
-        height: currentHeight,
       };
+      void initialize();
+      return () => {
+        cancelled = true;
+        editorRef.current = null;
+        setEditor((current) => current === instance ? null : current);
+        if (!instance) resolveReady();
+        if (instance) void instance.destroy();
+      };
+    }, [canvasElement, handleSchematicDataChange, msgCallback, reportEditorError, setHasViewedSchematic]);
 
-      console.log(
-        `Container resized significantly (${currentWidth}x${currentHeight}), recreating canvas for proper WebGL aspect ratio adaptation`
-      );
+    useEffect(() => {
+      if (!editor) return;
+      const operation = isToBePlottedMode ? editor.setMode("select") : editorMode === "none" ? editor.resetModes() : editor.setMode(editorMode);
+      void operation.catch((error: unknown) => reportEditorError("mode update", error));
+    }, [editor, editorMode, isToBePlottedMode, reportEditorError]);
 
-      // For actual resize, we need to recreate the canvas DOM element to get proper aspect ratio
-      const container = containerRef.current;
+    useEffect(() => {
+      if (!editor) return;
+      void editor.setTheme(isDarkMode ? "dark" : "light").catch((error: unknown) => reportEditorError("theme update", error));
+    }, [editor, isDarkMode, reportEditorError]);
 
-      // Remove existing canvas
-      if (canvasRef.current && canvasRef.current.parentNode === container) {
-        console.log("Removing existing canvas for resize recreation");
-        container.removeChild(canvasRef.current);
-        // Reset refs
-        canvasGenerationRef.current += 1;
-        initializedCanvasRef.current = null;
-        initializingCanvasRef.current = null;
-        canvasRef.current = null;
-      }
+    useEffect(() => {
+      if (!editor) return;
+      void editor.setInputProfile(inputProfile).catch((error: unknown) => reportEditorError("input profile update", error));
+    }, [editor, inputProfile, reportEditorError]);
 
-      // Create new canvas with current container dimensions
-      console.log("Creating new canvas for resize");
-      const newCanvas = document.createElement("canvas");
-      newCanvas.id = "schematic-canvas";
-      newCanvas.dataset.canvasReady = "false";
-      newCanvas.style.width = "100%";
-      newCanvas.style.height = "100%";
-      newCanvas.style.display = "block";
-      newCanvas.style.border = "solid 1px gray";
+    useEffect(() => {
+      if (!isToBePlottedMode) return;
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === "Escape" || event.key === "§") {
+          event.preventDefault();
+          handleExitToBePlottedMode();
+        }
+      };
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }, [handleExitToBePlottedMode, isToBePlottedMode]);
 
-      // Add to container and update ref
-      container.appendChild(newCanvas);
-      canvasRef.current = newCanvas;
+    useSchematicKeyboard({
+      containerRef,
+      canvasRef,
+      isTabVisibleRef,
+      isToBePlottedModeRef,
+      onOpenShortcutsDialog: () => setShowShortcutsDialog(true),
+      onResetAllModes: () => useAppStore.getState().resetSchematicModes(),
+      onSetWireMode: (enable) => useAppStore.getState().setEditorMode(enable ? "wire" : "none"),
+      onSetDeleteMode: (enable) => useAppStore.getState().setEditorMode(enable ? "delete" : "none"),
+      onSetMoveMode: (enable) => useAppStore.getState().setEditorMode(enable ? "move" : "none"),
+      onSetTextMode: (enable) => useAppStore.getState().setEditorMode(enable ? "text" : "none"),
+    });
 
-      // Initialize the new canvas
-      safeInitCanvas(newCanvas);
-      if (onCanvasResized) {
-        onCanvasResized();
-      }
-    };
+    useEffect(() => {
+      if (!editor) return;
+      void editor.getAvailableComponents().then(setAvailableComponents).catch((error: unknown) => reportEditorError("component discovery", error));
+    }, [editor, reportEditorError]);
 
-    // Debounce the resize handler to reduce frequency
-    const debouncedResizeHandler = debounce(handleResize, 300); // Reduced debounce time for better responsiveness
-
-    // Wrapper for resize handler that performs final checks
-    const visibilityAwareResizeHandler = () => {
-      // Final check for tab visibility - this prevents resize triggers during tab switches
-      if (!isTabVisibleRef.current) {
-        console.log("Skipping resize - final tab visibility check failed");
-        return;
-      }
-
-      // Final check for tab change in progress
-      if (isTabChangeInProgressRef.current) {
-        console.log(
-          "Skipping resize - final tab change check shows change in progress"
-        );
-        return;
-      }
-
-      debouncedResizeHandler();
-    };
-
-    // Only initialize if canvas exists but hasn't been initialized for this canvas instance
-    if (
-      canvasRef.current &&
-      initializedCanvasRef.current !== canvasRef.current
-    ) {
-      console.log("Canvas exists but not initialized, initializing");
-      safeInitCanvas(canvasRef.current);
-    }
-
-    // Event listeners
-    window.addEventListener("resize", visibilityAwareResizeHandler);
-    const resizeObserver = new ResizeObserver(visibilityAwareResizeHandler);
-    resizeObserver.observe(container);
-
-    return () => {
-      console.log("Cleaning up schematic listeners");
-      window.removeEventListener("resize", visibilityAwareResizeHandler);
-      resizeObserver.disconnect();
-      debouncedResizeHandler.cancel();
-    };
-  }, [safeInitCanvas, onCanvasResized]);
+    useEffect(() => {
+      if (!canvasMessage) return;
+      const timer = setTimeout(() => setCanvasMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }, [canvasMessage]);
 
   const sendToNetListButtonHandler = useCallback(async () => {
-    if (!canvasRef.current) return;
+    await editorReadyPromiseRef.current;
+    const activeEditor = editorRef.current;
+    if (!activeEditor) return;
 
     try {
-      const result = await eeSch.getNetList();
-      const { netList, success } = result || { netList: "", success: false };
+      const { netList, success } = await activeEditor.getNetList();
 
       // Read one-shot override flag (set when user holds Shift)
       const {
@@ -784,7 +427,7 @@ const Schematic: React.FC<SchematicProps> = ({
       // Ensure one-shot override doesn’t linger
       setOverrideSimulateOnNetlistErrorsOnce?.(false);
     } catch (err) {
-      console.error("[DEBUG NETLIST] getNetList() failed", err);
+      console.error("Schematic netlist generation failed:", err);
       toaster.create({
         title: "Netlist Error",
         description: "Unable to generate netlist. Check schematic and try again.",
@@ -807,7 +450,10 @@ const Schematic: React.FC<SchematicProps> = ({
     setLoadingSvg(true);
     setSvgContent(null);
     setShowExportImageDialog(true);
-    eeSch.sendCommand({ command: "export", exportType: "svg" });
+    if (!editor) return;
+    void editor.getSvg().then(setSvgContent).catch((error: unknown) => {
+      reportEditorError("SVG export", error);
+    }).finally(() => setLoadingSvg(false));
   };
 
   const handleShowShortcuts = () => {
@@ -830,19 +476,8 @@ const Schematic: React.FC<SchematicProps> = ({
     }
   }, [messages]); // Re-run when messages change
 
-
-  // Clear canvas message after 3 seconds
-  useEffect(() => {
-    if (canvasMessage) {
-      const timer = setTimeout(() => {
-        setCanvasMessage(null);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [canvasMessage]);
-
   return (
+    <SchematicEditorContext.Provider value={editor}>
     <Box position="relative" height={"100%"}>
       <Box
         position="relative"
@@ -852,9 +487,14 @@ const Schematic: React.FC<SchematicProps> = ({
         tabIndex={0} // Make container focusable for keyboard shortcuts
         outline="none" // Remove default focus outline
       >
-        {/* Canvas added dynamically */}
+        <canvas
+          id="schematic-canvas"
+          ref={setCanvasRef}
+          data-canvas-ready="false"
+          style={{ width: "100%", height: "100%", display: "block", border: "solid 1px gray" }}
+        />
 
-        {!isToBePlottedMode && (
+        {editor && !isToBePlottedMode && (
           <Float offset="10" placement="middle-start">
             <Actions
               availableComponents={availableComponents}
@@ -863,20 +503,18 @@ const Schematic: React.FC<SchematicProps> = ({
             />
           </Float>
         )}
-        {!isToBePlottedMode && (
+        {editor && !isToBePlottedMode && (
           <Float offset="10" placement="middle-end">
             <CanvasControls />
           </Float>
         )}
-        {propertiesOpen && (
+        {editor && propertiesOpen && (
           <Properties
             selectedItem={selectedItem}
-            canvasHeight={canvasHeight}
+            canvasHeight={0}
             onApply={(name, value) => {
-              eeSch.sendCommand({
-                command: "setSelectedItemNameValue",
-                name: name,
-                value: value,
+              void editor.setSelectedItemNameValue(name, value).catch((error: unknown) => {
+                reportEditorError("property update", error);
               });
             }}
             onCloseButtonClick={propertiesCallBack}
@@ -1031,7 +669,9 @@ const Schematic: React.FC<SchematicProps> = ({
         onClose={() => setShowShortcutsDialog(false)}
       />
     </Box>
+    </SchematicEditorContext.Provider>
   );
-};
+});
 
+Schematic.displayName = "Schematic";
 export default Schematic;

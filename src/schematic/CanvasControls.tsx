@@ -1,11 +1,12 @@
 import React from "react";
 import { IconButton } from "@chakra-ui/react";
 import { Tooltip } from "../components/ui/tooltip";
-import * as ee from "eecircuit-schematic";
 import { Undo2, X, RotateCw, FlipHorizontal, FlipVertical } from "lucide-react";
 import { useAppStore } from "src/store/appStore";
+import { useSchematicEditor } from "./editorContext";
 
 const CanvasControls: React.FC = () => {
+  const editor = useSchematicEditor();
   // const inputProfile = useAppStore((s) => s.inputProfile); // Removed profile check
   const isWiring = useAppStore((s) => s.isWiring);
   const isMoving = useAppStore((s) => s.isMoving);
@@ -47,7 +48,9 @@ const CanvasControls: React.FC = () => {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                ee.undoLastWirePoint();
+                void editor.undoLastWirePoint().catch((error: unknown) => {
+                  console.error("Failed to undo wire point:", error);
+                });
               }}
             >
               <Undo2 />
@@ -65,6 +68,9 @@ const CanvasControls: React.FC = () => {
                 e.preventDefault();
                 e.stopPropagation();
                 // Use robust reset to exit mode
+                void editor.cancelWire().catch((error: unknown) => {
+                  console.error("Failed to cancel wire:", error);
+                });
                 resetSchematicModes();
                 setIsWiring(false); // Force update UI
               }}
@@ -88,7 +94,9 @@ const CanvasControls: React.FC = () => {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                ee.rotateSelected();
+                void editor.rotateSelected().catch((error: unknown) => {
+                  console.error("Failed to rotate selection:", error);
+                });
               }}
             >
               <RotateCw />
@@ -105,7 +113,9 @@ const CanvasControls: React.FC = () => {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                ee.flipHorizontal();
+                void editor.flipHorizontal().catch((error: unknown) => {
+                  console.error("Failed to flip selection horizontally:", error);
+                });
               }}
             >
               <FlipHorizontal />
@@ -122,7 +132,9 @@ const CanvasControls: React.FC = () => {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                ee.flipVertical();
+                void editor.flipVertical().catch((error: unknown) => {
+                  console.error("Failed to flip selection vertically:", error);
+                });
               }}
             >
               <FlipVertical />
@@ -140,6 +152,9 @@ const CanvasControls: React.FC = () => {
                 e.preventDefault();
                 e.stopPropagation();
                 // Use robust reset to ensure controls disappear
+                void editor.cancelMove().catch((error: unknown) => {
+                  console.error("Failed to cancel move:", error);
+                });
                 resetSchematicModes();
                 setIsMoving(false); // Force update UI
               }}

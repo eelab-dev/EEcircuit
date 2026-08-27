@@ -1,4 +1,3 @@
-import { sendCommand, setTheme } from "eecircuit-schematic";
 import { StateCreator } from "zustand";
 import { getRecommendedInputProfile } from "../utils/deviceDetection";
 import { SettingsCategory } from "../types/commonTypes";
@@ -76,14 +75,6 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
   
   // Apply initial theme to document
   applyThemeToDocument(initialTheme);
-  // Attempt to sync initial theme to schematic on first load
-  try {
-    setTheme(initialTheme ? "dark" : "light");
-  } catch (err) {
-    // [DEBUG-theme-sync] setTheme at store init may run before canvas init
-    console.warn("[DEBUG-theme-sync] Initial setTheme at store init failed:", err);
-  }
-  
   // Set up system preference listener
   if (typeof window !== 'undefined') {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -91,13 +82,6 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
       const isDark = e.matches;
       set({ isDarkMode: isDark });
       applyThemeToDocument(isDark);
-      // Keep schematic canvas theme in sync with system changes
-      try {
-        setTheme(isDark ? "dark" : "light");
-      } catch (err) {
-        // [DEBUG-theme-sync] setTheme failed (likely before canvas init)
-        console.warn("[DEBUG-theme-sync] setTheme on system change failed:", err);
-      }
     };
     
     // Use addEventListener for modern browsers
@@ -147,36 +131,18 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
       
       set({ inputProfile: newProfile });
 
-      sendCommand({
-        command: "setInputProfile",
-        profile: newProfile,
-      });
     },
 
     // Theme actions with document class integration
     setIsDarkMode: (isDark) => {
       set({ isDarkMode: isDark });
       applyThemeToDocument(isDark);
-      // Propagate theme change to eecircuit schematic
-      try {
-        setTheme(isDark ? "dark" : "light");
-      } catch (err) {
-        // [DEBUG-theme-sync] setTheme failed (likely before canvas init)
-        console.warn("[DEBUG-theme-sync] setTheme in setIsDarkMode failed:", err);
-      }
     },
     toggleTheme: () => {
       const currentMode = get().isDarkMode;
       const newMode = !currentMode;
       set({ isDarkMode: newMode });
       applyThemeToDocument(newMode);
-      // Also notify eecircuit schematic of theme change
-      try {
-        setTheme(newMode ? "dark" : "light");
-      } catch (err) {
-        // [DEBUG-theme-sync] setTheme failed (likely before canvas init)
-        console.warn("[DEBUG-theme-sync] setTheme in toggleTheme failed:", err);
-      }
     },
 
     // Simulation configuration actions

@@ -1,7 +1,6 @@
 import { StateCreator } from "zustand";
 import { Schematic as SchematicType } from "eecircuit-schematic";
-import * as ee from "eecircuit-schematic";
-type EditorMode = Parameters<typeof ee.setMode>[0];
+import type { EditorMode } from "eecircuit-schematic";
 
 // Schematic state and actions
 export interface SchematicState {
@@ -44,16 +43,6 @@ export const createSchematicSlice: StateCreator<
     set({ hasResizedSinceSchematicView: has }),
   setHasViewedSchematic: (has) => set({ hasViewedSchematic: has }),
   setCurrentSchematic: (schematic) => set({ currentSchematic: schematic }),
-  setEditorMode: (mode) =>
-    set((state) => {
-      if (state.editorMode === mode) return state;
-      // Always use the engine's unified mode setter
-      ee.setMode(mode);
-      return { ...state, editorMode: mode } as SchematicSlice;
-    }),
-  resetSchematicModes: () =>
-    set((state) => {
-      ee.resetAllModes();
-      return { ...state, editorMode: "none" } as SchematicSlice;
-    }),
+  setEditorMode: (mode) => set({ editorMode: mode }),
+  resetSchematicModes: () => set({ editorMode: "none" }),
 });

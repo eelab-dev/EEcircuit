@@ -3,7 +3,6 @@ import { IconButton, Separator } from "@chakra-ui/react";
 import { Tooltip } from "../components/ui/tooltip";
 import AddComponentPopover from "./AddComponentPopover";
 import debounce from "lodash.debounce";
-import * as ee from "eecircuit-schematic";
 import type { AvailableComponent } from "eecircuit-schematic";
 
 import {
@@ -21,6 +20,7 @@ import {
 import { actionBarTheme } from "src/styles/uiThemes";
 import ToggleActionButton from "./ToggleActionButton";
 import { useAppStore } from "src/store/appStore";
+import { useSchematicEditor } from "./editorContext";
 
 type ActionsProps = {
   availableComponents: AvailableComponent[];
@@ -33,6 +33,7 @@ const Actions: React.FC<ActionsProps> = ({
   onExportImage,
   onShowShortcuts,
 }) => {
+  const editor = useSchematicEditor();
   const editorMode = useAppStore((s) => s.editorMode);
   const setEditorMode = useAppStore((s) => s.setEditorMode);
 
@@ -139,7 +140,9 @@ const Actions: React.FC<ActionsProps> = ({
           bg={actionBarTheme.buttonIconBg}
           aria-label="Fit schematic to screen"
           onClick={() => {
-            ee.sendCommand({ command: "view", viewType: "fit" });
+            void editor.fitView().catch((error: unknown) => {
+              console.error("Failed to fit schematic view:", error);
+            });
           }}
         >
           <Fullscreen />

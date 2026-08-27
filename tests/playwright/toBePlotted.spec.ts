@@ -41,15 +41,13 @@ test("To Be Plotted variables are updated when schematic nets change", async ({ 
   
   // Start from center and scan outwards in a grid
   scanLoop:
-  for (let dy = -100; dy <= 100; dy += 20) {
-    for (let dx = -100; dx <= 100; dx += 20) {
+  // The fitted demo is intentionally laid out with wires above/beside the
+  // source symbols. Search the usable canvas rather than coupling the demo
+  // geometry to a narrow center window.
+  for (let dy = -320; dy <= 40; dy += 30) {
+    for (let dx = -600; dx <= 600; dx += 30) {
       await page.mouse.move(cx + dx, cy + dy);
-      await page.waitForFunction(() => {
-        return Array.from(document.querySelectorAll("button")).some((button) => {
-          const text = button.textContent ?? "";
-          return /.* - \d+/.test(text) && !text.includes("X:");
-        });
-      }, undefined, { timeout: 100 }).catch(() => undefined);
+      await page.waitForTimeout(15);
       
       // Look for a button in the bottom bar that has a dash (e.g., "output - 2")
       // excluding the coordinate button "X:  0, Y:  0"
@@ -59,9 +57,10 @@ test("To Be Plotted variables are updated when schematic nets change", async ({ 
         if (await btn.isVisible()) {
           const text = await btn.innerText();
           if (text && !text.includes('X:')) {
-            const lowerText = text.toLowerCase();
-            // In the demo schematic, nets are usually named 'output', 'input', 'in', 'out'
-            if (lowerText.includes('out') || lowerText.includes('in')) {
+            // Only accept the named wire entries. Component names such as
+            // `vin` also contain "in", but selecting those would not update
+            // the transient to-be-plotted net list.
+            if (/^(output|input)\s*-\s*\d+/i.test(text.trim())) {
               targetX = cx + dx;
               targetY = cy + dy;
               const splitText = text.split('-');

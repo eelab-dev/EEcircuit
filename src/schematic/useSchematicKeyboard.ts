@@ -1,5 +1,4 @@
 import React from "react";
-import * as eeSch from "eecircuit-schematic";
 
 // Centralized keyboard handling for the Schematic tab
 // - Keeps code organized and avoids duplication in the component file
@@ -99,38 +98,17 @@ export function useSchematicKeyboard({
         return;
       }
 
-      // Handle Shift+Z for undo
-      if (event.shiftKey && event.key === "Z") {
-        event.preventDefault();
-        eeSch.undoSch();
-        return;
-      }
-
-      // Handle Shift+R for redo
-      if (event.shiftKey && event.key === "R") {
-        event.preventDefault();
-        eeSch.redoSch();
-        return;
-      }
-
       // Handle 'w' / 'W' to enter wire mode
       if (!event.shiftKey && !event.ctrlKey && !event.metaKey) {
         if (event.key === "w" || event.key === "W") {
-          // Don't prevent default to keep browser behavior safe; this is non-destructive
-          eeSch.resetAllModes(); // Syncs with action bar
-          console.log("[DEBUG KB] Entering wire mode via key 'w'");
           onSetWireMode(true);
           return;
         }
         if (event.key === "m" || event.key === "M") {
-          eeSch.resetAllModes();
-          console.log("[DEBUG KB] Entering move mode via key 'm'");
           onSetMoveMode(true);
           return;
         }
         if (event.key === "t" || event.key === "T") {
-          eeSch.resetAllModes();
-          console.log("[DEBUG KB] Entering text mode via key 't'");
           onSetTextMode(true);
           return;
         }
@@ -139,8 +117,6 @@ export function useSchematicKeyboard({
       // Handle Shift + D to enter delete mode
       if (event.shiftKey && (event.key === "d" || event.key === "D")) {
         event.preventDefault();
-        eeSch.resetAllModes(); // Syncs with action bar
-        console.log("[DEBUG KB] Entering delete mode via keys 'Shift+D'");
         onSetDeleteMode(true);
         return;
       }

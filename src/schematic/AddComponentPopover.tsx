@@ -3,9 +3,10 @@ import { Flex, IconButton, Box, Input, Text } from "@chakra-ui/react";
 import { createPortal } from "react-dom";
 import { Tooltip } from "../components/ui/tooltip";
 import { CopyPlus, X } from "lucide-react";
-import { AvailableComponent, sendCommand } from "eecircuit-schematic";
+import { AvailableComponent } from "eecircuit-schematic";
 import { dialogTheme } from "../styles/uiThemes";
 import { useAppStore } from "../store/appStore";
+import { useSchematicEditor } from "./editorContext";
 
 type ComponentCategory = AvailableComponent["category"];
 
@@ -105,12 +106,13 @@ type ComponentListProps = {
     componentItem: { borderColor: string; hoverBg: string; focusBg: string };
     componentText: { color: string };
   };
+  onAddComponent: (type: AvailableComponent["type"]) => void;
 };
 
 // Component list to render available components grouped by category
 const ComponentList = React.forwardRef<HTMLDivElement, ComponentListProps>(
   (
-    { availableComponents, clickCallback, focusedIndex, isDarkMode, styles },
+    { availableComponents, clickCallback, focusedIndex, isDarkMode, styles, onAddComponent },
     ref
   ) => {
     const groupedComponents = groupComponentsByCategory(availableComponents);
@@ -186,10 +188,7 @@ const ComponentList = React.forwardRef<HTMLDivElement, ComponentListProps>(
                         }
                         tabIndex={-1}
                         onClick={() => {
-                          sendCommand({
-                            command: "add",
-                            instanceType: component.type,
-                          });
+                          onAddComponent(component.type);
                           clickCallback();
                         }}
                       >
@@ -239,6 +238,7 @@ ComponentList.displayName = "ComponentList";
 const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   availableComponents,
 }) => {
+  const editor = useSchematicEditor();
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [popoverPosition, setPopoverPosition] = React.useState({
@@ -289,6 +289,12 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
     setSearchQuery("");
     setFocusedIndex(-1);
   }, []);
+
+  const addComponent = React.useCallback((type: AvailableComponent["type"]) => {
+    void editor.addComponent(type).catch((error: unknown) => {
+      console.error("Failed to add schematic component:", error);
+    });
+  }, [editor]);
 
   const openPopover = React.useCallback(() => {
     if (buttonRef.current) {
@@ -365,10 +371,7 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
         }
       } else if (e.key === "Enter") {
         e.preventDefault();
-        sendCommand({
-          command: "add",
-          instanceType: filteredComponents[focusedIndex]!.type,
-        });
+        addComponent(filteredComponents[focusedIndex]!.type);
         clickCallBack();
         return;
       }
@@ -509,6 +512,7 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
                   componentItem: styles.componentItem,
                   componentText: styles.componentText,
                 }}
+                onAddComponent={addComponent}
               />
             </Box>
           </Box>,

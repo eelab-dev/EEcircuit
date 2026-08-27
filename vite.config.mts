@@ -9,6 +9,13 @@ const configDirectory = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
+      // The local v2 package's obfuscated release bundle hides its nested
+      // worker URL from Vite's worker plugin. Use the typed source entry while
+      // developing/building this app so both workers remain discoverable.
+      "eecircuit-schematic": path.resolve(
+        configDirectory,
+        "../EEcircuit-schematic/src/main.ts"
+      ),
       // Monaco's package exports do not resolve its deep ESM worker paths
       // reliably with Vite's dependency resolver.
       "monaco-editor/esm/vs": path.resolve(
@@ -34,4 +41,9 @@ export default defineConfig({
     include: ["eecircuit-engine"],
   },
   worker: { format: "es" },
+  server: {
+    fs: {
+      allow: [configDirectory, path.resolve(configDirectory, "../EEcircuit-schematic")],
+    },
+  },
 });

@@ -19,11 +19,7 @@ import { Toaster } from "./components/ui/toaster.tsx";
 import { Tooltip } from "./components/ui/tooltip.tsx";
 
 import Logo from "./logo.tsx";
-import {
-  sendCommand,
-  loadSchematic,
-  Schematic as SchematicType,
-} from "eecircuit-schematic";
+import type { SchematicHandle } from "./schematic/schematic";
 import { EEcircuitFile } from "./types/commonTypes.ts";
 import type { PlotConfig } from "./components/ScientificPlot/types";
 import { useAppStore } from "./store/appStore";
@@ -207,7 +203,6 @@ const EEcircuitApp: React.FC = () => {
     inputProfile,
     toggleInputProfile,
     enterToBePlottedMode,
-    setCurrentSchematic,
     allSimulationConfigs,
     results, // Get reactive results for ScientificPlot
     
@@ -228,34 +223,11 @@ const EEcircuitApp: React.FC = () => {
     isLogY1, isLogY2
   } = useAppStore();
 
-  // Ref to store promise resolver for schematic save operations (keep this as it's for async operations)
-  const saveRequestIdRef = useRef(0);
-  const activeSaveRequestRef = useRef<{
-    id: number;
-    resolve: (data: SchematicType) => void;
-    reject: (error: Error) => void;
-    timeout: ReturnType<typeof setTimeout>;
-  } | null>(null);
   const saveInProgressRef = useRef(false);
+  const schematicRef = useRef<SchematicHandle>(null);
 
   // Ref for the tabs container to handle drag and drop
   const tabsContainerRef = useRef<HTMLDivElement>(null);
-
-  // Handler for schematic data changes - updated to use Zustand store
-  const handleSchematicDataChange = React.useCallback(
-    (schematicData: SchematicType) => {
-      setCurrentSchematic(schematicData); // Store in Zustand store
-
-      // If there's a pending save operation, resolve it with the new data
-      const request = activeSaveRequestRef.current;
-      if (request) {
-        activeSaveRequestRef.current = null;
-        clearTimeout(request.timeout);
-        request.resolve(schematicData);
-      }
-    },
-    [setCurrentSchematic]
-  );
 
   // Handle initial schematic view (when component mounts and schematic is the default tab)
   React.useEffect(() => {
@@ -407,7 +379,8 @@ const EEcircuitApp: React.FC = () => {
           setSchematicLoadingMessage("Loading schematic...");
 
           await waitForCanvasReady();
-          await loadSchematic(parsedContent.schematic);
+          if (!schematicRef.current) throw new Error("Schematic editor is not ready");
+          await schematicRef.current.loadSchematic(parsedContent.schematic);
         }
 
         // Restore simulation configurations if they exist
@@ -526,23 +499,6 @@ const EEcircuitApp: React.FC = () => {
     processSchematicFile,
   ]); // Include all dependencies
 
-  // Helper function to wait for schematic export completion
-  const waitForSchematicExport =
-    React.useCallback((): Promise<SchematicType> => {
-      return new Promise((resolve, reject) => {
-        const id = ++saveRequestIdRef.current;
-        // Five seconds is the fallback for a canvas that fails to answer.
-        const timeout = setTimeout(() => {
-          if (activeSaveRequestRef.current?.id === id) {
-            activeSaveRequestRef.current = null;
-          }
-          reject(new Error("Schematic export timeout - no response received"));
-        }, 5000); // 5 second fallback timeout
-
-        activeSaveRequestRef.current = { id, resolve, reject, timeout };
-      });
-    }, []);
-
   // Handler for saving the EEcircuit file
   const handleSaveFile = React.useCallback(async () => {
     if (saveInProgressRef.current) return;
@@ -555,15 +511,8 @@ const EEcircuitApp: React.FC = () => {
       }
       await waitForCanvasReady();
 
-      // Install the resolver before triggering export so synchronous responses
-      // cannot be lost.
-      const exportPromise = waitForSchematicExport();
-      sendCommand({
-        command: "export",
-        exportType: "schematic",
-      });
-
-      const latestSchematicData = await exportPromise;
+      if (!schematicRef.current) throw new Error("Schematic editor is not ready");
+      const latestSchematicData = await schematicRef.current.getSchematic();
 
       const validSimConfigs = allSimulationConfigs.filter(
         (config: SimulationType) => config.type !== "None"
@@ -612,7 +561,6 @@ const EEcircuitApp: React.FC = () => {
   }, [
     allSimulationConfigs,
     mainTabValue,
-    waitForSchematicExport,
     waitForCanvasReady,
     setMainTabValue,
   ]); // Added setMainTabValue
@@ -904,8 +852,8 @@ const EEcircuitApp: React.FC = () => {
         >
           <React.Suspense fallback={<TabPanelSkeleton label="schematic workspace" />}>
             <Schematic
+              ref={schematicRef}
               onCanvasResized={handleCanvasResized}
-              onSchematicDataChange={handleSchematicDataChange}
             />
           </React.Suspense>
           {isSchematicLoading && (
@@ -973,6 +921,15 @@ const EEcircuitApp: React.FC = () => {
           <NewSchematicDialog
             isOpen={showNewSchematicDialog}
             onClose={handleCloseNewSchematicDialog}
+            onClear={async () => {
+              if (!schematicRef.current) throw new Error("Schematic editor is not ready");
+              await schematicRef.current.clear();
+            }}
+            onLoadDemo={async () => {
+              if (!schematicRef.current) throw new Error("Schematic editor is not ready");
+              const { demoSchematic } = await import("./schematic/demoSchematic");
+              await schematicRef.current.loadSchematic(demoSchematic);
+            }}
           />
         </React.Suspense>
       )} {/* Simulation Configuration Dialog */}

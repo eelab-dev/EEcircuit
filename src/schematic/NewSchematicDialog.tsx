@@ -2,27 +2,38 @@
 import React from "react";
 import { Dialog, Button, Flex, IconButton, Portal } from "@chakra-ui/react";
 import { X } from "lucide-react";
-import { sendCommand, loadDemoSchematic } from "eecircuit-schematic";
 import { dialogTheme } from "../styles/uiThemes";
 
 type NewSchematicDialogProps = {
   isOpen: boolean;
   onClose: () => void;
+  onClear: () => Promise<void>;
+  onLoadDemo: () => Promise<void>;
 };
 
 const NewSchematicDialog: React.FC<NewSchematicDialogProps> = ({
   isOpen,
   onClose,
+  onClear,
+  onLoadDemo,
 }) => {
-  const handleNewSchematic = React.useCallback(() => {
-    sendCommand({ command: "clearSchematic" });
-    onClose();
-  }, [onClose]);
+  const handleNewSchematic = React.useCallback(async () => {
+    try {
+      await onClear();
+      onClose();
+    } catch (error) {
+      console.error("Failed to clear schematic:", error);
+    }
+  }, [onClear, onClose]);
 
-  const handleLoadDemo = React.useCallback(() => {
-    loadDemoSchematic();
-    onClose();
-  }, [onClose]);
+  const handleLoadDemo = React.useCallback(async () => {
+    try {
+      await onLoadDemo();
+      onClose();
+    } catch (error) {
+      console.error("Failed to load demo schematic:", error);
+    }
+  }, [onLoadDemo, onClose]);
 
   const handleCancel = React.useCallback(() => {
     onClose();
