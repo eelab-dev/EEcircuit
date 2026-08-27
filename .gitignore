@@ -35,3 +35,6 @@ test-videos
 .wrangler
 .stfolder
 .stignore
+
+# Repository-local Codex skills
+skills/
