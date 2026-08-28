@@ -32,6 +32,7 @@ import { demoSchematic } from "./demoSchematic";
 type SchematicProps = {
   onCanvasResized?: () => void;
   onSchematicDataChange?: (schematicData: SchematicType) => void;
+  onReady?: () => void;
 };
 
 export type SchematicHandle = {
@@ -42,9 +43,21 @@ export type SchematicHandle = {
 
 const blankSchematic: SchematicType = { componentInstances: [], wires: [] };
 
-const Properties = React.lazy(() => import("./properties"));
-const ExportImageDialog = React.lazy(() => import("./ExportImageDialog"));
-const ShortcutsDialog = React.lazy(() => import("./ShortcutsDialog"));
+const loadProperties = () => import("./properties");
+const loadExportImageDialog = () => import("./ExportImageDialog");
+const loadShortcutsDialog = () => import("./ShortcutsDialog");
+
+const Properties = React.lazy(loadProperties);
+const ExportImageDialog = React.lazy(loadExportImageDialog);
+const ShortcutsDialog = React.lazy(loadShortcutsDialog);
+
+export const preloadDeferredSchematicUi = async (): Promise<void> => {
+  await Promise.all([
+    loadProperties(),
+    loadExportImageDialog(),
+    loadShortcutsDialog(),
+  ]);
+};
 
 /**
  * v1 files occasionally contain floating-point transform noise, legacy
@@ -121,7 +134,7 @@ const normalizeLegacySchematic = (value: unknown): unknown => {
 };
 
 const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
-  ({ onSchematicDataChange }, ref) => {
+  ({ onReady, onSchematicDataChange }, ref) => {
     const isDarkMode = useAppStore((state) => state.isDarkMode);
     const inputProfile = useAppStore((state) => state.inputProfile);
     const editorMode = useAppStore((state) => state.editorMode);
@@ -161,6 +174,8 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
     const lastHitPointerAtRef = useRef(0);
     const handlePlotItemSelectedRef = useRef(addToBePlotted);
     const handleSchematicDataChangeRef = useRef(onSchematicDataChange);
+    const handleReadyRef = useRef(onReady);
+    const hasReportedReadyRef = useRef(false);
     const initialSchematicRef = useRef<SchematicType>(
       new URLSearchParams(window.location.search).get("clean") === "true"
         ? blankSchematic
@@ -171,7 +186,8 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
       isToBePlottedModeRef.current = isToBePlottedMode;
       handlePlotItemSelectedRef.current = addToBePlotted;
       handleSchematicDataChangeRef.current = onSchematicDataChange;
-    }, [addToBePlotted, isToBePlottedMode, onSchematicDataChange]);
+      handleReadyRef.current = onReady;
+    }, [addToBePlotted, isToBePlottedMode, onReady, onSchematicDataChange]);
 
     const handleSchematicDataChange = useCallback((schematicData: SchematicType) => {
       setCurrentSchematic(schematicData);
@@ -309,7 +325,6 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
           setEditor(instance);
           editorRef.current = instance;
           resolveReady();
-          canvasElement.dataset.canvasReady = "true";
           handleSchematicDataChange(await instance.getSchematic());
           if (!hasViewedSchematicRef.current) {
             await instance.fitView();
@@ -317,6 +332,13 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
               hasViewedSchematicRef.current = true;
               setHasViewedSchematic(true);
             }
+          }
+          if (cancelled) return;
+          canvasElement.dataset.canvasReady = "true";
+          performance.mark("eecircuit:schematic-ready");
+          if (!hasReportedReadyRef.current) {
+            hasReportedReadyRef.current = true;
+            handleReadyRef.current?.();
           }
         } catch (error) {
           if (!cancelled) {

@@ -27,23 +27,17 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   build: {
-    // Monaco is deferred until the Simulation tab is requested. Its editor
-    // modules contain initialization cycles that must remain in one chunk;
-    // splitting them by an arbitrary byte limit breaks production evaluation.
+    // Monaco's editor modules contain initialization cycles that must not be
+    // split by an arbitrary byte limit. Let Rolldown keep them with their
+    // natural lazy dependency graph instead of forcing a startup chunk.
     chunkSizeWarningLimit: 4_500,
     emptyOutDir: true,
     rolldownOptions: {
       output: {
-        // Keep deferred dependencies cacheable while preserving Monaco's
-        // initialization boundary and splitting the schematic package safely.
+        // Split the schematic package safely without imposing an artificial
+        // boundary on Monaco's cyclic module graph.
         codeSplitting: {
           groups: [
-            {
-              name: "monaco",
-              test: /node_modules[\\/]monaco-editor[\\/]/,
-              priority: 10,
-              minSize: 1,
-            },
             {
               name: "schematic-core",
               test: /EEcircuit-schematic[\\/]src[\\/]/,

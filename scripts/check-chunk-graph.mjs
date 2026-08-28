@@ -5,6 +5,33 @@ const files = (await readdir(assetsDirectory)).filter((file) => file.endsWith(".
 const fileSet = new Set(files);
 const graph = new Map(files.map((file) => [file, new Set()]));
 
+const basicLanguagesDirectory = new URL(
+  "../node_modules/monaco-editor/esm/vs/basic-languages/",
+  import.meta.url,
+);
+const builtInLanguageNames = (await readdir(basicLanguagesDirectory, { withFileTypes: true }))
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
+const unusedLanguageWorkers = /^(?:css|html|json|ts)\.worker-.*\.js$/;
+const editorWorkers = files.filter((file) => /^editor\.worker-.*\.js$/.test(file));
+const unwantedMonacoAssets = files.filter(
+  (file) =>
+    unusedLanguageWorkers.test(file) ||
+    builtInLanguageNames.some((language) => file.startsWith(`${language}-`)),
+);
+
+if (editorWorkers.length !== 1) {
+  throw new Error(`Expected exactly one Monaco editor worker, found ${editorWorkers.length}.`);
+}
+
+if (unwantedMonacoAssets.length > 0) {
+  throw new Error(
+    `Unused Monaco language assets detected:\n${unwantedMonacoAssets
+      .map((file) => `  - ${file}`)
+      .join("\n")}`,
+  );
+}
+
 for (const file of files) {
   const source = await readFile(new URL(file, assetsDirectory), "utf8");
   const staticImports = [

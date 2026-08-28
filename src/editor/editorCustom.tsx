@@ -2,9 +2,12 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import * as MonacoEditor from "monaco-editor";
+import * as MonacoEditor from "monaco-editor/editor/editor.api.js";
+import "monaco-editor/editor/contrib/clipboard/browser/clipboard.js";
+import "monaco-editor/editor/contrib/contextmenu/browser/contextmenu.js";
+import "monaco-editor/editor/contrib/find/browser/findController.js";
+import "monaco-editor/editor/contrib/suggest/browser/suggestController.js";
 import "./useWorker.ts";
-//import * as monaco from "monaco-editor";
 
 let spiceLanguageServicesRegistered = false;
 const spiceLanguageDisposables: Array<{ dispose: () => void }> = [];

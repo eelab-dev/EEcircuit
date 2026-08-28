@@ -128,22 +128,30 @@ const EEcircuitApp: React.FC = () => {
   // About dialog state
   const [showAboutDialog, setShowAboutDialog] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isSchematicReady, setIsSchematicReady] = React.useState(false);
 
-  const preloadSimulation = React.useCallback(() => {
-    preloadModule(loadSimulationEditorComponent);
-  }, []);
-  const preloadPlot = React.useCallback(() => {
-    preloadModule(loadPlotComponent);
+  const handleSchematicReady = React.useCallback(() => {
+    setIsSchematicReady(true);
   }, []);
 
-  // Warm lightweight dialogs after the first paint; editor, simulation, and
-  // plotting bundles are prefetched only when the user indicates intent.
+  // Keep the first schematic render lean, then warm the remaining UI while
+  // the user edits. Imports only evaluate modules; lazy components stay
+  // unmounted until their corresponding feature is opened.
   React.useEffect(() => {
-    const warmLazyDependencies = () => {
+    if (!isSchematicReady) return;
+
+    preloadModule(loadSimulationEditorComponent);
+    preloadModule(loadPlotComponent);
+
+    const warmSecondaryUi = () => {
       preloadModule(loadHeaderButtons);
       preloadModule(loadNewSchematicDialog);
       preloadModule(loadSettingsDialog);
       preloadModule(loadAboutDialog);
+      preloadModule(async () => {
+        const schematicModule = await loadSchematicComponent();
+        await schematicModule.preloadDeferredSchematicUi();
+      });
     };
 
 
@@ -161,10 +169,10 @@ const EEcircuitApp: React.FC = () => {
             cancelIdleCallback: (handle: number) => void;
           }
         ).requestIdleCallback(() => {
-          warmLazyDependencies();
-        });
+          warmSecondaryUi();
+        }, { timeout: 2_000 });
       } else {
-        timeoutHandle = globalThis.setTimeout(warmLazyDependencies, 300);
+        timeoutHandle = globalThis.setTimeout(warmSecondaryUi, 0);
       }
     }
 
@@ -180,7 +188,7 @@ const EEcircuitApp: React.FC = () => {
         globalThis.clearTimeout(timeoutHandle);
       }
     };
-  }, []);
+  }, [isSchematicReady]);
 
   // Listen for fullscreen changes from browser/keyboard
   React.useEffect(() => {
@@ -714,8 +722,6 @@ const EEcircuitApp: React.FC = () => {
                 <Tabs.Trigger
                   value="simulate"
                   aria-label="simulation config"
-                  onPointerEnter={preloadSimulation}
-                  onFocus={preloadSimulation}
                   disabled={!isSimulationTabEnabled}
                   style={{
                     opacity: isSimulationTabEnabled ? 1 : 0.5,
@@ -732,8 +738,6 @@ const EEcircuitApp: React.FC = () => {
               value="plot"
               marginX="0.5em"
               aria-label="plot display"
-              onPointerEnter={preloadPlot}
-              onFocus={preloadPlot}
               disabled={!isPlottingTabEnabled}
               style={{
                 opacity: isPlottingTabEnabled ? 1 : 0.5,
@@ -805,8 +809,6 @@ const EEcircuitApp: React.FC = () => {
                   <Tabs.Trigger
                     value="simulate"
                     aria-label="simulation config"
-                    onPointerEnter={preloadSimulation}
-                    onFocus={preloadSimulation}
                     disabled={!isSimulationTabEnabled}
                     style={{
                       opacity: isSimulationTabEnabled ? 1 : 0.5,
@@ -822,8 +824,6 @@ const EEcircuitApp: React.FC = () => {
               <Tabs.Trigger
                 value="plot"
                 aria-label="plot display"
-                onPointerEnter={preloadPlot}
-                onFocus={preloadPlot}
                 disabled={!isPlottingTabEnabled}
                 style={{
                   opacity: isPlottingTabEnabled ? 1 : 0.5,
@@ -875,6 +875,7 @@ const EEcircuitApp: React.FC = () => {
             <Schematic
               ref={schematicRef}
               onCanvasResized={handleCanvasResized}
+              onReady={handleSchematicReady}
             />
           </React.Suspense>
           {isSchematicLoading && (
