@@ -27,7 +27,34 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   build: {
+    // Monaco is deferred until the Simulation tab is requested. Its editor
+    // modules contain initialization cycles that must remain in one chunk;
+    // splitting them by an arbitrary byte limit breaks production evaluation.
+    chunkSizeWarningLimit: 4_500,
     emptyOutDir: true,
+    rolldownOptions: {
+      output: {
+        // Keep deferred dependencies cacheable while preserving Monaco's
+        // initialization boundary and splitting the schematic package safely.
+        codeSplitting: {
+          groups: [
+            {
+              name: "monaco",
+              test: /node_modules[\\/]monaco-editor[\\/]/,
+              priority: 10,
+              minSize: 1,
+            },
+            {
+              name: "schematic-core",
+              test: /EEcircuit-schematic[\\/]src[\\/]/,
+              priority: 10,
+              minSize: 1,
+              maxSize: 450_000,
+            },
+          ],
+        },
+      },
+    },
   },
   plugins: [react(), babel({
     presets: [reactCompilerPreset()],

@@ -1,5 +1,5 @@
 import { StateCreator } from "zustand";
-import { Schematic as SchematicType } from "eecircuit-schematic";
+import type { Schematic as SchematicType } from "eecircuit-schematic";
 import type { EditorMode } from "eecircuit-schematic";
 
 // Schematic state and actions

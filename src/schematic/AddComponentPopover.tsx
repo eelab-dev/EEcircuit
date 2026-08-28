@@ -3,7 +3,7 @@ import { Flex, IconButton, Box, Input, Text } from "@chakra-ui/react";
 import { createPortal } from "react-dom";
 import { Tooltip } from "../components/ui/tooltip";
 import { CopyPlus, X } from "lucide-react";
-import { AvailableComponent } from "eecircuit-schematic";
+import type { AvailableComponent } from "eecircuit-schematic";
 import { dialogTheme } from "../styles/uiThemes";
 import { useAppStore } from "../store/appStore";
 import { useSchematicEditor } from "./editorContext";

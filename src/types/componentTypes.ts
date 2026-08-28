@@ -1,5 +1,5 @@
 // Component property type definitions for EEsim
-import { AvailableComponent, SelectedItem } from "eecircuit-schematic";
+import type { AvailableComponent, SelectedItem } from "eecircuit-schematic";
 
 export interface BaseComponentProperties {
   name: string;

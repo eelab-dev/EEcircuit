@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { ResultType } from "eecircuit-engine";
+import type { ResultType } from "eecircuit-engine";
 import { Box, Grid, GridItem, Button } from "@chakra-ui/react";
 import { clearColorCache } from "./styling/colorUtils";
 import { formatEngineering } from "../utils/formatUtils";

@@ -25,10 +25,13 @@ test('verify internal signal filtering', async ({ page }) => {
   }
   await expect(spinnerContainer).toBeHidden({ timeout: 15000 });
   
-  // Verify file loaded
-  // The text might be hidden (e.g. simulation directive), so we check attached to confirm presence
-  await expect(page.getByText('Vin').first()).toBeAttached({ timeout: 5000 });
-  console.log('Schematic content "Vin" found (attached), upload successful.');
+  // The schematic is rendered on a canvas, so component labels are not DOM
+  // text. Canvas readiness plus the schematic action bar confirms that the
+  // editor survived the asynchronous file load without relying on a hidden
+  // simulation tab being mounted.
+  await expect(page.locator('[data-canvas-ready="true"]')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole('button', { name: 'Simulate Circuit' }).first()).toBeAttached({ timeout: 5000 });
+  console.log('Schematic canvas is ready after upload.');
 
   // 3. Click "Simulate" BUTTON (in BottomBar)
   // This button is responsible for enabling the tab and sending the netlist.

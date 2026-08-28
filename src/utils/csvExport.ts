@@ -1,4 +1,4 @@
-import { ResultType } from "eecircuit-engine";
+import type { ResultType } from "eecircuit-engine";
 
 export function escapeCsvField(value: unknown): string {
   const text = String(value ?? "");

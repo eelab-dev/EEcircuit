@@ -10,7 +10,7 @@ import {
   Span,
   Stack,
 } from "@chakra-ui/react";
-import { SelectedItem } from "eecircuit-schematic";
+import type { SelectedItem } from "eecircuit-schematic";
 import React, { useState } from "react";
 import {
   ComponentType,

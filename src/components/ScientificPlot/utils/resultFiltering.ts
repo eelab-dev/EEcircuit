@@ -1,4 +1,4 @@
-import { ResultType, RealDataType, ComplexDataType } from "eecircuit-engine";
+import type { ResultType, RealDataType, ComplexDataType } from "eecircuit-engine";
 import { isInternalSignal } from "./signalUtils";
 import { AggregatedResult } from "../types";
 

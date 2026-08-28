@@ -55,6 +55,13 @@ const SettingsDialog = React.lazy(loadSettingsDialog);
 const loadAboutDialog = () => import("./components/AboutDialog");
 const AboutDialog = React.lazy(loadAboutDialog);
 
+const preloadModule = (loader: () => Promise<unknown>): void => {
+  // Prefetches are best-effort. A later render will surface the real loading
+  // error through its Suspense boundary instead of creating an unhandled
+  // rejection during pointer/focus intent detection.
+  void loader().catch(() => undefined);
+};
+
 const TabPanelSkeleton: React.FC<{ label: string }> = ({ label }) => (
   <Flex
     flex={1}
@@ -122,16 +129,21 @@ const EEcircuitApp: React.FC = () => {
   const [showAboutDialog, setShowAboutDialog] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
 
-  // Preload heavier modules after first paint to improve perceived load on slow devices
-  React.useEffect(() => {
-    void loadSimulationEditorComponent();
-    void loadPlotComponent();
+  const preloadSimulation = React.useCallback(() => {
+    preloadModule(loadSimulationEditorComponent);
+  }, []);
+  const preloadPlot = React.useCallback(() => {
+    preloadModule(loadPlotComponent);
+  }, []);
 
+  // Warm lightweight dialogs after the first paint; editor, simulation, and
+  // plotting bundles are prefetched only when the user indicates intent.
+  React.useEffect(() => {
     const warmLazyDependencies = () => {
-      void loadHeaderButtons();
-      void loadNewSchematicDialog();
-      void loadSettingsDialog();
-      void loadAboutDialog();
+      preloadModule(loadHeaderButtons);
+      preloadModule(loadNewSchematicDialog);
+      preloadModule(loadSettingsDialog);
+      preloadModule(loadAboutDialog);
     };
 
 
@@ -669,6 +681,7 @@ const EEcircuitApp: React.FC = () => {
         defaultValue="schematic"
         value={mainTabValue}
         onValueChange={handleMainTabValueChange}
+        lazyMount
         variant="subtle"
         display={"flex"}
         flexDirection="column"
@@ -701,6 +714,8 @@ const EEcircuitApp: React.FC = () => {
                 <Tabs.Trigger
                   value="simulate"
                   aria-label="simulation config"
+                  onPointerEnter={preloadSimulation}
+                  onFocus={preloadSimulation}
                   disabled={!isSimulationTabEnabled}
                   style={{
                     opacity: isSimulationTabEnabled ? 1 : 0.5,
@@ -717,6 +732,8 @@ const EEcircuitApp: React.FC = () => {
               value="plot"
               marginX="0.5em"
               aria-label="plot display"
+              onPointerEnter={preloadPlot}
+              onFocus={preloadPlot}
               disabled={!isPlottingTabEnabled}
               style={{
                 opacity: isPlottingTabEnabled ? 1 : 0.5,
@@ -788,6 +805,8 @@ const EEcircuitApp: React.FC = () => {
                   <Tabs.Trigger
                     value="simulate"
                     aria-label="simulation config"
+                    onPointerEnter={preloadSimulation}
+                    onFocus={preloadSimulation}
                     disabled={!isSimulationTabEnabled}
                     style={{
                       opacity: isSimulationTabEnabled ? 1 : 0.5,
@@ -803,6 +822,8 @@ const EEcircuitApp: React.FC = () => {
               <Tabs.Trigger
                 value="plot"
                 aria-label="plot display"
+                onPointerEnter={preloadPlot}
+                onFocus={preloadPlot}
                 disabled={!isPlottingTabEnabled}
                 style={{
                   opacity: isPlottingTabEnabled ? 1 : 0.5,

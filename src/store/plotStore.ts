@@ -1,5 +1,5 @@
 import { StateCreator } from "zustand";
-import { ResultType } from "eecircuit-engine";
+import type { ResultType } from "eecircuit-engine";
 import { ToBePlotted, SimulationType } from "../types/commonTypes";
 import { areToBePlottedItemsEqual } from "../utils/toBePlotted";
 import type { AggregatedResult } from "../simulation/resultAggregator";

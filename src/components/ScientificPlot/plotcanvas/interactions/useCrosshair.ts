@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, RefObject } from "react";
-import { ResultType } from "eecircuit-engine";
+import type { ResultType } from "eecircuit-engine";
 import {
   LineConfig,
   WebglLinePlot,

@@ -1,4 +1,5 @@
-import { Simulation, ResultType } from "eecircuit-engine";
+import { Simulation } from "eecircuit-engine";
+import type { ResultType } from "eecircuit-engine";
 
 interface WorkerMessage {
   netlist: string;

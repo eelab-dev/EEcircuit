@@ -8,7 +8,7 @@ import {
   ArrowBigRight,
 } from "lucide-react";
 import { bottomBarTheme } from "../styles/uiThemes";
-import { PointerInfo } from "eecircuit-schematic";
+import type { PointerInfo } from "eecircuit-schematic";
 
 type BottomBarProps = {
   coord: { x: number; y: number };

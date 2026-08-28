@@ -1,4 +1,4 @@
-import { ResultType, ComplexNumber } from "eecircuit-engine";
+import type { ResultType, ComplexNumber } from "eecircuit-engine";
 import type { SimulationWorkerResult } from "./parallelSimulation";
 import type { BracketOperation } from "../utils/bracketParser";
 import {

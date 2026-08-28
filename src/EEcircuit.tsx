@@ -121,10 +121,6 @@ const AppLoadingShell: React.FC = () => (
 );
 
 const EEcircuit: React.FC = () => {
-  React.useEffect(() => {
-    void loadEEcircuitApp();
-  }, []);
-
   return (
     <React.Suspense fallback={<AppLoadingShell />}>
       <EEcircuitApp />

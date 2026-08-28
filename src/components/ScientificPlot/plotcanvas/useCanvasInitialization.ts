@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ResultType } from "eecircuit-engine";
+import type { ResultType } from "eecircuit-engine";
 import {
   DebugLogger,
   LineConfig,

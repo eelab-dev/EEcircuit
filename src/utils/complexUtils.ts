@@ -1,4 +1,4 @@
-import { ComplexNumber, ResultType } from "eecircuit-engine";
+import type { ComplexNumber, ResultType } from "eecircuit-engine";
 
 export interface PolarCoordinates {
   magnitude: number;

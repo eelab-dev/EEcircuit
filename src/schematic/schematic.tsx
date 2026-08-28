@@ -17,10 +17,7 @@ import { Box, Float } from "@chakra-ui/react";
 import Actions from "./actions";
 import CanvasControls from "./CanvasControls";
 import { useSchematicKeyboard } from "./useSchematicKeyboard";
-import Properties from "./properties";
 import BottomBar from "./bottombar";
-import ExportImageDialog from "./ExportImageDialog";
-import ShortcutsDialog from "./ShortcutsDialog";
 import { useAppStore } from "../store/appStore";
 import {
   formatToBePlottedLabel,
@@ -44,6 +41,10 @@ export type SchematicHandle = {
 };
 
 const blankSchematic: SchematicType = { componentInstances: [], wires: [] };
+
+const Properties = React.lazy(() => import("./properties"));
+const ExportImageDialog = React.lazy(() => import("./ExportImageDialog"));
+const ShortcutsDialog = React.lazy(() => import("./ShortcutsDialog"));
 
 /**
  * v1 files occasionally contain floating-point transform noise, legacy
@@ -509,16 +510,18 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
           </Float>
         )}
         {editor && propertiesOpen && (
-          <Properties
-            selectedItem={selectedItem}
-            canvasHeight={0}
-            onApply={(name, value) => {
-              void editor.setSelectedItemNameValue(name, value).catch((error: unknown) => {
-                reportEditorError("property update", error);
-              });
-            }}
-            onCloseButtonClick={propertiesCallBack}
-          />
+          <React.Suspense fallback={null}>
+            <Properties
+              selectedItem={selectedItem}
+              canvasHeight={0}
+              onApply={(name, value) => {
+                void editor.setSelectedItemNameValue(name, value).catch((error: unknown) => {
+                  reportEditorError("property update", error);
+                });
+              }}
+              onCloseButtonClick={propertiesCallBack}
+            />
+          </React.Suspense>
         )}
 
         {canvasMessage && (
@@ -658,16 +661,24 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
 
 
       </Box>
-      <ExportImageDialog
-        isOpen={showExportImageDialog}
-        onClose={() => setShowExportImageDialog(false)}
-        svgContent={svgContent}
-        loading={loadingSvg}
-      />
-      <ShortcutsDialog
-        isOpen={showShortcutsDialog}
-        onClose={() => setShowShortcutsDialog(false)}
-      />
+      {showExportImageDialog && (
+        <React.Suspense fallback={null}>
+          <ExportImageDialog
+            isOpen
+            onClose={() => setShowExportImageDialog(false)}
+            svgContent={svgContent}
+            loading={loadingSvg}
+          />
+        </React.Suspense>
+      )}
+      {showShortcutsDialog && (
+        <React.Suspense fallback={null}>
+          <ShortcutsDialog
+            isOpen
+            onClose={() => setShowShortcutsDialog(false)}
+          />
+        </React.Suspense>
+      )}
     </Box>
     </SchematicEditorContext.Provider>
   );

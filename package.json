@@ -11,8 +11,10 @@
     "lint": "eslint",
     "check": "tsc --noEmit && tsc -p tests/tsconfig.json --noEmit && eslint .",
     "test": "playwright test --project=chrome --workers=1",
+    "check:chunks": "node scripts/check-chunk-graph.mjs",
+    "test:preview": "npm run build && npm run check:chunks && playwright test --config=playwright.preview.config.ts",
     "test:unit": "vitest run",
-    "test:all": "npm run test:unit && npm test",
+    "test:all": "npm run test:unit && npm test && npm run test:preview",
     "deploy": "wrangler deploy"
   },
   "author": "Danial Chitnis",

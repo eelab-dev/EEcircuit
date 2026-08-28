@@ -40,6 +40,13 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         channel: 'chrome',
         headless: false,
+        launchOptions: {
+          args: [
+            '--disable-background-timer-throttling',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-renderer-backgrounding',
+          ],
+        },
       },
     },
     {
@@ -48,6 +55,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         channel: 'chrome',
+        headless: false,
         colorScheme: 'dark',
         viewport: { width: 1280, height: 720 },
         video: {

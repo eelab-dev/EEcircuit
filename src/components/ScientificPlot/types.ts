@@ -1,4 +1,4 @@
-import { ResultType } from "eecircuit-engine";
+import type { ResultType } from "eecircuit-engine";
 
 export type InputProfile = "mouse" | "trackpad" | "touchscreen";
 

@@ -1,4 +1,4 @@
-import { Schematic } from "eecircuit-schematic";
+import type { Schematic } from "eecircuit-schematic";
 
 export type EEcircuitFile = {
   schema: "EEcircuitV1";

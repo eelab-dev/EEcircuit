@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, RefObject, useCallback, startTransition } from "react";
-import { ResultType } from "eecircuit-engine";
+import type { ResultType } from "eecircuit-engine";
 import { LineConfig, UnifiedLinePlot, WebglLinePlot, WebglPolygonPlot, clearCanvas } from "webgl-plot";
 import { generatePlotColor, type PlotColor } from "./styling/colorUtils";
 import { LINE_THICKNESS } from "./styling/lineThickness";

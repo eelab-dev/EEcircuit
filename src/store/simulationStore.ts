@@ -1,8 +1,11 @@
 import { StateCreator } from "zustand";
-import { ResultType } from "eecircuit-engine";
+import type { ResultType } from "eecircuit-engine";
 import { SimulationType, ToBePlotted } from "../types/commonTypes";
 import type { BracketOperation } from "../utils/bracketParser";
-import type { ParallelSimulationResult } from "../simulation/parallelSimulation";
+import type {
+  ParallelSimulationResult,
+  SimulationWorkerResult,
+} from "../simulation/parallelSimulation";
 import { saveSimulationConfigs, loadSimulationConfigs } from "../utils/localStorageUtils";
 import { notifySimulationErrors } from "../utils/simulationErrorNotifier";
 import { chang90 } from "../Simulate/subcircuits/chang90";
@@ -10,7 +13,6 @@ import { addAcParameterToSource } from "../utils/sourceDetection";
 import { correctNgspiceUnits } from "../utils/unitCorrection";
 import { buildToBePlottedCommands } from "../utils/toBePlotted";
 import { extractValidNetsAndComponents } from "../utils/netlistUtils";
-import { ProgressiveResultAggregator } from "../simulation/resultAggregator";
 import { isSubcircuitEnd, isSubcircuitStart, parseSpiceLine } from "../utils/spiceLineParser";
 
 let latestParallelRunId = 0;
@@ -434,9 +436,18 @@ export const createSimulationSlice: StateCreator<
       actions.setBracketOperation(bracketOp);
       actions.setParallelSimulationRunning(true);
       const appActions = get() as unknown as { handleNewResults: (res: ResultType[]) => void };
-      const progressiveAggregator = new ProgressiveResultAggregator(bracketOp, (aggregated) => {
-        if (aggregated && isCurrentRun()) appActions.handleNewResults([aggregated as ResultType]);
-      });
+      const progressiveResults: SimulationWorkerResult[] = [];
+      const publishProgressiveAggregation = (simulationResult: SimulationWorkerResult): void => {
+        progressiveResults.push(simulationResult);
+        const aggregated = aggregateParallelResults(
+          progressiveResults,
+          bracketOp,
+          { preserveParameterInfo: true, sortByParameter: true },
+        );
+        if (aggregated && isCurrentRun()) {
+          appActions.handleNewResults([aggregated as ResultType]);
+        }
+      };
 
       // Initialize threads first to get the worker count
       const maxWorkers = (get() as unknown as { maxWebWorkers?: number }).maxWebWorkers || 4;
@@ -465,7 +476,7 @@ export const createSimulationSlice: StateCreator<
         },
         onResult: (simulationResult) => {
           if (!isCurrentRun()) return;
-          progressiveAggregator.addResult(simulationResult);
+          publishProgressiveAggregation(simulationResult);
         },
         onThreadUpdate: (threadId, status, currentSim) => {
           if (!isCurrentRun()) return;
