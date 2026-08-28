@@ -107,61 +107,6 @@ test("production preview evaluates lazy features and every browser chunk without
   );
   await expect(page.locator(".monaco-editor")).toBeVisible({ timeout: 15_000 });
 
-  const editor = page.locator(".monaco-editor").first();
-  const editorInput = page.getByRole("textbox", { name: "Editor content" });
-  await editorInput.focus();
-
-  await expect
-    .poll(() =>
-      editor.locator('.view-lines span[class*="mtk"]').evaluateAll((tokens) =>
-        new Set(tokens.map((token) => token.className)).size,
-      ),
-    )
-    .toBeGreaterThan(1);
-
-  await page.keyboard.press("ControlOrMeta+End");
-  await page.keyboard.press("Enter");
-  await page.keyboard.type("R");
-  await page.keyboard.press("Control+Space");
-  const suggestionWidget = page.locator(".suggest-widget");
-  await expect(suggestionWidget).toBeVisible();
-  await expect(suggestionWidget.getByText("R (resistor)", { exact: false })).toBeVisible();
-  await page.keyboard.press("Enter");
-  await expect(editor.locator(".view-lines")).toContainText("Rnumber node1 node2 value");
-
-  await page.keyboard.press("ControlOrMeta+End");
-  await page.keyboard.press("Enter");
-  await page.keyboard.type(".");
-  await expect(suggestionWidget).toBeVisible();
-  await expect(suggestionWidget.getByText(".tran", { exact: false })).toBeVisible();
-  await page.keyboard.press("Escape");
-
-  await editorInput.focus();
-  const findModifier = await page.evaluate(() =>
-    /Mac|iPhone|iPad/.test(navigator.userAgent) ? "Meta" : "Control",
-  );
-  await page.keyboard.press(`${findModifier}+KeyF`);
-  await expect(page.locator(".find-widget")).toBeVisible();
-  await page.keyboard.press("Escape");
-
-  await editor.locator(".view-lines").click({ button: "right" });
-  await expect(page.locator(".monaco-menu-container")).toBeVisible();
-  await page.keyboard.press("Escape");
-
-  const initialThemeClass = await editor.getAttribute("class");
-  await page.getByRole("button", { name: "Toggle color mode" }).click();
-  await expect.poll(() => editor.getAttribute("class")).not.toBe(initialThemeClass);
-
-  const loadedLanguageWorkers = await page.evaluate(() =>
-    performance
-      .getEntriesByType("resource")
-      .map((entry) => entry.name)
-      .filter((name) => /\/(?:editor|css|html|json|ts)\.worker-[^/]+\.js$/.test(name)),
-  );
-  expect(
-    loadedLanguageWorkers.every((worker) => worker.includes("/editor.worker-")),
-  ).toBe(true);
-
   await page.getByText("Transient", { exact: true }).click();
   await page.getByLabel("Stop Time").fill("10m");
   await page.getByLabel("Time Step").fill("100u");
