@@ -31,8 +31,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
 
   // Import handleNewResults from the main app store for handling simulation results
   const handleNewResults = useAppStore((state) => state.handleNewResults);
-  const setMainTabValue = useAppStore((state) => state.setMainTabValue);
-  const setIsPlottingTabEnabled = useAppStore((state) => state.setIsPlottingTabEnabled);
   const setSimulationConfig = useAppStore((state) => state.setSimulationConfig);
 
   // Bracket operation state
@@ -50,7 +48,6 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
   const lastSimulationConfigRef = React.useRef<SimulationType | undefined>(undefined);
   const lastGeneratedNetlistRef = React.useRef<string | null>(null);
   const [isSimulationButtonLoading, setIsSimulationButtonLoading] = useState(false);
-  const [hasAutoSwitchedToPlot, setHasAutoSwitchedToPlot] = useState(false);
 
   const handleEditor = React.useCallback((value: string | undefined) => {
     if (value !== undefined) {
@@ -78,30 +75,11 @@ const SimulationEditor: React.FC<SimulationEditorProps> = ({
     acknowledgeNetListRefresh,
   ]);
 
-  useEffect(() => {
-    if (isParallelSimulationRunning) {
-      if (!hasAutoSwitchedToPlot) {
-        setIsPlottingTabEnabled(true);
-        setMainTabValue("plot");
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setHasAutoSwitchedToPlot(true);
-      }
-      setIsSimulationButtonLoading(false);
-    } else if (hasAutoSwitchedToPlot) {
-      setHasAutoSwitchedToPlot(false);
-    }
-  }, [
-    hasAutoSwitchedToPlot,
-    isParallelSimulationRunning,
-    setIsPlottingTabEnabled,
-    setMainTabValue,
-  ]);
-
   const isButtonLoading =
     isSimulationButtonLoading || isParallelSimulationRunning;
   const buttonLoadingText = isParallelSimulationRunning
     ? "Simulating"
-    : "Loading engine";
+    : "Running simulation";
 
   // Handler for full config changes from config components
   const handleFullConfigChange = React.useCallback(

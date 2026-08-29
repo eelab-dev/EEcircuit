@@ -1,6 +1,8 @@
 import { readdir } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 
+test.use({ baseURL: "http://127.0.0.1:4174" });
+
 const backgroundChunkNames = [
   "simulate-",
   "ScientificPlot-",
@@ -10,6 +12,13 @@ const backgroundChunkNames = [
   "properties-",
   "ShortcutsDialog-",
   "ExportImageDialog-",
+];
+
+const simulationRuntimeChunkNames = [
+  "bracketParser-",
+  "parallelSimulation-",
+  "resultAggregator-",
+  "simulationWorker-",
 ];
 
 const expectBackgroundUiPreloaded = async (page: Page, url: string) => {
@@ -36,35 +45,114 @@ const expectBackgroundUiPreloaded = async (page: Page, url: string) => {
     )
     .toEqual([]);
 
-  const preloadTiming = await page.evaluate((chunkNames) => {
+  await expect.poll(() => page.evaluate(() => ({
+    engineReadyMarks: performance.getEntriesByName("eecircuit:simulation-engine-ready").length,
+    status: (window as typeof window & {
+      _workerPoolDebug?: {
+        getStatus(): {
+          initialized: boolean;
+          totalWorkers: number;
+          availableWorkers: number;
+          busyWorkers: number;
+          readyWorkers: number;
+        };
+      };
+    })._workerPoolDebug?.getStatus(),
+  })), { timeout: 30_000 }).toEqual({
+    engineReadyMarks: 1,
+    status: {
+      initialized: true,
+      totalWorkers: 1,
+      availableWorkers: 1,
+      busyWorkers: 0,
+      readyWorkers: 1,
+    },
+  });
+
+  const preloadTiming = await page.evaluate(({ chunkNames, runtimeChunkNames }) => {
     const readyMark = performance.getEntriesByName("eecircuit:schematic-ready").at(-1);
+    const primaryReadyMark = performance.getEntriesByName("eecircuit:primary-ui-ready").at(-1);
+    const engineReadyMark = performance.getEntriesByName("eecircuit:simulation-engine-ready").at(-1);
     const resources = performance
       .getEntriesByType("resource")
       .filter((entry) => entry.name.endsWith(".js"));
 
     return {
       readyAt: readyMark?.startTime ?? -1,
+      primaryReadyAt: primaryReadyMark?.startTime ?? -1,
+      engineReadyAt: engineReadyMark?.startTime ?? -1,
       starts: chunkNames.map((chunkName) => ({
         chunkName,
         startTimes: resources
           .filter((resource) => resource.name.includes(chunkName))
           .map((resource) => resource.startTime),
       })),
+      runtimeStarts: runtimeChunkNames.map((chunkName) => ({
+        chunkName,
+        startTimes: resources
+          .filter((resource) => resource.name.includes(chunkName))
+          .map((resource) => resource.startTime),
+      })),
     };
-  }, backgroundChunkNames);
+  }, { chunkNames: backgroundChunkNames, runtimeChunkNames: simulationRuntimeChunkNames });
 
   expect(preloadTiming.readyAt).toBeGreaterThanOrEqual(0);
+  expect(preloadTiming.primaryReadyAt).toBeGreaterThanOrEqual(preloadTiming.readyAt);
+  expect(preloadTiming.engineReadyAt).toBeGreaterThan(preloadTiming.primaryReadyAt);
   for (const chunk of preloadTiming.starts) {
     expect(chunk.startTimes, `${chunk.chunkName} should load exactly once`).toHaveLength(1);
     expect(chunk.startTimes[0], `${chunk.chunkName} loaded before schematic readiness`).toBeGreaterThanOrEqual(
       preloadTiming.readyAt,
     );
   }
+  for (const chunk of preloadTiming.runtimeStarts) {
+    expect(chunk.startTimes, `${chunk.chunkName} should load exactly once`).toHaveLength(1);
+    expect(chunk.startTimes[0], `${chunk.chunkName} loaded before primary UI readiness`)
+      .toBeGreaterThanOrEqual(preloadTiming.primaryReadyAt);
+  }
 
   await expect(page.locator(".monaco-editor")).toHaveCount(0);
   await expect(page.getByText("Plot Variables")).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 };
+
+const getJavaScriptResources = (page: Page) => page.evaluate(() =>
+  performance
+    .getEntriesByType("resource")
+    .map((entry) => entry.name)
+    .filter((name) => name.endsWith(".js")),
+);
+
+const startTabFallbackObserver = (page: Page) => page.evaluate(() => {
+  const observedLabels: string[] = [];
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      for (const addedNode of record.addedNodes) {
+        if (!(addedNode instanceof Element)) continue;
+        const loadingPanels = [
+          ...(addedNode.matches("[data-tab-panel-loading]") ? [addedNode] : []),
+          ...addedNode.querySelectorAll("[data-tab-panel-loading]"),
+        ];
+        for (const loadingPanel of loadingPanels) {
+          const label = loadingPanel.getAttribute("data-tab-panel-loading");
+          if (label) observedLabels.push(label);
+        }
+      }
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  (window as typeof window & {
+    __tabFallbackObservation?: { observer: MutationObserver; observedLabels: string[] };
+  }).__tabFallbackObservation = { observer, observedLabels };
+});
+
+const stopTabFallbackObserver = (page: Page) => page.evaluate(() => {
+  const observation = (window as typeof window & {
+    __tabFallbackObservation?: { observer: MutationObserver; observedLabels: string[] };
+  }).__tabFallbackObservation;
+  observation?.observer.disconnect();
+  return observation?.observedLabels ?? [];
+});
 
 test("production preview evaluates lazy features and every browser chunk without errors", async ({ page }) => {
   test.setTimeout(60_000);
@@ -98,6 +186,8 @@ test("production preview evaluates lazy features and every browser chunk without
   await expect(page.getByText("Export Schematic", { exact: true })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: "Close export dialog" }).click();
 
+  await startTabFallbackObserver(page);
+  const resourcesBeforeSimulationTab = await getJavaScriptResources(page);
   await page.getByRole("button", { name: "Simulate Circuit" }).click();
 
   await expect(page.getByRole("tab", { name: "simulation config" })).toHaveAttribute(
@@ -106,12 +196,24 @@ test("production preview evaluates lazy features and every browser chunk without
     { timeout: 15_000 },
   );
   await expect(page.locator(".monaco-editor")).toBeVisible({ timeout: 15_000 });
+  const resourcesAfterSimulationTab = await getJavaScriptResources(page);
+  expect(resourcesAfterSimulationTab.filter((resource) =>
+    !resourcesBeforeSimulationTab.includes(resource) && !/\/editor\.worker-/.test(resource),
+  )).toEqual([]);
+  await expect(page.getByText("Loading engine", { exact: true })).toHaveCount(0);
 
   await page.getByText("Transient", { exact: true }).click();
   await page.getByLabel("Stop Time").fill("10m");
   await page.getByLabel("Time Step").fill("100u");
+  const resourcesBeforeRun = await getJavaScriptResources(page);
   await page.getByRole("button", { name: /Run Simulation|Run/i }).click();
   await expect(page.getByText("Plot Variables")).toBeVisible({ timeout: 20_000 });
+  const resourcesAfterRun = await getJavaScriptResources(page);
+  expect(resourcesAfterRun.filter((resource) =>
+    !resourcesBeforeRun.includes(resource) &&
+    simulationRuntimeChunkNames.some((chunkName) => resource.includes(chunkName)),
+  )).toEqual([]);
+  expect(await stopTabFallbackObserver(page)).toEqual([]);
 
   const browserChunks = (await readdir("dist/assets"))
     .filter((file) => file.endsWith(".js"))

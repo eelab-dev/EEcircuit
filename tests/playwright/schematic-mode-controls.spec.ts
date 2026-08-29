@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test('schematic controls visibility', async ({ page }) => {
+test('move and wire modes show and hide contextual controls', async ({ page }) => {
   // 1. Open the app
   await page.goto('/');
 

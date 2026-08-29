@@ -1,13 +1,22 @@
 import { Simulation } from "eecircuit-engine";
 import type { ResultType } from "eecircuit-engine";
 
-interface WorkerMessage {
+interface InitializeWorkerMessage {
+  type: "initialize";
+  requestId: string;
+}
+
+interface RunWorkerMessage {
+  type: "run";
   netlist: string;
   sessionId: string;
   requestId: string;
 }
 
+type WorkerMessage = InitializeWorkerMessage | RunWorkerMessage;
+
 interface WorkerResponse {
+  type?: "result";
   sessionId: string;
   requestId: string;
   success: boolean;
@@ -94,6 +103,25 @@ async function runSimulation(netlist: string, sessionId: string, requestId: stri
 
 // Handle messages from main thread
 self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
+  if (event.data.type === "initialize") {
+    try {
+      await initializeSimulation();
+      self.postMessage({
+        type: "initialized",
+        requestId: event.data.requestId,
+        success: true,
+      });
+    } catch (error) {
+      self.postMessage({
+        type: "initialized",
+        requestId: event.data.requestId,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : "Unknown initialization error",
+      });
+    }
+    return;
+  }
+
   const { netlist, sessionId, requestId } = event.data;
   
   if (!netlist || !sessionId || !requestId) {
@@ -107,6 +135,7 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
   }
 
   const response = await runSimulation(netlist, sessionId, requestId);
+  response.type = "result";
   self.postMessage(response);
 });
 

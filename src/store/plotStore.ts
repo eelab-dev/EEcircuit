@@ -109,7 +109,7 @@ export interface PlotActions {
   setShowInternalSignals: (show: boolean) => void;
 
   // Combined actions for common operations
-  handleNewResults: (results: ResultType[]) => void;
+  handleNewResults: (results: ResultType[], options?: { switchToPlot?: boolean }) => void;
   enterToBePlottedMode: () => void;
   exitToBePlottedMode: () => void;
   
@@ -244,7 +244,7 @@ export const createPlotSlice: StateCreator<
   setShowInternalSignals: (show) => set({ showInternalSignals: show }),
 
   // Combined actions for common operations
-  handleNewResults: (newResults) => {
+  handleNewResults: (newResults, options) => {
     // Double-check that we have valid results before enabling plot tab
     const hasValidResults =
       newResults &&
@@ -388,7 +388,7 @@ export const createPlotSlice: StateCreator<
       set({
         results: [firstResult], // Always use firstResult which has been processed correctly
         isPlottingTabEnabled: true,
-        mainTabValue: "plot",
+        ...(options?.switchToPlot === false ? {} : { mainTabValue: "plot" as const }),
         
         // Canvas mode
         numCanvases: numCanvases as 1 | 2,

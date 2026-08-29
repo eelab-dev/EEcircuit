@@ -435,7 +435,12 @@ export const createSimulationSlice: StateCreator<
 
       actions.setBracketOperation(bracketOp);
       actions.setParallelSimulationRunning(true);
-      const appActions = get() as unknown as { handleNewResults: (res: ResultType[]) => void };
+      const appActions = get() as unknown as {
+        handleNewResults: (
+          res: ResultType[],
+          options?: { switchToPlot?: boolean },
+        ) => void;
+      };
       const progressiveResults: SimulationWorkerResult[] = [];
       const publishProgressiveAggregation = (simulationResult: SimulationWorkerResult): void => {
         progressiveResults.push(simulationResult);
@@ -445,7 +450,10 @@ export const createSimulationSlice: StateCreator<
           { preserveParameterInfo: true, sortByParameter: true },
         );
         if (aggregated && isCurrentRun()) {
-          appActions.handleNewResults([aggregated as ResultType]);
+          appActions.handleNewResults(
+            [aggregated as ResultType],
+            { switchToPlot: progressiveResults.length === 1 },
+          );
         }
       };
 
@@ -540,7 +548,10 @@ export const createSimulationSlice: StateCreator<
         // Reconcile the final ordered aggregate after all callbacks have run.
         const aggregated = aggregateParallelResults(result.results, bracketOp);
         if (aggregated) {
-          appActions.handleNewResults([aggregated as ResultType]);
+          appActions.handleNewResults(
+            [aggregated as ResultType],
+            { switchToPlot: false },
+          );
         }
       }
     } catch (error) {

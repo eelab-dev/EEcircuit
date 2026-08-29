@@ -28,18 +28,35 @@ import { dialogTheme } from "./styles/uiThemes.ts";
 import { handleFullscreen } from "./utils/fullscreenUtils.tsx";
 import { filterInternalSignals } from "./components/ScientificPlot/utils/resultFiltering";
 import { validateEEcircuitFile } from "./utils/eeCircuitFileValidator";
+import { createPreloadableComponent } from "./utils/preloadableComponent";
 
 const loadSchematicComponent = () => import("./schematic/schematic.tsx");
 const Schematic = React.lazy(loadSchematicComponent);
 
-const loadSimulationEditorComponent = () => import("./Simulate/simulate.tsx");
-const SimulationEditor = React.lazy(loadSimulationEditorComponent);
+const simulationEditorResource = createPreloadableComponent(
+  () => import("./Simulate/simulate.tsx"),
+);
+const loadSimulationEditorComponent = simulationEditorResource.preload;
+const SimulationEditor = simulationEditorResource.Component;
 
-const loadPlotComponent = () =>
+const plotResource = createPreloadableComponent(() =>
   import("./components/ScientificPlot").then((module) => ({
     default: module.ScientificPlot,
-  }));
-const Plot = React.lazy(loadPlotComponent);
+  })),
+);
+const loadPlotComponent = plotResource.preload;
+const Plot = plotResource.Component;
+
+const loadSimulationRuntime = async (): Promise<void> => {
+  const [, simulationModule] = await Promise.all([
+    Promise.all([
+      import("./utils/bracketParser"),
+      import("./simulation/resultAggregator"),
+    ]),
+    import("./simulation/parallelSimulation"),
+  ]);
+  await simulationModule.prewarmSimulationEngine();
+};
 
 import PlotProgressOverlay from "./components/PlotProgressOverlay";
 
@@ -64,6 +81,7 @@ const preloadModule = (loader: () => Promise<unknown>): void => {
 
 const TabPanelSkeleton: React.FC<{ label: string }> = ({ label }) => (
   <Flex
+    data-tab-panel-loading={label}
     flex={1}
     minHeight={0}
     alignItems="center"
@@ -129,6 +147,12 @@ const EEcircuitApp: React.FC = () => {
   const [showAboutDialog, setShowAboutDialog] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [isSchematicReady, setIsSchematicReady] = React.useState(false);
+  const hasStartedBackgroundPreloadRef = React.useRef(false);
+  const backgroundPreloadMountedRef = React.useRef(false);
+  const backgroundIdleHandleRef = React.useRef<number | undefined>(undefined);
+  const backgroundTimeoutHandleRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   const handleSchematicReady = React.useCallback(() => {
     setIsSchematicReady(true);
@@ -139,9 +163,7 @@ const EEcircuitApp: React.FC = () => {
   // unmounted until their corresponding feature is opened.
   React.useEffect(() => {
     if (!isSchematicReady) return;
-
-    preloadModule(loadSimulationEditorComponent);
-    preloadModule(loadPlotComponent);
+    backgroundPreloadMountedRef.current = true;
 
     const warmSecondaryUi = () => {
       preloadModule(loadHeaderButtons);
@@ -155,37 +177,54 @@ const EEcircuitApp: React.FC = () => {
     };
 
 
-    let idleHandle: number | undefined;
-    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
-
-    if (typeof window !== "undefined") {
+    const scheduleSecondaryUi = () => {
+      if (!backgroundPreloadMountedRef.current || typeof window === "undefined") return;
       if ("requestIdleCallback" in window) {
-        idleHandle = (
+        backgroundIdleHandleRef.current = (
           window as Window & {
             requestIdleCallback: (
               callback: IdleRequestCallback,
               options?: IdleRequestOptions
             ) => number;
-            cancelIdleCallback: (handle: number) => void;
           }
-        ).requestIdleCallback(() => {
-          warmSecondaryUi();
-        }, { timeout: 2_000 });
+        ).requestIdleCallback(warmSecondaryUi, { timeout: 2_000 });
       } else {
-        timeoutHandle = globalThis.setTimeout(warmSecondaryUi, 0);
+        backgroundTimeoutHandleRef.current = globalThis.setTimeout(warmSecondaryUi, 0);
       }
+    };
+
+    if (!hasStartedBackgroundPreloadRef.current) {
+      hasStartedBackgroundPreloadRef.current = true;
+      void (async () => {
+        const primaryResults = await Promise.allSettled([
+          loadSimulationEditorComponent(),
+          loadPlotComponent(),
+        ]);
+        if (!backgroundPreloadMountedRef.current) return;
+        if (primaryResults.every((result) => result.status === "fulfilled")) {
+          performance.mark("eecircuit:primary-ui-ready");
+        }
+
+        // Start ngspice only after the likely next-tab UI has finished loading.
+        // It is best-effort here; the real Run path retries and reports errors.
+        void loadSimulationRuntime().catch(() => undefined);
+        scheduleSecondaryUi();
+      })();
     }
 
     return () => {
-      if (idleHandle !== undefined && typeof window !== "undefined") {
+      backgroundPreloadMountedRef.current = false;
+      if (backgroundIdleHandleRef.current !== undefined && typeof window !== "undefined") {
         if ("cancelIdleCallback" in window) {
           (window as Window & { cancelIdleCallback: (handle: number) => void }).cancelIdleCallback(
-            idleHandle
+            backgroundIdleHandleRef.current
           );
         }
+        backgroundIdleHandleRef.current = undefined;
       }
-      if (timeoutHandle !== undefined) {
-        globalThis.clearTimeout(timeoutHandle);
+      if (backgroundTimeoutHandleRef.current !== undefined) {
+        globalThis.clearTimeout(backgroundTimeoutHandleRef.current);
+        backgroundTimeoutHandleRef.current = undefined;
       }
     };
   }, [isSchematicReady]);

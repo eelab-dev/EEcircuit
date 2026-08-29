@@ -11,7 +11,7 @@ const segmentDirection = (start: Point, end: Point): "horizontal" | "vertical" |
   return "diagonal";
 };
 
-test("Load Demo restores the app-owned schematic after clearing", async ({ page }) => {
+test("Load Demo restores the original app-owned schematic and save data", async ({ page }) => {
   await page.goto("/");
 
   const canvas = page.locator("canvas#schematic-canvas");
@@ -64,7 +64,7 @@ test("Load Demo restores the app-owned schematic after clearing", async ({ page 
   ]);
 });
 
-test("default demo preserves the original common-source amplifier", () => {
+test("app-owned demo preserves the original common-source amplifier geometry", () => {
   expect(demoSchematic.componentInstances).toHaveLength(9);
   expect(demoSchematic.wires).toHaveLength(8);
 

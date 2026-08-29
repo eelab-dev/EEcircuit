@@ -7,9 +7,10 @@ import "monaco-editor/features/tokenization/register";
 import "monaco-editor/features/clipboard/register";
 import "monaco-editor/features/contextmenu/register";
 import "monaco-editor/features/find/register";
-// Monaco 0.56 exposes the classic suggestion controller through this supported entry point.
-import "monaco-editor/features/inlineCompletions/register";
 import "monaco-editor/features/snippet/register";
+// Monaco 0.56's suggest feature entry point registers inline suggestions only.
+// The classic completion popup is still registered by this separate controller.
+import "monaco-editor/esm/vs/editor/contrib/suggest/browser/suggestController.js";
 import "./useWorker.ts";
 import { registerSpiceLanguage } from "./spiceLanguage";
 

@@ -1,6 +1,8 @@
 import { readdir } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
+test.use({ baseURL: "http://127.0.0.1:4174" });
+
 test("SPICE Monaco editor supports highlighting, completion, and editing features", async ({ page }) => {
   test.setTimeout(45_000);
   const browserErrors: Error[] = [];
@@ -89,9 +91,9 @@ test("SPICE Monaco editor supports highlighting, completion, and editing feature
   await editor.locator(".view-line").filter({ hasText: "Rnumber node1 node2 value" }).last().click();
   await page.keyboard.press("End");
   await page.keyboard.press("Enter");
-  await page.keyboard.type("  .");
+  await page.keyboard.type("  .a");
+  await page.keyboard.press("Control+Space");
   await expect(suggestionWidget).toBeVisible();
-  await page.keyboard.type("a");
   const acSuggestion = suggestionWidget.getByText(".ac", { exact: true });
   await expect(acSuggestion).toBeVisible();
   await acSuggestion.click();
@@ -106,9 +108,9 @@ test("SPICE Monaco editor supports highlighting, completion, and editing feature
     .click();
   await page.keyboard.press("End");
   await page.keyboard.press("Enter");
-  await page.keyboard.type("  .");
+  await page.keyboard.type("  .pa");
+  await page.keyboard.press("Control+Space");
   await expect(suggestionWidget).toBeVisible();
-  await page.keyboard.type("pa");
   const paramSuggestion = suggestionWidget.getByText(".param", { exact: true });
   await expect(paramSuggestion).toBeVisible();
   await expect(suggestionWidget.getByText(".parameter", { exact: true })).toHaveCount(0);

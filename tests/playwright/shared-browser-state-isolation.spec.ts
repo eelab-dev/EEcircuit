@@ -2,8 +2,8 @@ import { expect, test } from "./fixtures";
 
 const PROBE_NAME = "eecircuit-playwright-isolation-probe";
 
-test.describe("shared headed Chrome isolation", () => {
-  test("records disposable browser state in one test tab", async ({ page }) => {
+test.describe("shared headed Chrome browser-state isolation", () => {
+  test("stores disposable browser state in the current test tab", async ({ page }) => {
     await page.goto("/?clean=true");
 
     await page.evaluate(async (probeName) => {
@@ -34,7 +34,7 @@ test.describe("shared headed Chrome isolation", () => {
       .toBe(true);
   });
 
-  test("starts the next test tab without prior browser state", async ({ page }) => {
+  test("clears browser state before opening the next test tab", async ({ page }) => {
     await page.goto("/?clean=true");
 
     const remainingState = await page.evaluate(async (probeName) => {

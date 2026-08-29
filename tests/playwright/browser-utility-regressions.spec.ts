@@ -1,6 +1,6 @@
 import { expect, test } from "./fixtures";
 
-test.describe("confirmed defect regressions", () => {
+test.describe("browser-loaded utility regressions", () => {
   test("validates bounded bracket expansion and mixed units", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");

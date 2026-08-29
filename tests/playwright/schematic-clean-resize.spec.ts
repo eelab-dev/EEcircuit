@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures";
 
-test("clean startup initializes an editor and preserves the canvas across resize", async ({ page }) => {
+test("clean startup keeps the ready canvas instance across viewport resize", async ({ page }) => {
   await page.goto("/?clean=true");
 
   const canvas = page.locator("canvas#schematic-canvas");

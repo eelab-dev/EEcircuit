@@ -41,6 +41,8 @@ export interface ParallelSimulationResult {
 // Default configuration
 const DEFAULT_MAX_WORKERS = 4;
 const DEFAULT_TIMEOUT = 30000; // 30 seconds per simulation
+let simulationPrewarmPromise: Promise<void> | null = null;
+let simulationEnginePrewarmed = false;
 
 /**
  * Global worker pool for managing persistent parallel simulation workers
@@ -50,6 +52,7 @@ class GlobalSimulationWorkerPool {
   private workers: Worker[] = [];
   private availableWorkers: Worker[] = [];
   private busyWorkers: Set<Worker> = new Set();
+  private readyWorkers: Set<Worker> = new Set();
   private workerToThreadId: Map<Worker, number> = new Map();
   private isInitialized: boolean = false;
   private initializationPromise: Promise<void> | null = null;
@@ -66,19 +69,24 @@ class GlobalSimulationWorkerPool {
     return GlobalSimulationWorkerPool.instance;
   }
 
+  private createWorker(threadId: number): Worker {
+    const worker = new Worker(new URL("../workers/simulationWorker.ts", import.meta.url), { type: "module" });
+    this.workers.push(worker);
+    this.availableWorkers.push(worker);
+    this.workerToThreadId.set(worker, threadId);
+    return worker;
+  }
+
   async initialize(): Promise<void> {
-    if (this.isInitialized) {
+    if (this.isInitialized && this.workers.length >= this.maxWorkers) {
       return;
     }
     if (this.initializationPromise) return this.initializationPromise;
 
     this.initializationPromise = (async () => {
-      for (let i = 0; i < this.maxWorkers; i++) {
+      for (let i = this.workers.length; i < this.maxWorkers; i++) {
         try {
-          const worker = new Worker(new URL("../workers/simulationWorker.ts", import.meta.url), { type: "module" });
-          this.workers.push(worker);
-          this.availableWorkers.push(worker);
-          this.workerToThreadId.set(worker, i);
+          this.createWorker(i);
         } catch (error) {
           console.warn(`Failed to create worker ${i}:`, error);
         }
@@ -111,11 +119,38 @@ class GlobalSimulationWorkerPool {
   async reconfigure(maxWorkers: number): Promise<void> {
     const requested = Math.max(1, Math.floor(maxWorkers));
     const desired = Math.min(requested, navigator.hardwareConcurrency || 4);
-    if (desired === this.maxWorkers && this.isInitialized) return;
+    if (desired === this.maxWorkers && this.isInitialized && this.workers.length >= desired) return;
     this.maxWorkers = desired;
     if (this.busyWorkers.size > 0) return;
-    if (this.isInitialized) this.terminate(false);
-    await this.initialize();
+    if (!this.isInitialized) {
+      await this.initialize();
+      return;
+    }
+
+    if (desired > this.workers.length) {
+      for (let i = this.workers.length; i < desired; i++) {
+        try {
+          this.createWorker(i);
+        } catch (error) {
+          console.warn(`Failed to create worker ${i}:`, error);
+        }
+      }
+      return;
+    }
+
+    if (desired < this.workers.length) {
+      const removableWorkers = this.availableWorkers
+        .filter((worker) => !this.readyWorkers.has(worker))
+        .concat(this.availableWorkers.filter((worker) => this.readyWorkers.has(worker)));
+      const workersToRemove = removableWorkers.slice(0, this.workers.length - desired);
+      for (const worker of workersToRemove) {
+        this.workers = this.workers.filter((candidate) => candidate !== worker);
+        this.availableWorkers = this.availableWorkers.filter((candidate) => candidate !== worker);
+        this.readyWorkers.delete(worker);
+        this.workerToThreadId.delete(worker);
+        worker.terminate();
+      }
+    }
   }
 
   replaceWorker(worker: Worker): void {
@@ -123,6 +158,7 @@ class GlobalSimulationWorkerPool {
     this.workers = this.workers.filter((candidate) => candidate !== worker);
     this.availableWorkers = this.availableWorkers.filter((candidate) => candidate !== worker);
     this.busyWorkers.delete(worker);
+    this.readyWorkers.delete(worker);
     this.workerToThreadId.delete(worker);
     worker.terminate();
     try {
@@ -132,7 +168,9 @@ class GlobalSimulationWorkerPool {
       this.workerToThreadId.set(replacement, threadId >= 0 ? threadId : this.workers.length - 1);
     } catch (error) {
       console.warn("Failed to replace simulation worker:", error);
+      if (this.workers.length === 0) this.isInitialized = false;
     }
+    simulationEnginePrewarmed = this.readyWorkers.size > 0;
   }
 
   terminate(resetSingleton = true): void {
@@ -142,14 +180,21 @@ class GlobalSimulationWorkerPool {
     this.workers = [];
     this.availableWorkers = [];
     this.busyWorkers.clear();
+    this.readyWorkers.clear();
     this.workerToThreadId.clear();
     this.isInitialized = false;
     this.initializationPromise = null;
+    simulationEnginePrewarmed = false;
+    simulationPrewarmPromise = null;
     if (resetSingleton) GlobalSimulationWorkerPool.instance = null;
   }
 
   getThreadId(worker: Worker): number {
     return this.workerToThreadId.get(worker) ?? -1;
+  }
+
+  markWorkerReady(worker: Worker): void {
+    if (this.workers.includes(worker)) this.readyWorkers.add(worker);
   }
 
   get availableCount(): number {
@@ -162,6 +207,97 @@ class GlobalSimulationWorkerPool {
 
   get initialized(): boolean {
     return this.isInitialized;
+  }
+
+  get readyCount(): number {
+    return this.readyWorkers.size;
+  }
+}
+
+export function initializeSimulationWorker(
+  worker: Worker,
+  timeout: number = DEFAULT_TIMEOUT,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const requestId = crypto.randomUUID();
+    let settled = false;
+
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      worker.removeEventListener("message", handleMessage);
+      worker.removeEventListener("error", handleError);
+      if (error) reject(error);
+      else resolve();
+    };
+
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data as {
+        type?: string;
+        requestId?: string;
+        success?: boolean;
+        errorMessage?: string;
+      };
+      if (message.type !== "initialized" || message.requestId !== requestId) return;
+      if (message.success) finish();
+      else finish(new Error(message.errorMessage || "Simulation engine initialization failed"));
+    };
+
+    const handleError = (error: ErrorEvent) => {
+      finish(new Error(error.message || "Simulation worker initialization failed"));
+    };
+
+    const timeoutId = setTimeout(() => {
+      finish(new Error(`Simulation engine initialization timed out after ${timeout}ms`));
+    }, timeout);
+
+    worker.addEventListener("message", handleMessage);
+    worker.addEventListener("error", handleError);
+    worker.postMessage({ type: "initialize", requestId });
+  });
+}
+
+export function prewarmSimulationEngine(): Promise<void> {
+  if (simulationEnginePrewarmed) return Promise.resolve();
+  if (simulationPrewarmPromise) return simulationPrewarmPromise;
+
+  const warmup = (async () => {
+    const workerPool = GlobalSimulationWorkerPool.getInstance(1);
+    await workerPool.reconfigure(1);
+    await workerPool.initialize();
+    const worker = workerPool.getAvailableWorker();
+    if (!worker) throw new Error("No simulation worker available for background initialization");
+
+    try {
+      await initializeSimulationWorker(worker);
+      workerPool.markWorkerReady(worker);
+      simulationEnginePrewarmed = true;
+      if (typeof performance !== "undefined") {
+        performance.mark("eecircuit:simulation-engine-ready");
+      }
+    } catch (error) {
+      workerPool.replaceWorker(worker);
+      throw error;
+    } finally {
+      if (workerPool.getThreadId(worker) >= 0) workerPool.releaseWorker(worker);
+    }
+  })();
+
+  simulationPrewarmPromise = warmup;
+  void warmup.finally(() => {
+    if (simulationPrewarmPromise === warmup) simulationPrewarmPromise = null;
+  }).catch(() => undefined);
+  return warmup;
+}
+
+async function waitForSimulationPrewarm(): Promise<void> {
+  if (!simulationPrewarmPromise) return;
+  try {
+    await simulationPrewarmPromise;
+  } catch {
+    // Background warmup is best-effort. The normal run path retries with a
+    // replacement worker and surfaces an error only if that real run fails.
   }
 }
 
@@ -217,7 +353,7 @@ if (typeof window !== 'undefined') {
 
   // Make debugging functions available globally for testing
   (window as unknown as { _workerPoolDebug: { 
-    getStatus: () => { initialized: boolean; totalWorkers: number; availableWorkers: number; busyWorkers: number }; 
+    getStatus: () => { initialized: boolean; totalWorkers: number; availableWorkers: number; busyWorkers: number; readyWorkers: number };
     cleanup: () => void 
   } })._workerPoolDebug = {
     getStatus: getWorkerPoolStatus,
@@ -319,7 +455,7 @@ export async function runSimulationInWorker(
     }
 
     // Send netlist to worker
-    worker.postMessage({ netlist, sessionId, requestId });
+    worker.postMessage({ type: "run", netlist, sessionId, requestId });
   });
 }
 
@@ -331,6 +467,7 @@ export async function runSingleSimulation(
   timeout: number = DEFAULT_TIMEOUT,
   signal?: AbortSignal,
 ): Promise<SimulationWorkerResult> {
+  await waitForSimulationPrewarm();
   return runLatestSession(async (session) => {
     const workerPool = GlobalSimulationWorkerPool.getInstance(1);
     await workerPool.reconfigure(1);
@@ -356,6 +493,7 @@ export async function runParallelSimulation(
   netlist: string,
   options: ParallelSimulationOptions = {}
 ): Promise<ParallelSimulationResult> {
+  await waitForSimulationPrewarm();
   return runLatestSession(
     (session) => runParallelSimulationInternal(netlist, { ...options, signal: session.controller.signal }, session),
     options.signal,
@@ -523,10 +661,7 @@ export function isParallelSimulationSupported(): boolean {
  */
 export function cleanupPersistentWorkers(): void {
   const pool = GlobalSimulationWorkerPool.getInstance();
-  if (pool.initialized) {
-    console.log('Manually terminating persistent simulation workers');
-    pool.terminate();
-  }
+  pool.terminate();
 }
 
 /**
@@ -537,6 +672,7 @@ export function getWorkerPoolStatus(): {
   totalWorkers: number;
   availableWorkers: number;
   busyWorkers: number;
+  readyWorkers: number;
 } {
   const pool = GlobalSimulationWorkerPool.getInstance();
   return {
@@ -544,5 +680,6 @@ export function getWorkerPoolStatus(): {
     totalWorkers: pool.totalCount,
     availableWorkers: pool.availableCount,
     busyWorkers: pool.totalCount - pool.availableCount,
+    readyWorkers: pool.readyCount,
   };
 }
