@@ -75,6 +75,7 @@ const ShortcutsDialog: React.FC<ShortcutsDialogProps> = ({
     {
       title: "Mode Controls",
       shortcuts: [
+        { keys: "A", description: "Open the component browser" },
         { keys: "M", description: "Move component" },
         { keys: "W", description: "Enter wire mode" },
         { keys: "T", description: "Enter text mode" },

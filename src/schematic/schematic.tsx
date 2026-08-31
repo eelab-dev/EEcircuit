@@ -7,6 +7,7 @@ import {
   Schematic as SchematicType,
   SchematicValidationError,
   type AvailableComponent,
+  type EditorMode,
   type EditorEvent,
   type PointerInfo,
   type SelectedItem,
@@ -28,6 +29,10 @@ import { dialogTheme, schCanvasMessageTheme } from "../styles/uiThemes";
 import { toaster } from "../components/ui/toaster";
 import { SchematicEditorContext } from "./editorContext";
 import { demoSchematic } from "./demoSchematic";
+import {
+  executeSchematicEditorCommand,
+  type SchematicEditorCommand,
+} from "./schematicCommands";
 
 type SchematicProps = {
   onCanvasResized?: () => void;
@@ -138,6 +143,8 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
     const isDarkMode = useAppStore((state) => state.isDarkMode);
     const inputProfile = useAppStore((state) => state.inputProfile);
     const editorMode = useAppStore((state) => state.editorMode);
+    const mainTabValue = useAppStore((state) => state.mainTabValue);
+    const isMoving = useAppStore((state) => state.isMoving);
     const hasViewedSchematic = useAppStore((state) => state.hasViewedSchematic);
     const setHasViewedSchematic = useAppStore((state) => state.setHasViewedSchematic);
     const setCurrentSchematic = useAppStore((state) => state.setCurrentSchematic);
@@ -167,8 +174,10 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
     const [svgContent, setSvgContent] = useState<string | null>(null);
     const [loadingSvg, setLoadingSvg] = useState(false);
     const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
+    const [isAddComponentOpen, setIsAddComponentOpen] = useState(false);
     const [canvasMessage, setCanvasMessage] = useState<{ text: string; type: "error" | "warning" } | null>(null);
     const isToBePlottedModeRef = useRef(isToBePlottedMode);
+    const isMovingRef = useRef(isMoving);
     const pointerInfoRef = useRef<PointerInfo>(null);
     const lastHitPointerInfoRef = useRef<PointerInfo>(null);
     const lastHitPointerAtRef = useRef(0);
@@ -184,10 +193,12 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
 
     useEffect(() => {
       isToBePlottedModeRef.current = isToBePlottedMode;
+      isMovingRef.current = isMoving;
+      isTabVisibleRef.current = mainTabValue === "schematic";
       handlePlotItemSelectedRef.current = addToBePlotted;
       handleSchematicDataChangeRef.current = onSchematicDataChange;
       handleReadyRef.current = onReady;
-    }, [addToBePlotted, isToBePlottedMode, onReady, onSchematicDataChange]);
+    }, [addToBePlotted, isMoving, isToBePlottedMode, mainTabValue, onReady, onSchematicDataChange]);
 
     const handleSchematicDataChange = useCallback((schematicData: SchematicType) => {
       setCurrentSchematic(schematicData);
@@ -200,6 +211,34 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
       addMessage({ text: message, type: "error", category: "Schematic", mLevel: "user" });
       setCanvasMessage({ text: message, type: "error" });
     }, [addMessage]);
+
+    const handleEditorCommand = useCallback((command: SchematicEditorCommand) => {
+      const activeEditor = editorRef.current;
+      if (!activeEditor) return;
+      void executeSchematicEditorCommand(activeEditor, command)
+        .then(() => {
+          canvasRef.current?.setAttribute("data-last-editor-command", command);
+        })
+        .catch((error: unknown) => {
+          reportEditorError(command, error);
+        });
+    }, [reportEditorError]);
+
+    const handleResetAllModes = useCallback(() => {
+      const store = useAppStore.getState();
+      if (store.editorMode === "none") {
+        // Component placement starts movement in the editor without changing the
+        // app-owned mode. Reset the editor explicitly in that state because a
+        // no-op store update would not rerun the mode synchronization effect.
+        handleEditorCommand("reset-modes");
+        return;
+      }
+      store.resetSchematicModes();
+    }, [handleEditorCommand]);
+
+    const handleSetMode = useCallback((mode: EditorMode) => {
+      useAppStore.getState().setEditorMode(mode);
+    }, []);
 
     const msgCallback = useCallback((msg: EditorEvent) => {
       switch (msg.type) {
@@ -258,7 +297,8 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
           break;
         case "schematicEditorActivity":
           useAppStore.getState().setIsWiring(msg.activity === "wiring");
-          useAppStore.getState().setIsMoving(msg.activity === "moving");
+          isMovingRef.current = msg.activity === "moving";
+          useAppStore.getState().setIsMoving(isMovingRef.current);
           break;
         case "status":
           if (msg.status === "worker-error") {
@@ -391,12 +431,12 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
       canvasRef,
       isTabVisibleRef,
       isToBePlottedModeRef,
+      isMovingRef,
+      onOpenComponentPopover: () => setIsAddComponentOpen(true),
       onOpenShortcutsDialog: () => setShowShortcutsDialog(true),
-      onResetAllModes: () => useAppStore.getState().resetSchematicModes(),
-      onSetWireMode: (enable) => useAppStore.getState().setEditorMode(enable ? "wire" : "none"),
-      onSetDeleteMode: (enable) => useAppStore.getState().setEditorMode(enable ? "delete" : "none"),
-      onSetMoveMode: (enable) => useAppStore.getState().setEditorMode(enable ? "move" : "none"),
-      onSetTextMode: (enable) => useAppStore.getState().setEditorMode(enable ? "text" : "none"),
+      onResetAllModes: handleResetAllModes,
+      onSetMode: handleSetMode,
+      onEditorCommand: handleEditorCommand,
     });
 
     useEffect(() => {
@@ -521,6 +561,10 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
           <Float offset="10" placement="middle-start">
             <Actions
               availableComponents={availableComponents}
+              isAddComponentOpen={isAddComponentOpen}
+              onAddComponentOpenChange={setIsAddComponentOpen}
+              onEditorCommand={handleEditorCommand}
+              onSetMode={handleSetMode}
               onExportImage={handleExportImage}
               onShowShortcuts={handleShowShortcuts}
             />
@@ -528,7 +572,7 @@ const Schematic = React.forwardRef<SchematicHandle, SchematicProps>(
         )}
         {editor && !isToBePlottedMode && (
           <Float offset="10" placement="middle-end">
-            <CanvasControls />
+            <CanvasControls onEditorCommand={handleEditorCommand} />
           </Float>
         )}
         {editor && propertiesOpen && (

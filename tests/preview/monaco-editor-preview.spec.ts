@@ -76,12 +76,20 @@ test("SPICE Monaco editor supports highlighting, completion, and editing feature
   expect(tokenFor(".param")?.className).toBeTruthy();
 
   const suggestionWidget = page.locator(".suggest-widget");
+  const openSuggestions = async () => {
+    await editorInput.focus();
+    await expect(editorInput).toBeFocused();
+    await expect.poll(async () => {
+      if (await suggestionWidget.isVisible()) return true;
+      await page.keyboard.press("Control+Space");
+      return suggestionWidget.isVisible();
+    }, { timeout: 5_000 }).toBe(true);
+  };
   await editor.locator(".view-line").filter({ hasText: ".end" }).last().click();
   await page.keyboard.press("End");
   await page.keyboard.press("Enter");
   await page.keyboard.type("  R");
-  await page.keyboard.press("Control+Space");
-  await expect(suggestionWidget).toBeVisible();
+  await openSuggestions();
   const resistorSuggestion = suggestionWidget.getByText("R (resistor)", { exact: false });
   await expect(resistorSuggestion).toBeVisible();
   await resistorSuggestion.click();
@@ -92,8 +100,7 @@ test("SPICE Monaco editor supports highlighting, completion, and editing feature
   await page.keyboard.press("End");
   await page.keyboard.press("Enter");
   await page.keyboard.type("  .a");
-  await page.keyboard.press("Control+Space");
-  await expect(suggestionWidget).toBeVisible();
+  await openSuggestions();
   const acSuggestion = suggestionWidget.getByText(".ac", { exact: true });
   await expect(acSuggestion).toBeVisible();
   await acSuggestion.click();
@@ -109,8 +116,7 @@ test("SPICE Monaco editor supports highlighting, completion, and editing feature
   await page.keyboard.press("End");
   await page.keyboard.press("Enter");
   await page.keyboard.type("  .pa");
-  await page.keyboard.press("Control+Space");
-  await expect(suggestionWidget).toBeVisible();
+  await openSuggestions();
   const paramSuggestion = suggestionWidget.getByText(".param", { exact: true });
   await expect(paramSuggestion).toBeVisible();
   await expect(suggestionWidget.getByText(".parameter", { exact: true })).toHaveCount(0);

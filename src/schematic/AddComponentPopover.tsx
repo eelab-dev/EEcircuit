@@ -93,6 +93,8 @@ const groupComponentsByCategory = (components: AvailableComponent[]) => {
 
 type AddComponentPopoverProps = {
   availableComponents: AvailableComponent[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
 type ComponentListProps = {
@@ -237,9 +239,10 @@ ComponentList.displayName = "ComponentList";
 
 const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   availableComponents,
+  open: isOpen,
+  onOpenChange,
 }) => {
   const editor = useSchematicEditor();
-  const [isOpen, setIsOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [popoverPosition, setPopoverPosition] = React.useState({
     top: 0,
@@ -279,16 +282,16 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   };
 
   const closePopover = React.useCallback(() => {
-    setIsOpen(false);
+    onOpenChange(false);
     setSearchQuery("");
     setFocusedIndex(-1);
-  }, []);
+  }, [onOpenChange]);
 
   const clickCallBack = React.useCallback(() => {
-    setIsOpen(false);
+    onOpenChange(false);
     setSearchQuery("");
     setFocusedIndex(-1);
-  }, []);
+  }, [onOpenChange]);
 
   const addComponent = React.useCallback((type: AvailableComponent["type"]) => {
     void editor.addComponent(type).catch((error: unknown) => {
@@ -302,9 +305,15 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
       const top = "6.25rem";
       const left = rect.right + 8;
       setPopoverPosition({ top: parseFloat(top) * 16, left });
-      setIsOpen(true);
+      onOpenChange(true);
     }
-  }, []);
+  }, [onOpenChange]);
+
+  React.useLayoutEffect(() => {
+    if (!isOpen || !buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setPopoverPosition({ top: 6.25 * 16, left: rect.right + 8 });
+  }, [isOpen]);
 
   React.useEffect(() => {
     if (isOpen && searchInputRef.current) {
@@ -323,9 +332,17 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   });
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape" || e.key === "§") {
+      e.preventDefault();
+      e.stopPropagation();
+      closePopover();
+      buttonRef.current?.focus();
+      return;
+    }
+
     if (e.key === "Tab") {
       e.preventDefault();
-      if (document.activeElement === searchInputRef.current) {
+      if (focusedIndex < 0) {
         if (filteredComponents.length > 0) {
           setFocusedIndex(0);
         }
@@ -336,7 +353,7 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
       return;
     }
 
-    if (document.activeElement === searchInputRef.current) {
+    if (document.activeElement === searchInputRef.current && focusedIndex < 0) {
       if (e.key === "ArrowDown") {
         if (filteredComponents.length > 0) {
           e.preventDefault();
@@ -383,46 +400,6 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
   };
 
   React.useEffect(() => {
-    const handleGlobalKeyDown = (event: KeyboardEvent) => {
-      // Close on Escape or § when open
-      if ((event.key === "Escape" || event.key === "§") && isOpen) {
-        closePopover();
-        return;
-      }
-
-      // Open on "A" (no modifiers) when not focused in inputs
-      if (!isOpen) {
-        if (event.ctrlKey || event.metaKey || event.altKey) return;
-        const key = event.key;
-        if (key === "a" || key === "A") {
-          // Check if we are in the schematic tab
-          const mainTabValue = useAppStore.getState().mainTabValue;
-          if (mainTabValue !== "schematic") return;
-
-          const target = event.target as HTMLElement | null;
-          const tag = (target?.tagName || "").toLowerCase();
-          const isEditable = !!target?.isContentEditable;
-          if (
-            tag === "input" ||
-            tag === "textarea" ||
-            tag === "select" ||
-            isEditable
-          ) {
-            return;
-          }
-          event.preventDefault();
-          openPopover();
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleGlobalKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleGlobalKeyDown);
-    };
-  }, [isOpen, closePopover, openPopover]);
-
-  React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         isOpen &&
@@ -451,6 +428,8 @@ const AddComponentPopover: React.FC<AddComponentPopoverProps> = ({
           onClick={openPopover}
           bg={dialogTheme.buttonIconBg}
           aria-label="Open add component popover"
+          aria-expanded={isOpen}
+          aria-controls="component-popover"
         >
           <CopyPlus />
         </IconButton>

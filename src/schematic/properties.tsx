@@ -103,7 +103,6 @@ const Properties: React.FC<PropertiesProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape" || e.key === "§") {
       e.preventDefault();
-      console.log("[DEBUG PROPERTIES] Closing dialog via ESC/§ from input");
       onCloseButtonClick();
       return;
     }
@@ -183,7 +182,6 @@ const Properties: React.FC<PropertiesProps> = ({
             // Don't let this bubble to global handlers
             e.preventDefault();
             e.stopPropagation();
-            console.log("[DEBUG PROPERTIES] Closing dialog via ESC/§ (container)");
             onCloseButtonClick();
           }
         }}

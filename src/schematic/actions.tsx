@@ -3,7 +3,7 @@ import { IconButton, Separator } from "@chakra-ui/react";
 import { Tooltip } from "../components/ui/tooltip";
 import AddComponentPopover from "./AddComponentPopover";
 import debounce from "lodash.debounce";
-import type { AvailableComponent } from "eecircuit-schematic";
+import type { AvailableComponent, EditorMode } from "eecircuit-schematic";
 
 import {
   Cable,
@@ -20,22 +20,28 @@ import {
 import { actionBarTheme } from "src/styles/uiThemes";
 import ToggleActionButton from "./ToggleActionButton";
 import { useAppStore } from "src/store/appStore";
-import { useSchematicEditor } from "./editorContext";
+import type { SchematicEditorCommand } from "./schematicCommands";
 
 type ActionsProps = {
   availableComponents: AvailableComponent[];
+  isAddComponentOpen: boolean;
+  onAddComponentOpenChange: (open: boolean) => void;
+  onEditorCommand: (command: SchematicEditorCommand) => void;
+  onSetMode: (mode: EditorMode) => void;
   onExportImage: () => void;
   onShowShortcuts: () => void;
 };
 
 const Actions: React.FC<ActionsProps> = ({
   availableComponents,
+  isAddComponentOpen,
+  onAddComponentOpenChange,
+  onEditorCommand,
+  onSetMode,
   onExportImage,
   onShowShortcuts,
 }) => {
-  const editor = useSchematicEditor();
   const editorMode = useAppStore((s) => s.editorMode);
-  const setEditorMode = useAppStore((s) => s.setEditorMode);
 
   const [isCompact, setIsCompact] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -81,20 +87,23 @@ const Actions: React.FC<ActionsProps> = ({
         maxWidth: isCompact ? "7rem" : "auto",
       }}
     >
-      <Tooltip content="Select" showArrow openDelay={300}>
-        <IconButton
-          bg={actionBarTheme.buttonIconBg}
-          aria-label="Select tool"
-        >
+      <ToggleActionButton
+        tooltip="Select"
+        pressed={editorMode === "select"}
+        onToggle={(next) => onSetMode(next ? "select" : "none")}
+      >
           <MousePointer />
-        </IconButton>
-      </Tooltip>
-      <AddComponentPopover availableComponents={availableComponents} />
+      </ToggleActionButton>
+      <AddComponentPopover
+        availableComponents={availableComponents}
+        open={isAddComponentOpen}
+        onOpenChange={onAddComponentOpenChange}
+      />
 
       <ToggleActionButton
         tooltip="Wire (W)"
         pressed={editorMode === "wire"}
-        onToggle={(next) => setEditorMode(next ? "wire" : "none")}
+        onToggle={(next) => onSetMode(next ? "wire" : "none")}
       >
         <Cable />
       </ToggleActionButton>
@@ -102,7 +111,7 @@ const Actions: React.FC<ActionsProps> = ({
       <ToggleActionButton
         tooltip="Move (M)"
         pressed={editorMode === "move"}
-        onToggle={(next) => setEditorMode(next ? "move" : "none")}
+        onToggle={(next) => onSetMode(next ? "move" : "none")}
       >
         <Move />
       </ToggleActionButton>
@@ -110,7 +119,7 @@ const Actions: React.FC<ActionsProps> = ({
       <ToggleActionButton
         tooltip="Text (T)"
         pressed={editorMode === "text"}
-        onToggle={(next) => setEditorMode(next ? "text" : "none")}
+        onToggle={(next) => onSetMode(next ? "text" : "none")}
       >
         <Type />
       </ToggleActionButton>
@@ -118,7 +127,7 @@ const Actions: React.FC<ActionsProps> = ({
       <ToggleActionButton
         tooltip="Remove (Shift+D)"
         pressed={editorMode === "delete"}
-        onToggle={(next) => setEditorMode(next ? "delete" : "none")}
+        onToggle={(next) => onSetMode(next ? "delete" : "none")}
       >
         <Eraser />
       </ToggleActionButton>
@@ -126,24 +135,19 @@ const Actions: React.FC<ActionsProps> = ({
       <Separator display={isCompact ? "none" : "block"} />
       {/* Navigation */}
 
-      <Tooltip content="Hand Tool" showArrow openDelay={300}>
-        <IconButton
-          bg={actionBarTheme.buttonIconBg}
-          aria-label="Hand tool"
-        >
+      <ToggleActionButton
+        tooltip="Hand Tool"
+        pressed={editorMode === "pan"}
+        onToggle={(next) => onSetMode(next ? "pan" : "none")}
+      >
           <Hand />
-        </IconButton>
-      </Tooltip>
+      </ToggleActionButton>
 
       <Tooltip content="Fit to Screen (F)" showArrow openDelay={300}>
         <IconButton
           bg={actionBarTheme.buttonIconBg}
           aria-label="Fit schematic to screen"
-          onClick={() => {
-            void editor.fitView().catch((error: unknown) => {
-              console.error("Failed to fit schematic view:", error);
-            });
-          }}
+          onClick={() => onEditorCommand("fit-view")}
         >
           <Fullscreen />
         </IconButton>
@@ -153,6 +157,7 @@ const Actions: React.FC<ActionsProps> = ({
         <IconButton
           bg={actionBarTheme.buttonIconBg}
           aria-label="Return view to origin"
+          onClick={() => onEditorCommand("return-to-origin")}
         >
           <CircleDot />
         </IconButton>

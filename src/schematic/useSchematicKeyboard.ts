@@ -1,21 +1,41 @@
 import React from "react";
-
-// Centralized keyboard handling for the Schematic tab
-// - Keeps code organized and avoids duplication in the component file
-// - Does NOT handle to-be-plotted mode ESC; that remains local to schematic.tsx
+import type { EditorMode } from "eecircuit-schematic";
+import type { SchematicEditorCommand } from "./schematicCommands";
+import { resolveSchematicShortcut } from "./schematicShortcuts";
 
 export type UseSchematicKeyboardParams = {
   containerRef: React.RefObject<HTMLDivElement | null>;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  // Use RefObject to avoid deprecated MutableRefObject warnings; we only read .current here
   isTabVisibleRef: React.RefObject<boolean>;
   isToBePlottedModeRef: React.RefObject<boolean>;
+  isMovingRef: React.RefObject<boolean>;
+  onOpenComponentPopover: () => void;
   onOpenShortcutsDialog: () => void;
-  onResetAllModes: () => void; // Should also reset action bar toggles
-  onSetWireMode: (enable: boolean) => void; // Syncs with action bar and schematic engine
-  onSetDeleteMode: (enable: boolean) => void; // Syncs with action bar and schematic engine
-  onSetMoveMode: (enable: boolean) => void; // Syncs with action bar and schematic engine
-  onSetTextMode: (enable: boolean) => void; // Syncs with action bar and schematic engine
+  onResetAllModes: () => void;
+  onSetMode: (mode: Extract<EditorMode, "wire" | "move" | "text" | "delete">) => void;
+  onEditorCommand: (command: SchematicEditorCommand) => void;
+};
+
+const isWithinPropertiesDialog = (target: EventTarget | null): boolean => {
+  let element = target as HTMLElement | null;
+  while (element) {
+    if (element.hasAttribute("data-properties-dialog")) return true;
+    element = element.parentElement;
+  }
+  return false;
+};
+
+const isTextInputLike = (target: EventTarget | null): boolean => {
+  const element = target as HTMLElement | null;
+  if (!element) return false;
+  const tag = element.tagName.toLowerCase();
+  return (
+    tag === "input" ||
+    tag === "textarea" ||
+    tag === "select" ||
+    element.isContentEditable ||
+    element.closest(".monaco-editor") !== null
+  );
 };
 
 export function useSchematicKeyboard({
@@ -23,139 +43,65 @@ export function useSchematicKeyboard({
   canvasRef,
   isTabVisibleRef,
   isToBePlottedModeRef,
+  isMovingRef,
+  onOpenComponentPopover,
   onOpenShortcutsDialog,
   onResetAllModes,
-  onSetWireMode,
-  onSetDeleteMode,
-  onSetMoveMode,
-  onSetTextMode,
+  onSetMode,
+  onEditorCommand,
 }: UseSchematicKeyboardParams) {
-  // Helper to check focus within schematic canvas container
   const isFocusInCanvas = React.useCallback(() => {
-    const canvasContainer = containerRef.current;
-    if (!canvasContainer || !document.activeElement) return false;
-    const active = document.activeElement as HTMLElement;
+    const container = containerRef.current;
+    const activeElement = document.activeElement;
+    if (!container || !activeElement) return false;
+    return container.contains(activeElement) || activeElement === canvasRef.current;
+  }, [canvasRef, containerRef]);
 
-    // If focus is within the properties dialog, treat as NOT in canvas for shortcuts
-    let el: HTMLElement | null = active;
-    while (el) {
-      if (el.hasAttribute && el.hasAttribute("data-properties-dialog")) {
-        return false;
-      }
-      el = el.parentElement;
-    }
-
-    return (
-      canvasContainer.contains(active) || active === canvasRef.current
-    );
-  }, [containerRef, canvasRef]);
-
-  // Helper to detect if an event target is inside the properties dialog
-  const isWithinPropertiesDialog = (target: EventTarget | null) => {
-    const node = target as HTMLElement | null;
-    let el: HTMLElement | null = node;
-    while (el) {
-      if (el.hasAttribute && el.hasAttribute("data-properties-dialog")) {
-        return true;
-      }
-      el = el.parentElement;
-    }
-    return false;
-  };
-
-  // Helper to detect text inputs/contenteditable to avoid consuming typing keys
-  const isTextInputLike = (target: EventTarget | null) => {
-    const el = target as HTMLElement | null;
-    if (!el) return false;
-    const tag = (el.tagName || "").toLowerCase();
-    const editable = (el as HTMLElement).isContentEditable;
-    return (
-      tag === "input" ||
-      tag === "textarea" ||
-      tag === "select" ||
-      editable
-    );
-  };
-
-  // Shortcuts: Shift+H/Ctrl+H, Shift+Z (undo), Shift+R (redo)
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Only when tab visible and focus within canvas container
-      if (!isTabVisibleRef.current || !isFocusInCanvas()) return;
+      const action = resolveSchematicShortcut(event, {
+        isTabVisible: isTabVisibleRef.current,
+        isFocusInCanvas: isFocusInCanvas(),
+        isEditableTarget: isTextInputLike(event.target),
+        isWithinPropertiesDialog: isWithinPropertiesDialog(event.target),
+        isToBePlottedMode: isToBePlottedModeRef.current,
+        isMoving: isMovingRef.current,
+      });
+      if (!action) return;
 
-      // Ignore keys originating in the properties dialog or text inputs
-      if (isWithinPropertiesDialog(event.target)) return;
-      if (isTextInputLike(event.target)) return;
+      event.preventDefault();
+      event.stopPropagation();
 
-      // Handle Shift+H or Ctrl+H for shortcuts dialog (override eecircuit-schematic's Ctrl+H)
-      if (
-        (event.shiftKey && event.key === "H") ||
-        (event.ctrlKey && (event.key === "h" || event.key === "H"))
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-        onOpenShortcutsDialog();
-        return;
-      }
-
-      // Handle 'w' / 'W' to enter wire mode
-      if (!event.shiftKey && !event.ctrlKey && !event.metaKey) {
-        if (event.key === "w" || event.key === "W") {
-          onSetWireMode(true);
-          return;
-        }
-        if (event.key === "m" || event.key === "M") {
-          onSetMoveMode(true);
-          return;
-        }
-        if (event.key === "t" || event.key === "T") {
-          onSetTextMode(true);
-          return;
-        }
-      }
-
-      // Handle Shift + D to enter delete mode
-      if (event.shiftKey && (event.key === "d" || event.key === "D")) {
-        event.preventDefault();
-        onSetDeleteMode(true);
-        return;
+      switch (action.type) {
+        case "open-components":
+          onOpenComponentPopover();
+          break;
+        case "open-shortcuts":
+          onOpenShortcutsDialog();
+          break;
+        case "set-mode":
+          onSetMode(action.mode);
+          break;
+        case "reset-modes":
+          onResetAllModes();
+          break;
+        case "editor-command":
+          onEditorCommand(action.command);
+          break;
       }
     };
 
-    // Capture to ensure we can override library defaults if needed
     document.addEventListener("keydown", handleKeyDown, true);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown, true);
-    };
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
   }, [
     isFocusInCanvas,
+    isMovingRef,
     isTabVisibleRef,
+    isToBePlottedModeRef,
+    onEditorCommand,
+    onOpenComponentPopover,
     onOpenShortcutsDialog,
-    onSetWireMode,
-    onSetDeleteMode,
-    onSetMoveMode,
-    onSetTextMode,
+    onResetAllModes,
+    onSetMode,
   ]);
-
-  // Handle Escape/§ to reset all modes (and action bar toggles)
-  // NOTE: We intentionally do NOT preventDefault so as not to interfere with fullscreen behavior
-  React.useEffect(() => {
-    const handleEscReset = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" && event.key !== "§") return;
-
-      // Scope to visible tab and canvas focus; skip if to-be-plotted mode is active
-      if (!isTabVisibleRef.current || !isFocusInCanvas()) return;
-      // If inside properties dialog, let the dialog handle closing
-      if (isWithinPropertiesDialog(event.target)) return;
-      if (isToBePlottedModeRef.current) return;
-
-      console.log("[DEBUG KB] Resetting all modes via ESC/§");
-      onResetAllModes();
-    };
-
-    document.addEventListener("keydown", handleEscReset);
-    return () => {
-      document.removeEventListener("keydown", handleEscReset);
-    };
-  }, [isFocusInCanvas, isTabVisibleRef, isToBePlottedModeRef, onResetAllModes]);
 }
