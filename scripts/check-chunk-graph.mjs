@@ -1,9 +1,30 @@
 import { readdir, readFile } from "node:fs/promises";
 
 const assetsDirectory = new URL("../dist/assets/", import.meta.url);
+const packageJson = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url), "utf8"),
+);
 const files = (await readdir(assetsDirectory)).filter((file) => file.endsWith(".js"));
 const fileSet = new Set(files);
 const graph = new Map(files.map((file) => [file, new Set()]));
+const forbiddenRuntimeDependencies = [
+  "react",
+  "react-dom",
+  "@chakra-ui/react",
+  "@emotion/react",
+  "zustand",
+];
+const retainedRuntimeDependencies = forbiddenRuntimeDependencies.filter(
+  (dependency) => packageJson.dependencies?.[dependency],
+);
+
+if (retainedRuntimeDependencies.length > 0) {
+  throw new Error(
+    `Legacy UI runtime dependencies remain:\n${retainedRuntimeDependencies
+      .map((dependency) => `  - ${dependency}`)
+      .join("\n")}`,
+  );
+}
 
 const basicLanguagesDirectory = new URL(
   "../node_modules/monaco-editor/esm/vs/basic-languages/",
@@ -34,6 +55,9 @@ if (unwantedMonacoAssets.length > 0) {
 
 for (const file of files) {
   const source = await readFile(new URL(file, assetsDirectory), "utf8");
+  if (/__REACT_DEVTOOLS_GLOBAL_HOOK__|react-dom|@chakra-ui|@emotion\//i.test(source)) {
+    throw new Error(`${file} contains a legacy React/Chakra/Emotion runtime marker.`);
+  }
   const staticImports = [
     ...source.matchAll(/\bfrom["']\.\/([^"']+\.js)["']/g),
     ...source.matchAll(/\bimport["']\.\/([^"']+\.js)["']/g),

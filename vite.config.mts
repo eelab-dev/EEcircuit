@@ -1,6 +1,4 @@
 import { defineConfig } from "vite";
-import react, { reactCompilerPreset } from "@vitejs/plugin-react";
-import babel from "@rolldown/plugin-babel";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -51,11 +49,7 @@ export default defineConfig({
       },
     },
   },
-  plugins: [svelte(), react(), babel({
-    presets: [reactCompilerPreset()],
-    include: /\.[jt]sx?$/,
-    exclude: [/node_modules/, /\.worker\.ts$/],
-  })],
+  plugins: [svelte()],
   optimizeDeps: {
     // Exclude local packages to enable HMR during development
     exclude: ["eecircuit-schematic", "monaco-editor"],

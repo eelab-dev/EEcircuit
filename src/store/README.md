@@ -92,23 +92,18 @@ The store is now split into the following modules:
 - `setDragBox(show)`: Show/hide drag & drop box
 - `toggleInputProfile()`: Switch between mouse/trackpad modes
 
-## Main Store (`appStore.ts`)
+## Main State (`appState.svelte.ts`)
 
-The main store combines all domain stores using Zustand's slice pattern:
+The main state combines the framework-neutral domain slices with Svelte 5 runes:
 
 ```typescript
-export const useAppStore = create<AppStore>()((...a) => ({
-  ...createTabSlice(...a),
-  ...createSchematicSlice(...a),
-  ...createSimulationSlice(...a),
-  ...createPlotSlice(...a),
-  ...createUiSlice(...a),
-}));
+export const appState = createAppState();
+export const getAppState = (): AppStore => appState;
 ```
 
 ## Clean Architecture
 
-This modular approach provides a clean, maintainable architecture without any backward compatibility layers. Components should access the store directly using specific selectors. Bracket results update progressively, worker sessions cancel and ignore stale or timed-out responses, and reset-selection selects every output variable from the current result. Plot zoom/pan is preserved only when the ordered X-plus-output schema is unchanged.
+This modular approach provides a clean, maintainable architecture without a compatibility layer. Components access typed rune state directly. Bracket results update progressively, worker sessions cancel and ignore stale or timed-out responses, and reset-selection selects every output variable from the current result. Plot zoom/pan is preserved only when the ordered X-plus-output schema is unchanged.
 
 ## Benefits
 

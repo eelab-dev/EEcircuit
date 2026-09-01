@@ -1,14 +1,11 @@
 {
   "exclude": [
-    "temp/**/*.tsx",
     "temp/**/*.ts",
-    "tests/**/*.tsx",
     "tests/**/*.ts"
   ],
   "compilerOptions": {
     "module": "esnext",
     "moduleResolution": "Bundler",
-    "jsx": "preserve",
     "paths": {
       "src/*": ["./src/*"]
     },
@@ -32,5 +29,5 @@
     "resolveJsonModule": true,
     "isolatedModules": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.svelte"]
+  "include": ["src/**/*.ts", "src/**/*.svelte"]
 }

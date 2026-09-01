@@ -1,7 +1,7 @@
 import { unitConvert2string } from "./unitConverter";
 import { convertLogToLinearSpace } from "../utils/coordinateUtils";
 
-// Direct axis rendering functions - no React component needed
+// Direct axis rendering functions with no component-framework dependency.
 export interface AxisParams {
   canvas: HTMLCanvasElement;
   scale: number;

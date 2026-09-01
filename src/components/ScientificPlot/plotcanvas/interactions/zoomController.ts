@@ -10,15 +10,15 @@ interface LogAxisState {
  * HIGH-PERFORMANCE ZOOM CONTROLLER FOR WEBGL PLOT CANVAS
  *
  * Handles zoom and pan operations with optimized performance:
- * - Direct webgl-plot updates for zoom visuals (no React re-renders)
+ * - Direct webgl-plot updates for zoom visuals (no component re-renders)
  * - Real-time panning via webgl redraw callbacks
- * - Smooth scroll wheel panning without React overhead
- * - Dual canvas synchronization with minimal React state updates
+ * - Smooth scroll wheel panning without framework overhead
+ * - Dual canvas synchronization with minimal state updates
  * - Pan bounds limiting to prevent empty axis areas
  *
  * Performance optimizations:
  * - webglRedrawCallback enables direct canvas updates during real-time operations
- * - React re-renders only triggered for major state changes (zoom complete, pan end)
+ * - Component updates only triggered for major state changes (zoom complete, pan end)
  * - All visual feedback (zoom selection, pan movement) handled via webgl-plot directly
  *
  * IMPORTANT BUG PREVENTION:
@@ -44,7 +44,7 @@ interface LogAxisState {
  * - Pan synchronization works in data coordinate space
  * - Visual rendering uses canvas-specific axis scales for proper positioning
  *
- * Independent of React lifecycle for maximum performance during user interactions.
+ * Independent of component lifecycle for maximum performance during interactions.
  */
 export class ZoomController {
   private isZooming = false;
@@ -65,7 +65,7 @@ export class ZoomController {
   // Callback for pan offset synchronization
   private onPanOffsetChangeCb: ((panOffset: number) => void) | null = null;
 
-  // Callback for direct webgl redraw (no React re-render)
+  // Callback for direct WebGL redraw (no component re-render)
   private onWebglRedrawCb: (() => void) | null = null;
 
   // Flag to prevent infinite loops when applying external changes
@@ -295,7 +295,7 @@ export class ZoomController {
   }
 
   /**
-   * Set webgl redraw callback for direct canvas updates (no React re-render)
+   * Set WebGL redraw callback for direct canvas updates (no component re-render)
    */
   setWebglRedrawCallback(callback: (() => void) | null): void {
     this.onWebglRedrawCb = callback;
@@ -333,7 +333,7 @@ export class ZoomController {
   }
 
   /**
-   * Trigger direct webgl redraw (no React re-render)
+   * Trigger direct WebGL redraw (no component re-render)
    */
   private triggerWebglRedraw(): void {
     if (this.onWebglRedrawCb) {

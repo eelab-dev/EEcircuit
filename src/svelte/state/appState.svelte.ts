@@ -5,7 +5,7 @@ import { createSimulationSlice } from "../../store/simulationStore";
 import { createTabSlice } from "../../store/tabStore";
 import type { StoreSetter } from "../../store/storeTypes";
 import { createUiSlice } from "../../store/uiStore";
-import type { AppStore } from "../../store/appStore";
+import type { AppStore } from "../../store/appStoreTypes";
 import { setMessageSink } from "../../store/messageBus";
 
 const state = $state({} as AppStore);

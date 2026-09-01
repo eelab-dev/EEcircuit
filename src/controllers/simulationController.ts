@@ -1,9 +1,9 @@
-import type { AppStore } from "../store/appStore";
+import type { AppStore } from "../store/appStoreTypes";
 import { notifySimulationErrors } from "../utils/simulationErrorNotifier";
 
 let latestSingleRunId = 0;
 
-/** Runs a simulation without depending on React, Svelte, or component lifecycle. */
+/** Runs a simulation without depending on the UI framework or component lifecycle. */
 export async function executeSimulation(
   getStore: () => AppStore,
   editorNetlist: string,

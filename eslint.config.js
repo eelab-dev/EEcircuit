@@ -1,16 +1,8 @@
 import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
-import pluginReact from "eslint-plugin-react";
 import { defineConfig } from "eslint/config";
-import reactHooks from "eslint-plugin-react-hooks";
 import pluginSvelte from "eslint-plugin-svelte";
-import fs from "node:fs";
-
-// workaround for eslint-plugin-react compat with eslint 10
-// read react version from package.json to avoid hardcoding
-const pkg = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"));
-const reactVersion = pkg.dependencies.react.replace(/[\^~]/, "");
 
 export default defineConfig([
   {
@@ -33,7 +25,7 @@ export default defineConfig([
 
   // Base JS config for src
   {
-    files: ["src/**/*.{ts,mts,cts,jsx,tsx}", "tests/**/*.{ts,mts,cts,jsx,tsx}"],
+    files: ["src/**/*.{ts,mts,cts}", "tests/**/*.{ts,mts,cts}"],
     plugins: { js },
     extends: ["js/recommended"],
     languageOptions: {
@@ -44,7 +36,7 @@ export default defineConfig([
   // TypeScript configs
   ...tseslint.configs.recommended.map((config) => ({
     ...config,
-    files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
+    files: ["src/**/*.ts", "tests/**/*.ts"],
   })),
 
   ...pluginSvelte.configs["flat/recommended"],
@@ -62,14 +54,4 @@ export default defineConfig([
       parser: tseslint.parser,
     },
   },
-
-  // React config
-  {
-    ...pluginReact.configs.flat.recommended,
-    files: ["src/**/*.{jsx,tsx}", "tests/**/*.{jsx,tsx}"],
-    settings: {
-      react: { version: reactVersion },
-    },
-  },
-  reactHooks.configs.flat["recommended-latest"],
 ]);

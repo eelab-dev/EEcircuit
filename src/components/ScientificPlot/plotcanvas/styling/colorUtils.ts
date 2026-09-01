@@ -71,7 +71,7 @@ function stringToHash(str: string): number {
  * Get background color based on theme mode
  */
 function getBackgroundColor(mode: ColorMode): [number, number, number] {
-  // Based on Chakra UI theme colors
+  // Balanced semantic palette for light and dark themes.
   return mode === "light"
     ? [250 / 255, 250 / 255, 250 / 255] // Light background
     : [20 / 255, 20 / 255, 20 / 255]; // Dark background
