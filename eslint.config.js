@@ -49,6 +49,14 @@ export default defineConfig([
 
   ...pluginSvelte.configs["flat/recommended"],
   {
+    files: ["src/**/*.svelte"],
+    languageOptions: {
+      parserOptions: {
+        parser: tseslint.parser,
+      },
+    },
+  },
+  {
     files: ["src/**/*.svelte.ts"],
     languageOptions: {
       parser: tseslint.parser,
