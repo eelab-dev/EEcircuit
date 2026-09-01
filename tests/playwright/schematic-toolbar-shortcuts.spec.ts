@@ -85,6 +85,23 @@ test("component browser keyboard navigation and focus guards are app scoped", as
   const search = page.getByPlaceholder("Search components...");
   await expect(search).toBeFocused();
   await expect(page.getByRole("heading", { name: "passive" })).toBeVisible();
+  const firstComponentCard = page.locator(".component-card").first();
+  const symbolBox = await firstComponentCard.locator(".component-symbol").boundingBox();
+  const nameBox = await firstComponentCard.locator(".component-name").boundingBox();
+  if (!symbolBox || !nameBox) throw new Error("Component picker tile layout is missing");
+  expect(symbolBox.y + symbolBox.height).toBeLessThanOrEqual(nameBox.y + 1);
+  expect(Math.abs((symbolBox.x + symbolBox.width / 2) - (nameBox.x + nameBox.width / 2))).toBeLessThan(2);
+  const clippedSymbols = await page.locator(".component-card").evaluateAll((cards) => cards.flatMap((card) => {
+    const symbol = card.querySelector<HTMLElement>(".component-symbol");
+    const image = card.querySelector<HTMLImageElement>("img");
+    if (!symbol || !image) return [card.textContent?.trim() ?? "unknown"];
+    const symbolRect = symbol.getBoundingClientRect();
+    const imageRect = image.getBoundingClientRect();
+    return imageRect.width <= symbolRect.width + 1 && imageRect.height <= symbolRect.height + 1
+      ? []
+      : [card.textContent?.trim() ?? "unknown"];
+  }));
+  expect(clippedSymbols).toEqual([]);
   await search.fill("res");
 
   await page.keyboard.press("w");

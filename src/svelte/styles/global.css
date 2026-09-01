@@ -80,10 +80,11 @@ input, select, textarea { min-width: 0; border: 1px solid var(--border); border-
 .component-picker-content { min-height: 0; display: contents; }
 .picker-heading, .properties-panel header { display: flex; align-items: center; justify-content: space-between; }
 .component-list { min-height: 0; overflow: auto; display: grid; gap: .65rem; }.component-category { display: grid; gap: .45rem; }.component-category h3 { margin: 0; color: var(--fg-muted); font-size: .68rem; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }.component-category-divider { height: 1px; margin-bottom: .2rem; background: var(--border-subtle); }.component-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; }.picker-empty { margin: .5rem; text-align: center; }
-.component-card { min-height: 5rem; display: grid; grid-template-columns: 1fr 4rem; align-items: center; text-align: left; }
+.component-card { min-height: 6.25rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem; padding: .55rem; text-align: center; }
 .component-card.focused { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
-.component-symbol { height: 3rem; color: var(--fg); overflow: hidden; transform: scaleY(-1); }
-.component-symbol :where(img) { max-width: 100%; max-height: 100%; }
+.component-symbol { width: 100%; height: 3.5rem; display: grid; place-items: center; color: var(--fg); overflow: hidden; transform: scaleY(-1); }
+.component-symbol :where(img) { display: block; width: 100%; height: 3.5rem; object-fit: contain; }
+.component-name { color: var(--fg); font-size: .8rem; line-height: 1.2; }
 .properties-panel { position: absolute; z-index: 30; top: 50%; right: 4.5rem; transform: translateY(-50%); width: 16rem; max-height: 80%; overflow: auto; padding: .75rem; border: 1px solid var(--border); border-radius: .65rem; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(14px); box-shadow: 0 12px 34px color-mix(in srgb, #000 20%, transparent); }
 .properties-panel form, .settings-list { display: grid; gap: .75rem; margin-top: .75rem; }
 .properties-panel label, .settings-list label { display: grid; gap: .3rem; color: var(--fg-muted); font-size: .85rem; }

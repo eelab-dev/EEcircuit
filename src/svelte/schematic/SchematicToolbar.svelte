@@ -170,8 +170,8 @@
                     onkeydown={handlePickerKeydown}
                     onclick={() => chooseComponent(component.type)}
                   >
-                    <span>{component.type}</span>
                     <span class="component-symbol"><img src={svgData(component.svg)} alt="" /></span>
+                    <span class="component-name">{component.type}</span>
                   </button>
                 {/each}
               </div>
