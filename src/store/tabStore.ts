@@ -1,4 +1,4 @@
-import { StateCreator } from "zustand";
+import type { SliceCreator } from "./storeTypes";
 
 // Tab management state and actions
 export interface TabState {
@@ -15,7 +15,7 @@ export interface TabActions {
 
 export type TabSlice = TabState & TabActions;
 
-export const createTabSlice: StateCreator<TabSlice, [], [], TabSlice> = (
+export const createTabSlice: SliceCreator<TabSlice, TabSlice> = (
   set
 ) => ({
   // Initial state

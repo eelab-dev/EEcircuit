@@ -1,4 +1,4 @@
-import { StateCreator } from "zustand";
+import type { SliceCreator } from "./storeTypes";
 import type { Schematic as SchematicType } from "eecircuit-schematic";
 import type { EditorMode } from "eecircuit-schematic";
 
@@ -24,12 +24,7 @@ export interface SchematicActions {
 
 export type SchematicSlice = SchematicState & SchematicActions;
 
-export const createSchematicSlice: StateCreator<
-  SchematicSlice,
-  [],
-  [],
-  SchematicSlice
-> = (set) => ({
+export const createSchematicSlice: SliceCreator<SchematicSlice, SchematicSlice> = (set) => ({
   // Initial state
   shouldFitToScreen: false,
   hasResizedSinceSchematicView: false,

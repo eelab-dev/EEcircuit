@@ -48,6 +48,12 @@ export default defineConfig([
   })),
 
   ...pluginSvelte.configs["flat/recommended"],
+  {
+    files: ["src/**/*.svelte.ts"],
+    languageOptions: {
+      parser: tseslint.parser,
+    },
+  },
 
   // React config
   {

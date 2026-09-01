@@ -1,4 +1,4 @@
-import { StateCreator } from "zustand";
+import type { SliceCreator } from "./storeTypes";
 import type { ResultType } from "eecircuit-engine";
 import { SimulationType, ToBePlotted } from "../types/commonTypes";
 import type { BracketOperation } from "../utils/bracketParser";
@@ -109,10 +109,8 @@ export interface SimulationActions {
 
 export type SimulationSlice = SimulationState & SimulationActions;
 
-export const createSimulationSlice: StateCreator<
+export const createSimulationSlice: SliceCreator<
   SimulationSlice & StoreWithTab,
-  [],
-  [],
   SimulationSlice
 > = (set, get) => ({
   // Initial state

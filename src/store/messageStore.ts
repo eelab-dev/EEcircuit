@@ -1,4 +1,4 @@
-import { StateCreator } from "zustand";
+import type { SliceCreator } from "./storeTypes";
 
 export type MessageCategory = "Schematic" | "Simulation" | "Plotting";
 export type MessageType = "error" | "warning" | "info" | "success";
@@ -25,7 +25,7 @@ export interface MessageActions {
 
 export type MessageSlice = MessageState & MessageActions;
 
-export const createMessageSlice: StateCreator<MessageSlice, [], [], MessageSlice> = (
+export const createMessageSlice: SliceCreator<MessageSlice, MessageSlice> = (
   set
 ) => ({
   messages: [],

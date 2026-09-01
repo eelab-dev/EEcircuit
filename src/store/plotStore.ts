@@ -1,4 +1,4 @@
-import { StateCreator } from "zustand";
+import type { SliceCreator } from "./storeTypes";
 import type { ResultType } from "eecircuit-engine";
 import { ToBePlotted, SimulationType } from "../types/commonTypes";
 import { areToBePlottedItemsEqual } from "../utils/toBePlotted";
@@ -119,10 +119,8 @@ export interface PlotActions {
 
 export type PlotSlice = PlotState & PlotActions;
 
-export const createPlotSlice: StateCreator<
+export const createPlotSlice: SliceCreator<
   PlotSlice & StoreWithTabAndSimulation,
-  [],
-  [],
   PlotSlice
 > = (set, get) => ({
   // Initial state

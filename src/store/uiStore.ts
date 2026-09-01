@@ -1,4 +1,4 @@
-import { StateCreator } from "zustand";
+import type { SliceCreator } from "./storeTypes";
 import { getRecommendedInputProfile } from "../utils/deviceDetection";
 import { SettingsCategory } from "../types/commonTypes";
 
@@ -67,7 +67,7 @@ const getInitialTheme = (): boolean => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 };
 
-export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (
+export const createUiSlice: SliceCreator<UiSlice, UiSlice> = (
   set,
   get
 ) => {
