@@ -31,6 +31,7 @@ const dispatchKey = async (
 
 test("toolbar modes and shortcuts share exclusive application state", async ({ page }) => {
   await waitForSchematic(page);
+  await expect(page.locator(".schematic-bottom-bar output").first()).toHaveCSS("font-family", /monospace/i);
 
   const select = modeButton(page, /^Select$/);
   const wire = modeButton(page, /^Wire \(W\)$/);
@@ -83,6 +84,7 @@ test("component browser keyboard navigation and focus guards are app scoped", as
   await expect(addButton).toHaveAttribute("aria-expanded", "true");
   const search = page.getByPlaceholder("Search components...");
   await expect(search).toBeFocused();
+  await expect(page.getByRole("heading", { name: "passive" })).toBeVisible();
   await search.fill("res");
 
   await page.keyboard.press("w");
@@ -122,6 +124,12 @@ test("component browser keyboard navigation and focus guards are app scoped", as
   await page.keyboard.press("Escape");
   await expect(addButton).toHaveAttribute("aria-expanded", "false");
   await expect(addButton).toBeFocused();
+
+  await page.keyboard.press("a");
+  await expect(search).toBeFocused();
+  await page.locator("#canvas-container").click({ position: { x: 10, y: 10 } });
+  await expect(addButton).toHaveAttribute("aria-expanded", "false");
+  await expect(addButton).toBeFocused();
 });
 
 test("view and help controls work through buttons and keyboard without editor errors", async ({ page }) => {
@@ -158,6 +166,29 @@ test("view and help controls work through buttons and keyboard without editor er
   await page.keyboard.press("Control+h");
   await expect(page.getByText("Keyboard Shortcuts", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Close shortcuts dialog" }).click();
+
+  await page.getByRole("button", { name: "Export schematic image" }).click();
+  await expect(page.getByText("Export Schematic", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: "1:1 Scale" })).toBeVisible();
+  await page.getByRole("button", { name: "Download", exact: true }).click();
+  await expect(page.getByText("Download as PNG", { exact: true })).toBeVisible();
+  await expect(page.getByText("Download as SVG", { exact: true })).toBeVisible();
+  await expect(page.getByText("Download as PDF", { exact: true })).toBeVisible();
+
+  const pngDownload = page.waitForEvent("download");
+  await page.getByText("Download as PNG", { exact: true }).click();
+  expect((await pngDownload).suggestedFilename()).toBe("schematic.png");
+
+  await page.getByRole("button", { name: "Download", exact: true }).click();
+  const svgDownload = page.waitForEvent("download");
+  await page.getByText("Download as SVG", { exact: true }).click();
+  expect((await svgDownload).suggestedFilename()).toBe("schematic.svg");
+
+  await page.getByRole("button", { name: "Download", exact: true }).click();
+  const pdfDownload = page.waitForEvent("download");
+  await page.getByText("Download as PDF", { exact: true }).click();
+  expect((await pdfDownload).suggestedFilename()).toBe("schematic.pdf");
+  await page.getByRole("button", { name: "Close export dialog" }).click();
 
   expect(errors).toEqual([]);
 });
@@ -233,7 +264,17 @@ test("app integration smoke covers add, transform, edit, move, wire, and delete"
   await expect(properties).toBeVisible();
   await page.getByPlaceholder("Component name (e.g., R1, C1)").fill("R_SMOKE");
   await page.getByPlaceholder("e.g., 1k, 10ohm, 100").fill("2.2k");
-  await page.getByRole("button", { name: "Apply" }).click();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(properties).toBeVisible();
+  await expect(page.getByPlaceholder("Component name (e.g., R1, C1)")).not.toHaveValue("R_SMOKE");
+  await expect(page.getByRole("button", { name: "Close", exact: true })).toBeVisible();
+  const nameInput = page.getByPlaceholder("Component name (e.g., R1, C1)");
+  const valueInput = page.getByPlaceholder("e.g., 1k, 10ohm, 100");
+  await nameInput.fill("R_SMOKE");
+  await nameInput.press("Enter");
+  await expect(valueInput).toBeFocused();
+  await valueInput.fill("2.2k");
+  await valueInput.press("Enter");
   await expect(properties).toBeHidden();
 
   await modeButton(page, /^Move \(M\)$/).click();

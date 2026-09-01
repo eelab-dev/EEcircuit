@@ -166,7 +166,7 @@ test("production preview evaluates lazy features and every browser chunk without
   await page.getByRole("button", { name: "Cancel" }).click();
 
   await page.getByRole("button", { name: "About EEcircuit" }).click();
-  await expect(page.getByText("About EEcircuit", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "About EEcircuit" })).toBeVisible();
   await page.getByRole("button", { name: "Close dialog" }).click();
 
   await page.getByRole("button", { name: "Open keyboard shortcuts" }).click();
@@ -179,7 +179,7 @@ test("production preview evaluates lazy features and every browser chunk without
 
   await startTabFallbackObserver(page);
   const resourcesBeforeSimulationTab = await getJavaScriptResources(page);
-  await page.getByRole("button", { name: "Simulate Circuit" }).click();
+  await page.getByRole("button", { name: "Simulate Circuit" }).click({ modifiers: ["Shift"] });
 
   await expect(page.getByRole("tab", { name: "simulation config" })).toHaveAttribute(
     "aria-selected",

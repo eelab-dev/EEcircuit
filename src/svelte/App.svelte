@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount, type Component } from "svelte";
-  import { Activity, RotateCcw, Settings, Settings2 } from "@lucide/svelte";
+  import { Tabs } from "@ark-ui/svelte/tabs";
+  import { Activity, BookOpen, Bug, Code2, ExternalLink, RotateCcw, Settings, Settings2 } from "@lucide/svelte";
   import type { Schematic } from "eecircuit-schematic";
   import Logo from "./components/Logo.svelte";
   import HeaderActions from "./components/HeaderActions.svelte";
   import Modal from "./components/Modal.svelte";
+  import Notifications from "./components/Notifications.svelte";
   import SchematicView from "./schematic/SchematicView.svelte";
   import { appState } from "./state/appState.svelte";
   import { validateEEcircuitFile } from "../utils/eeCircuitFileValidator";
@@ -34,10 +36,6 @@
   let tempShowInternalSignals = $state(appState.showInternalSignals);
   let tempLineThickness = $state(appState.lineThickness);
   let tempResetPlotState = $state(appState.resetPlotStateOnNewSim);
-
-  const activeMessages = $derived(
-    appState.messages.filter((message) => appState.showDevMessages || message.mLevel !== "dev").slice(-4),
-  );
 
   function ensurePrimaryUi(): Promise<void> {
     if (primaryUiPromise) return primaryUiPromise;
@@ -78,6 +76,16 @@
     if (tab !== "schematic") void ensurePrimaryUi();
     appState.setMainTabValue(tab);
     if (tab === "schematic" && appState.hasResizedSinceSchematicView) appState.setShouldFitToScreen(true);
+  }
+
+  function blockUnavailableTab(event: Event, enabled: boolean) {
+    if (enabled) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+
+  function blockUnavailableTabKey(event: KeyboardEvent, enabled: boolean) {
+    if (event.key === "Enter" || event.key === " ") blockUnavailableTab(event, enabled);
   }
 
   function openSettings() {
@@ -182,12 +190,31 @@
   }
 
   async function toggleFullscreen() {
+    type NavigatorWithKeyboard = Navigator & { keyboard?: { lock?: (keys?: string[]) => Promise<void>; unlock?: () => void } };
+    const keyboard = (navigator as NavigatorWithKeyboard).keyboard;
     try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await document.documentElement.requestFullscreen();
+      if (document.fullscreenElement) {
+        keyboard?.unlock?.();
+        await document.exitFullscreen();
+        return;
+      }
+      await document.documentElement.requestFullscreen();
+      if (keyboard?.lock) {
+        try { await keyboard.lock(["Escape"]); }
+        catch { appState.addMessage({ text: "Fullscreen is active, but this browser could not lock the Escape key.", type: "warning", category: "Schematic", mLevel: "user" }); }
+      } else {
+        const shortcut = /Mac|iPhone|iPad/.test(navigator.userAgent) ? "Control+Command+F" : "F11";
+        appState.addMessage({ text: `Browser keyboard lock is unavailable. Use ${shortcut} if you need browser-level fullscreen.`, type: "warning", category: "Schematic", mLevel: "user" });
+      }
     } catch (error) {
       appState.addMessage({ text: error instanceof Error ? error.message : "Fullscreen is unavailable.", type: "warning", category: "Schematic", mLevel: "user" });
     }
+  }
+
+  function clearLocalData() {
+    if (!window.confirm("Are you sure you want to clear all local storage? This will reset all application settings and data.")) return;
+    localStorage.clear();
+    location.reload();
   }
 
   function handleDrop(event: DragEvent) {
@@ -213,13 +240,20 @@
   ondragleave={(event) => { if (!shell.contains(event.relatedTarget as Node | null)) dragActive = false; }}
   ondrop={handleDrop}
 >
+  <Tabs.Root class="app-tabs-root" value={appState.mainTabValue} onValueChange={(details) => selectTab(details.value as "schematic" | "simulate" | "plot")}>
   <header class="main-header">
     <Logo />
-    <div class="main-tabs" role="tablist" aria-label="EEcircuit workspaces">
-      <button role="tab" aria-selected={appState.mainTabValue === "schematic"} class:active={appState.mainTabValue === "schematic"} onclick={() => selectTab("schematic")}>Schematic</button>
-      <button role="tab" aria-label="simulation config" aria-selected={appState.mainTabValue === "simulate"} class:active={appState.mainTabValue === "simulate"} disabled={!appState.isSimulationTabEnabled} onclick={() => selectTab("simulate")}>Simulation</button>
-      <button role="tab" aria-label="plot display" aria-selected={appState.mainTabValue === "plot"} class:active={appState.mainTabValue === "plot"} disabled={!appState.isPlottingTabEnabled} onclick={() => selectTab("plot")}>Plotting</button>
-    </div>
+    <Tabs.List class="main-tabs" aria-label="EEcircuit workspaces">
+      <Tabs.Trigger value="schematic">Schematic</Tabs.Trigger>
+      <span class:disabled={!appState.isSimulationTabEnabled} class="disabled-tab-wrap">
+        <Tabs.Trigger value="simulate" aria-label="simulation config" aria-disabled={!appState.isSimulationTabEnabled} onclick={(event) => blockUnavailableTab(event, appState.isSimulationTabEnabled)} onkeydown={(event) => blockUnavailableTabKey(event, appState.isSimulationTabEnabled)}>Simulation</Tabs.Trigger>
+        {#if !appState.isSimulationTabEnabled}<span class="disabled-tab-tooltip" role="tooltip">Click Simulate on the schematic to generate a netlist first.</span>{/if}
+      </span>
+      <span class:disabled={!appState.isPlottingTabEnabled} class="disabled-tab-wrap">
+        <Tabs.Trigger value="plot" aria-label="plot display" aria-disabled={!appState.isPlottingTabEnabled} onclick={(event) => blockUnavailableTab(event, appState.isPlottingTabEnabled)} onkeydown={(event) => blockUnavailableTabKey(event, appState.isPlottingTabEnabled)}>Plotting</Tabs.Trigger>
+        {#if !appState.isPlottingTabEnabled}<span class="disabled-tab-tooltip" role="tooltip">Run a successful simulation to create plot results first.</span>{/if}
+      </span>
+    </Tabs.List>
     <HeaderActions
       {isSaving}
       isDarkMode={appState.isDarkMode}
@@ -256,13 +290,8 @@
   </div>
 
   {#if dragActive}<div class="drop-overlay">Drop EEcircuit file here</div>{/if}
-  <div class="toast-stack" aria-live="polite">
-    {#each activeMessages as message (message.id)}
-      <div class:error={message.type === "error"} class:warning={message.type === "warning"} class:success={message.type === "success"} class="toast">
-        <span>{message.text}</span><button aria-label="Dismiss message" onclick={() => appState.removeMessage(message.id)}>×</button>
-      </div>
-    {/each}
-  </div>
+  <Notifications />
+  </Tabs.Root>
 </main>
 
 <Modal bind:open={newDialogOpen} title="Create New Schematic" closeLabel="Close new schematic dialog">
@@ -295,6 +324,10 @@
             <span class="setting-copy"><strong>Developer messages</strong><small>Show technical status messages alongside user-facing notifications.</small></span>
             <input type="checkbox" checked={appState.showDevMessages} onchange={(event) => appState.setShowDevMessages(event.currentTarget.checked)} />
           </label>
+          <div class="setting-row">
+            <span class="setting-copy"><strong>Data management</strong><small>Clear locally stored settings and simulation state from this browser.</small></span>
+            <button class="danger-outline-button" onclick={clearLocalData}>Clear Local Storage</button>
+          </div>
         </div>
       {:else if settingsCategory === "simulation"}
         <header class="settings-panel-heading"><h3>Simulation</h3><p>Tune parallel execution and what is retained between runs.</p></header>
@@ -317,7 +350,7 @@
           </label>
           <label class="setting-row">
             <span class="setting-copy"><strong>Line thickness</strong><small>Adjust the stroke width used for every plotted signal.</small></span>
-            <span class="range-control"><input aria-label="Plot line thickness" type="range" min="1" max="8" step="1" bind:value={tempLineThickness} /><output>{tempLineThickness}px</output></span>
+            <span class="range-control"><input aria-label="Plot line thickness" type="range" min="1" max="10" step="1" bind:value={tempLineThickness} /><output>{tempLineThickness}px</output></span>
           </label>
           <label class="setting-row setting-row-inline">
             <span class="setting-copy"><strong>Reset plot state</strong><small>Return to a single canvas and linear scales for each new run.</small></span>
@@ -334,6 +367,11 @@
   {#snippet footer()}<button onclick={() => settingsOpen = false}>Cancel</button><button class="primary-button" onclick={saveSettings}>Save changes</button>{/snippet}
 </Modal>
 
-<Modal bind:open={aboutOpen} title="About EEcircuit">
-  <p>EEcircuit is a browser-based circuit editor and ngspice simulator. Schematics, simulation, and plotting run locally in your browser.</p>
+<Modal bind:open={aboutOpen} title="About EEcircuit" contentClass="about-modal">
+  <div class="about-list">
+    <section><BookOpen size={19} /><div><strong>Need help?</strong><p>Find comprehensive guides and documentation at <a href="https://help.eecircuit.com" target="_blank" rel="noreferrer">help.eecircuit.com <ExternalLink size={12} /></a>.</p></div></section>
+    <section><Code2 size={19} /><div><strong>Open Source</strong><p>Explore the code and contribute through the <a href="https://github.com/eelab-dev/EEcircuit" target="_blank" rel="noreferrer">GitHub repository <ExternalLink size={12} /></a>.</p></div></section>
+    <section><Bug size={19} /><div><strong>Found a bug?</strong><p>Report reproducible problems through the <a href="https://github.com/eelab-dev/EEcircuit/issues" target="_blank" rel="noreferrer">Issue Tracker <ExternalLink size={12} /></a>.</p></div></section>
+  </div>
+  {#snippet footer()}<button class="primary-button" onclick={() => aboutOpen = false}>Okay</button>{/snippet}
 </Modal>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { resultsToCSVString } from "../../src/utils/csvExport";
 import { parseSpiceLine } from "../../src/utils/spiceLineParser";
 import { detectSourcesFromNetlist } from "../../src/utils/sourceDetection";
+import { formatEngineering } from "../../src/components/ScientificPlot/utils/formatUtils";
 import {
   getSpiceCompletionContext,
   SPICE_COMMENT_PATTERN,
@@ -15,6 +16,14 @@ import {
 } from "../../src/editor/spiceLanguage";
 
 describe("SPICE parsing and CSV export", () => {
+  it("formats plot coordinates with engineering prefixes", () => {
+    expect(formatEngineering(0)).toBe("0");
+    expect(formatEngineering(0.0012)).toBe("1.200m");
+    expect(formatEngineering(0.000_004_7)).toBe("4.700μ");
+    expect(formatEngineering(2_200)).toBe("2.200k");
+    expect(formatEngineering(-3_000_000)).toBe("-3.000M");
+  });
+
   it("parses subcircuit parameters after PARAMS and trailing assignments", () => {
     expect(parseSpiceLine("X1 in out amp PARAMS: gain=10 bias=2")).toMatchObject({
       nodes: ["in", "out"],

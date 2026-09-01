@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Menu } from "@ark-ui/svelte/menu";
   import { Pencil, Play, Plus, Trash2, X } from "@lucide/svelte";
   import type { SimulationAC, SimulationDC, SimulationNoise, SimulationTransient, SimulationType } from "../../types/commonTypes";
   import { detectNetsFromNetlist } from "../../utils/netDetection";
@@ -13,7 +14,6 @@
   let editorValue = $state(appState.netList);
   let lastGeneratedNetlist = $state(appState.netList);
   let running = $state(false);
-  let plottedOpen = $state(false);
   let selectedConfigIndex = $state(-1);
   let isAddingConfig = $state(false);
   let newConfigName = $state("");
@@ -221,15 +221,21 @@
   <div class="netlist-pane">
     <header class="netlist-header">
       <div class="plotted-menu-wrap">
-        <button aria-expanded={appState.toBePlotted.length ? plottedOpen : undefined} onclick={() => { if (appState.toBePlotted.length) plottedOpen = !plottedOpen; else appState.enterToBePlottedMode(); }}>To Be Plotted{appState.toBePlotted.length ? ` (${appState.toBePlotted.length})` : ""}</button>
-        {#if plottedOpen}
-          <div class="plotted-menu" role="menu">
+        {#if appState.toBePlotted.length}
+          <Menu.Root positioning={{ placement: "bottom-start" }}>
+            <Menu.Trigger>To Be Plotted ({appState.toBePlotted.length})</Menu.Trigger>
+            <Menu.Positioner>
+              <Menu.Content class="plotted-menu">
             {#each appState.toBePlotted as item, index (`${item.type}-${index}`)}
               {@const label = formatToBePlottedLabel(item)}
-              <button role="menuitem" aria-label={`Remove ${label} from To Be Plotted`} onclick={() => appState.removeToBePlotted(item)}><span>{label}</span><X size={14} /></button>
+                  <Menu.Item class="plotted-menu-item" value={`remove-${index}`} aria-label={`Remove ${label} from To Be Plotted`} onSelect={() => appState.removeToBePlotted(item)}><span>{label}</span><X size={14} /></Menu.Item>
             {/each}
-            <button role="menuitem" onclick={() => { plottedOpen = false; appState.enterToBePlottedMode(); }}>Add More...</button>
-          </div>
+                <Menu.Item class="plotted-menu-item" value="add-more" onSelect={appState.enterToBePlottedMode}>Add More...</Menu.Item>
+              </Menu.Content>
+            </Menu.Positioner>
+          </Menu.Root>
+        {:else}
+          <button onclick={appState.enterToBePlottedMode}>To Be Plotted</button>
         {/if}
       </div>
     </header>

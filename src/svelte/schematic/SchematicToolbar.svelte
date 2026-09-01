@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Popover } from "@ark-ui/svelte/popover";
+  import { SvelteMap } from "svelte/reactivity";
   import {
     Cable,
     CircleDot,
@@ -39,15 +41,30 @@
 
   let pickerOpen = $state(false);
   let search = $state("");
-  let addButton: HTMLButtonElement;
+  let addButton = $state<HTMLButtonElement | null>(null);
   let searchInput = $state<HTMLInputElement>();
-  let componentButtons = $state<HTMLButtonElement[]>([]);
+  let pickerElement = $state<HTMLElement | null>(null);
   let focusedIndex = $state(-1);
   let filtered = $derived(
     availableComponents.filter((component) =>
       component.type.toLowerCase().includes(search.trim().toLowerCase()),
     ),
   );
+  const categoryPriority: Record<AvailableComponent["category"], number> = {
+    passive: 1,
+    transistor: 2,
+    source: 3,
+    power: 4,
+    "dependent-source": 5,
+    connection: 6,
+    subcircuit: 7,
+  };
+  let grouped = $derived.by(() => {
+    const groups = new SvelteMap<AvailableComponent["category"], AvailableComponent[]>();
+    for (const component of filtered) groups.set(component.category, [...(groups.get(component.category) ?? []), component]);
+    return [...groups.entries()].sort(([categoryA], [categoryB]) => categoryPriority[categoryA] - categoryPriority[categoryB]);
+  });
+  let flattened = $derived(grouped.flatMap(([, components]) => components));
 
   function toggleMode(mode: EditorMode) {
     onSetMode(appState.editorMode === mode ? "none" : mode);
@@ -55,13 +72,17 @@
 
   function chooseComponent(type: AvailableComponent["type"]) {
     onAddComponent(type);
-    pickerOpen = false;
-    search = "";
-    focusedIndex = -1;
+    setPickerOpen(false);
   }
 
   function svgData(svg: string) {
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    const color = appState.isDarkMode ? "#ffffff" : "#111318";
+    const themed = svg
+      .replace(/stroke=["'](?!none)[^"']*["']/gi, `stroke="${color}"`)
+      .replace(/fill=["'](?!none)[^"']*["']/gi, `fill="${color}"`)
+      .replace(/stroke:\s*(?!none)[^;"'}]*/gi, `stroke: ${color}`)
+      .replace(/fill:\s*(?!none)[^;"'}]*/gi, `fill: ${color}`);
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(themed)}`;
   }
 
   function setPickerOpen(open: boolean) {
@@ -69,8 +90,14 @@
     if (!open) {
       search = "";
       focusedIndex = -1;
-      addButton?.focus();
+      queueMicrotask(() => addButton?.focus());
     }
+  }
+
+  function focusComponent(index: number) {
+    if (!flattened.length) return;
+    focusedIndex = (index + flattened.length) % flattened.length;
+    pickerElement?.querySelector<HTMLButtonElement>(`[data-component-index="${focusedIndex}"]`)?.focus();
   }
 
   function handlePickerKeydown(event: KeyboardEvent) {
@@ -79,19 +106,19 @@
       setPickerOpen(false);
       return;
     }
-    if (event.key === "Tab" && document.activeElement === searchInput) {
+    if (document.activeElement === searchInput && (event.key === "ArrowDown" || event.key === "Tab")) {
       event.preventDefault();
-      focusedIndex = 0;
-      componentButtons[0]?.focus();
-      return;
-    }
-    if (event.key === "ArrowDown" && document.activeElement === searchInput) {
-      event.preventDefault();
-      focusedIndex = 0;
-      componentButtons[0]?.focus();
+      focusComponent(event.shiftKey ? flattened.length - 1 : 0);
       return;
     }
     if (focusedIndex < 0) return;
+    if (event.key === "Tab") {
+      event.preventDefault();
+      if (event.shiftKey && focusedIndex === 0) searchInput?.focus();
+      else if (!event.shiftKey && focusedIndex === flattened.length - 1) searchInput?.focus();
+      else focusComponent(focusedIndex + (event.shiftKey ? -1 : 1));
+      return;
+    }
     const columns = 2;
     let next = focusedIndex;
     if (event.key === "ArrowRight") next += 1;
@@ -100,8 +127,12 @@
     else if (event.key === "ArrowUp") next -= columns;
     else return;
     event.preventDefault();
-    focusedIndex = Math.max(0, Math.min(filtered.length - 1, next));
-    componentButtons[focusedIndex]?.focus();
+    if (event.key === "ArrowUp" && next < 0) {
+      focusedIndex = -1;
+      searchInput?.focus();
+      return;
+    }
+    focusComponent(Math.max(0, Math.min(flattened.length - 1, next)));
   }
 
   $effect(() => {
@@ -111,7 +142,46 @@
 
 <div class="schematic-toolbar" aria-label="Schematic tools">
   <button class:active={appState.editorMode === "select"} class="tool-button" aria-label="Select" aria-pressed={appState.editorMode === "select"} title="Select" onclick={() => toggleMode("select")}><MousePointer size={19} /></button>
-  <button bind:this={addButton} class="tool-button" aria-label="Open add component popover" aria-expanded={pickerOpen} title="Add Component (A)" onclick={() => setPickerOpen(!pickerOpen)}><CopyPlus size={19} /></button>
+  <Popover.Root open={pickerOpen} portalled={false} onOpenChange={(details) => setPickerOpen(details.open)} initialFocusEl={() => searchInput ?? null} positioning={{ placement: "right-start", gutter: 10 }}>
+    <Popover.Trigger bind:ref={addButton} class="tool-button" aria-label="Open add component popover" title="Add Component (A)"><CopyPlus size={19} /></Popover.Trigger>
+    <Popover.Positioner>
+      <Popover.Content bind:ref={pickerElement} class="component-picker" aria-label="Add Component">
+        <div class="component-picker-content">
+        <div class="picker-heading">
+          <Popover.Title>Add Component</Popover.Title>
+          <Popover.CloseTrigger class="icon-button" aria-label="Close component picker"><X size={17} /></Popover.CloseTrigger>
+        </div>
+        <input bind:this={searchInput} aria-label="Search components" placeholder="Search components..." bind:value={search} onkeydown={handlePickerKeydown} />
+        <div class="component-list">
+          {#if !flattened.length}<p class="muted picker-empty">No components match “{search}”.</p>{/if}
+          {#each grouped as [category, components], categoryIndex (category)}
+            <section class="component-category">
+              {#if categoryIndex > 0}<span class="component-category-divider"></span>{/if}
+              <h3>{category.replace("-", " ")}</h3>
+              <div class="component-grid">
+                {#each components as component (component.type)}
+                  {@const index = flattened.indexOf(component)}
+                  <button
+                    data-component-index={index}
+                    tabindex="-1"
+                    class:focused={focusedIndex === index}
+                    class="component-card"
+                    onfocus={() => focusedIndex = index}
+                    onkeydown={handlePickerKeydown}
+                    onclick={() => chooseComponent(component.type)}
+                  >
+                    <span>{component.type}</span>
+                    <span class="component-symbol"><img src={svgData(component.svg)} alt="" /></span>
+                  </button>
+                {/each}
+              </div>
+            </section>
+          {/each}
+        </div>
+        </div>
+      </Popover.Content>
+    </Popover.Positioner>
+  </Popover.Root>
   <button class:active={appState.editorMode === "wire"} class="tool-button" aria-label="Wire (W)" aria-pressed={appState.editorMode === "wire"} title="Wire (W)" onclick={() => toggleMode("wire")}><Cable size={19} /></button>
   <button class:active={appState.editorMode === "move"} class="tool-button" aria-label="Move (M)" aria-pressed={appState.editorMode === "move"} title="Move (M)" onclick={() => toggleMode("move")}><Move size={19} /></button>
   <button class:active={appState.editorMode === "text"} class="tool-button" aria-label="Text (T)" aria-pressed={appState.editorMode === "text"} title="Text (T)" onclick={() => toggleMode("text")}><Type size={19} /></button>
@@ -124,24 +194,6 @@
   <button class="tool-button" aria-label="Export schematic image" title="Export Image" onclick={onExport}><ImageDown size={19} /></button>
   <button class="tool-button" aria-label="Open keyboard shortcuts" title="Keyboard Shortcuts" onclick={onShortcuts}><Keyboard size={19} /></button>
 </div>
-
-{#if pickerOpen}
-  <div class="component-picker" role="dialog" aria-label="Add Component" tabindex="-1" onkeydown={handlePickerKeydown}>
-    <div class="picker-heading">
-      <strong>Add Component</strong>
-      <button class="icon-button" aria-label="Close component picker" onclick={() => setPickerOpen(false)}><X size={17} /></button>
-    </div>
-    <input bind:this={searchInput} aria-label="Search components" placeholder="Search components..." bind:value={search} />
-    <div class="component-grid">
-      {#each filtered as component, index (component.type)}
-        <button bind:this={componentButtons[index]} class="component-card" onclick={() => chooseComponent(component.type)}>
-          <span>{component.type}</span>
-          <span class="component-symbol"><img src={svgData(component.svg)} alt="" /></span>
-        </button>
-      {/each}
-    </div>
-  </div>
-{/if}
 
 {#if appState.isWiring || appState.editorMode === "wire"}
   <div class="canvas-controls">

@@ -16,7 +16,7 @@ test("SPICE Monaco editor supports highlighting, completion, and editing feature
   await expect(page.locator('[data-canvas-ready="true"]')).toBeVisible({ timeout: 15_000 });
   await expect(page.locator(".monaco-editor")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Simulate Circuit" }).click();
+  await page.getByRole("button", { name: "Simulate Circuit" }).click({ modifiers: ["Shift"] });
   await expect(page.getByRole("tab", { name: "simulation config" })).toHaveAttribute(
     "aria-selected",
     "true",

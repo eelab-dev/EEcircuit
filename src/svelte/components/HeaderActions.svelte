@@ -13,6 +13,8 @@
     Touchpad,
     Upload,
   } from "@lucide/svelte";
+  import StatusCenter from "./StatusCenter.svelte";
+  import TooltipButton from "./TooltipButton.svelte";
 
   let {
     isSaving,
@@ -53,20 +55,22 @@
 </script>
 
 <div class="header-actions">
-  <button class="icon-button" aria-label="New Schematic" title="New Schematic" onclick={onNew}><FilePlus size={17} /></button>
+  <TooltipButton label="New Schematic" onclick={onNew}><FilePlus size={17} /></TooltipButton>
   <input bind:this={fileInput} class="visually-hidden" type="file" accept=".json,.txt,application/json,text/plain" onchange={handleFileChange} />
-  <button class="icon-button" aria-label="Open EEcircuit file" title="Open EEcircuit file" onclick={() => fileInput.click()}><Upload size={17} /></button>
-  <button class="icon-button" aria-label="Save EEcircuit file" title="Save EEcircuit file" disabled={isSaving} onclick={onSave}><Download size={17} /></button>
+  <TooltipButton label="Open EEcircuit file" tooltip="Open EEcircuit file from disk" onclick={() => fileInput.click()}><Upload size={17} /></TooltipButton>
+  <TooltipButton label="Save EEcircuit file" tooltip="Save the schematic and simulation configurations" disabled={isSaving} onclick={onSave}><Download size={17} /></TooltipButton>
   <span class="action-divider"></span>
-  <button class="icon-button" aria-label="Toggle color mode" title="Toggle light/dark mode" onclick={onToggleTheme}>
+  <TooltipButton label="Toggle color mode" tooltip="Toggle light/dark mode" onclick={onToggleTheme}>
     {#if isDarkMode}<Sun size={17} />{:else}<Moon size={17} />{/if}
-  </button>
-  <button class="icon-button" aria-label={`Current input profile: ${inputProfile} - Click to cycle`} title={`Input profile: ${inputProfile}`} onclick={onToggleInput}>
+  </TooltipButton>
+  <TooltipButton label={`Current input profile: ${inputProfile} - Click to cycle`} tooltip={inputProfile === "mouse" ? "Mouse: Shift+wheel zoom, wheel pan when zoomed" : inputProfile === "trackpad" ? "Trackpad: Ctrl+scroll zoom, scroll pan when zoomed" : "Touchscreen: pinch zoom, drag pan when zoomed"} onclick={onToggleInput}>
     {#if inputProfile === "mouse"}<Mouse size={17} />{:else if inputProfile === "trackpad"}<Touchpad size={17} />{:else}<Smartphone size={17} />{/if}
-  </button>
-  <button class="icon-button" aria-label="Fullscreen" title={fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"} onclick={onFullscreen}>
+  </TooltipButton>
+  <TooltipButton label="Fullscreen" tooltip={fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"} onclick={onFullscreen}>
     {#if fullscreen}<SquareX size={17} />{:else}<Expand size={17} />{/if}
-  </button>
-  <button class="icon-button" aria-label="Simulation Settings" title="Settings" onclick={onSettings}><Settings size={17} /></button>
-  <button class="icon-button" aria-label="About EEcircuit" title="About EEcircuit" onclick={onAbout}><Info size={17} /></button>
+  </TooltipButton>
+  <TooltipButton label="Simulation Settings" tooltip="Simulation Settings" onclick={onSettings}><Settings size={17} /></TooltipButton>
+  <StatusCenter />
+  <span class="action-divider"></span>
+  <TooltipButton label="About EEcircuit" onclick={onAbout}><Info size={17} /></TooltipButton>
 </div>

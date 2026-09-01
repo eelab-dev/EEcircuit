@@ -22,7 +22,7 @@ test("production UI, Monaco, worker simulation, plot, theme, and pointer input w
   await page.mouse.down();
   await page.mouse.up();
 
-  await page.getByRole("button", { name: "Simulate Circuit" }).click();
+  await page.getByRole("button", { name: "Simulate Circuit" }).click({ modifiers: ["Shift"] });
   await expect(page.locator(".monaco-editor")).toBeVisible({ timeout: 15_000 });
   const workspaceBox = await page.locator(".workspace-stack").boundingBox();
   const simulationBox = await page.locator(".simulation-workspace").boundingBox();

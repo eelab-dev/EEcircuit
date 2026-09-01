@@ -5,7 +5,7 @@
   "description": "Circuit Simulator",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 5173 --host",
+    "dev": "vite --force --port 5173 --host",
     "build": "vite build && ./copy_workers.sh",
     "preview": "vite preview",
     "lint": "eslint",
@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@ark-ui/svelte": "^5.24.1",
+    "@danchitnis/svg-to-pdf": "^1.0.0",
     "@lucide/svelte": "^1.38.0",
     "eecircuit-engine": "^1.7.0",
     "eecircuit-schematic": "file:../EEcircuit-schematic",
