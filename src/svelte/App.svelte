@@ -24,6 +24,7 @@
   let newDialogOpen = $state(false);
   let settingsOpen = $state(false);
   let aboutOpen = $state(false);
+  let settingsCategory = $state<"general" | "simulation" | "plotting">("simulation");
   let dragActive = $state(false);
 
   const activeMessages = $derived(
@@ -210,12 +211,26 @@
 </Modal>
 
 <Modal bind:open={settingsOpen} title="Settings">
-  <div class="settings-list">
-    <label>Maximum simulation workers<input type="number" min="1" max={navigator.hardwareConcurrency || 8} value={appState.maxWebWorkers} onchange={(event) => appState.setMaxWebWorkers(Number(event.currentTarget.value))} /></label>
-    <label class="check-row"><input type="checkbox" checked={appState.showDevMessages} onchange={(event) => appState.setShowDevMessages(event.currentTarget.checked)} />Show developer messages</label>
-    <label class="check-row"><input type="checkbox" checked={appState.resetVariableSelectionsOnNewSim} onchange={(event) => appState.setResetVariableSelectionsOnNewSim(event.currentTarget.checked)} />Reset variable selection for each run</label>
+  <div class="settings-layout">
+    <nav class="settings-nav" aria-label="Settings categories">
+      <button class:active={settingsCategory === "general"} onclick={() => settingsCategory = "general"}>General Settings</button>
+      <button class:active={settingsCategory === "simulation"} onclick={() => settingsCategory = "simulation"}>Simulation Settings</button>
+      <button class:active={settingsCategory === "plotting"} onclick={() => settingsCategory = "plotting"}>Plotting Settings</button>
+    </nav>
+    <div class="settings-list">
+      {#if settingsCategory === "general"}
+        <label class="check-row"><input type="checkbox" checked={appState.showDevMessages} onchange={(event) => appState.setShowDevMessages(event.currentTarget.checked)} />Show developer messages</label>
+      {:else if settingsCategory === "simulation"}
+        <label>Maximum simulation workers<input type="number" min="1" max={navigator.hardwareConcurrency || 8} value={appState.maxWebWorkers} onchange={(event) => appState.setMaxWebWorkers(Number(event.currentTarget.value))} /></label>
+        <label class="check-row"><input type="checkbox" checked={appState.resetVariableSelectionsOnNewSim} onchange={(event) => appState.setResetVariableSelectionsOnNewSim(event.currentTarget.checked)} />Reset variable selection for each run</label>
+      {:else}
+        <label class="check-row"><input type="checkbox" checked={appState.showInternalSignals} onchange={(event) => appState.setShowInternalSignals(event.currentTarget.checked)} />Show internal subcircuit signals</label>
+        <label>Plot line thickness<input type="range" min="1" max="8" step="1" value={appState.lineThickness} oninput={(event) => appState.setLineThickness(Number(event.currentTarget.value))} /></label>
+        <label class="check-row"><input type="checkbox" checked={appState.resetPlotStateOnNewSim} onchange={(event) => appState.setResetPlotStateOnNewSim(event.currentTarget.checked)} />Reset plot state for each run</label>
+      {/if}
+    </div>
   </div>
-  {#snippet footer()}<button class="primary-button" onclick={() => settingsOpen = false}>Save</button>{/snippet}
+  {#snippet footer()}<button onclick={() => settingsOpen = false}>Cancel</button><button class="primary-button" onclick={() => settingsOpen = false}>Save</button>{/snippet}
 </Modal>
 
 <Modal bind:open={aboutOpen} title="About EEcircuit">

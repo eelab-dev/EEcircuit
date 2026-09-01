@@ -46,7 +46,10 @@
     if (config.type === "None") return;
     const valid = Object.entries(config).every(([key, value]) => key === "name" || key === "initialConditions" || value !== "");
     if (!valid) return;
-    const index = appState.allSimulationConfigs.findIndex((item) => item.type === config.type && "name" in item && item.name === config.name);
+    const index = appState.allSimulationConfigs.findIndex((item) => {
+      if (item.type !== config.type) return false;
+      return item.name === config.name;
+    });
     if (index >= 0) appState.updateSimulationConfig(index, config);
     else appState.addSimulationConfig(config);
   }
@@ -56,10 +59,23 @@
     if (type === "None") {
       appState.setSimulationConfig({ type: "None" });
       appState.setSimulationCommandString("");
-    } else if (type === "DC") publish(dc, `.dc ${dc.source} ${dc.start} ${dc.stop} ${dc.step}`);
-    else if (type === "AC") publish(ac, `.ac ${ac.sweepType} ${ac.stepNumber} ${ac.frequencyStart} ${ac.frequencyStop}`);
-    else if (type === "Transient") publish(transient, `.tran ${transient.timeStep} ${transient.stopTime}`);
-    else publish(noise, `.noise v(${noise.netName}) ${noise.source} ${noise.sweepType} ${noise.steps} ${noise.startFreq} ${noise.stopFreq}`);
+    } else if (type === "DC") {
+      const saved = appState.allSimulationConfigs.find((config): config is SimulationDC => config.type === "DC");
+      if (saved) dc = { ...saved };
+      publish(dc, `.dc ${dc.source} ${dc.start} ${dc.stop} ${dc.step}`);
+    } else if (type === "AC") {
+      const saved = appState.allSimulationConfigs.find((config): config is SimulationAC => config.type === "AC");
+      if (saved) ac = { ...saved };
+      publish(ac, `.ac ${ac.sweepType} ${ac.stepNumber} ${ac.frequencyStart} ${ac.frequencyStop}`);
+    } else if (type === "Transient") {
+      const saved = appState.allSimulationConfigs.find((config): config is SimulationTransient => config.type === "Transient");
+      if (saved) transient = { ...saved };
+      publish(transient, `.tran ${transient.timeStep} ${transient.stopTime}`);
+    } else {
+      const saved = appState.allSimulationConfigs.find((config): config is SimulationNoise => config.type === "Noise");
+      if (saved) noise = { ...saved };
+      publish(noise, `.noise v(${noise.netName}) ${noise.source} ${noise.sweepType} ${noise.steps} ${noise.startFreq} ${noise.stopFreq}`);
+    }
   }
 
   function updateDc() { publish(dc, `.dc ${dc.source} ${dc.start} ${dc.stop} ${dc.step}`); }

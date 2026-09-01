@@ -89,11 +89,13 @@ input, select, textarea { min-width: 0; border: 1px solid var(--border); border-
 .toast.error { border-left-color: var(--danger); }.toast.warning { border-left-color: var(--warning); }.toast.success { border-left-color: var(--success); }
 .toast button { border: 0; background: transparent; font-size: 1.2rem; }
 .modal-backdrop { position: fixed; z-index: 400; inset: 0; background: rgb(0 0 0 / .48); backdrop-filter: blur(3px); }
+.modal-backdrop[data-state="closed"], .modal-positioner[data-state="closed"] { display: none; pointer-events: none; }
 .modal-positioner { position: fixed; z-index: 401; inset: 0; display: grid; place-items: center; padding: 1rem; }
 .modal-content { width: min(40rem, 95vw); max-height: 88vh; overflow: auto; border: 1px solid var(--border); border-radius: .8rem; background: color-mix(in srgb, var(--bg) 96%, transparent); box-shadow: 0 20px 60px rgb(0 0 0 / .3); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1rem .5rem; font-size: 1.05rem; font-weight: 650; }
 .modal-body { padding: .75rem 1rem 1rem; color: var(--fg-muted); }
 .modal-footer { display: flex; justify-content: flex-end; gap: .5rem; padding: .75rem 1rem 1rem; }
+.settings-layout { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 1rem; }.settings-nav { display: grid; align-content: start; gap: .35rem; }.settings-nav button { text-align: left; }.settings-nav button.active { color: white; border-color: var(--accent); background: var(--accent); }.settings-list { margin-top: 0; }
 .shortcut-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
 .shortcut-grid h3 { color: var(--fg); margin: 0 0 .5rem; }
 .shortcut-row { display: grid; grid-template-columns: 7rem 1fr; align-items: start; gap: .5rem; margin: .35rem 0; font-size: .86rem; }
@@ -132,4 +134,5 @@ kbd { width: fit-content; padding: .15rem .35rem; border: 1px solid var(--border
   .component-picker { left: .5rem; top: 3.4rem; width: calc(100% - 1rem); }.properties-panel { right: .5rem; top: 4rem; transform: none; }.schematic-bottom-bar output { display: none; }.wide-label { display: none; }.shortcut-grid { grid-template-columns: 1fr; }
   .simulation-workspace { grid-template-columns: 1fr; grid-template-rows: auto minmax(25rem, 1fr); overflow: auto; }.simulation-sidebar { grid-row: 1; max-height: 24rem; border-left: 0; border-bottom: 1px solid var(--border); }.netlist-pane { min-height: 25rem; }
   .plot-body.with-sidebar { grid-template-columns: minmax(0, 1fr); }.plot-sidebar { position: absolute; z-index: 40; top: 3.2rem; right: 0; bottom: 0; width: min(17rem, 82vw); box-shadow: -10px 0 28px rgb(0 0 0 / .2); }.plot-grid { grid-template-columns: 3.6rem minmax(0, 1fr); }
+  .settings-layout { grid-template-columns: 1fr; }.settings-nav { grid-template-columns: repeat(3, 1fr); }.settings-nav button { text-align: center; padding-inline: .3rem; font-size: .76rem; }
 }
