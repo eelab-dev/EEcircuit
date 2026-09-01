@@ -4,6 +4,7 @@ import tseslint from "typescript-eslint";
 import pluginReact from "eslint-plugin-react";
 import { defineConfig } from "eslint/config";
 import reactHooks from "eslint-plugin-react-hooks";
+import pluginSvelte from "eslint-plugin-svelte";
 import fs from "node:fs";
 
 // workaround for eslint-plugin-react compat with eslint 10
@@ -45,6 +46,8 @@ export default defineConfig([
     ...config,
     files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
   })),
+
+  ...pluginSvelte.configs["flat/recommended"],
 
   // React config
   {
