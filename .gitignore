@@ -28,6 +28,7 @@ AGENTS.md
 CODE_AUDIT.md
 issues.md
 tsconfig.tsbuildinfo
+/docs/
 
 .agent
 test-videos

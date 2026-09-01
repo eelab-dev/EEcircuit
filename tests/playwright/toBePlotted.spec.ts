@@ -49,9 +49,9 @@ test("To Be Plotted variables are updated when schematic nets change", async ({ 
       await page.mouse.move(cx + dx, cy + dy);
       await page.waitForTimeout(15);
       
-      // Look for a button in the bottom bar that has a dash (e.g., "output - 2")
-      // excluding the coordinate button "X:  0, Y:  0"
-      const pointerInfoBtns = await page.locator('button').filter({ hasText: /.* - \d+/ }).all();
+      // Pointer information is status output in the Svelte shell (for example,
+      // "output — 2"), while controls remain actual buttons.
+      const pointerInfoBtns = await page.locator('.schematic-bottom-bar output').filter({ hasText: /.*[—-]\s*\d+/ }).all();
       
       for (const btn of pointerInfoBtns) {
         if (await btn.isVisible()) {
@@ -60,10 +60,10 @@ test("To Be Plotted variables are updated when schematic nets change", async ({ 
             // Only accept the named wire entries. Component names such as
             // `vin` also contain "in", but selecting those would not update
             // the transient to-be-plotted net list.
-            if (/^(output|input)\s*-\s*\d+/i.test(text.trim())) {
+            if (/^(output|input)\s*[—-]\s*\d+/i.test(text.trim())) {
               targetX = cx + dx;
               targetY = cy + dy;
-              const splitText = text.split('-');
+              const splitText = text.split(/[—-]/);
               if (splitText[0]) {
                 foundNetName = splitText[0].trim();
               } else {

@@ -1,15 +1,14 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, type Component } from "svelte";
   import type { Schematic } from "eecircuit-schematic";
   import Logo from "./components/Logo.svelte";
   import HeaderActions from "./components/HeaderActions.svelte";
   import Modal from "./components/Modal.svelte";
   import SchematicView from "./schematic/SchematicView.svelte";
-  import SimulationView from "./simulation/SimulationView.svelte";
-  import PlotView from "./plot/PlotView.svelte";
   import { appState } from "./state/appState.svelte";
   import { validateEEcircuitFile } from "../utils/eeCircuitFileValidator";
   import type { EEcircuitFile, SimulationType } from "../types/commonTypes";
+  import { demoSchematic } from "../schematic/demoSchematic";
 
   type SchematicExports = {
     loadSchematic: (value: unknown) => Promise<void>;
@@ -26,14 +25,51 @@
   let aboutOpen = $state(false);
   let settingsCategory = $state<"general" | "simulation" | "plotting">("simulation");
   let dragActive = $state(false);
+  let SimulationComponent = $state<Component>();
+  let PlotComponent = $state<Component>();
+  let primaryUiPromise: Promise<void> | undefined;
 
   const activeMessages = $derived(
     appState.messages.filter((message) => appState.showDevMessages || message.mLevel !== "dev").slice(-4),
   );
 
+  function ensurePrimaryUi(): Promise<void> {
+    if (primaryUiPromise) return primaryUiPromise;
+    primaryUiPromise = (async () => {
+      const [simulationModule, plotModule, simulationRuntime] = await Promise.all([
+        import("./simulation/SimulationView.svelte"),
+        import("./plot/PlotView.svelte"),
+        import("../simulation/parallelSimulation"),
+      ]);
+      SimulationComponent = simulationModule.default;
+      PlotComponent = plotModule.default;
+      performance.mark("eecircuit:primary-ui-ready");
+      try {
+        await simulationRuntime.prewarmSimulationEngine();
+      } catch (error) {
+        appState.addMessage({
+          text: error instanceof Error ? error.message : "Simulation engine prewarming failed.",
+          type: "warning",
+          category: "Simulation",
+          mLevel: "dev",
+        });
+      }
+    })();
+    return primaryUiPromise;
+  }
+
+  function handleSchematicReady() {
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(() => void ensurePrimaryUi(), { timeout: 1_500 });
+    } else {
+      setTimeout(() => void ensurePrimaryUi(), 0);
+    }
+  }
+
   function selectTab(tab: "schematic" | "simulate" | "plot") {
     if (tab === "simulate" && !appState.isSimulationTabEnabled) return;
     if (tab === "plot" && !appState.isPlottingTabEnabled) return;
+    if (tab !== "schematic") void ensurePrimaryUi();
     appState.setMainTabValue(tab);
     if (tab === "schematic" && appState.hasResizedSinceSchematicView) appState.setShouldFitToScreen(true);
   }
@@ -178,16 +214,20 @@
 
   <div class="workspace-stack">
     <div role="tabpanel" class:hidden={appState.mainTabValue !== "schematic"} class="workspace-panel">
-      <SchematicView bind:this={schematic} />
+      <SchematicView bind:this={schematic} onReady={handleSchematicReady} />
       {#if appState.isSchematicLoading}
         <div class="loading-overlay" role="status"><div class="loading-card"><span class="spinner"></span><span>{appState.schematicLoadingMessage}</span></div></div>
       {/if}
     </div>
     {#if appState.mainTabValue === "simulate"}
-      <div role="tabpanel" class="workspace-panel"><SimulationView /></div>
+      <div role="tabpanel" class="workspace-panel">
+        {#if SimulationComponent}<SimulationComponent />{:else}<div class="feature-loading" data-tab-panel-loading="simulation">Loading simulation tools…</div>{/if}
+      </div>
     {/if}
     {#if appState.mainTabValue === "plot"}
-      <div role="tabpanel" class="workspace-panel"><PlotView /></div>
+      <div role="tabpanel" class="workspace-panel">
+        {#if PlotComponent}<PlotComponent />{:else}<div class="feature-loading" data-tab-panel-loading="plot">Loading plot tools…</div>{/if}
+      </div>
     {/if}
   </div>
 
@@ -205,7 +245,7 @@
   <p>Start with an empty canvas or load the demonstration circuit. Unsaved work will be replaced.</p>
   {#snippet footer()}
     <button onclick={() => newDialogOpen = false}>Cancel</button>
-    <button class="primary-button" onclick={async () => { const { demoSchematic } = await import("../schematic/demoSchematic"); await schematic.loadSchematic(demoSchematic); newDialogOpen = false; }}>Load Demo</button>
+    <button class="primary-button" onclick={async () => { await schematic.loadSchematic(demoSchematic); newDialogOpen = false; }}>Load Demo</button>
     <button class="danger-button" onclick={async () => { await schematic.clear(); newDialogOpen = false; }}>New Empty Schematic</button>
   {/snippet}
 </Modal>

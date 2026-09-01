@@ -11,14 +11,11 @@ test.describe("file lifecycle", () => {
     await page.goto("/");
     const input = page.locator('input[type="file"]').first();
 
-    const dialogPromise = page.waitForEvent("dialog");
     await input.setInputFiles(file("malformed.json", {
       schema: "EEcircuitV1",
       schematic: { componentInstances: {}, wires: [] },
     }));
-    const dialog = await dialogPromise;
-    expect(dialog.message()).toContain("Failed to load schematic file");
-    await dialog.accept();
+    await expect(page.getByText("The schematic field is malformed.")).toBeVisible();
 
     await input.setInputFiles(file("configuration-only.json", {
       schema: "EEcircuitV1",

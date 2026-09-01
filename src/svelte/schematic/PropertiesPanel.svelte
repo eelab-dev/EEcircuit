@@ -68,7 +68,7 @@
   <form onsubmit={(event) => { event.preventDefault(); apply(); }}>
     {#if selectedItem.type === "instance" && selectedItem.typeName !== "port"}
       <label>Name
-        {#if fixedName}<span class="fixed-value">{selectedItem.typeName}</span>{:else}<input bind:value={localValues.name} onkeydown={handleInputKeydown} />{/if}
+        {#if fixedName}<span class="fixed-value">{selectedItem.typeName}</span>{:else}<input placeholder="Component name (e.g., R1, C1)" bind:value={localValues.name} onkeydown={handleInputKeydown} />{/if}
       </label>
     {:else if selectedItem.type === "wire"}
       <label>Net Name<input placeholder="Network name" bind:value={localValues.name} onkeydown={handleInputKeydown} /></label>

@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
-test.use({ baseURL: "http://127.0.0.1:4174" });
+test.use({ baseURL: process.env.EECIRCUIT_PREVIEW_ORIGIN ?? "http://127.0.0.1:4176" });
 
 test("SPICE Monaco editor supports highlighting, completion, and editing features", async ({ page }) => {
   test.setTimeout(45_000);

@@ -27,17 +27,28 @@
   $effect(() => {
     if (appState.netList !== lastGeneratedNetlist || appState.netListNeedsRefresh) {
       lastGeneratedNetlist = appState.netList;
-      editorValue = appState.netList;
+      // "None" is the manual-editor mode. A configuration update that was
+      // queued just before switching to None must not overwrite those edits.
+      if (appState.selectedSimType !== "None") editorValue = appState.netList;
       if (appState.netListNeedsRefresh) appState.acknowledgeNetListRefresh();
     }
   });
 
   $effect(() => {
     const config = appState.simulationConfig;
-    if (config?.type === "DC") dc = { ...config };
-    else if (config?.type === "AC") ac = { ...config };
-    else if (config?.type === "Transient") transient = { ...config };
-    else if (config?.type === "Noise") noise = { ...config };
+    if (config?.type === "DC") {
+      dc = { ...config };
+      appState.setSimulationCommandString(correctNgspiceUnits(`.dc ${config.source} ${config.start} ${config.stop} ${config.step}`));
+    } else if (config?.type === "AC") {
+      ac = { ...config };
+      appState.setSimulationCommandString(correctNgspiceUnits(`.ac ${config.sweepType} ${config.stepNumber} ${config.frequencyStart} ${config.frequencyStop}`));
+    } else if (config?.type === "Transient") {
+      transient = { ...config };
+      appState.setSimulationCommandString(correctNgspiceUnits(`.tran ${config.timeStep} ${config.stopTime}`));
+    } else if (config?.type === "Noise") {
+      noise = { ...config };
+      appState.setSimulationCommandString(correctNgspiceUnits(`.noise v(${config.netName}) ${config.source} ${config.sweepType} ${config.steps} ${config.startFreq} ${config.stopFreq}`));
+    }
   });
 
   function publish(config: SimulationType, command: string) {
@@ -97,7 +108,7 @@
   <div class="netlist-pane">
     <header class="netlist-header">
       <div class="plotted-menu-wrap">
-        <button aria-expanded={plottedOpen} onclick={() => plottedOpen = !plottedOpen}>To Be Plotted{appState.toBePlotted.length ? ` (${appState.toBePlotted.length})` : ""}</button>
+        <button aria-expanded={appState.toBePlotted.length ? plottedOpen : undefined} onclick={() => { if (appState.toBePlotted.length) plottedOpen = !plottedOpen; else appState.enterToBePlottedMode(); }}>To Be Plotted{appState.toBePlotted.length ? ` (${appState.toBePlotted.length})` : ""}</button>
         {#if plottedOpen}
           <div class="plotted-menu" role="menu">
             {#each appState.toBePlotted as item, index (`${item.type}-${index}`)}

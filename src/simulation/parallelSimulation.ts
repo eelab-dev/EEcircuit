@@ -1,5 +1,4 @@
 import type { ResultType } from "eecircuit-engine";
-import { expandNetlist } from "../utils/netlistExpander";
 
 export interface SimulationWorkerResult {
   success: boolean;
@@ -516,6 +515,7 @@ async function runParallelSimulationInternal(
 
   try {
     // First, expand the netlist
+    const { expandNetlist } = await import("../utils/netlistExpander");
     const expansionResult = expandNetlist(netlist);
 
     if (!expansionResult.hasExpansion || !expansionResult.parameterValues || !expansionResult.expandAt) {

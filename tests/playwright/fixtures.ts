@@ -7,7 +7,7 @@ import {
   type Page,
 } from "@playwright/test";
 
-const APP_ORIGIN = "http://localhost:5173";
+const APP_ORIGIN = process.env.EECIRCUIT_TEST_ORIGIN ?? "http://localhost:5173";
 const desktopChrome = devices["Desktop Chrome"];
 
 interface SharedChrome {

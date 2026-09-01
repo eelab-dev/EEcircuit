@@ -1,24 +1,17 @@
 import { readdir } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 
-test.use({ baseURL: "http://127.0.0.1:4174" });
+test.use({ baseURL: process.env.EECIRCUIT_PREVIEW_ORIGIN ?? "http://127.0.0.1:4176" });
 
 const backgroundChunkNames = [
-  "simulate-",
-  "ScientificPlot-",
-  "NewSchematicDialog-",
-  "SettingsDialog-",
-  "AboutDialog-",
-  "properties-",
-  "ShortcutsDialog-",
-  "ExportImageDialog-",
+  "SimulationView-",
+  "PlotView-",
+  "parallelSimulation-",
 ];
 
 const simulationRuntimeChunkNames = [
   "bracketParser-",
-  "parallelSimulation-",
   "resultAggregator-",
-  "simulationWorker-",
 ];
 
 const expectBackgroundUiPreloaded = async (page: Page, url: string) => {
@@ -106,9 +99,7 @@ const expectBackgroundUiPreloaded = async (page: Page, url: string) => {
     );
   }
   for (const chunk of preloadTiming.runtimeStarts) {
-    expect(chunk.startTimes, `${chunk.chunkName} should load exactly once`).toHaveLength(1);
-    expect(chunk.startTimes[0], `${chunk.chunkName} loaded before primary UI readiness`)
-      .toBeGreaterThanOrEqual(preloadTiming.primaryReadyAt);
+    expect(chunk.startTimes.length, `${chunk.chunkName} must remain lazy before the first run`).toBe(0);
   }
 
   await expect(page.locator(".monaco-editor")).toHaveCount(0);
@@ -198,7 +189,8 @@ test("production preview evaluates lazy features and every browser chunk without
   await expect(page.locator(".monaco-editor")).toBeVisible({ timeout: 15_000 });
   const resourcesAfterSimulationTab = await getJavaScriptResources(page);
   expect(resourcesAfterSimulationTab.filter((resource) =>
-    !resourcesBeforeSimulationTab.includes(resource) && !/\/editor\.worker-/.test(resource),
+    !resourcesBeforeSimulationTab.includes(resource) &&
+    simulationRuntimeChunkNames.some((chunkName) => resource.includes(chunkName)),
   )).toEqual([]);
   await expect(page.getByText("Loading engine", { exact: true })).toHaveCount(0);
 
@@ -209,10 +201,12 @@ test("production preview evaluates lazy features and every browser chunk without
   await page.getByRole("button", { name: /Run Simulation|Run/i }).click();
   await expect(page.getByText("Plot Variables")).toBeVisible({ timeout: 20_000 });
   const resourcesAfterRun = await getJavaScriptResources(page);
-  expect(resourcesAfterRun.filter((resource) =>
+  const newlyLoadedSimulationRuntime = resourcesAfterRun.filter((resource) =>
     !resourcesBeforeRun.includes(resource) &&
     simulationRuntimeChunkNames.some((chunkName) => resource.includes(chunkName)),
-  )).toEqual([]);
+  );
+  expect(newlyLoadedSimulationRuntime.filter((resource) => resource.includes("bracketParser-"))).toHaveLength(1);
+  expect(newlyLoadedSimulationRuntime.some((resource) => resource.includes("resultAggregator-"))).toBe(false);
   expect(await stopTabFallbackObserver(page)).toEqual([]);
 
   const browserChunks = (await readdir("dist/assets"))

@@ -8,6 +8,7 @@
 
   let sidebarOpen = $state(true);
   let emphasized = $state(0);
+  let sharedXTransform = $state<{ scaleX: number; offsetX: number; revision: number } | undefined>();
   let filteredResults = $derived(filterInternalSignals(appState.results, appState.showInternalSignals));
   let result = $derived(filteredResults[0]);
   let variables = $derived(result?.variableNames.slice(1) ?? []);
@@ -37,8 +38,8 @@
   <div class:with-sidebar={sidebarOpen} class="plot-body">
     <div class:dual={canvasCount === 2} class="plot-canvases">
       {#if result}
-        <div class="plot-canvas-wrap">{#if canvasCount === 2}<h3>{acMode ? "Magnitude" : "Plot 1"}</h3>{/if}<WebglPlotCanvas {result} selectedVariables={selectedForCanvas1()} isDarkMode={appState.isDarkMode} isLogX={appState.isLogX} isLogY={canvasCount === 1 ? appState.isLogY : appState.isLogY1} lineThickness={appState.lineThickness} emphasizedPlotIndex={emphasized} /></div>
-        {#if canvasCount === 2}<div class="plot-canvas-wrap"><h3>{acMode ? "Phase" : "Plot 2"}</h3><WebglPlotCanvas {result} selectedVariables={appState.canvas2SelectedVariables} isDarkMode={appState.isDarkMode} isLogX={appState.isLogX} isLogY={appState.isLogY2} lineThickness={appState.lineThickness} emphasizedPlotIndex={emphasized} /></div>{/if}
+        <div class="plot-canvas-wrap">{#if canvasCount === 2}<h3>{acMode ? "Magnitude" : "Plot 1"}</h3>{/if}<WebglPlotCanvas {result} selectedVariables={selectedForCanvas1()} isDarkMode={appState.isDarkMode} isLogX={appState.isLogX} isLogY={canvasCount === 1 ? appState.isLogY : appState.isLogY1} inputProfile={appState.inputProfile} lineThickness={appState.lineThickness} emphasizedPlotIndex={emphasized} externalXTransform={sharedXTransform} onXTransform={(transform) => sharedXTransform = { ...transform, revision: (sharedXTransform?.revision ?? 0) + 1 }} /></div>
+        {#if canvasCount === 2}<div class="plot-canvas-wrap"><h3>{acMode ? "Phase" : "Plot 2"}</h3><WebglPlotCanvas {result} selectedVariables={appState.canvas2SelectedVariables} isDarkMode={appState.isDarkMode} isLogX={appState.isLogX} isLogY={appState.isLogY2} inputProfile={appState.inputProfile} lineThickness={appState.lineThickness} emphasizedPlotIndex={emphasized} externalXTransform={sharedXTransform} onXTransform={(transform) => sharedXTransform = { ...transform, revision: (sharedXTransform?.revision ?? 0) + 1 }} /></div>{/if}
       {/if}
     </div>
     {#if sidebarOpen && result}

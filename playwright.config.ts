@@ -1,5 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const devOrigin = "http://127.0.0.1:5175";
+const previewOrigin = "http://127.0.0.1:4176";
+process.env.EECIRCUIT_TEST_ORIGIN = devOrigin;
+process.env.EECIRCUIT_PREVIEW_ORIGIN = previewOrigin;
+
 export default defineConfig({
   testDir: "./tests",
   testMatch: ["playwright/**/*.spec.ts", "preview/**/*.spec.ts"],
@@ -9,7 +14,7 @@ export default defineConfig({
   workers: 1,
   reporter: "list",
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: devOrigin,
     trace: "retain-on-failure",
     headless: false,
   },
@@ -29,17 +34,25 @@ export default defineConfig({
         },
       },
     },
+    {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"], browserName: "webkit", headless: false },
+    },
+    {
+      name: "ipad-webkit",
+      use: { ...devices["iPad Pro 11"], browserName: "webkit", headless: false },
+    },
   ],
   webServer: [
     {
-      command: "npm run dev",
-      url: "http://localhost:5173",
-      reuseExistingServer: !process.env.CI,
+      command: "npm run dev -- --host 127.0.0.1 --port 5175 --strictPort",
+      url: devOrigin,
+      reuseExistingServer: false,
     },
     {
-      command: "npm run preview -- --host 127.0.0.1 --port 4174 --strictPort",
-      url: "http://127.0.0.1:4174",
-      reuseExistingServer: !process.env.CI,
+      command: "npm run preview -- --host 127.0.0.1 --port 4176 --strictPort",
+      url: previewOrigin,
+      reuseExistingServer: false,
     },
   ],
 });

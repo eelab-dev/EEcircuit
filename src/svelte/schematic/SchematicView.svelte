@@ -83,6 +83,20 @@
     }
   }
 
+  function handleCanvasClick() {
+    if (!getAppState().isToBePlottedMode) return;
+    const pointer = pointerInfo ?? (Date.now() - lastPointerAt < 2_000 ? lastPointerInfo : null);
+    if (pointer?.type === "wire" || pointer?.type === "junction") {
+      appState.addToBePlotted({ type: "voltage", netName: pointer.name?.trim() || "unknown" });
+    } else if (pointer?.type === "terminal") {
+      const parsed = parseTerminalPointerInfo(pointer.name);
+      if (parsed) {
+        const corrected = normalizeTerminalSelection(parsed);
+        appState.addToBePlotted({ type: "current", componentName: corrected.componentName, terminalName: corrected.terminalName });
+      }
+    }
+  }
+
   function onEditorEvent(message: EditorEvent) {
     switch (message.type) {
       case "change":
@@ -213,19 +227,34 @@
 
   onMount(() => {
     let cancelled = false;
+    let sizeObserver: ResizeObserver | undefined;
     readyPromise = new Promise<void>((resolve) => { resolveReady = resolve; });
     canvas.dataset.canvasReady = "false";
     const initialSchematic = new URLSearchParams(location.search).get("clean") === "true"
       ? blankSchematic
       : appState.currentSchematic ?? demoSchematic;
 
-    void createSchematicEditor({
-      canvas,
-      initialSchematic,
-      theme: appState.isDarkMode ? "dark" : "light",
-      inputProfile: appState.inputProfile,
-      onEvent: onEditorEvent,
-    }).then(async (instance) => {
+    const waitForRenderedSize = () => new Promise<void>((resolve) => {
+      if (canvas.clientWidth > 0 && canvas.clientHeight > 0) { resolve(); return; }
+      sizeObserver = new ResizeObserver(() => {
+        if (canvas.clientWidth <= 0 || canvas.clientHeight <= 0) return;
+        sizeObserver?.disconnect();
+        sizeObserver = undefined;
+        resolve();
+      });
+      sizeObserver.observe(canvas);
+    });
+
+    void (async () => {
+      await waitForRenderedSize();
+      if (cancelled) return;
+      const instance = await createSchematicEditor({
+        canvas,
+        initialSchematic,
+        theme: appState.isDarkMode ? "dark" : "light",
+        inputProfile: appState.inputProfile,
+        onEvent: onEditorEvent,
+      });
       if (cancelled) { await instance.destroy(); return; }
       editor = instance;
       resolveReady();
@@ -238,11 +267,12 @@
       canvas.dataset.canvasReady = "true";
       performance.mark("eecircuit:schematic-ready");
       onReady?.();
-    }).catch((error) => { resolveReady(); reportError("initialization", error); });
+    })().catch((error) => { resolveReady(); reportError("initialization", error); });
 
     document.addEventListener("keydown", handleKeydown);
     return () => {
       cancelled = true;
+      sizeObserver?.disconnect();
       document.removeEventListener("keydown", handleKeydown);
       const instance = editor;
       editor = null;
@@ -276,7 +306,7 @@
 <section class="schematic-workspace">
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div class="canvas-container" id="canvas-container" bind:this={container} role="application" aria-label="Schematic editor" tabindex="0">
-    <canvas id="schematic-canvas" bind:this={canvas} data-canvas-ready="false"></canvas>
+    <canvas id="schematic-canvas" bind:this={canvas} data-canvas-ready="false" onclick={handleCanvasClick}></canvas>
     {#if editor && !appState.isToBePlottedMode}
       <SchematicToolbar
         {availableComponents}
