@@ -4,24 +4,24 @@
   let {
     label,
     tooltip = label,
-    disabled = false,
     pressed,
-    className = "icon-button",
+    className = "tool-button",
+    placement = "right",
     onclick,
     children,
   }: {
     label: string;
     tooltip?: string;
-    disabled?: boolean;
     pressed?: boolean;
     className?: string;
+    placement?: "top" | "right" | "bottom" | "left";
     onclick: (event: MouseEvent) => void;
     children: import("svelte").Snippet;
   } = $props();
 </script>
 
-<Tooltip.Root lazyMount unmountOnExit positioning={{ placement: "bottom" }} openDelay={300} closeDelay={50}>
-  <Tooltip.Trigger class={className} aria-label={label} aria-pressed={pressed} {disabled} {onclick}>
+<Tooltip.Root lazyMount unmountOnExit positioning={{ placement }} openDelay={300} closeDelay={50}>
+  <Tooltip.Trigger class={`${className}${pressed ? " active" : ""}`} aria-label={label} aria-pressed={pressed} {onclick}>
     {@render children()}
   </Tooltip.Trigger>
   <Tooltip.Positioner>

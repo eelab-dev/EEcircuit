@@ -98,6 +98,8 @@ input, select, textarea { min-width: 0; border: 1px solid var(--border); border-
 .schematic-bottom-bar output, .schematic-bottom-bar button { pointer-events: auto; padding: .45rem .7rem; border: 1px solid var(--border); border-radius: .5rem; background: color-mix(in srgb, var(--bg) 78%, transparent); backdrop-filter: blur(8px); font-size: .82rem; }
 .schematic-bottom-bar output { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .schematic-bottom-bar output:first-child { position: absolute; left: 50%; transform: translateX(-50%); }
+.schematic-bottom-bar .pointer-output { position: absolute; left: 50%; display: flex; align-items: center; gap: .45rem; transform: translateX(calc(-50% + 10rem)); }
+.schematic-bottom-bar .pointer-output svg { flex: 0 0 auto; }
 .selection-overlay small { font-family: var(--font-mono); }
 .properties-panel input, .fixed-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .schematic-bottom-bar .simulate-button { min-height: 2.65rem; display: flex; align-items: center; gap: .5rem; padding: .65rem 1rem; border-radius: .65rem; background: var(--accent); border-color: var(--accent); font-size: .95rem; font-weight: 600; line-height: 1.2; box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 24%, transparent); }
@@ -224,6 +226,10 @@ kbd { width: fit-content; padding: .15rem .35rem; border: 1px solid var(--border
 .thread-progress-list { display: grid; gap: .3rem; }.thread-progress-list > div { display: grid; grid-template-columns: 2rem minmax(0, 1fr) 3.3rem; align-items: center; gap: .4rem; color: var(--fg-muted); font-family: var(--font-mono); font-size: .7rem; font-variant-numeric: tabular-nums; }.thread-progress-list progress { width: 100%; }
 .spinner { width: 2rem; height: 2rem; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent); animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+@media (max-height: 639px) and (min-width: 601px) {
+  .schematic-toolbar { grid-template-columns: repeat(2, 1fr); gap: .25rem; max-width: 7rem; }
+  .schematic-toolbar .tool-divider { display: none; }
+}
 @media (max-width: 900px) {
   .main-header { grid-template-columns: auto 1fr; gap: .5rem; }.main-tabs { justify-self: end; }.header-actions { grid-column: 1 / -1; justify-self: center; }.logo { width: 6.5rem; }
 }
@@ -234,7 +240,15 @@ kbd { width: fit-content; padding: .15rem .35rem; border: 1px solid var(--border
 @media (max-width: 600px) {
   .app-shell { padding: .25rem; }.main-header { grid-template-columns: 1fr; }.logo { display: none; }.main-tabs, .header-actions { justify-self: center; }.main-tabs button { min-width: auto; padding-inline: .6rem; }
   .schematic-toolbar { top: .5rem; left: 50%; transform: translateX(-50%); display: flex; max-width: calc(100% - 1rem); overflow-x: auto; }.tool-divider { width: 1px; height: 1.4rem; }
-  .component-picker { left: .5rem; top: 3.4rem; width: calc(100% - 1rem); }.properties-panel { right: .5rem; top: 4rem; transform: none; }.schematic-bottom-bar output { display: none; }.wide-label { display: none; }.shortcut-grid { grid-template-columns: 1fr; }
+  .component-picker { left: .5rem; top: 3.4rem; width: calc(100% - 1rem); }.properties-panel { right: .5rem; top: 4rem; transform: none; }
+  .schematic-bottom-bar { left: .5rem; right: .5rem; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .3rem; }
+  .schematic-bottom-bar output, .schematic-bottom-bar button { min-width: 0; padding: .35rem .45rem; font-size: .68rem; }
+  .schematic-bottom-bar output:first-child { position: static; transform: none; }
+  .schematic-bottom-bar .pointer-output { position: static; overflow: hidden; transform: none; }
+  .schematic-bottom-bar .pointer-output span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .schematic-bottom-bar .simulate-button { min-height: 2.25rem; padding: .45rem .6rem; font-size: .78rem; }
+  .schematic-bottom-bar .simulate-button { grid-column: 3; }
+  .wide-label { display: none; }.shortcut-grid { grid-template-columns: 1fr; }
   .plot-toolbar { min-height: auto; flex-wrap: wrap; overflow: visible; gap: .3rem; padding: .45rem .55rem; }.plot-toolbar > span { margin-left: .15rem; font-size: .78rem; }.plot-toolbar button { min-height: 2.1rem; padding: .38rem .58rem; font-size: .82rem; }
   .plot-grid { grid-template-columns: 3.6rem minmax(0, 1fr); }.plot-interaction-hint { display: none; }
   .settings-modal { height: min(37rem, 94vh); }.settings-layout { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }.settings-nav { grid-template-columns: repeat(3, 1fr); border-right: 0; border-bottom: 1px solid var(--border-subtle); }.settings-nav button { min-height: 2.7rem; justify-content: center; padding-inline: .3rem; text-align: center; }.settings-nav button > span { display: block; }.settings-nav button small { display: none; }.settings-nav button.active { box-shadow: inset 0 -3px 0 var(--accent); }.settings-panel { padding: 1rem; }

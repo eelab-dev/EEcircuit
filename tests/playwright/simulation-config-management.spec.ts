@@ -28,14 +28,19 @@ test("saved simulation configurations can be created, selected, renamed, and del
   await expect(configSelect).toHaveValue("1");
   await expect(configSelect.locator('option[value="1"]')).toHaveText("Long run (Transient)");
 
-  await configSelect.selectOption({ label: "Startup sweep (Transient)" });
-  await expect(page.getByLabel("Stop Time")).toHaveValue("10u");
-  await expect(page.getByLabel("Time Step")).toHaveValue("100n");
+  await page.getByRole("button", { name: "Add configuration" }).click();
+  await page.getByLabel("New configuration name").fill("Final run");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(configSelect).toHaveValue("2");
+
+  await configSelect.selectOption({ label: "Long run (Transient)" });
 
   await page.getByRole("button", { name: "Delete configuration" }).click();
   await expect(configSelect).toHaveValue("0");
-  await expect(configSelect.locator('option[value="0"]')).toHaveText("Long run (Transient)");
-  await expect(configSelect.locator("option", { hasText: "Startup sweep" })).toHaveCount(0);
+  await expect(configSelect.locator('option[value="0"]')).toHaveText("Startup sweep (Transient)");
+  await expect(configSelect.locator("option", { hasText: "Long run" })).toHaveCount(0);
+  await expect(page.getByLabel("Stop Time")).toHaveValue("10u");
+  await expect(page.getByLabel("Time Step")).toHaveValue("100n");
 
   await page.reload();
   await expect(page.locator('[data-canvas-ready="true"]')).toBeVisible({ timeout: 15_000 });
@@ -43,5 +48,5 @@ test("saved simulation configurations can be created, selected, renamed, and del
   await expect(page.getByText("Simulation Configuration", { exact: true })).toBeVisible({ timeout: 10_000 });
   const restoredSelect = page.getByLabel("Saved simulation configuration", { exact: true });
   await expect(restoredSelect).toHaveValue("0");
-  await expect(restoredSelect.locator('option[value="0"]')).toHaveText("Long run (Transient)");
+  await expect(restoredSelect.locator('option[value="0"]')).toHaveText("Startup sweep (Transient)");
 });

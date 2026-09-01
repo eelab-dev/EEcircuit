@@ -1,13 +1,16 @@
 import { test, expect } from './fixtures';
 import path from 'path';
+import { waitForImportedCircuit } from './file-import-helpers';
 
 test('verify tia transient simulation', async ({ page }) => {
   // 1. Initial Setup
   await page.goto('/');
+  await expect(page.locator('[data-canvas-ready="true"]')).toBeVisible({ timeout: 15000 });
 
   // 2. Load Test Circuit File (TIA)
   console.log('Step: Load Test Circuit File');
   await page.locator('input[type="file"]').first().setInputFiles(path.resolve('tests/test-circuit-tia.json'));
+  await waitForImportedCircuit(page, { configCount: 0, componentNames: ['X1', 'CL'] });
   
   // 3. Click Simulate Button
   console.log('Step: Click Simulate Button');

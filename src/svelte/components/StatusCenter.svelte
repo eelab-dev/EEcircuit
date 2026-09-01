@@ -11,8 +11,8 @@
   let copied = $state(false);
   let visibleMessages = $derived(appState.messages.filter((message) => appState.showDevMessages || message.mLevel !== "dev"));
   let filteredMessages = $derived(visibleMessages.filter((message) => selectedCategories.includes(message.category)));
-  let errorCount = $derived(visibleMessages.filter((message) => message.type === "error").length);
-  let warningCount = $derived(visibleMessages.filter((message) => message.type === "warning").length);
+  let errorCount = $derived(filteredMessages.filter((message) => message.type === "error").length);
+  let warningCount = $derived(filteredMessages.filter((message) => message.type === "warning").length);
   let statusLabel = $derived(
     errorCount ? `${errorCount} error${errorCount === 1 ? "" : "s"}`
       : warningCount ? `${warningCount} warning${warningCount === 1 ? "" : "s"}`

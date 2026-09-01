@@ -16,6 +16,10 @@
   let editor = $state<Monaco.editor.IStandaloneCodeEditor | null>(null);
   let monaco = $state<typeof Monaco | null>(null);
 
+  export function getValue() {
+    return editor?.getValue() ?? value;
+  }
+
   onMount(() => {
     let disposed = false;
     let contentSubscription: Monaco.IDisposable | undefined;

@@ -98,7 +98,7 @@ async function medianPropertyEditLatency(page: Page): Promise<number> {
     samples.push(performance.now() - start);
   }
   await page.getByRole("button", { name: "Cancel" }).click();
-  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).last().click();
   samples.sort((left, right) => left - right);
   return samples[Math.floor(samples.length / 2)] ?? -1;
 }
@@ -106,7 +106,7 @@ async function medianPropertyEditLatency(page: Page): Promise<number> {
 async function measureSimulationInteractions(page: Page) {
   const tabStart = performance.now();
   await page.getByRole("button", { name: "Simulate Circuit" }).click({ modifiers: ["Shift"] });
-  await expect(page.getByRole("group", { name: "Simulation Configuration" })).toBeVisible();
+  await expect(page.getByText("Simulation Configuration", { exact: true }).last()).toBeVisible();
   const simulationTabMs = performance.now() - tabStart;
 
   await page.getByText("Transient", { exact: true }).click();

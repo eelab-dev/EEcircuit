@@ -3,7 +3,7 @@
   import { Pencil, Play, Plus, Trash2, X } from "@lucide/svelte";
   import type { SimulationAC, SimulationDC, SimulationNoise, SimulationTransient, SimulationType } from "../../types/commonTypes";
   import { detectNetsFromNetlist } from "../../utils/netDetection";
-  import { detectSourcesFromNetlist } from "../../utils/sourceDetection";
+  import { detectSourcesFromNetlist, getDefaultSource, validateSourceInNetlist } from "../../utils/sourceDetection";
   import { correctNgspiceUnits } from "../../utils/unitCorrection";
   import { formatToBePlottedLabel } from "../../utils/toBePlotted";
   import { executeSimulation } from "../../controllers/simulationController";
@@ -19,6 +19,7 @@
   let newConfigName = $state("");
   let editingConfigIndex = $state(-1);
   let editingConfigName = $state("");
+  let monacoEditor = $state<{ getValue: () => string }>();
 
   let dc = $state<SimulationDC>({ type: "DC", name: "DC-1", source: "", start: "", stop: "", step: "" });
   let ac = $state<SimulationAC>({ type: "AC", name: "AC-1", source: "", frequencyStart: "", frequencyStop: "", stepNumber: "", sweepType: "dec" });
@@ -50,6 +51,12 @@
     return { type, name, netName: "", source: "", steps: "", startFreq: "", stopFreq: "", sweepType: "dec" };
   }
 
+  function resolveStaleSource(config: SimulationType, netlist: string): SimulationType {
+    if (config.type === "None" || config.type === "Transient" || !config.source) return config;
+    if (validateSourceInNetlist(netlist, config.source)) return config;
+    return { ...config, source: getDefaultSource(netlist) } as SimulationType;
+  }
+
   function isConfigValid(config: SimulationType) {
     if (config.type === "None") return false;
     if (config.type === "DC") return !!(config.source.trim() && config.start.trim() && config.stop.trim() && config.step.trim());
@@ -67,6 +74,8 @@
   }
 
   function activateConfig(config: SimulationType, index: number) {
+    config = resolveStaleSource(config, appState.netList);
+    if (index >= 0 && appState.allSimulationConfigs[index] !== config) appState.updateSimulationConfig(index, config);
     selectedConfigIndex = index;
     appState.setSelectedSimType(config.type);
     appState.setSimulationConfig(config);
@@ -84,7 +93,13 @@
   });
 
   $effect(() => {
-    const config = appState.simulationConfig;
+    const currentConfig = appState.simulationConfig;
+    const config = currentConfig ? resolveStaleSource(currentConfig, appState.netList) : undefined;
+    if (config && config !== currentConfig) {
+      appState.setSimulationConfig(config);
+      const index = appState.allSimulationConfigs.findIndex((item) => item === currentConfig || (item.type !== "None" && config.type !== "None" && item.type === config.type && item.name === config.name));
+      if (index >= 0) appState.updateSimulationConfig(index, config);
+    }
     if (config?.type === "DC") {
       dc = { ...config };
       appState.setSimulationCommandString(correctNgspiceUnits(`.dc ${config.source} ${config.start} ${config.stop} ${config.step}`));
@@ -130,6 +145,10 @@
 
   function selectType(type: SimulationType["type"]) {
     if (type === "None") {
+      // A generated-netlist prop update can still be queued while Monaco is
+      // showing the user's manual text. Snapshot the live model so entering
+      // manual mode cancels that stale update instead of overwriting the UI.
+      editorValue = monacoEditor?.getValue() ?? editorValue;
       selectedConfigIndex = -1;
       appState.setSelectedSimType(type);
       appState.setSimulationConfig({ type: "None" });
@@ -198,7 +217,7 @@
       appState.setSimulationCommandString("");
       return;
     }
-    const nextIndex = Math.min(deletedIndex, remaining.length - 1);
+    const nextIndex = deletedIndex > 0 ? deletedIndex - 1 : 0;
     activateConfig(remaining[nextIndex]!, nextIndex);
   }
 
@@ -239,9 +258,7 @@
         {/if}
       </div>
     </header>
-    {#key appState.mainTabValue}
-      <MonacoEditor value={editorValue} theme={appState.isDarkMode ? "dark" : "light"} onChange={(value) => editorValue = value} />
-    {/key}
+    <MonacoEditor bind:this={monacoEditor} value={editorValue} theme={appState.isDarkMode ? "dark" : "light"} onChange={(value) => editorValue = value} />
   </div>
 
   <aside class="simulation-sidebar">
@@ -309,25 +326,24 @@
       {:else if appState.selectedSimType === "DC"}
         <fieldset class="config-form"><legend>DC Simulation</legend><code>.dc {dc.source} {dc.start} {dc.stop} {dc.step}</code>
           <label>Sweep Source{#if sources.length}<select bind:value={dc.source} onchange={updateDc}><option value="">Select a source...</option>{#each sources as source (source)}<option value={source}>{source}</option>{/each}</select>{:else}<input bind:value={dc.source} oninput={updateDc} />{/if}</label>
-          <label>Start Value<input bind:value={dc.start} oninput={updateDc} /></label><label>Stop Value<input bind:value={dc.stop} oninput={updateDc} /></label><label>Step Size<input bind:value={dc.step} oninput={updateDc} /></label>
+          <label>Start Value<input placeholder="e.g., 0, 1m" bind:value={dc.start} oninput={updateDc} /></label><label>Stop Value<input placeholder="e.g., 10, 1.5k" bind:value={dc.stop} oninput={updateDc} /></label><label>Step Size<input placeholder="e.g., 0.1, 10m" bind:value={dc.step} oninput={updateDc} /></label>
         </fieldset>
       {:else if appState.selectedSimType === "AC"}
         <fieldset class="config-form"><legend>AC Simulation</legend><code>.ac {ac.sweepType} {ac.stepNumber} {ac.frequencyStart} {ac.frequencyStop}</code>
           <label>Source{#if sources.length}<select bind:value={ac.source} onchange={updateAc}><option value="">Select a source...</option>{#each sources as source (source)}<option value={source}>{source}</option>{/each}</select>{:else}<input bind:value={ac.source} oninput={updateAc} />{/if}</label>
           <label>Sweep Type<select bind:value={ac.sweepType} onchange={updateAc}><option value="dec">Decade</option><option value="oct">Octave</option><option value="lin">Linear</option></select></label>
-          <label>Start Frequency<input bind:value={ac.frequencyStart} oninput={updateAc} /></label><label>Stop Frequency<input bind:value={ac.frequencyStop} oninput={updateAc} /></label><label>Steps Number<input bind:value={ac.stepNumber} oninput={updateAc} /></label>
+          <label>Start Frequency<input placeholder="e.g., 1, 10k" bind:value={ac.frequencyStart} oninput={updateAc} /></label><label>Stop Frequency<input placeholder="e.g., 1M, 2G" bind:value={ac.frequencyStop} oninput={updateAc} /></label><label>Steps Number<input placeholder="e.g., 10, 100, 1k" bind:value={ac.stepNumber} oninput={updateAc} /></label>
         </fieldset>
       {:else if appState.selectedSimType === "Transient"}
         <fieldset class="config-form"><legend>Transient Simulation</legend><code>.tran {transient.timeStep} {transient.stopTime}</code>
-          <label>Stop Time<input bind:value={transient.stopTime} oninput={updateTransient} /></label><label>Time Step<input bind:value={transient.timeStep} oninput={updateTransient} /></label>
-          <label class="check-row"><input type="checkbox" bind:checked={transient.initialConditions} onchange={updateTransient} />Use initial conditions</label>
+          <label>Stop Time<input placeholder="e.g., 10n, 1m, 1" bind:value={transient.stopTime} oninput={updateTransient} /></label><label>Time Step<input placeholder="e.g., 1n, 10p, 1m" bind:value={transient.timeStep} oninput={updateTransient} /></label>
         </fieldset>
       {:else}
         <fieldset class="config-form"><legend>Noise Simulation</legend><code>.noise v({noise.netName}) {noise.source} {noise.sweepType} {noise.steps} {noise.startFreq} {noise.stopFreq}</code>
-          <label>Output Net Name{#if nets.length}<select bind:value={noise.netName} onchange={updateNoise}><option value="">Select a net...</option>{#each nets as net (net)}<option value={net}>{net}</option>{/each}</select>{:else}<input bind:value={noise.netName} oninput={updateNoise} />{/if}</label>
+          <label>Output Net Name{#if nets.length}<select bind:value={noise.netName} onchange={updateNoise}><option value="">Select a net...</option>{#each nets as net (net)}<option value={net}>{net}</option>{/each}</select>{:else}<input placeholder="e.g., out" bind:value={noise.netName} oninput={updateNoise} />{/if}</label>
           <label>Input Source{#if sources.length}<select bind:value={noise.source} onchange={updateNoise}><option value="">Select a source...</option>{#each sources as source (source)}<option value={source}>{source}</option>{/each}</select>{:else}<input bind:value={noise.source} oninput={updateNoise} />{/if}</label>
           <label>Sweep Type<select bind:value={noise.sweepType} onchange={updateNoise}><option value="dec">Decade</option><option value="oct">Octave</option><option value="lin">Linear</option></select></label>
-          <label>Steps<input bind:value={noise.steps} oninput={updateNoise} /></label><label>Start Frequency<input bind:value={noise.startFreq} oninput={updateNoise} /></label><label>Stop Frequency<input bind:value={noise.stopFreq} oninput={updateNoise} /></label>
+          <label>Steps<input placeholder="e.g., 10, 100, 1k" bind:value={noise.steps} oninput={updateNoise} /></label><label>Start Frequency<input placeholder="e.g., 1, 10k" bind:value={noise.startFreq} oninput={updateNoise} /></label><label>Stop Frequency<input placeholder="e.g., 1M, 2G" bind:value={noise.stopFreq} oninput={updateNoise} /></label>
         </fieldset>
       {/if}
     </div>

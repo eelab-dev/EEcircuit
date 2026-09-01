@@ -11,7 +11,7 @@
     type SchematicEditor,
     type SelectedItem,
   } from "eecircuit-schematic";
-  import { ArrowBigRight } from "@lucide/svelte";
+  import { ArrowBigRight, Cable, CirclePlus, LayoutDashboard, Square } from "@lucide/svelte";
   import { demoSchematic } from "../../schematic/demoSchematic";
   import { normalizeLegacySchematic } from "../../schematic/normalizeLegacySchematic";
   import { executeSchematicEditorCommand, type SchematicEditorCommand } from "../../schematic/schematicCommands";
@@ -63,6 +63,11 @@
 
   function setMode(mode: EditorMode) {
     appState.setEditorMode(mode);
+  }
+
+  function formatCoordinate(value: number) {
+    const text = value.toString();
+    return value >= 0 ? ` ${text.padStart(3, " ")}` : text.padStart(4, " ");
   }
 
   function handlePlotSelection(item: SelectedItem) {
@@ -269,11 +274,11 @@
       onReady?.();
     })().catch((error) => { resolveReady(); reportError("initialization", error); });
 
-    document.addEventListener("keydown", handleKeydown);
+    document.addEventListener("keydown", handleKeydown, true);
     return () => {
       cancelled = true;
       sizeObserver?.disconnect();
-      document.removeEventListener("keydown", handleKeydown);
+      document.removeEventListener("keydown", handleKeydown, true);
       const instance = editor;
       editor = null;
       if (instance) void instance.destroy();
@@ -335,8 +340,16 @@
       </div>
     {/if}
     <div class="schematic-bottom-bar">
-      <output>X: {coord.x}, Y: {coord.y}</output>
-      {#if pointerInfo}<output>{pointerInfo.name} — {pointerInfo.uid}</output>{/if}
+      <output aria-label="Schematic coordinates">X:{formatCoordinate(coord.x)}, Y:{formatCoordinate(coord.y)}</output>
+      {#if pointerInfo}
+        <output class="pointer-output" aria-label="Schematic pointer information">
+          {#if pointerInfo.type === "wire"}<Cable size={16} />
+          {:else if pointerInfo.type === "junction"}<CirclePlus size={16} />
+          {:else if pointerInfo.type === "instance" || pointerInfo.type === "text"}<LayoutDashboard size={16} />
+          {:else if pointerInfo.type === "terminal"}<Square size={16} />{/if}
+          <span>{pointerInfo.name} — {pointerInfo.uid}</span>
+        </output>
+      {/if}
       <button class="simulate-button" aria-label="Simulate Circuit" onclick={(event) => { if (appState.isToBePlottedMode) appState.exitToBePlottedMode(); void sendToSimulation(event.shiftKey); }}>
         <span>Simulate <span class="wide-label">(Netlist)</span></span><ArrowBigRight size={18} />
       </button>

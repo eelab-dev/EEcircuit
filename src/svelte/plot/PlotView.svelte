@@ -9,6 +9,7 @@
 
   let sidebarOpen = $state(true);
   let sidebarPinned = $state(true);
+  let desktopPinnedPreference = true;
   let isMobile = $state(false);
   let cursorEnabled = $state(false);
   let sharedCursorX = $state<number | null>(null);
@@ -25,7 +26,14 @@
   let canvas1Available = $derived(acMode ? variables.filter((name) => !name.toLowerCase().includes("[phase]")) : variables);
   let canvas2Available = $derived(acMode ? variables.filter((name) => name.toLowerCase().includes("[phase]")) : variables);
   let progressPercent = $derived(
-    (appState.parallelSimulationProgress.completed / Math.max(1, appState.parallelSimulationProgress.total)) * 100,
+    Math.min(100, Math.max(0,
+      (appState.parallelSimulationProgress.completed / Math.max(1, appState.parallelSimulationProgress.total)) * 100,
+    )),
+  );
+  let activeThreads = $derived(
+    appState.parallelSimulationProgress.threads.filter((thread) =>
+      thread.totalAssignedSimulations > 0 || thread.completedSimulations > 0 || thread.isRunning
+    ),
   );
   let showParallelStatus = $derived(
     appState.isParallelSimulationRunning || (appState.isBracketOperationPlot && appState.parallelSimulationProgress.total > 0),
@@ -46,6 +54,7 @@
 
   function togglePin() {
     sidebarPinned = !sidebarPinned;
+    desktopPinnedPreference = sidebarPinned;
     if (!sidebarPinned) sidebarOpen = false;
   }
 
@@ -59,7 +68,7 @@
         sidebarPinned = false;
         sidebarOpen = false;
       } else {
-        sidebarPinned = true;
+        sidebarPinned = desktopPinnedPreference;
         sidebarOpen = true;
       }
     };
@@ -67,6 +76,12 @@
     const onChange = (event: MediaQueryListEvent) => update(event.matches);
     media.addEventListener("change", onChange);
     return () => media.removeEventListener("change", onChange);
+  });
+
+  $effect(() => {
+    const count = appState.bracketOperationResults?.parameterValues?.length ?? 0;
+    if (!count) emphasized = 0;
+    else if (emphasized >= count) emphasized = count - 1;
   });
 </script>
 
@@ -170,8 +185,8 @@
       <header><strong>{appState.isParallelSimulationRunning ? "Parallel Simulation" : "Parallel Simulation Complete"}</strong><span>{appState.parallelSimulationProgress.completed}/{appState.parallelSimulationProgress.total}</span></header>
       {#if appState.bracketOperation}<small>[{appState.bracketOperation.start}:{appState.bracketOperation.step}:{appState.bracketOperation.stop}]{appState.bracketOperation.unit ?? ""}</small>{/if}
       <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax={appState.parallelSimulationProgress.total} aria-valuenow={appState.parallelSimulationProgress.completed}><span style:width={`${progressPercent}%`}></span></div>
-      {#if appState.parallelSimulationProgress.threads.length}
-        <section class="thread-progress-list"><small>Threads:</small>{#each appState.parallelSimulationProgress.threads as thread (thread.threadId)}<div><span>#{thread.threadId + 1}</span><progress max={Math.max(1, thread.totalAssignedSimulations)} value={thread.completedSimulations}></progress><span>{thread.completedSimulations}/{thread.totalAssignedSimulations}</span></div>{/each}</section>
+      {#if activeThreads.length}
+        <section class="thread-progress-list"><small>Threads:</small>{#each activeThreads as thread (thread.threadId)}<div><span>#{thread.threadId + 1}</span><progress aria-label={`Thread ${thread.threadId + 1} progress`} max={Math.max(1, thread.totalAssignedSimulations)} value={thread.completedSimulations}></progress><span>{thread.completedSimulations}/{thread.totalAssignedSimulations}</span></div>{/each}</section>
       {/if}
       <footer><span>✓ {appState.parallelSimulationProgress.successful} successful</span><span>✗ {appState.parallelSimulationProgress.failed} failed</span></footer>
     </aside>

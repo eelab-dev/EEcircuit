@@ -5,6 +5,7 @@
   import type { ResultType } from "eecircuit-engine";
   import { clearCanvas, setupCanvasAndWebGL, UnifiedLinePlot, type LineConfig } from "webgl-plot";
   import type { AggregatedResult } from "../../components/ScientificPlot/types";
+  import { BRACKET_PLOT_STYLES, getBracketTransparency } from "../../components/ScientificPlot/bracketPlotStyles";
   import { renderXAxis, renderYAxis } from "../../components/ScientificPlot/plotcanvas/axis/axisRenderer";
   import { generatePlotColor } from "../../components/ScientificPlot/plotcanvas/styling/colorUtils";
   import { formatEngineering } from "../../components/ScientificPlot/utils/formatUtils";
@@ -57,13 +58,14 @@
   let plot: UnifiedLinePlot | null = null;
   let gl: WebGL2RenderingContext | null = null;
   let resizeVersion = $state(0);
-  let localCursorVisible = $state(false);
-  let crosshairX = $state(0);
-  let crosshairY = $state(0);
-  let crosshairLabel = $state("");
-  let snapPointVisible = $state(false);
+  let verticalCursor: HTMLSpanElement;
+  let horizontalCursor: HTMLSpanElement;
+  let snapMarker: HTMLSpanElement;
+  let cursorLabel: HTMLOutputElement;
+  let interactionHintElement: HTMLElement;
+  let localCursorVisible = false;
+  let snapPointVisible = false;
   let isZoomed = $state(false);
-  let crosshairVisible = $derived(cursorEnabled && (localCursorVisible || externalCursorX !== null));
   const colorCache = new Map<string, [number, number, number, number]>();
   let renderedLines: PlotLine[] = [];
   let scales = { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
@@ -75,6 +77,7 @@
   let selectionStartX = $state(0);
   let selectionEndX = $state(0);
   let renderedSchema = "";
+  let rebuildCount = 0;
   const activePointers = new SvelteMap<number, { x: number; y: number }>();
   let pinchStart: { distance: number; scaleX: number; offsetX: number; centerX: number } | null = null;
   let lastTouchTap = { at: 0, x: 0, y: 0 };
@@ -96,6 +99,20 @@
     return hoveredVariable === name ? thickness * 1.7 : thickness;
   }
 
+  function styleForLine(line: Pick<PlotLine, "variableName" | "parameterIndex">) {
+    const base = generatePlotColor(line.variableName, isDarkMode, colorCache);
+    const isBracketLine = line.parameterIndex !== undefined;
+    const isEmphasized = isBracketLine && line.parameterIndex === emphasizedPlotIndex;
+    const alpha = isBracketLine ? getBracketTransparency({ isDarkMode, isEmphasized }) : 1;
+    const thickness = isBracketLine
+      ? (isEmphasized ? BRACKET_PLOT_STYLES.EMPHASIZED_LINE_THICKNESS : BRACKET_PLOT_STYLES.NORMAL_LINE_THICKNESS)
+      : lineThickness;
+    return {
+      color: lineColor(line.variableName, base, alpha),
+      thickness: lineWidth(line.variableName, thickness),
+    };
+  }
+
   function buildLines(): PlotLine[] {
     const aggregated = result as AggregatedResult;
     const lines: PlotLine[] = [];
@@ -111,10 +128,8 @@
             points[index * 2] = xValues[index] ?? 0;
             points[index * 2 + 1] = yValues[index] ?? 0;
           }
-          const base = generatePlotColor(name, isDarkMode, colorCache);
-          const emphasized = sweep.parameterIndex === emphasizedPlotIndex;
-          const thickness = emphasized ? lineThickness * 1.6 : lineThickness;
-          lines.push({ points, color: lineColor(name, base, emphasized ? 1 : .18), thickness: lineWidth(name, thickness), enabled: true, variableName: name, parameterIndex: sweep.parameterIndex });
+          const metadata = { variableName: name, parameterIndex: sweep.parameterIndex };
+          lines.push({ points, ...styleForLine(metadata), enabled: true, ...metadata });
         }
       }
       return lines;
@@ -130,8 +145,8 @@
         points[index * 2] = Number(xValues[index] ?? 0);
         points[index * 2 + 1] = Number(yValues[index] ?? 0);
       }
-      const base = generatePlotColor(name, isDarkMode, colorCache);
-      lines.push({ points, color: lineColor(name, base, 1), thickness: lineWidth(name, lineThickness), enabled: true, variableName: name });
+      const metadata = { variableName: name };
+      lines.push({ points, ...styleForLine(metadata), enabled: true, ...metadata });
     }
     return lines;
   }
@@ -152,6 +167,8 @@
     if (!plot || !gl) return;
     const scaleX = Math.max(baseScales.scaleX, Math.min(baseScales.scaleX * 1_000_000, next.scaleX));
     scales = { ...next, scaleX, offsetX: clampOffset(scaleX, next.offsetX) };
+    canvas.dataset.scaleX = String(scales.scaleX);
+    canvas.dataset.offsetX = String(scales.offsetX);
     plot.setGlobalTransform([scales.scaleX, scales.scaleY], [scales.offsetX, scales.offsetY]);
     clearCanvas(gl, [0, 0, 0, 0]);
     plot.draw();
@@ -164,10 +181,26 @@
     applyScales({ ...baseScales });
   }
 
+  function updateLineStyles() {
+    if (!plot || !gl) return;
+    renderedLines.forEach((line, index) => {
+      const style = styleForLine(line);
+      line.color = style.color;
+      line.thickness = style.thickness;
+      plot?.updateLineColor(index, style.color);
+      plot?.updateLineThickness(index, style.thickness);
+    });
+    clearCanvas(gl, [0, 0, 0, 0]);
+    plot.draw();
+    renderAxes();
+  }
+
   function rebuild() {
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const previousScales = { ...scales };
+    rebuildCount += 1;
+    canvas.dataset.rebuildCount = String(rebuildCount);
     const schema = JSON.stringify([result.variableNames, selectedVariables, isLogX, isLogY]);
     const preserveXView = renderedSchema === schema && previousScales.scaleX > baseScales.scaleX * 1.0001;
     plot?.cleanup();
@@ -198,6 +231,8 @@
       }
     }
     renderedSchema = schema;
+    canvas.dataset.scaleX = String(scales.scaleX);
+    canvas.dataset.offsetX = String(scales.offsetX);
     plot.setGlobalTransform([scales.scaleX, scales.scaleY], [scales.offsetX, scales.offsetY]);
     clearCanvas(gl, [0, 0, 0, 0]);
     plot.draw();
@@ -261,19 +296,39 @@
     }
     localCursorVisible = true;
     const screenX = x * scales.scaleX + scales.offsetX;
-    crosshairX = ((screenX + 1) / 2) * 100;
-    crosshairY = ((1 - (y * scales.scaleY + scales.offsetY)) / 2) * 100;
-    crosshairLabel = `X: ${formatEngineering(rawX)}, Y: ${formatEngineering(rawY)}`;
+    const crosshairX = ((screenX + 1) / 2) * 100;
+    const crosshairY = ((1 - (y * scales.scaleY + scales.offsetY)) / 2) * 100;
+    renderCursor(crosshairX, crosshairY, `X: ${formatEngineering(rawX)}, Y: ${formatEngineering(rawY)}`, true, snapPointVisible);
     // Share normalized screen position so dual-canvas cursor guides stay
     // visually aligned even during a resize or transform synchronization frame.
     onCursorX?.(screenX);
   }
 
-  function hideLocalCursor() {
-    if (dragging) return;
-    localCursorVisible = false;
-    snapPointVisible = false;
-    onCursorX?.(null);
+  function renderCursor(xPercent: number, yPercent: number, label: string, showHorizontal: boolean, showSnap: boolean) {
+    if (!verticalCursor || !horizontalCursor || !snapMarker || !cursorLabel || !interactionHintElement) return;
+    verticalCursor.hidden = false;
+    verticalCursor.style.left = `${xPercent}%`;
+    verticalCursor.dataset.cursorX = xPercent.toFixed(4);
+    horizontalCursor.hidden = !showHorizontal;
+    horizontalCursor.style.top = `${yPercent}%`;
+    snapMarker.hidden = !showSnap;
+    snapMarker.style.left = `${xPercent}%`;
+    snapMarker.style.top = `${yPercent}%`;
+    snapMarker.dataset.snapX = xPercent.toFixed(4);
+    cursorLabel.hidden = false;
+    // Pointer-rate output bypasses Svelte state so large plots keep a smooth crosshair.
+    // eslint-disable-next-line svelte/no-dom-manipulating
+    cursorLabel.textContent = label;
+    interactionHintElement.hidden = true;
+  }
+
+  function hideCursorElements() {
+    if (!verticalCursor || !horizontalCursor || !snapMarker || !cursorLabel || !interactionHintElement) return;
+    verticalCursor.hidden = true;
+    horizontalCursor.hidden = true;
+    snapMarker.hidden = true;
+    cursorLabel.hidden = true;
+    interactionHintElement.hidden = false;
   }
 
   function handleWheel(event: WheelEvent) {
@@ -296,8 +351,7 @@
 
   function handlePointerMove(event: PointerEvent) {
     const point = pointerPosition(event);
-    updateCrosshair(point);
-    activePointers.set(event.pointerId, point);
+    if (activePointers.has(event.pointerId)) activePointers.set(event.pointerId, point);
     if (activePointers.size === 2 && pinchStart) {
       const pointers = [...activePointers.values()];
       const first = pointers[0]!;
@@ -310,21 +364,27 @@
         const nextScaleX = pinchStart.scaleX * (distance / pinchStart.distance);
         applyScales({ ...scales, scaleX: nextScaleX, offsetX: centerX - anchorDataX * nextScaleX });
       }
+      return;
     } else if (selecting) {
       selectionEndX = point.x;
       if (Math.abs(selectionEndX - selectionStartX) > .01) gestureMoved = true;
+      return;
     } else if (dragging) {
       const delta = point.x - dragStartX;
       if (Math.abs(delta) > .01) gestureMoved = true;
       applyScales({ ...scales, offsetX: dragOffsetX + delta });
+      return;
     }
+    updateCrosshair(point);
   }
 
   function handlePointerDown(event: PointerEvent) {
-    canvas.setPointerCapture(event.pointerId);
+    if (event.pointerType !== "touch" && event.button !== 0 && event.button !== 2) return;
+    if (event.button === 2) event.preventDefault();
     const point = pointerPosition(event);
     if (activePointers.size === 0) gestureMoved = false;
     activePointers.set(event.pointerId, point);
+    canvas.setPointerCapture(event.pointerId);
     if (activePointers.size === 2) {
       const pointers = [...activePointers.values()];
       const first = pointers[0]!;
@@ -336,12 +396,29 @@
     }
     dragStartX = point.x;
     dragOffsetX = scales.offsetX;
-    if (inputProfile === "touchscreen" || event.pointerType === "touch") dragging = scales.scaleX > baseScales.scaleX * 1.0001;
+    if (event.button === 2) {
+      dragging = scales.scaleX > baseScales.scaleX * 1.0001;
+      selecting = false;
+    } else if (inputProfile === "touchscreen" || event.pointerType === "touch") dragging = scales.scaleX > baseScales.scaleX * 1.0001;
     else {
       selecting = true;
       selectionStartX = point.x;
       selectionEndX = point.x;
     }
+  }
+
+  function cancelPointerInteraction(event: PointerEvent) {
+    activePointers.delete(event.pointerId);
+    selecting = false;
+    dragging = false;
+    pinchStart = null;
+    if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+  }
+
+  function handlePointerLeave(event: PointerEvent) {
+    // Chakra retained the last cursor readout on leave. Only cancel an input
+    // operation whose buttons are no longer pressed.
+    if (event.buttons === 0 && (selecting || dragging)) cancelPointerInteraction(event);
   }
 
   function handlePointerUp(event: PointerEvent) {
@@ -391,12 +468,21 @@
   });
 
   $effect(() => {
+    result;
     JSON.stringify(result.variableNames);
     result.data.map((series) => series.values.length).join(",");
-    (result as AggregatedResult).bracketPlotData?.length;
+    const bracketData = (result as AggregatedResult).bracketPlotData;
+    bracketData;
+    bracketData?.length;
     JSON.stringify(selectedVariables);
-    isDarkMode; isLogX; isLogY; lineThickness; emphasizedPlotIndex; hoveredVariable; resizeVersion;
+    isLogX; isLogY; resizeVersion;
     const frame = requestAnimationFrame(rebuild);
+    return () => cancelAnimationFrame(frame);
+  });
+
+  $effect(() => {
+    isDarkMode; lineThickness; emphasizedPlotIndex; hoveredVariable;
+    const frame = requestAnimationFrame(updateLineStyles);
     return () => cancelAnimationFrame(frame);
   });
 
@@ -411,12 +497,13 @@
     if (!cursorEnabled) {
       localCursorVisible = false;
       snapPointVisible = false;
+      hideCursorElements();
       return;
     }
     if (localCursorVisible || externalCursorX === null) return;
-    crosshairX = ((externalCursorX + 1) / 2) * 100;
+    const crosshairX = ((externalCursorX + 1) / 2) * 100;
     const coordinateX = (externalCursorX - scales.offsetX) / scales.scaleX;
-    crosshairLabel = `X: ${formatEngineering(fromCoordinate(coordinateX, isLogX))}`;
+    renderCursor(crosshairX, 0, `X: ${formatEngineering(fromCoordinate(coordinateX, isLogX))}`, false, false);
   });
 </script>
 
@@ -432,16 +519,15 @@
       onpointerdown={handlePointerDown}
       onpointermove={handlePointerMove}
       onpointerup={handlePointerUp}
-      onpointercancel={handlePointerUp}
-      onpointerleave={hideLocalCursor}
+      onpointercancel={cancelPointerInteraction}
+      onpointerleave={handlePointerLeave}
+      oncontextmenu={(event) => { if (isZoomed) event.preventDefault(); }}
       ondblclick={resetZoom}
     ></canvas>
-    {#if crosshairVisible}
-      <span class="crosshair-v" data-cursor-x={crosshairX.toFixed(4)} style:left={`${crosshairX}%`}></span>
-      {#if localCursorVisible}<span class="crosshair-h" style:top={`${crosshairY}%`}></span>{/if}
-      {#if snapPointVisible && localCursorVisible}<span class="crosshair-snap-dot" data-snap-marker data-snap-x={crosshairX.toFixed(4)} style:left={`${crosshairX}%`} style:top={`${crosshairY}%`}></span>{/if}
-      <output class="crosshair-label">{crosshairLabel}</output>
-    {/if}
+    <span bind:this={verticalCursor} hidden class="crosshair-v"></span>
+    <span bind:this={horizontalCursor} hidden class="crosshair-h"></span>
+    <span bind:this={snapMarker} hidden class="crosshair-snap-dot" data-snap-marker></span>
+    <output bind:this={cursorLabel} hidden class="crosshair-label"></output>
     <button
       class:active={snapToLines}
       class="plot-snap-button"
@@ -453,7 +539,7 @@
       {#if snapToLines}<MapPin size={14} aria-hidden="true" />Snap{:else}<Crosshair size={14} aria-hidden="true" />Free{/if}
     </button>
     {#if isZoomed}<button class="plot-reset-zoom" aria-label="Reset zoom" onclick={resetZoom}>Reset Zoom</button>{/if}
-    {#if !crosshairVisible}<small class="plot-interaction-hint">{interactionHint}</small>{/if}
+    <small bind:this={interactionHintElement} class="plot-interaction-hint">{interactionHint}</small>
     {#if selecting}<span class="zoom-selection" style:left={`${((Math.min(selectionStartX, selectionEndX) + 1) / 2) * 100}%`} style:width={`${(Math.abs(selectionEndX - selectionStartX) / 2) * 100}%`}></span>{/if}
   </div>
   <span class="plot-axis-corner" aria-hidden="true"></span>

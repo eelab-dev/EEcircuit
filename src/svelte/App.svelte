@@ -30,6 +30,9 @@
   let dragActive = $state(false);
   let SimulationComponent = $state<Component>();
   let PlotComponent = $state<Component>();
+  let simulationActivated = $state(appState.mainTabValue === "simulate");
+  let plotActivated = $state(appState.mainTabValue === "plot");
+  let primaryUiError = $state<string | null>(null);
   let primaryUiPromise: Promise<void> | undefined;
   let tempMaxWorkers = $state(appState.maxWebWorkers);
   let tempResetVariableSelections = $state(appState.resetVariableSelectionsOnNewSim);
@@ -39,6 +42,7 @@
 
   function ensurePrimaryUi(): Promise<void> {
     if (primaryUiPromise) return primaryUiPromise;
+    primaryUiError = null;
     primaryUiPromise = (async () => {
       const [simulationModule, plotModule, simulationRuntime] = await Promise.all([
         import("./simulation/SimulationView.svelte"),
@@ -58,22 +62,36 @@
           mLevel: "dev",
         });
       }
-    })();
+    })().catch((error: unknown) => {
+      primaryUiPromise = undefined;
+      primaryUiError = error instanceof Error ? error.message : "Unable to load the simulation and plotting interface.";
+      appState.addMessage({
+        text: primaryUiError,
+        type: "error",
+        category: "Simulation",
+        mLevel: "user",
+      });
+      throw error;
+    });
     return primaryUiPromise;
+  }
+
+  function loadPrimaryUi() {
+    void ensurePrimaryUi().catch(() => undefined);
   }
 
   function handleSchematicReady() {
     if ("requestIdleCallback" in window) {
-      window.requestIdleCallback(() => void ensurePrimaryUi(), { timeout: 1_500 });
+      window.requestIdleCallback(loadPrimaryUi, { timeout: 1_500 });
     } else {
-      setTimeout(() => void ensurePrimaryUi(), 0);
+      setTimeout(loadPrimaryUi, 0);
     }
   }
 
   function selectTab(tab: "schematic" | "simulate" | "plot") {
     if (tab === "simulate" && !appState.isSimulationTabEnabled) return;
     if (tab === "plot" && !appState.isPlottingTabEnabled) return;
-    if (tab !== "schematic") void ensurePrimaryUi();
+    if (tab !== "schematic") loadPrimaryUi();
     appState.setMainTabValue(tab);
     if (tab === "schematic" && appState.hasResizedSinceSchematicView) appState.setShouldFitToScreen(true);
   }
@@ -228,6 +246,16 @@
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
   });
+
+  $effect(() => {
+    if (appState.mainTabValue === "simulate") {
+      simulationActivated = true;
+      loadPrimaryUi();
+    } else if (appState.mainTabValue === "plot") {
+      plotActivated = true;
+      loadPrimaryUi();
+    }
+  });
 </script>
 
 <svelte:head><title>EEcircuit</title></svelte:head>
@@ -277,14 +305,26 @@
         <div class="loading-overlay" role="status"><div class="loading-card"><span class="spinner"></span><span>{appState.schematicLoadingMessage}</span></div></div>
       {/if}
     </div>
-    {#if appState.mainTabValue === "simulate"}
-      <div role="tabpanel" class="workspace-panel">
-        {#if SimulationComponent}<SimulationComponent />{:else}<div class="feature-loading" data-tab-panel-loading="simulation">Loading simulation tools…</div>{/if}
+    {#if simulationActivated}
+      <div role="tabpanel" aria-hidden={appState.mainTabValue !== "simulate"} class:hidden={appState.mainTabValue !== "simulate"} class="workspace-panel">
+        {#if SimulationComponent}
+          <SimulationComponent />
+        {:else if primaryUiError}
+          <div class="feature-loading feature-load-error" role="alert"><span>{primaryUiError}</span><button onclick={loadPrimaryUi}>Retry</button></div>
+        {:else}
+          <div class="feature-loading" data-tab-panel-loading="simulation">Loading simulation tools…</div>
+        {/if}
       </div>
     {/if}
-    {#if appState.mainTabValue === "plot"}
-      <div role="tabpanel" class="workspace-panel">
-        {#if PlotComponent}<PlotComponent />{:else}<div class="feature-loading" data-tab-panel-loading="plot">Loading plot tools…</div>{/if}
+    {#if plotActivated}
+      <div role="tabpanel" aria-hidden={appState.mainTabValue !== "plot"} class:hidden={appState.mainTabValue !== "plot"} class="workspace-panel">
+        {#if PlotComponent}
+          <PlotComponent />
+        {:else if primaryUiError}
+          <div class="feature-loading feature-load-error" role="alert"><span>{primaryUiError}</span><button onclick={loadPrimaryUi}>Retry</button></div>
+        {:else}
+          <div class="feature-loading" data-tab-panel-loading="plot">Loading plot tools…</div>
+        {/if}
       </div>
     {/if}
   </div>

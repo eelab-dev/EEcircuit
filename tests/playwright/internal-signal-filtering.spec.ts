@@ -1,9 +1,11 @@
 import { test, expect } from './fixtures';
 import * as path from 'path';
+import { waitForImportedCircuit } from './file-import-helpers';
 
 test('verify internal signal filtering', async ({ page }) => {
   // 1. Open the app
   await page.goto('/');
+  await expect(page.locator('[data-canvas-ready="true"]')).toBeVisible({ timeout: 15000 });
 
   // 2. Upload tests/test-subcircuit.json
   const filePath = path.join(process.cwd(), 'tests', 'test-subcircuit.json');
@@ -16,14 +18,7 @@ test('verify internal signal filtering', async ({ page }) => {
   console.log('Attempting file upload...');
   await page.locator('input[type="file"]').first().setInputFiles(filePath);
 
-  // Wait for loading to finish
-  const spinnerContainer = page.getByText(/Loading schematic|Processing file/);
-  try {
-    await expect(spinnerContainer).toBeVisible({ timeout: 5000 });
-  } catch {
-    console.log('Spinner did not appear or was too fast.');
-  }
-  await expect(spinnerContainer).toBeHidden({ timeout: 15000 });
+  await waitForImportedCircuit(page, { configCount: 2 });
   
   // The schematic is rendered on a canvas, so component labels are not DOM
   // text. Canvas readiness plus the schematic action bar confirms that the

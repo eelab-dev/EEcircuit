@@ -1,5 +1,8 @@
 <script lang="ts">
   import { Popover } from "@ark-ui/svelte/popover";
+  import type { PopoverTriggerProps } from "@ark-ui/svelte/popover";
+  import { Tooltip } from "@ark-ui/svelte/tooltip";
+  import type { TooltipTriggerProps } from "@ark-ui/svelte/tooltip";
   import { SvelteMap } from "svelte/reactivity";
   import {
     Cable,
@@ -22,6 +25,12 @@
   import type { AvailableComponent, EditorMode } from "eecircuit-schematic";
   import type { SchematicEditorCommand } from "../../schematic/schematicCommands";
   import { appState } from "../state/appState.svelte";
+  import SchematicToolButton from "./SchematicToolButton.svelte";
+  type TriggerPropsFn = Parameters<NonNullable<TooltipTriggerProps["asChild"]>>[0];
+
+  function popoverTooltipProps(props: TriggerPropsFn): PopoverTriggerProps {
+    return props() as PopoverTriggerProps;
+  }
 
   let {
     availableComponents,
@@ -90,7 +99,10 @@
     if (!open) {
       search = "";
       focusedIndex = -1;
-      queueMicrotask(() => addButton?.focus());
+      // Ark completes its dismissal focus work after onOpenChange. Restore the
+      // trigger on the next task so Escape and outside clicks behave like the
+      // original component picker instead of leaving focus on the page body.
+      setTimeout(() => addButton?.focus(), 0);
     }
   }
 
@@ -109,6 +121,14 @@
     if (document.activeElement === searchInput && (event.key === "ArrowDown" || event.key === "Tab")) {
       event.preventDefault();
       focusComponent(event.shiftKey ? flattened.length - 1 : 0);
+      return;
+    }
+    if (document.activeElement === searchInput && event.key === "Enter" && flattened.length) {
+      // Ark can finish its initial-focus work just after ArrowDown during a
+      // very fast open/search/select sequence. Keep Enter deterministic even
+      // if focus returns to the search field between those two keystrokes.
+      event.preventDefault();
+      chooseComponent(flattened[Math.max(0, focusedIndex)]!.type);
       return;
     }
     if (focusedIndex < 0) return;
@@ -140,10 +160,17 @@
   });
 </script>
 
+{#snippet addComponentTrigger(tooltipProps: TriggerPropsFn)}
+  <Popover.Trigger {...popoverTooltipProps(tooltipProps)} bind:ref={addButton} class="tool-button" aria-label="Open add component popover"><CopyPlus size={19} /></Popover.Trigger>
+{/snippet}
+
 <div class="schematic-toolbar" aria-label="Schematic tools">
-  <button class:active={appState.editorMode === "select"} class="tool-button" aria-label="Select" aria-pressed={appState.editorMode === "select"} title="Select" onclick={() => toggleMode("select")}><MousePointer size={19} /></button>
+  <SchematicToolButton label="Select" pressed={appState.editorMode === "select"} onclick={() => toggleMode("select")}><MousePointer size={19} /></SchematicToolButton>
   <Popover.Root open={pickerOpen} portalled={false} onOpenChange={(details) => setPickerOpen(details.open)} initialFocusEl={() => searchInput ?? null} positioning={{ placement: "right-start", gutter: 10 }}>
-    <Popover.Trigger bind:ref={addButton} class="tool-button" aria-label="Open add component popover" title="Add Component (A)"><CopyPlus size={19} /></Popover.Trigger>
+    <Tooltip.Root lazyMount unmountOnExit positioning={{ placement: "right" }} openDelay={300} closeDelay={50}>
+      <Tooltip.Trigger asChild={addComponentTrigger} />
+      <Tooltip.Positioner><Tooltip.Content class="tooltip-content">Add Component (A)</Tooltip.Content></Tooltip.Positioner>
+    </Tooltip.Root>
     <Popover.Positioner>
       <Popover.Content bind:ref={pickerElement} class="component-picker" aria-label="Add Component">
         <div class="component-picker-content">
@@ -182,29 +209,29 @@
       </Popover.Content>
     </Popover.Positioner>
   </Popover.Root>
-  <button class:active={appState.editorMode === "wire"} class="tool-button" aria-label="Wire (W)" aria-pressed={appState.editorMode === "wire"} title="Wire (W)" onclick={() => toggleMode("wire")}><Cable size={19} /></button>
-  <button class:active={appState.editorMode === "move"} class="tool-button" aria-label="Move (M)" aria-pressed={appState.editorMode === "move"} title="Move (M)" onclick={() => toggleMode("move")}><Move size={19} /></button>
-  <button class:active={appState.editorMode === "text"} class="tool-button" aria-label="Text (T)" aria-pressed={appState.editorMode === "text"} title="Text (T)" onclick={() => toggleMode("text")}><Type size={19} /></button>
-  <button class:active={appState.editorMode === "delete"} class="tool-button" aria-label="Remove (Shift+D)" aria-pressed={appState.editorMode === "delete"} title="Remove (Shift+D)" onclick={() => toggleMode("delete")}><Eraser size={19} /></button>
+  <SchematicToolButton label="Wire (W)" pressed={appState.editorMode === "wire"} onclick={() => toggleMode("wire")}><Cable size={19} /></SchematicToolButton>
+  <SchematicToolButton label="Move (M)" pressed={appState.editorMode === "move"} onclick={() => toggleMode("move")}><Move size={19} /></SchematicToolButton>
+  <SchematicToolButton label="Text (T)" pressed={appState.editorMode === "text"} onclick={() => toggleMode("text")}><Type size={19} /></SchematicToolButton>
+  <SchematicToolButton label="Remove (Shift+D)" pressed={appState.editorMode === "delete"} onclick={() => toggleMode("delete")}><Eraser size={19} /></SchematicToolButton>
   <span class="tool-divider"></span>
-  <button class:active={appState.editorMode === "pan"} class="tool-button" aria-label="Hand Tool" aria-pressed={appState.editorMode === "pan"} title="Hand Tool" onclick={() => toggleMode("pan")}><Hand size={19} /></button>
-  <button class="tool-button" aria-label="Fit schematic to screen" title="Fit to Screen (F)" onclick={() => onCommand("fit-view")}><Focus size={19} /></button>
-  <button class="tool-button" aria-label="Return view to origin" title="Return to Origin (O)" onclick={() => onCommand("return-to-origin")}><CircleDot size={19} /></button>
+  <SchematicToolButton label="Hand Tool" pressed={appState.editorMode === "pan"} onclick={() => toggleMode("pan")}><Hand size={19} /></SchematicToolButton>
+  <SchematicToolButton label="Fit schematic to screen" tooltip="Fit to Screen (F)" onclick={() => onCommand("fit-view")}><Focus size={19} /></SchematicToolButton>
+  <SchematicToolButton label="Return view to origin" tooltip="Return to Origin (O)" onclick={() => onCommand("return-to-origin")}><CircleDot size={19} /></SchematicToolButton>
   <span class="tool-divider"></span>
-  <button class="tool-button" aria-label="Export schematic image" title="Export Image" onclick={onExport}><ImageDown size={19} /></button>
-  <button class="tool-button" aria-label="Open keyboard shortcuts" title="Keyboard Shortcuts" onclick={onShortcuts}><Keyboard size={19} /></button>
+  <SchematicToolButton label="Export schematic image" tooltip="Export Image" onclick={onExport}><ImageDown size={19} /></SchematicToolButton>
+  <SchematicToolButton label="Open keyboard shortcuts" tooltip="Keyboard Shortcuts" onclick={onShortcuts}><Keyboard size={19} /></SchematicToolButton>
 </div>
 
 {#if appState.isWiring || appState.editorMode === "wire"}
   <div class="canvas-controls">
-    <button class="round-button" aria-label="Undo last wire point" title="Undo Last Point" onclick={() => onCommand("undo-wire-point")}><Undo2 size={20} /></button>
-    <button class="round-button" aria-label="Cancel wire" title="Cancel Wire" onclick={() => { onCommand("cancel-wire"); appState.resetSchematicModes(); appState.setIsWiring(false); }}><X size={20} /></button>
+    <SchematicToolButton className="round-button" placement="left" label="Undo last wire point" tooltip="Undo Last Point" onclick={() => onCommand("undo-wire-point")}><Undo2 size={20} /></SchematicToolButton>
+    <SchematicToolButton className="round-button" placement="left" label="Cancel wire" tooltip="Cancel Wire" onclick={() => { onCommand("cancel-wire"); appState.resetSchematicModes(); appState.setIsWiring(false); }}><X size={20} /></SchematicToolButton>
   </div>
 {:else if appState.isMoving}
   <div class="canvas-controls">
-    <button class="round-button" aria-label="Rotate selection" title="Rotate Selection" onclick={() => onCommand("rotate")}><RotateCw size={20} /></button>
-    <button class="round-button" aria-label="Flip horizontal" title="Flip Horizontal" onclick={() => onCommand("flip-horizontal")}><FlipHorizontal size={20} /></button>
-    <button class="round-button" aria-label="Flip vertical" title="Flip Vertical" onclick={() => onCommand("flip-vertical")}><FlipVertical size={20} /></button>
-    <button class="round-button" aria-label="Cancel move" title="Cancel Move" onclick={() => { onCommand("cancel-move"); appState.resetSchematicModes(); appState.setIsMoving(false); }}><X size={20} /></button>
+    <SchematicToolButton className="round-button" placement="left" label="Rotate selection" tooltip="Rotate Selection" onclick={() => onCommand("rotate")}><RotateCw size={20} /></SchematicToolButton>
+    <SchematicToolButton className="round-button" placement="left" label="Flip horizontal" tooltip="Flip Horizontal" onclick={() => onCommand("flip-horizontal")}><FlipHorizontal size={20} /></SchematicToolButton>
+    <SchematicToolButton className="round-button" placement="left" label="Flip vertical" tooltip="Flip Vertical" onclick={() => onCommand("flip-vertical")}><FlipVertical size={20} /></SchematicToolButton>
+    <SchematicToolButton className="round-button" placement="left" label="Cancel move" tooltip="Cancel Move" onclick={() => { onCommand("cancel-move"); appState.resetSchematicModes(); appState.setIsMoving(false); }}><X size={20} /></SchematicToolButton>
   </div>
 {/if}

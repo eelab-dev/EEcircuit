@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import path from 'path';
+import { waitForImportedCircuit } from './file-import-helpers';
 
 test('verify ac bracket mode conversion with test file', async ({ page }) => {
   test.setTimeout(60000);
@@ -15,6 +16,7 @@ test('verify ac bracket mode conversion with test file', async ({ page }) => {
   // 2. Load Test Circuit File (AC)
   console.log('Step: Load Test Circuit File');
   await page.locator('input[type="file"]').first().setInputFiles(path.resolve('tests/test-circuit-ac.json'));
+  await waitForImportedCircuit(page, { configCount: 1 });
   
   // 3. Click Simulate Button
   console.log('Step: Click Simulate Button');

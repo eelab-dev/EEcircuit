@@ -218,11 +218,8 @@ export const createSimulationSlice: SliceCreator<
       },
     })),
 
-  initializeThreads: (numThreads, totalSimulations) =>
+  initializeThreads: (numThreads) =>
     set((state: SimulationSlice) => {
-      const simulationsPerThread = Math.floor(totalSimulations / numThreads);
-      const remainingSimulations = totalSimulations % numThreads;
-
       const threads: ThreadState[] = Array.from(
         { length: numThreads },
         (_, index) => ({
@@ -231,8 +228,9 @@ export const createSimulationSlice: SliceCreator<
           isCompleted: false,
           currentSimulation: undefined,
           completedSimulations: 0,
-          totalAssignedSimulations:
-            simulationsPerThread + (index < remainingSimulations ? 1 : 0),
+          // The worker pool schedules dynamically. Count assignments when
+          // they actually happen instead of predicting an even distribution.
+          totalAssignedSimulations: 0,
         })
       );
 
@@ -487,9 +485,16 @@ export const createSimulationSlice: SliceCreator<
         onThreadUpdate: (threadId, status, currentSim) => {
           if (!isCurrentRun()) return;
           if (status === "start") {
+            const currentState = get() as SimulationSlice;
+            const thread = currentState.parallelSimulationProgress.threads.find(
+              (candidate) => candidate.threadId === threadId
+            );
             actions.updateThreadProgress(threadId, {
               isRunning: true,
+              isCompleted: false,
               currentSimulation: currentSim,
+              totalAssignedSimulations:
+                (thread?.totalAssignedSimulations || 0) + 1,
             });
           } else if (status === "complete") {
             const currentState = get() as SimulationSlice;
