@@ -318,5 +318,6 @@
     {/if}
     {#if selecting}<span class="zoom-selection" style:left={`${((Math.min(selectionStartX, selectionEndX) + 1) / 2) * 100}%`} style:width={`${(Math.abs(selectionEndX - selectionStartX) / 2) * 100}%`}></span>{/if}
   </div>
+  <span class="plot-axis-corner" aria-hidden="true"></span>
   <canvas class="plot-x-axis" bind:this={xAxis}></canvas>
 </div>

@@ -6,12 +6,14 @@
     open = $bindable(),
     title,
     closeLabel = "Close dialog",
+    contentClass = "",
     children,
     footer,
   }: {
     open: boolean;
     title: string;
     closeLabel?: string;
+    contentClass?: string;
     children: import("svelte").Snippet;
     footer?: import("svelte").Snippet;
   } = $props();
@@ -21,7 +23,7 @@
   <Dialog.Root open={true} onOpenChange={(details) => { if (!details.open) open = false; }}>
     <Dialog.Backdrop class="modal-backdrop" />
     <Dialog.Positioner class="modal-positioner">
-      <Dialog.Content class="modal-content">
+      <Dialog.Content class={`modal-content ${contentClass}`}>
         <header class="modal-header">
           <Dialog.Title>{title}</Dialog.Title>
           <Dialog.CloseTrigger class="icon-button" aria-label={closeLabel} onclick={() => open = false}>

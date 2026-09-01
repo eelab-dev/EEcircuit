@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, type Component } from "svelte";
+  import { Activity, RotateCcw, Settings, Settings2 } from "@lucide/svelte";
   import type { Schematic } from "eecircuit-schematic";
   import Logo from "./components/Logo.svelte";
   import HeaderActions from "./components/HeaderActions.svelte";
@@ -28,6 +29,11 @@
   let SimulationComponent = $state<Component>();
   let PlotComponent = $state<Component>();
   let primaryUiPromise: Promise<void> | undefined;
+  let tempMaxWorkers = $state(appState.maxWebWorkers);
+  let tempResetVariableSelections = $state(appState.resetVariableSelectionsOnNewSim);
+  let tempShowInternalSignals = $state(appState.showInternalSignals);
+  let tempLineThickness = $state(appState.lineThickness);
+  let tempResetPlotState = $state(appState.resetPlotStateOnNewSim);
 
   const activeMessages = $derived(
     appState.messages.filter((message) => appState.showDevMessages || message.mLevel !== "dev").slice(-4),
@@ -72,6 +78,24 @@
     if (tab !== "schematic") void ensurePrimaryUi();
     appState.setMainTabValue(tab);
     if (tab === "schematic" && appState.hasResizedSinceSchematicView) appState.setShouldFitToScreen(true);
+  }
+
+  function openSettings() {
+    tempMaxWorkers = appState.maxWebWorkers;
+    tempResetVariableSelections = appState.resetVariableSelectionsOnNewSim;
+    tempShowInternalSignals = appState.showInternalSignals;
+    tempLineThickness = appState.lineThickness;
+    tempResetPlotState = appState.resetPlotStateOnNewSim;
+    settingsOpen = true;
+  }
+
+  function saveSettings() {
+    appState.setMaxWebWorkers(tempMaxWorkers);
+    appState.setResetVariableSelectionsOnNewSim(tempResetVariableSelections);
+    appState.setShowInternalSignals(tempShowInternalSignals);
+    appState.setLineThickness(tempLineThickness);
+    appState.setResetPlotStateOnNewSim(tempResetPlotState);
+    settingsOpen = false;
   }
 
   async function waitForCanvasReady() {
@@ -207,7 +231,7 @@
       onToggleTheme={appState.toggleTheme}
       onToggleInput={appState.toggleInputProfile}
       onFullscreen={toggleFullscreen}
-      onSettings={() => settingsOpen = true}
+      onSettings={openSettings}
       onAbout={() => aboutOpen = true}
     />
   </header>
@@ -250,27 +274,64 @@
   {/snippet}
 </Modal>
 
-<Modal bind:open={settingsOpen} title="Settings">
+<Modal bind:open={settingsOpen} title="Settings" contentClass="settings-modal">
   <div class="settings-layout">
     <nav class="settings-nav" aria-label="Settings categories">
-      <button class:active={settingsCategory === "general"} onclick={() => settingsCategory = "general"}>General Settings</button>
-      <button class:active={settingsCategory === "simulation"} onclick={() => settingsCategory = "simulation"}>Simulation Settings</button>
-      <button class:active={settingsCategory === "plotting"} onclick={() => settingsCategory = "plotting"}>Plotting Settings</button>
+      <button aria-label="General Settings" class:active={settingsCategory === "general"} aria-current={settingsCategory === "general" ? "page" : undefined} onclick={() => settingsCategory = "general"}>
+        <Settings size={18} /><span><strong>General</strong><small>Interface and diagnostics</small></span>
+      </button>
+      <button aria-label="Simulation Settings" class:active={settingsCategory === "simulation"} aria-current={settingsCategory === "simulation" ? "page" : undefined} onclick={() => settingsCategory = "simulation"}>
+        <Activity size={18} /><span><strong>Simulation</strong><small>Workers and run behavior</small></span>
+      </button>
+      <button aria-label="Plotting Settings" class:active={settingsCategory === "plotting"} aria-current={settingsCategory === "plotting" ? "page" : undefined} onclick={() => settingsCategory = "plotting"}>
+        <Settings2 size={18} /><span><strong>Plotting</strong><small>Signals and appearance</small></span>
+      </button>
     </nav>
-    <div class="settings-list">
+    <section class="settings-panel">
       {#if settingsCategory === "general"}
-        <label class="check-row"><input type="checkbox" checked={appState.showDevMessages} onchange={(event) => appState.setShowDevMessages(event.currentTarget.checked)} />Show developer messages</label>
+        <header class="settings-panel-heading"><h3>General</h3><p>Control interface diagnostics and developer feedback.</p></header>
+        <div class="settings-list">
+          <label class="setting-row setting-row-inline">
+            <span class="setting-copy"><strong>Developer messages</strong><small>Show technical status messages alongside user-facing notifications.</small></span>
+            <input type="checkbox" checked={appState.showDevMessages} onchange={(event) => appState.setShowDevMessages(event.currentTarget.checked)} />
+          </label>
+        </div>
       {:else if settingsCategory === "simulation"}
-        <label>Maximum simulation workers<input type="number" min="1" max={navigator.hardwareConcurrency || 8} value={appState.maxWebWorkers} onchange={(event) => appState.setMaxWebWorkers(Number(event.currentTarget.value))} /></label>
-        <label class="check-row"><input type="checkbox" checked={appState.resetVariableSelectionsOnNewSim} onchange={(event) => appState.setResetVariableSelectionsOnNewSim(event.currentTarget.checked)} />Reset variable selection for each run</label>
+        <header class="settings-panel-heading"><h3>Simulation</h3><p>Tune parallel execution and what is retained between runs.</p></header>
+        <div class="settings-list">
+          <label class="setting-row">
+            <span class="setting-copy"><strong>Maximum parallel workers</strong><small>Higher values can speed up bracket sweeps but use more system resources.</small></span>
+            <span class="number-control"><input aria-label="Maximum simulation workers" type="number" min="1" max={navigator.hardwareConcurrency || 8} bind:value={tempMaxWorkers} /><small>Maximum {navigator.hardwareConcurrency || 8} on this device</small></span>
+          </label>
+          <label class="setting-row setting-row-inline">
+            <span class="setting-copy"><strong>Reset variable selection</strong><small>Select all available output variables when a new simulation starts.</small></span>
+            <input type="checkbox" bind:checked={tempResetVariableSelections} />
+          </label>
+        </div>
       {:else}
-        <label class="check-row"><input type="checkbox" checked={appState.showInternalSignals} onchange={(event) => appState.setShowInternalSignals(event.currentTarget.checked)} />Show internal subcircuit signals</label>
-        <label>Plot line thickness<input type="range" min="1" max="8" step="1" value={appState.lineThickness} oninput={(event) => appState.setLineThickness(Number(event.currentTarget.value))} /></label>
-        <label class="check-row"><input type="checkbox" checked={appState.resetPlotStateOnNewSim} onchange={(event) => appState.setResetPlotStateOnNewSim(event.currentTarget.checked)} />Reset plot state for each run</label>
+        <header class="settings-panel-heading"><h3>Plotting</h3><p>Choose signal visibility and the default plot appearance.</p></header>
+        <div class="settings-list">
+          <label class="setting-row setting-row-inline">
+            <span class="setting-copy"><strong>Show internal subcircuit signals</strong><small>Include internal subcircuit nodes in the variable list.</small></span>
+            <input type="checkbox" bind:checked={tempShowInternalSignals} />
+          </label>
+          <label class="setting-row">
+            <span class="setting-copy"><strong>Line thickness</strong><small>Adjust the stroke width used for every plotted signal.</small></span>
+            <span class="range-control"><input aria-label="Plot line thickness" type="range" min="1" max="8" step="1" bind:value={tempLineThickness} /><output>{tempLineThickness}px</output></span>
+          </label>
+          <label class="setting-row setting-row-inline">
+            <span class="setting-copy"><strong>Reset plot state</strong><small>Return to a single canvas and linear scales for each new run.</small></span>
+            <input type="checkbox" bind:checked={tempResetPlotState} />
+          </label>
+          <div class="settings-reset-actions">
+            <button title="Reset variable selections to default" onclick={appState.resetVariableSelections}><RotateCcw size={15} />Reset variables</button>
+            <button title="Reset plot settings to default" onclick={appState.resetPlotState}><RotateCcw size={15} />Reset plot</button>
+          </div>
+        </div>
       {/if}
-    </div>
+    </section>
   </div>
-  {#snippet footer()}<button onclick={() => settingsOpen = false}>Cancel</button><button class="primary-button" onclick={() => settingsOpen = false}>Save</button>{/snippet}
+  {#snippet footer()}<button onclick={() => settingsOpen = false}>Cancel</button><button class="primary-button" onclick={saveSettings}>Save changes</button>{/snippet}
 </Modal>
 
 <Modal bind:open={aboutOpen} title="About EEcircuit">
