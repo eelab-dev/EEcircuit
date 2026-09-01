@@ -5,6 +5,8 @@
   import HeaderActions from "./components/HeaderActions.svelte";
   import Modal from "./components/Modal.svelte";
   import SchematicView from "./schematic/SchematicView.svelte";
+  import SimulationView from "./simulation/SimulationView.svelte";
+  import PlotView from "./plot/PlotView.svelte";
   import { appState } from "./state/appState.svelte";
   import { validateEEcircuitFile } from "../utils/eeCircuitFileValidator";
   import type { EEcircuitFile, SimulationType } from "../types/commonTypes";
@@ -144,6 +146,7 @@
 
 <main
   class="app-shell"
+  data-ui-runtime="svelte"
   bind:this={shell}
   ondragover={(event) => { event.preventDefault(); if (event.dataTransfer?.types.includes("Files")) dragActive = true; }}
   ondragleave={(event) => { if (!shell.contains(event.relatedTarget as Node | null)) dragActive = false; }}
@@ -180,10 +183,10 @@
       {/if}
     </div>
     {#if appState.mainTabValue === "simulate"}
-      <div role="tabpanel" class="workspace-panel placeholder-panel"><h2>Simulation Configuration</h2><p>The Svelte simulation controls are loading…</p></div>
+      <div role="tabpanel" class="workspace-panel"><SimulationView /></div>
     {/if}
     {#if appState.mainTabValue === "plot"}
-      <div role="tabpanel" class="workspace-panel placeholder-panel"><h2>Plot Variables</h2><p>The WebGL plot controls are loading…</p></div>
+      <div role="tabpanel" class="workspace-panel"><PlotView /></div>
     {/if}
   </div>
 
