@@ -17,20 +17,22 @@
   } = $props();
 </script>
 
-<Dialog.Root bind:open lazyMount unmountOnExit>
-  <Dialog.Backdrop class="modal-backdrop" />
-  <Dialog.Positioner class="modal-positioner">
-    <Dialog.Content class="modal-content">
-      <header class="modal-header">
-        <Dialog.Title>{title}</Dialog.Title>
-        <Dialog.CloseTrigger class="icon-button" aria-label={closeLabel}>
-          <X size={18} />
-        </Dialog.CloseTrigger>
-      </header>
-      <div class="modal-body">{@render children()}</div>
-      {#if footer}
-        <footer class="modal-footer">{@render footer()}</footer>
-      {/if}
-    </Dialog.Content>
-  </Dialog.Positioner>
-</Dialog.Root>
+{#if open}
+  <Dialog.Root open={true} onOpenChange={(details) => { if (!details.open) open = false; }}>
+    <Dialog.Backdrop class="modal-backdrop" />
+    <Dialog.Positioner class="modal-positioner">
+      <Dialog.Content class="modal-content">
+        <header class="modal-header">
+          <Dialog.Title>{title}</Dialog.Title>
+          <Dialog.CloseTrigger class="icon-button" aria-label={closeLabel} onclick={() => open = false}>
+            <X size={18} />
+          </Dialog.CloseTrigger>
+        </header>
+        <div class="modal-body">{@render children()}</div>
+        {#if footer}
+          <footer class="modal-footer">{@render footer()}</footer>
+        {/if}
+      </Dialog.Content>
+    </Dialog.Positioner>
+  </Dialog.Root>
+{/if}

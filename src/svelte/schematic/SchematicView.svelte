@@ -177,9 +177,10 @@
     });
     if (!action) return;
     event.preventDefault();
+    event.stopPropagation();
     if (action.type === "open-components") {
       document.querySelector<HTMLButtonElement>('[aria-label="Open add component popover"]')?.click();
-    } else if (action.type === "open-shortcuts") shortcutsOpen = true;
+    } else if (action.type === "open-shortcuts") setTimeout(() => { shortcutsOpen = true; }, 0);
     else if (action.type === "set-mode") setMode(action.mode);
     else if (action.type === "reset-modes") {
       if (appState.editorMode === "none") void command("reset-modes"); else appState.resetSchematicModes();

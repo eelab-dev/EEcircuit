@@ -41,7 +41,7 @@
   let search = $state("");
   let addButton: HTMLButtonElement;
   let searchInput = $state<HTMLInputElement>();
-  let componentButtons: HTMLButtonElement[] = [];
+  let componentButtons = $state<HTMLButtonElement[]>([]);
   let focusedIndex = $state(-1);
   let filtered = $derived(
     availableComponents.filter((component) =>
@@ -80,6 +80,12 @@
       return;
     }
     if (event.key === "Tab" && document.activeElement === searchInput) {
+      event.preventDefault();
+      focusedIndex = 0;
+      componentButtons[0]?.focus();
+      return;
+    }
+    if (event.key === "ArrowDown" && document.activeElement === searchInput) {
       event.preventDefault();
       focusedIndex = 0;
       componentButtons[0]?.focus();
