@@ -9,8 +9,8 @@
     CircleDot,
     CopyPlus,
     Eraser,
-    FlipHorizontal,
-    FlipVertical,
+    SquareCenterlineDashedHorizontal,
+    SquareCenterlineDashedVertical,
     Focus,
     Hand,
     ImageDown,
@@ -230,8 +230,8 @@
 {:else if appState.isMoving}
   <div class="canvas-controls">
     <SchematicToolButton className="round-button" placement="left" label="Rotate selection" tooltip="Rotate Selection" onclick={() => onCommand("rotate")}><RotateCw size={20} /></SchematicToolButton>
-    <SchematicToolButton className="round-button" placement="left" label="Flip horizontal" tooltip="Flip Horizontal" onclick={() => onCommand("flip-horizontal")}><FlipHorizontal size={20} /></SchematicToolButton>
-    <SchematicToolButton className="round-button" placement="left" label="Flip vertical" tooltip="Flip Vertical" onclick={() => onCommand("flip-vertical")}><FlipVertical size={20} /></SchematicToolButton>
+    <SchematicToolButton className="round-button" placement="left" label="Flip horizontal" tooltip="Flip Horizontal" onclick={() => onCommand("flip-horizontal")}><SquareCenterlineDashedHorizontal size={20} /></SchematicToolButton>
+    <SchematicToolButton className="round-button" placement="left" label="Flip vertical" tooltip="Flip Vertical" onclick={() => onCommand("flip-vertical")}><SquareCenterlineDashedVertical size={20} /></SchematicToolButton>
     <SchematicToolButton className="round-button" placement="left" label="Cancel move" tooltip="Cancel Move" onclick={() => { onCommand("cancel-move"); appState.resetSchematicModes(); appState.setIsMoving(false); }}><X size={20} /></SchematicToolButton>
   </div>
 {/if}

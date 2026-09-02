@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, type Component } from "svelte";
   import { Tabs } from "@ark-ui/svelte/tabs";
-  import { Activity, BookOpen, Bug, Code2, ExternalLink, RotateCcw, Settings, Settings2 } from "@lucide/svelte";
+  import { Activity, BookOpen, Bug, CodeXml, ExternalLink, RotateCcw, Settings, Settings2 } from "@lucide/svelte";
   import type { Schematic } from "eecircuit-schematic";
   import Logo from "./components/Logo.svelte";
   import HeaderActions from "./components/HeaderActions.svelte";
@@ -410,7 +410,7 @@
 <Modal bind:open={aboutOpen} title="About EEcircuit" contentClass="about-modal">
   <div class="about-list">
     <section><BookOpen size={19} /><div><strong>Need help?</strong><p>Find comprehensive guides and documentation at <a href="https://help.eecircuit.com" target="_blank" rel="noreferrer">help.eecircuit.com <ExternalLink size={12} /></a>.</p></div></section>
-    <section><Code2 size={19} /><div><strong>Open Source</strong><p>Explore the code and contribute through the <a href="https://github.com/eelab-dev/EEcircuit" target="_blank" rel="noreferrer">GitHub repository <ExternalLink size={12} /></a>.</p></div></section>
+    <section><CodeXml size={19} /><div><strong>Open Source</strong><p>Explore the code and contribute through the <a href="https://github.com/eelab-dev/EEcircuit" target="_blank" rel="noreferrer">GitHub repository <ExternalLink size={12} /></a>.</p></div></section>
     <section><Bug size={19} /><div><strong>Found a bug?</strong><p>Report reproducible problems through the <a href="https://github.com/eelab-dev/EEcircuit/issues" target="_blank" rel="noreferrer">Issue Tracker <ExternalLink size={12} /></a>.</p></div></section>
   </div>
   {#snippet footer()}<button class="primary-button" onclick={() => aboutOpen = false}>Okay</button>{/snippet}

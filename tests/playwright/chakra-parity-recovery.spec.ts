@@ -223,16 +223,47 @@ test("status badge counts follow category filters", async ({ page }) => {
   await expect(page.locator('button[aria-label="1 warning"]')).toBeAttached();
 });
 
-test("schematic controls remain usable in short and narrow viewports", async ({ page }) => {
+test("schematic controls remain usable in short and narrow viewports", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1100, height: 600 });
   await loadReadyApp(page);
   const toolbar = page.locator(".schematic-toolbar");
-  await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length)).toBe(2);
-  await expect(toolbar.locator(".tool-divider").first()).toBeHidden();
+  await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length)).toBe(1);
+  await expect(toolbar.locator(".tool-divider").first()).toBeVisible();
   await toolbar.getByRole("button", { name: "Select" }).hover();
   await expect(page.getByRole("tooltip", { name: "Select" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("single-column-toolbar-600px.png") });
+
+  await page.setViewportSize({ width: 1100, height: 500 });
+  await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length)).toBe(2);
+  await expect(toolbar.locator(".tool-divider").first()).toBeHidden();
+  await page.screenshot({ path: testInfo.outputPath("two-column-toolbar-500px.png") });
 
   await page.setViewportSize({ width: 580, height: 800 });
   await expect(page.getByLabel("Schematic coordinates")).toBeVisible();
   await expect(page.getByRole("button", { name: "Simulate Circuit" })).toBeVisible();
+});
+
+test("header actions compress tabs toward the logo without overlap", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 820, height: 720 });
+  await loadReadyApp(page);
+  const logo = page.locator(".logo");
+  const tabs = page.locator(".main-tabs");
+  const actions = page.locator(".header-actions");
+  const [logoBox, tabsBox, actionsBox] = await Promise.all([
+    logo.boundingBox(), tabs.boundingBox(), actions.boundingBox(),
+  ]);
+  if (!logoBox || !tabsBox || !actionsBox) throw new Error("Header groups are not measurable");
+
+  expect(logoBox.x + logoBox.width).toBeLessThanOrEqual(tabsBox.x);
+  expect(tabsBox.x + tabsBox.width).toBeLessThanOrEqual(actionsBox.x);
+  await page.screenshot({ path: testInfo.outputPath("compact-desktop-header.png") });
+
+  await page.setViewportSize({ width: 580, height: 800 });
+  const [mobileLogoBox, mobileTabsBox, mobileActionsBox] = await Promise.all([
+    logo.boundingBox(), tabs.boundingBox(), actions.boundingBox(),
+  ]);
+  if (!mobileLogoBox || !mobileTabsBox || !mobileActionsBox) throw new Error("Compact header groups are not measurable");
+  expect(mobileActionsBox.y + mobileActionsBox.height).toBeLessThanOrEqual(mobileTabsBox.y);
+  expect(mobileLogoBox.y).toBeGreaterThanOrEqual(mobileActionsBox.y + mobileActionsBox.height);
+  await page.screenshot({ path: testInfo.outputPath("mobile-header.png") });
 });

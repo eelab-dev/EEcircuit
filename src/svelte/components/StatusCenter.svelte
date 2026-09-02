@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AlertCircle, CheckCircle, ClipboardCopy, Info, Trash2 } from "@lucide/svelte";
+  import { CircleAlert, CircleCheckBig, ClipboardCopy, Info, Trash2 } from "@lucide/svelte";
   import type { MessageCategory } from "../../store/messageStore";
   import { appState } from "../state/appState.svelte";
   import Modal from "./Modal.svelte";
@@ -37,7 +37,7 @@
 </script>
 
 <TooltipButton label={statusLabel} tooltip={statusLabel} onclick={() => open = true}>
-  {#if errorCount}<AlertCircle class="status-error" size={17} />{:else if warningCount}<Info class="status-warning" size={17} />{:else}<CheckCircle class="status-success" size={17} />{/if}
+  {#if errorCount}<CircleAlert class="status-error" size={17} />{:else if warningCount}<Info class="status-warning" size={17} />{:else}<CircleCheckBig class="status-success" size={17} />{/if}
   {#if errorCount}<span class="status-count">{errorCount > 9 ? "9+" : errorCount}</span>{/if}
 </TooltipButton>
 

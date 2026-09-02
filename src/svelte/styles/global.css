@@ -46,16 +46,16 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 input, select, textarea { min-width: 0; border: 1px solid var(--border); border-radius: .4rem; padding: .5rem .6rem; color: var(--fg); background: var(--bg); }
 .app-shell { position: relative; height: 100%; display: flex; flex-direction: column; padding: .5rem; gap: .45rem; }
 .app-tabs-root { width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; gap: .45rem; }
-.main-header { min-height: 3.25rem; display: grid; grid-template-columns: minmax(7rem, 1fr) auto minmax(7rem, 1fr); align-items: center; gap: 1rem; padding: .25rem .5rem; }
-.logo { width: 7.5rem; height: auto; display: block; }
-.main-tabs { display: flex; align-items: center; gap: .3rem; padding: .25rem; border: 1px solid var(--border-subtle); border-radius: .65rem; background: var(--bg-subtle); }
-.main-tabs button { min-width: 6.5rem; border: 0; background: transparent; }
+.main-header { min-height: 3.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .25rem .5rem; }
+.logo { flex: 0 0 auto; width: 7.5rem; height: auto; display: block; }
+.main-tabs { flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: .3rem; padding: .25rem; border: 1px solid var(--border-subtle); border-radius: .65rem; background: var(--bg-subtle); }
+.main-tabs button { min-width: clamp(5rem, 8vw, 6.5rem); border: 0; background: transparent; }
 .main-tabs button.active, .main-tabs [data-selected] { color: var(--accent); background: var(--bg); box-shadow: 0 1px 4px color-mix(in srgb, var(--fg) 12%, transparent); }
 .disabled-tab-wrap { position: relative; display: inline-flex; }
 .disabled-tab-wrap.disabled [role="tab"] { opacity: .42; cursor: not-allowed; }
 .disabled-tab-tooltip { position: absolute; z-index: 90; top: calc(100% + .55rem); left: 50%; width: 15rem; display: none; padding: .45rem .55rem; transform: translateX(-50%); border: 1px solid var(--border); border-radius: .4rem; color: var(--fg); background: var(--bg); box-shadow: 0 8px 24px rgb(0 0 0 / .2); font-size: .75rem; line-height: 1.35; text-align: left; }
 .disabled-tab-wrap.disabled:hover .disabled-tab-tooltip, .disabled-tab-wrap.disabled:focus-within .disabled-tab-tooltip { display: block; }
-.header-actions { display: flex; justify-self: end; align-items: center; gap: .2rem; }
+.header-actions { flex: 0 0 auto; display: flex; align-items: center; gap: .2rem; }
 .header-actions .icon-button { position: relative; }
 .tooltip-content { z-index: 600; max-width: 18rem; padding: .4rem .55rem; border: 1px solid var(--border); border-radius: .4rem; color: var(--fg); background: var(--bg); box-shadow: 0 8px 24px rgb(0 0 0 / .22); font-size: .75rem; line-height: 1.35; }
 .status-success { color: var(--success); }.status-warning { color: var(--warning); }.status-error { color: var(--danger); }
@@ -226,19 +226,29 @@ kbd { width: fit-content; padding: .15rem .35rem; border: 1px solid var(--border
 .thread-progress-list { display: grid; gap: .3rem; }.thread-progress-list > div { display: grid; grid-template-columns: 2rem minmax(0, 1fr) 3.3rem; align-items: center; gap: .4rem; color: var(--fg-muted); font-family: var(--font-mono); font-size: .7rem; font-variant-numeric: tabular-nums; }.thread-progress-list progress { width: 100%; }
 .spinner { width: 2rem; height: 2rem; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent); animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (max-height: 639px) and (min-width: 601px) {
+@media (max-height: 519px) and (min-width: 601px) {
   .schematic-toolbar { grid-template-columns: repeat(2, 1fr); gap: .25rem; max-width: 7rem; }
   .schematic-toolbar .tool-divider { display: none; }
 }
-@media (max-width: 900px) {
-  .main-header { grid-template-columns: auto 1fr; gap: .5rem; }.main-tabs { justify-self: end; }.header-actions { grid-column: 1 / -1; justify-self: center; }.logo { width: 6.5rem; }
+@media (max-width: 1050px) {
+  .main-header { gap: .5rem; }
+  .logo { width: 6.5rem; }
+  .main-tabs button { min-width: 5rem; padding-inline: .55rem; }
+  .header-actions { gap: .08rem; }
+  .header-actions .icon-button { width: 2.1rem; height: 2.1rem; }
+  .header-actions .action-divider { margin-inline: .05rem; }
 }
 @media (max-width: 767px) {
+  .main-header { display: grid; grid-template-columns: auto auto; justify-content: center; gap: .5rem 1rem; }
+  .header-actions { grid-column: 1 / -1; grid-row: 1; justify-self: center; }
+  .logo { grid-column: 1; grid-row: 2; width: 5rem; }
+  .main-tabs { grid-column: 2; grid-row: 2; justify-self: center; }
   .simulation-workspace { grid-template-columns: 1fr; grid-template-rows: auto minmax(25rem, 1fr); overflow: auto; }.simulation-sidebar { grid-row: 1; max-height: 24rem; border-left: 0; border-bottom: 1px solid var(--border); }.netlist-pane { min-height: 25rem; }
   .plot-body.with-sidebar { grid-template-columns: minmax(0, 1fr); }.plot-sidebar-toggle.shifted { right: 1rem; }
 }
 @media (max-width: 600px) {
-  .app-shell { padding: .25rem; }.main-header { grid-template-columns: 1fr; }.logo { display: none; }.main-tabs, .header-actions { justify-self: center; }.main-tabs button { min-width: auto; padding-inline: .6rem; }
+  .app-shell { padding: .25rem; }.main-header { grid-template-columns: auto auto; gap: .35rem .5rem; }.logo { width: 4rem; }.main-tabs, .header-actions { justify-self: center; }.main-tabs button { min-width: auto; padding-inline: .6rem; }
+  .header-actions { gap: .04rem; }.header-actions .icon-button { width: 2rem; height: 2rem; }.header-actions .action-divider { margin-inline: 0; }
   .schematic-toolbar { top: .5rem; left: 50%; transform: translateX(-50%); display: flex; max-width: calc(100% - 1rem); overflow-x: auto; }.tool-divider { width: 1px; height: 1.4rem; }
   .component-picker { left: .5rem; top: 3.4rem; width: calc(100% - 1rem); }.properties-panel { right: .5rem; top: 4rem; transform: none; }
   .schematic-bottom-bar { left: .5rem; right: .5rem; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .3rem; }

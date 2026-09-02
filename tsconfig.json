@@ -19,6 +19,7 @@
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "allowArbitraryExtensions": true,
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "target": "ESNext",
