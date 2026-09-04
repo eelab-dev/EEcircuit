@@ -91,7 +91,7 @@
   {/if}
   <div class="plot-toolbar">
     {#if !acMode && !noiseMode}<span>Mode:</span><button class:active={canvasCount === 1} onclick={() => appState.setNumCanvases(1)}>Single</button><button class:active={canvasCount === 2} onclick={() => appState.setNumCanvases(2)}>Dual</button>{/if}
-    <span>Cursor:</span><button class:active={cursorEnabled} aria-pressed={cursorEnabled} onclick={() => { cursorEnabled = !cursorEnabled; if (!cursorEnabled) sharedCursorX = null; }}>{cursorEnabled ? "Hide" : "Show"}</button>
+    <span>Cursor:</span><button class:active={cursorEnabled} aria-label="Toggle cursor" aria-pressed={cursorEnabled} onclick={() => { cursorEnabled = !cursorEnabled; if (!cursorEnabled) sharedCursorX = null; }}>{cursorEnabled ? "Hide" : "Show"}</button>
     <span>Scale:</span><button class:active={appState.isLogX} aria-label="Log X" aria-pressed={appState.isLogX} onclick={appState.toggleLogX}>Log X</button>
     {#if canvasCount === 1}<button class:active={appState.isLogY} aria-label="Log Y" aria-pressed={appState.isLogY} onclick={appState.toggleLogY}>Log Y</button>{:else}<button class:active={appState.isLogY1} aria-label="Log Y1" aria-pressed={appState.isLogY1} onclick={appState.toggleLogY1}>Log Y1</button><button class:active={appState.isLogY2} aria-label="Log Y2" aria-pressed={appState.isLogY2} onclick={appState.toggleLogY2}>Log Y2</button>{/if}
   </div>

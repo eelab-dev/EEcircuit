@@ -29,6 +29,7 @@ CODE_AUDIT.md
 issues.md
 tsconfig.tsbuildinfo
 /docs/
+.ipad-testing.env
 
 .agent
 test-videos

@@ -189,6 +189,7 @@
                 {#each components as component (component.type)}
                   {@const index = flattened.indexOf(component)}
                   <button
+                    aria-label={`Add ${component.type}`}
                     data-component-index={index}
                     tabindex="-1"
                     class:focused={focusedIndex === index}

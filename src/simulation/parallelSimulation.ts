@@ -1,4 +1,5 @@
 import type { ResultType } from "eecircuit-engine";
+import { createUuid } from "../utils/uuid";
 
 export interface SimulationWorkerResult {
   success: boolean;
@@ -218,7 +219,7 @@ export function initializeSimulationWorker(
   timeout: number = DEFAULT_TIMEOUT,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const requestId = crypto.randomUUID();
+    const requestId = createUuid();
     let settled = false;
 
     const finish = (error?: Error) => {
@@ -326,7 +327,7 @@ async function runLatestSession<T>(
   let resolveDone: () => void = () => undefined;
   const done = new Promise<void>((resolve) => { resolveDone = resolve; });
   const session: ActiveSimulationSession = {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     controller,
     done,
     resolveDone,
@@ -369,8 +370,8 @@ export async function runSimulationInWorker(
   parameterValue: string,
   parameterIndex: number,
   timeout: number = DEFAULT_TIMEOUT,
-  sessionId: string = crypto.randomUUID(),
-  requestId: string = crypto.randomUUID(),
+  sessionId: string = createUuid(),
+  requestId: string = createUuid(),
   signal?: AbortSignal,
 ): Promise<SimulationWorkerResult> {
   return new Promise((resolve) => {
@@ -474,7 +475,7 @@ export async function runSingleSimulation(
     const worker = workerPool.getAvailableWorker();
     if (!worker) throw new Error("No simulation workers available");
     try {
-      const result = await runSimulationInWorker(worker, netlist, "", 0, timeout, session.id, crypto.randomUUID(), session.controller.signal);
+      const result = await runSimulationInWorker(worker, netlist, "", 0, timeout, session.id, createUuid(), session.controller.signal);
       if (result.timedOut || result.cancelled) workerPool.replaceWorker(worker);
       else workerPool.releaseWorker(worker);
       return result;
@@ -571,7 +572,7 @@ async function runParallelSimulationInternal(
             expandedNetlist.parameterIndex,
             timeout,
             session.id,
-            crypto.randomUUID(),
+            createUuid(),
             session.controller.signal,
           );
 

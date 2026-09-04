@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type * as Monaco from "monaco-editor/editor";
+  import { installInsecureWebKitClipboardFallback } from "../../editor/insecureWebKitClipboard";
 
   let {
     value,
@@ -23,6 +24,7 @@
   onMount(() => {
     let disposed = false;
     let contentSubscription: Monaco.IDisposable | undefined;
+    installInsecureWebKitClipboardFallback();
     void Promise.all([
       import("monaco-editor/editor"),
       import("monaco-editor/features/codeEditor/register"),

@@ -95,14 +95,15 @@
   <form onsubmit={(event) => { event.preventDefault(); apply(true); }}>
     {#if selectedItem.type === "instance" && selectedItem.typeName !== "port"}
       <label>Name
-        {#if fixedName}<span class="fixed-value">{selectedItem.typeName}</span>{:else}<input placeholder="Component name (e.g., R1, C1)" bind:value={localValues.name} onkeydown={handleInputKeydown} />{/if}
+        {#if fixedName}<span class="fixed-value">{selectedItem.typeName}</span>{:else}<input aria-label="Component name" placeholder="Component name (e.g., R1, C1)" bind:value={localValues.name} onkeydown={handleInputKeydown} />{/if}
       </label>
     {:else if selectedItem.type === "wire"}
-      <label>Net Name<input placeholder="Network name" bind:value={localValues.name} onkeydown={handleInputKeydown} /></label>
+      <label>Net Name<input aria-label="Net name" placeholder="Network name" bind:value={localValues.name} onkeydown={handleInputKeydown} /></label>
     {/if}
     {#each fields as field (field.key)}
       <label>{field.label}{field.unit ? ` (${field.unit})` : ""}{field.required ? " *" : ""}
         <input
+          aria-label={field.label}
           placeholder={field.placeholder}
           value={(localValues.properties as Record<string, string>)[field.key] ?? ""}
           oninput={(event) => updateProperty(field.key, event.currentTarget.value)}

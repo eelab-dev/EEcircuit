@@ -272,7 +272,7 @@
   <header class="main-header">
     <Logo />
     <Tabs.List class="main-tabs" aria-label="EEcircuit workspaces">
-      <Tabs.Trigger value="schematic">Schematic</Tabs.Trigger>
+      <Tabs.Trigger value="schematic" aria-label="Schematic">Schematic</Tabs.Trigger>
       <span class:disabled={!appState.isSimulationTabEnabled} class="disabled-tab-wrap">
         <Tabs.Trigger value="simulate" aria-label="simulation config" aria-disabled={!appState.isSimulationTabEnabled} onclick={(event) => blockUnavailableTab(event, appState.isSimulationTabEnabled)} onkeydown={(event) => blockUnavailableTabKey(event, appState.isSimulationTabEnabled)}>Simulation</Tabs.Trigger>
         {#if !appState.isSimulationTabEnabled}<span class="disabled-tab-tooltip" role="tooltip">Click Simulate on the schematic to generate a netlist first.</span>{/if}
