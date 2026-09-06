@@ -30,7 +30,11 @@ export const areToBePlottedItemsEqual = (
   return false;
 };
 
-export const buildToBePlottedCommands = (items: ToBePlotted[]): string => {
+export const buildToBePlottedCommands = (
+  items: ToBePlotted[],
+  resolveCurrentExpression: (componentName: string, terminalName: string) => string =
+    (componentName, terminalName) => `I(${componentName},${terminalName})`,
+): string => {
   if (items.length === 0) {
     return "";
   }
@@ -42,14 +46,15 @@ export const buildToBePlottedCommands = (items: ToBePlotted[]): string => {
     if (item.type === "voltage") {
       voltageTokens.push(`V(${item.netName})`);
     } else {
-      currentTokens.push(`I(${item.componentName},${item.terminalName})`);
+      currentTokens.push(resolveCurrentExpression(item.componentName, item.terminalName));
     }
   });
 
   const commands: string[] = [];
 
-  if (currentTokens.length > 0) {
-    commands.push(`.probe ${currentTokens.join(" ")}`);
+  const probeTokens = currentTokens.filter((token) => /^I\(/i.test(token));
+  if (probeTokens.length > 0) {
+    commands.push(`.probe ${probeTokens.join(" ")}`);
   }
 
   const saveTokens = [...voltageTokens, ...currentTokens];

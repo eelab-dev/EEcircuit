@@ -70,14 +70,19 @@ test("app-owned demo preserves the original common-source amplifier geometry", (
   );
   expect(instances.get("M1")).toMatchObject({
     typeName: "nFET",
-    value: "PTM90N W=1u L=0.09u",
+    value: "nmos_3p3 W=1u L=0.28u",
     origin: { x: 0, y: 0 },
   });
   expect(instances.get("R1")).toMatchObject({
     typeName: "resistor",
-    value: "1k",
+    value: "100k",
     origin: { x: 0, y: 13 },
     rotation: "90",
+  });
+  expect(instances.get("vin")).toMatchObject({
+    typeName: "vsin",
+    value: "SIN (0.9 0.1 1k)",
+    origin: { x: -15, y: -7 },
   });
 
   for (const wire of demoSchematic.wires) {

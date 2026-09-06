@@ -11,7 +11,8 @@
     type SelectedItem,
   } from "eecircuit-schematic";
   import { ArrowBigRight, Cable, CirclePlus, LayoutDashboard, Square } from "@lucide/svelte";
-  import { demoSchematic } from "../../schematic/demoSchematic";
+  import { createDemoSchematic } from "../../schematic/demoSchematic";
+  import { defaultFetValue } from "../../pdk/processCatalog";
   import { executeSchematicEditorCommand, type SchematicEditorCommand } from "../../schematic/schematicCommands";
   import { resolveSchematicShortcut } from "../../schematic/schematicShortcuts";
   import { formatToBePlottedLabel, normalizeTerminalSelection, parseTerminalPointerInfo } from "../../utils/toBePlotted";
@@ -148,7 +149,12 @@
   }
 
   async function addComponent(type: AvailableComponent["type"]) {
-    try { await editor?.addComponent(type); } catch (error) { reportError("component placement", error); }
+    const value = type === "nFET"
+      ? defaultFetValue(appState.processId, "n")
+      : type === "pFET"
+        ? defaultFetValue(appState.processId, "p")
+        : undefined;
+    try { await editor?.addComponent(type, value ? { value } : undefined); } catch (error) { reportError("component placement", error); }
   }
 
   async function sendToSimulation(shiftPressed: boolean) {
@@ -156,8 +162,14 @@
     if (!editor) return;
     appState.setOverrideSimulateOnNetlistErrorsOnce(shiftPressed);
     try {
-      const { netList, success } = await editor.getNetList();
+      const [{ netList, success }, schematicSnapshot] = await Promise.all([
+        editor.getNetList(),
+        editor.getSchematic(),
+      ]);
       if (success || getAppState().overrideSimulateOnNetlistErrorsOnce) {
+        // Resolve PDK models against the same schematic state that produced
+        // this exported netlist, rather than a potentially stale change event.
+        appState.setCurrentSchematic(schematicSnapshot);
         await appState.exportNetlist(netList);
         appState.setOverrideSimulateOnNetlistErrorsOnce(false);
       } else {
@@ -231,7 +243,7 @@
     canvas.dataset.canvasReady = "false";
     const initialSchematic = new URLSearchParams(location.search).get("clean") === "true"
       ? blankSchematic
-      : appState.currentSchematic ?? demoSchematic;
+      : appState.currentSchematic ?? createDemoSchematic(appState.processId);
 
     const waitForRenderedSize = () => new Promise<void>((resolve) => {
       if (canvas.clientWidth > 0 && canvas.clientHeight > 0) { resolve(); return; }

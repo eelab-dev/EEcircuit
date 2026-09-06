@@ -1,6 +1,40 @@
 import type { SliceCreator } from "./storeTypes";
 import { getRecommendedInputProfile } from "../utils/deviceDetection";
 import { SettingsCategory } from "../types/commonTypes";
+import {
+  isGf180Corner,
+  isProcessId,
+  type Gf180Corner,
+  type ProcessId,
+} from "../pdk/processCatalog";
+
+const PDK_STORAGE_KEY = "eecircuit-pdk-settings";
+
+function loadPdkSettings(): { processId: ProcessId; gf180Corner: Gf180Corner } {
+  if (typeof window === "undefined") return { processId: "gf180", gf180Corner: "typical" };
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(PDK_STORAGE_KEY) ?? "null");
+    if (typeof parsed === "object" && parsed !== null) {
+      const value = parsed as Record<string, unknown>;
+      return {
+        processId: isProcessId(value.processId) ? value.processId : "gf180",
+        gf180Corner: isGf180Corner(value.gf180Corner) ? value.gf180Corner : "typical",
+      };
+    }
+  } catch (error) {
+    console.warn("Failed to load PDK settings from localStorage:", error);
+  }
+  return { processId: "gf180", gf180Corner: "typical" };
+}
+
+function savePdkSettings(processId: ProcessId, gf180Corner: Gf180Corner) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PDK_STORAGE_KEY, JSON.stringify({ processId, gf180Corner }));
+  } catch (error) {
+    console.warn("Failed to save PDK settings to localStorage:", error);
+  }
+}
 
 // UI state and actions
 export interface UiState {
@@ -13,6 +47,8 @@ export interface UiState {
   maxWebWorkers: number;
   resetVariableSelectionsOnNewSim: boolean;
   resetPlotStateOnNewSim: boolean;
+  processId: ProcessId;
+  gf180Corner: Gf180Corner;
   // Schematic error tracking
   hasSchematicErrors: boolean;
   // One-shot override flag to allow navigating to Simulate despite errors
@@ -34,6 +70,8 @@ export interface UiActions {
   setMaxWebWorkers: (count: number) => void;
   setResetVariableSelectionsOnNewSim: (reset: boolean) => void;
   setResetPlotStateOnNewSim: (reset: boolean) => void;
+  setProcessId: (processId: ProcessId) => void;
+  setGf180Corner: (corner: Gf180Corner) => void;
   // Schematic error actions
   setHasSchematicErrors: (hasErrors: boolean) => void;
   resetSchematicErrors: () => void;
@@ -72,6 +110,7 @@ export const createUiSlice: SliceCreator<UiSlice, UiSlice> = (
   get
 ) => {
   const initialTheme = getInitialTheme();
+  const initialPdk = loadPdkSettings();
   
   // Apply initial theme to document
   applyThemeToDocument(initialTheme);
@@ -104,6 +143,8 @@ export const createUiSlice: SliceCreator<UiSlice, UiSlice> = (
     maxWebWorkers: Math.min(4, navigator.hardwareConcurrency || 4),
     resetVariableSelectionsOnNewSim: false,
     resetPlotStateOnNewSim: false,
+    processId: initialPdk.processId,
+    gf180Corner: initialPdk.gf180Corner,
     hasSchematicErrors: false,
     overrideSimulateOnNetlistErrorsOnce: false,
     activeSettingsCategory: "simulation",
@@ -154,6 +195,14 @@ export const createUiSlice: SliceCreator<UiSlice, UiSlice> = (
     // Plot reset configuration actions
     setResetVariableSelectionsOnNewSim: (reset) => set({ resetVariableSelectionsOnNewSim: reset }),
     setResetPlotStateOnNewSim: (reset) => set({ resetPlotStateOnNewSim: reset }),
+    setProcessId: (processId) => {
+      set({ processId });
+      savePdkSettings(processId, get().gf180Corner);
+    },
+    setGf180Corner: (gf180Corner) => {
+      set({ gf180Corner });
+      savePdkSettings(get().processId, gf180Corner);
+    },
 
     // Schematic error actions
     setHasSchematicErrors: (hasErrors) => set({ hasSchematicErrors: hasErrors }),

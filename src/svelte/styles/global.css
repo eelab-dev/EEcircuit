@@ -101,7 +101,10 @@ input, select, textarea { min-width: 0; border: 1px solid var(--border); border-
 .schematic-bottom-bar .pointer-output { position: absolute; left: 50%; display: flex; align-items: center; gap: .45rem; transform: translateX(calc(-50% + 10rem)); }
 .schematic-bottom-bar .pointer-output svg { flex: 0 0 auto; }
 .selection-overlay small { font-family: var(--font-mono); }
-.properties-panel input, .fixed-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.properties-panel input, .properties-panel select, .fixed-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.properties-panel label small { color: var(--fg-subtle); font-size: .7rem; line-height: 1.35; }
+.property-notice { margin: 0; padding: .55rem; border: 1px solid var(--warning); border-radius: .4rem; color: var(--fg-muted); background: color-mix(in srgb, var(--warning) 9%, var(--bg)); font-size: .75rem; line-height: 1.4; }
+.property-errors { margin: 0; padding: .55rem .55rem .55rem 1.5rem; border: 1px solid var(--danger); border-radius: .4rem; color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--bg)); font-size: .75rem; line-height: 1.4; }
 .schematic-bottom-bar .simulate-button { min-height: 2.65rem; display: flex; align-items: center; gap: .5rem; padding: .65rem 1rem; border-radius: .65rem; background: var(--accent); border-color: var(--accent); font-size: .95rem; font-weight: 600; line-height: 1.2; box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 24%, transparent); }
 .canvas-message, .selection-overlay { position: absolute; z-index: 35; top: 1rem; left: 50%; transform: translateX(-50%); max-width: min(38rem, 85%); padding: .7rem 1rem; border: 1px solid var(--warning); border-radius: .55rem; background: color-mix(in srgb, var(--bg) 88%, var(--warning) 12%); box-shadow: 0 8px 28px color-mix(in srgb, #000 16%, transparent); }
 .canvas-message.error { border-color: var(--danger); }

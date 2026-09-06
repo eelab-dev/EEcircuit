@@ -7,6 +7,15 @@
     getPropertiesFromSelectedItem,
     type ComponentType,
   } from "../../types/componentTypes";
+  import {
+    compatibleModelFor,
+    effectiveModelFor,
+    geometryDescription,
+    modelsFor,
+    validateGeometry,
+    type FetPolarity,
+  } from "../../pdk/processCatalog";
+  import { appState } from "../state/appState.svelte";
 
   let {
     selectedItem,
@@ -20,8 +29,9 @@
 
   let localValues = $state<ReturnType<typeof getPropertiesFromSelectedItem>>({ name: "", properties: {} });
   let initialValues = $state<ReturnType<typeof getPropertiesFromSelectedItem>>({ name: "", properties: {} });
-  let selectedKey = $derived(JSON.stringify(selectedItem));
+  let selectedKey = $derived(JSON.stringify([selectedItem, appState.processId]));
   let previousKey = $state("");
+  let storedModel = $state<string | undefined>();
 
   function copyValues(values: ReturnType<typeof getPropertiesFromSelectedItem>) {
     return { name: values.name, properties: { ...values.properties } };
@@ -30,6 +40,15 @@
   $effect(() => {
     if (selectedKey !== previousKey) {
       localValues = getPropertiesFromSelectedItem(selectedItem);
+      storedModel = undefined;
+      if (selectedItem.type === "instance" && (selectedItem.typeName === "nFET" || selectedItem.typeName === "pFET")) {
+        const polarity: FetPolarity = selectedItem.typeName === "nFET" ? "n" : "p";
+        storedModel = "model" in localValues.properties ? localValues.properties.model : undefined;
+        localValues.properties = {
+          ...localValues.properties,
+          model: effectiveModelFor(appState.processId, polarity, storedModel).name,
+        };
+      }
       initialValues = copyValues(localValues);
       previousKey = selectedKey;
     }
@@ -44,8 +63,33 @@
     selectedItem.type === "instance" && ["VDD", "GND"].includes(selectedItem.typeName.toUpperCase()),
   );
   let hasChanges = $derived(JSON.stringify(localValues) !== JSON.stringify(initialValues));
+  let fetPolarity = $derived<FetPolarity | undefined>(
+    selectedItem.type === "instance" && selectedItem.typeName === "nFET"
+      ? "n"
+      : selectedItem.type === "instance" && selectedItem.typeName === "pFET"
+        ? "p"
+        : undefined,
+  );
+  let selectedFetModel = $derived(fetPolarity
+    ? effectiveModelFor(
+        appState.processId,
+        fetPolarity,
+        "model" in localValues.properties ? localValues.properties.model : undefined,
+      )
+    : undefined,
+  );
+  let geometryErrors = $derived(selectedFetModel
+    ? validateGeometry(
+        selectedFetModel,
+        "W" in localValues.properties ? localValues.properties.W : undefined,
+        "L" in localValues.properties ? localValues.properties.L : undefined,
+      )
+    : [],
+  );
+  let substitutedModel = $derived(!!fetPolarity && !!storedModel && !compatibleModelFor(appState.processId, fetPolarity, storedModel));
 
   function apply(close = false) {
+    if (geometryErrors.length > 0) return;
     if (selectedItem.type === "wire") {
       onApply("name", localValues.name);
     } else if (selectedItem.type === "instance") {
@@ -71,8 +115,8 @@
     }
     if (event.key === "Enter") {
       event.preventDefault();
-      const input = event.currentTarget as HTMLInputElement;
-      const inputs = [...(input.form?.querySelectorAll<HTMLInputElement>("input:not(:disabled)") ?? [])]
+      const input = event.currentTarget as HTMLInputElement | HTMLSelectElement;
+      const inputs = [...(input.form?.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input:not(:disabled), select:not(:disabled)") ?? [])]
         .filter((item) => item.offsetParent !== null);
       const next = inputs[inputs.indexOf(input) + 1];
       if (next) next.focus();
@@ -102,18 +146,41 @@
     {/if}
     {#each fields as field (field.key)}
       <label>{field.label}{field.unit ? ` (${field.unit})` : ""}{field.required ? " *" : ""}
-        <input
-          aria-label={field.label}
-          placeholder={field.placeholder}
-          value={(localValues.properties as Record<string, string>)[field.key] ?? ""}
-          oninput={(event) => updateProperty(field.key, event.currentTarget.value)}
-          onkeydown={handleInputKeydown}
-        />
+        {#if field.key === "model" && fetPolarity}
+          <select
+            aria-label="Model"
+            value={(localValues.properties as Record<string, string>)[field.key] ?? ""}
+            onchange={(event) => updateProperty(field.key, event.currentTarget.value)}
+            onkeydown={handleInputKeydown}
+          >
+            {#each modelsFor(appState.processId, fetPolarity) as model (model.name)}
+              <option value={model.name}>{model.label} ({model.name})</option>
+            {/each}
+          </select>
+        {:else}
+          <input
+            aria-label={field.label}
+            placeholder={field.placeholder}
+            value={(localValues.properties as Record<string, string>)[field.key] ?? ""}
+            aria-invalid={(field.key === "W" || field.key === "L") && geometryErrors.length > 0}
+            oninput={(event) => updateProperty(field.key, event.currentTarget.value)}
+            onkeydown={handleInputKeydown}
+          />
+        {/if}
+        {#if (field.key === "W" || field.key === "L") && selectedFetModel && geometryDescription(selectedFetModel)}
+          <small>{geometryDescription(selectedFetModel)}</small>
+        {/if}
       </label>
     {/each}
+    {#if substitutedModel && selectedFetModel}
+      <p class="property-notice" role="status">{storedModel} is outside the selected process. Generated netlists use {selectedFetModel.name}.</p>
+    {/if}
+    {#if geometryErrors.length}
+      <ul class="property-errors" role="alert">{#each geometryErrors as error (error)}<li>{error}</li>{/each}</ul>
+    {/if}
     <div class="form-actions">
       {#if hasChanges}
-        <button class="primary-button" type="submit">Apply</button><button type="button" onclick={cancel}>Cancel</button>
+        <button class="primary-button" type="submit" disabled={geometryErrors.length > 0}>Apply</button><button type="button" onclick={cancel}>Cancel</button>
       {:else}
         <button class="properties-close-button" type="button" onclick={onClose}>Close</button>
       {/if}

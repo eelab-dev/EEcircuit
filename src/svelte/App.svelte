@@ -12,7 +12,15 @@
   import { validateEEcircuitFile } from "../utils/eeCircuitFileValidator";
   import { convertEEcircuitV1ToV2, isEEcircuitV1 } from "../utils/convertEEcircuitV1ToV2";
   import type { EEcircuitFile, SimulationType } from "../types/commonTypes";
-  import { demoSchematic } from "../schematic/demoSchematic";
+  import { createDemoSchematic } from "../schematic/demoSchematic";
+  import {
+    GF180_CORNERS,
+    PROCESS_CATALOG,
+    PROCESS_IDS,
+    type Gf180Corner,
+    type ProcessId,
+  } from "../pdk/processCatalog";
+  import { incompatibleFetReplacements } from "../pdk/netlistResolver";
 
   type SchematicExports = {
     loadSchematic: (value: unknown) => Promise<void>;
@@ -44,6 +52,8 @@
   let tempShowInternalSignals = $state(appState.showInternalSignals);
   let tempLineThickness = $state(appState.lineThickness);
   let tempResetPlotState = $state(appState.resetPlotStateOnNewSim);
+  let tempProcessId = $state<ProcessId>(appState.processId);
+  let tempGf180Corner = $state<Gf180Corner>(appState.gf180Corner);
 
   function ensurePrimaryUi(): Promise<void> {
     if (primaryUiPromise) return primaryUiPromise;
@@ -117,15 +127,31 @@
     tempShowInternalSignals = appState.showInternalSignals;
     tempLineThickness = appState.lineThickness;
     tempResetPlotState = appState.resetPlotStateOnNewSim;
+    tempProcessId = appState.processId;
+    tempGf180Corner = appState.gf180Corner;
     settingsOpen = true;
   }
 
-  function saveSettings() {
+  async function saveSettings() {
+    if (tempProcessId !== appState.processId) {
+      const incompatible = incompatibleFetReplacements(appState.currentSchematic, tempProcessId);
+      if (incompatible.length > 0) {
+        const confirmed = window.confirm(
+          `${incompatible.length} transistor${incompatible.length === 1 ? "" : "s"} use models outside ${PROCESS_CATALOG[tempProcessId].label}: ` +
+          `${incompatible.map(({ name, replacement }) => `${name} → ${replacement}`).join(", ")}. ` +
+          "Generated netlists will use those replacements until the stored models are changed. Save this process change?",
+        );
+        if (!confirmed) return;
+      }
+    }
     appState.setMaxWebWorkers(tempMaxWorkers);
     appState.setResetVariableSelectionsOnNewSim(tempResetVariableSelections);
     appState.setShowInternalSignals(tempShowInternalSignals);
     appState.setLineThickness(tempLineThickness);
     appState.setResetPlotStateOnNewSim(tempResetPlotState);
+    appState.setProcessId(tempProcessId);
+    appState.setGf180Corner(tempGf180Corner);
+    if (appState.rawNetlist && appState.selectedSimType !== "None") await appState.generateDisplayNetlist();
     settingsOpen = false;
   }
 
@@ -392,7 +418,7 @@
   <p>Start with an empty canvas or load the demonstration circuit. Unsaved work will be replaced.</p>
   {#snippet footer()}
     <button onclick={() => newDialogOpen = false}>Cancel</button>
-    <button class="primary-button" onclick={async () => { await schematic.loadSchematic(demoSchematic); newDialogOpen = false; }}>Load Demo</button>
+    <button class="primary-button" onclick={async () => { await schematic.loadSchematic(createDemoSchematic(appState.processId)); newDialogOpen = false; }}>Load Demo</button>
     <button class="danger-button" onclick={async () => { await schematic.clear(); newDialogOpen = false; }}>New Empty Schematic</button>
   {/snippet}
 </Modal>
@@ -444,6 +470,20 @@
         <header class="settings-panel-heading"><h3>Simulation</h3><p>Tune parallel execution and what is retained between runs.</p></header>
         <div class="settings-list">
           <label class="setting-row">
+            <span class="setting-copy"><strong>Process</strong><small>Restrict NFET and PFET models and select the simulator model card.</small></span>
+            <select aria-label="Process" bind:value={tempProcessId}>
+              {#each PROCESS_IDS as processId (processId)}<option value={processId}>{PROCESS_CATALOG[processId].label}</option>{/each}
+            </select>
+          </label>
+          {#if tempProcessId === "gf180"}
+            <label class="setting-row">
+              <span class="setting-copy"><strong>GF180 process corner</strong><small>Choose the global GF180 model-card corner.</small></span>
+              <select aria-label="GF180 process corner" bind:value={tempGf180Corner}>
+                {#each GF180_CORNERS as corner (corner)}<option value={corner}>{corner}</option>{/each}
+              </select>
+            </label>
+          {/if}
+          <label class="setting-row">
             <span class="setting-copy"><strong>Maximum parallel workers</strong><small>Higher values can speed up bracket sweeps but use more system resources.</small></span>
             <span class="number-control"><input aria-label="Maximum simulation workers" type="number" min="1" max={navigator.hardwareConcurrency || 8} bind:value={tempMaxWorkers} /><small>Maximum {navigator.hardwareConcurrency || 8} on this device</small></span>
           </label>
@@ -475,7 +515,7 @@
       {/if}
     </section>
   </div>
-  {#snippet footer()}<button onclick={() => settingsOpen = false}>Cancel</button><button class="primary-button" onclick={saveSettings}>Save changes</button>{/snippet}
+  {#snippet footer()}<button onclick={() => settingsOpen = false}>Cancel</button><button class="primary-button" onclick={() => void saveSettings()}>Save changes</button>{/snippet}
 </Modal>
 
 <Modal bind:open={aboutOpen} title="About EEcircuit" contentClass="about-modal">
