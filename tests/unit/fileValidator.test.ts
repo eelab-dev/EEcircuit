@@ -9,18 +9,18 @@ const validSchematic = {
 
 describe("EEcircuit file validation", () => {
   it("accepts compatible unknown schematic fields", () => {
-    const result = validateEEcircuitFile({ schema: "EEcircuitV1", schematic: validSchematic });
+    const result = validateEEcircuitFile({ schema: "EEcircuitV2", schematic: validSchematic });
     expect(result.valid).toBe(true);
     if (result.valid) expect(result.file.schematic).toHaveProperty("futureField");
   });
 
   it("rejects malformed nested schematic collections", () => {
     expect(validateEEcircuitFile({
-      schema: "EEcircuitV1",
+      schema: "EEcircuitV2",
       schematic: { componentInstances: {}, wires: [] },
     }).valid).toBe(false);
     expect(validateEEcircuitFile({
-      schema: "EEcircuitV1",
+      schema: "EEcircuitV2",
       schematic: { componentInstances: [], wires: [{ absolutePath: [{ x: "bad", y: 0 }] }] },
     }).valid).toBe(false);
   });
@@ -33,7 +33,15 @@ describe("EEcircuit file validation", () => {
       { type: "Transient", stopTime: "1", timeStep: "0.1", initialConditions: false },
       { type: "Noise", netName: "out", source: "V1", steps: "10", startFreq: "1", stopFreq: "100", sweepType: "lin" },
     ];
-    expect(validateEEcircuitFile({ schema: "EEcircuitV1", simulations }).valid).toBe(true);
-    expect(validateEEcircuitFile({ schema: "EEcircuitV1", simulations: [{ type: "DC", source: 1 }] }).valid).toBe(false);
+    expect(validateEEcircuitFile({ schema: "EEcircuitV2", simulations }).valid).toBe(true);
+    expect(validateEEcircuitFile({ schema: "EEcircuitV2", simulations: [{ type: "DC", source: 1 }] }).valid).toBe(false);
+  });
+
+  it("rejects obsolete and unsupported schema versions", () => {
+    expect(validateEEcircuitFile({ schema: "EEcircuitV1" })).toEqual({
+      valid: false,
+      error: "The file is not an EEcircuitV2 document.",
+    });
+    expect(validateEEcircuitFile({ schema: "EEcircuitV3" }).valid).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 {
-  "schema": "EEcircuitV1",
+  "schema": "EEcircuitV2",
   "title": "EEcircuit",
   "description": "EEcircuit Schematic",
   "date": "2026-01-17T23:47:05.058Z",
@@ -168,7 +168,7 @@
           "type": "terminal",
           "prop": {
             "instanceName": "R1",
-            "terminalName": "1"
+            "terminalName": "2"
           }
         },
         "netName": "output"
@@ -188,7 +188,7 @@
           "type": "terminal",
           "prop": {
             "instanceName": "R1",
-            "terminalName": "2"
+            "terminalName": "1"
           }
         },
         "endLocation": {
@@ -386,11 +386,11 @@
           },
           {
             "x": 10,
-            "y": -8
+            "y": -7
           },
           {
             "x": 5,
-            "y": -8
+            "y": -7
           }
         ],
         "startLocation": {
@@ -405,7 +405,7 @@
           "prop": {
             "junctionPosition": {
               "x": 5,
-              "y": -8
+              "y": -7
             }
           }
         },

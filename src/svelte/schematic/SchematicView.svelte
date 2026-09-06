@@ -2,7 +2,6 @@
   import { onMount } from "svelte";
   import {
     createSchematicEditor,
-    SchematicValidationError,
     type AvailableComponent,
     type EditorEvent,
     type EditorMode,
@@ -13,7 +12,6 @@
   } from "eecircuit-schematic";
   import { ArrowBigRight, Cable, CirclePlus, LayoutDashboard, Square } from "@lucide/svelte";
   import { demoSchematic } from "../../schematic/demoSchematic";
-  import { normalizeLegacySchematic } from "../../schematic/normalizeLegacySchematic";
   import { executeSchematicEditorCommand, type SchematicEditorCommand } from "../../schematic/schematicCommands";
   import { resolveSchematicShortcut } from "../../schematic/schematicShortcuts";
   import { formatToBePlottedLabel, normalizeTerminalSelection, parseTerminalPointerInfo } from "../../utils/toBePlotted";
@@ -209,11 +207,7 @@
   export async function loadSchematic(schematic: unknown) {
     await readyPromise;
     if (!editor) throw new Error("Schematic editor is not ready");
-    try { await editor.loadSchematic(schematic); }
-    catch (error) {
-      if (!(error instanceof SchematicValidationError)) throw error;
-      await editor.loadSchematic(normalizeLegacySchematic(schematic));
-    }
+    await editor.loadSchematic(schematic);
     await editor.fitView();
     appState.setHasViewedSchematic(true);
   }

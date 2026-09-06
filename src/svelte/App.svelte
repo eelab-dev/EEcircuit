@@ -10,6 +10,7 @@
   import SchematicView from "./schematic/SchematicView.svelte";
   import { appState } from "./state/appState.svelte";
   import { validateEEcircuitFile } from "../utils/eeCircuitFileValidator";
+  import { convertEEcircuitV1ToV2, isEEcircuitV1 } from "../utils/convertEEcircuitV1ToV2";
   import type { EEcircuitFile, SimulationType } from "../types/commonTypes";
   import { demoSchematic } from "../schematic/demoSchematic";
 
@@ -26,6 +27,10 @@
   let newDialogOpen = $state(false);
   let settingsOpen = $state(false);
   let aboutOpen = $state(false);
+  let conversionOpen = $state(false);
+  let conversionSource = $state.raw<{ value: unknown; name: string } | null>(null);
+  let conversionErrors = $state<string[]>([]);
+  let converting = $state(false);
   let settingsCategory = $state<"general" | "simulation" | "plotting">("simulation");
   let dragActive = $state(false);
   let SimulationComponent = $state<Component>();
@@ -157,6 +162,18 @@
       let parsed: unknown;
       try { parsed = JSON.parse(await file.text()); }
       catch { throw new Error("The selected file is not valid JSON."); }
+      if (isEEcircuitV1(parsed)) {
+        conversionSource = { value: parsed, name: file.name };
+        conversionErrors = [];
+        conversionOpen = true;
+        appState.addMessage({
+          text: "EEcircuitV1 is obsolete. Convert this file to EEcircuitV2 before opening it.",
+          type: "warning",
+          category: "Schematic",
+          mLevel: "user",
+        });
+        return;
+      }
       const validation = validateEEcircuitFile(parsed);
       if (!validation.valid) throw new Error(validation.error);
       const data = validation.file;
@@ -188,7 +205,7 @@
       const latest = await schematic.getSchematic();
       const simulations = appState.allSimulationConfigs.filter((config: SimulationType) => config.type !== "None");
       const data: EEcircuitFile = {
-        schema: "EEcircuitV1",
+        schema: "EEcircuitV2",
         title: "EEcircuit",
         description: "EEcircuit Schematic",
         date: new Date().toISOString(),
@@ -205,6 +222,43 @@
     } catch (error) {
       appState.addMessage({ text: error instanceof Error ? error.message : "Unable to save file.", type: "error", category: "Schematic", mLevel: "user" });
     } finally { isSaving = false; }
+  }
+
+  function closeConversion() {
+    conversionOpen = false;
+    conversionSource = null;
+    conversionErrors = [];
+  }
+
+  async function convertLegacyFile() {
+    if (!conversionSource || converting) return;
+    converting = true;
+    conversionErrors = [];
+    try {
+      const result = await convertEEcircuitV1ToV2(conversionSource.value);
+      if (!result.success) {
+        conversionErrors = result.errors;
+        return;
+      }
+      const url = URL.createObjectURL(new Blob([JSON.stringify(result.file, null, 2)], { type: "application/json" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      const baseName = conversionSource.name.replace(/\.(json|txt)$/i, "");
+      anchor.download = `${baseName}-v2.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      appState.addMessage({
+        text: `Converted ${conversionSource.name} to EEcircuitV2. Open the downloaded file to load it.`,
+        type: "success",
+        category: "Schematic",
+        mLevel: "user",
+      });
+      closeConversion();
+    } catch (error) {
+      conversionErrors = [error instanceof Error ? error.message : "Unable to convert this file."];
+    } finally {
+      converting = false;
+    }
   }
 
   async function toggleFullscreen() {
@@ -340,6 +394,23 @@
     <button onclick={() => newDialogOpen = false}>Cancel</button>
     <button class="primary-button" onclick={async () => { await schematic.loadSchematic(demoSchematic); newDialogOpen = false; }}>Load Demo</button>
     <button class="danger-button" onclick={async () => { await schematic.clear(); newDialogOpen = false; }}>New Empty Schematic</button>
+  {/snippet}
+</Modal>
+
+<Modal bind:open={conversionOpen} title="Obsolete EEcircuit file" closeLabel="Cancel V1 conversion">
+  <p>EEcircuitV1 is obsolete. Convert this file to EEcircuitV2 before opening it.</p>
+  <p>The conversion downloads a new file and does not replace the circuit currently open.</p>
+  {#if conversionErrors.length}
+    <div role="alert">
+      <strong>Conversion failed</strong>
+      <ul>{#each conversionErrors as error, index (`${index}:${error}`)}<li>{error}</li>{/each}</ul>
+    </div>
+  {/if}
+  {#snippet footer()}
+    <button disabled={converting} onclick={closeConversion}>Cancel</button>
+    <button class="primary-button" disabled={converting} onclick={convertLegacyFile}>
+      {converting ? "Converting…" : "Convert and download"}
+    </button>
   {/snippet}
 </Modal>
 

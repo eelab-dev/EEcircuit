@@ -1,7 +1,7 @@
 import type { Schematic } from "eecircuit-schematic";
 
 export type EEcircuitFile = {
-  schema: "EEcircuitV1";
+  schema: "EEcircuitV2";
   title?: string;
   description?: string;
   date?: string;

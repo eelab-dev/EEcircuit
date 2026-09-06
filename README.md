@@ -17,6 +17,12 @@ The repository expects the sibling `../EEcircuit-schematic` package because it i
 
 Deployment uses Wrangler and the Cloudflare configuration in `wrangler.jsonc`.
 
+### EEcircuit file format
+
+The application reads and writes `EEcircuitV2` documents. V2 schematic connections are explicit: a connected wire endpoint has a terminal or junction reference, while an endpoint without a reference is electrically floating even if it shares a terminal's coordinates. Canonical saves may store a net name on one representative wire instead of repeating it on every connected segment.
+
+`EEcircuitV1` is obsolete and cannot be opened directly. When a V1 file is selected, the application offers to convert and download a separate V2 file. The converter rejects ambiguous or invalid wiring rather than changing the circuit by guessing.
+
 ## SPICE
 
 To learn more about SPICE netlists, refer to the [ngspice manual](http://ngspice.sourceforge.net/docs/ngspice-manual.pdf).

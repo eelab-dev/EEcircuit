@@ -39,8 +39,8 @@ function isSimulation(value: unknown): value is SimulationType {
 }
 
 export function validateEEcircuitFile(value: unknown): { valid: true; file: EEcircuitFile } | { valid: false; error: string } {
-  if (!isRecord(value) || value.schema !== "EEcircuitV1") {
-    return { valid: false, error: "The file is not an EEcircuitV1 document." };
+  if (!isRecord(value) || value.schema !== "EEcircuitV2") {
+    return { valid: false, error: "The file is not an EEcircuitV2 document." };
   }
   for (const field of ["title", "description", "date"]) {
     if (value[field] !== undefined && !isString(value[field])) {

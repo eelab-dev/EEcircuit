@@ -11,7 +11,7 @@ test('verify noise simulation configuration and plotting', async ({ page }) => {
   // 2. Load Test Circuit File (TIA)
   console.log('Step: Load Test Circuit File');
   await page.locator('input[type="file"]').first().setInputFiles(path.resolve('tests/test-circuit-tia.json'));
-  await waitForImportedCircuit(page, { configCount: 0, componentNames: ['X1', 'CL'] });
+  await waitForImportedCircuit(page, { configCount: 0, componentNames: ['X1', 'Cf'] });
   
   // 3. Click Simulate Button to generate netlist and go to Simulate tab
   console.log('Step: Click Simulate Button');

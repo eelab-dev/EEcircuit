@@ -1,5 +1,5 @@
 {
-  "schema": "EEcircuitV1",
+  "schema": "EEcircuitV2",
   "title": "EEcircuit",
   "description": "EEcircuit Schematic",
   "date": "2026-01-18T04:11:48.830Z",
@@ -400,45 +400,16 @@
             "y": 22
           },
           {
-            "x": -5,
+            "x": -8,
             "y": 22
+          },
+          {
+            "x": -8,
+            "y": 10
           },
           {
             "x": -5,
-            "y": 14
-          }
-        ],
-        "startLocation": {
-          "type": "terminal",
-          "prop": {
-            "instanceName": "Cf",
-            "terminalName": "1"
-          }
-        },
-        "endLocation": {
-          "type": "junction",
-          "prop": {
-            "junctionPosition": {
-              "x": -5,
-              "y": 14
-            }
-          }
-        },
-        "netName": "in"
-      },
-      {
-        "absolutePath": [
-          {
-            "x": 7,
-            "y": 22
-          },
-          {
-            "x": 18,
-            "y": 22
-          },
-          {
-            "x": 18,
-            "y": 14
+            "y": 10
           }
         ],
         "startLocation": {
@@ -452,8 +423,45 @@
           "type": "junction",
           "prop": {
             "junctionPosition": {
+              "x": -5,
+              "y": 10
+            }
+          }
+        },
+        "netName": "in"
+      },
+      {
+        "absolutePath": [
+          {
+            "x": 7,
+            "y": 22
+          },
+          {
+            "x": 21,
+            "y": 22
+          },
+          {
+            "x": 21,
+            "y": 10
+          },
+          {
+            "x": 18,
+            "y": 10
+          }
+        ],
+        "startLocation": {
+          "type": "terminal",
+          "prop": {
+            "instanceName": "Cf",
+            "terminalName": "1"
+          }
+        },
+        "endLocation": {
+          "type": "junction",
+          "prop": {
+            "junctionPosition": {
               "x": 18,
-              "y": 14
+              "y": 10
             }
           }
         },

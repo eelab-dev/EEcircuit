@@ -37,11 +37,13 @@ test("Load Demo restores the original app-owned schematic and save data", async 
   if (!downloadPath) return;
 
   const savedFile = JSON.parse(await readFile(downloadPath, "utf8")) as {
+    schema: string;
     schematic: {
       componentInstances: Array<{ name: string; typeName: string }>;
-      wires: Array<{ netName?: string }>;
+      wires: Array<{ startLocation?: unknown; endLocation?: unknown; netName?: string }>;
     };
   };
+  expect(savedFile.schema).toBe("EEcircuitV2");
   expect(savedFile.schematic.componentInstances).toHaveLength(9);
   expect(savedFile.schematic.wires).toHaveLength(8);
   expect(savedFile.schematic.componentInstances).toEqual(
@@ -52,16 +54,11 @@ test("Load Demo restores the original app-owned schematic and save data", async 
       expect.objectContaining({ name: "Vsup", typeName: "vdc" }),
     ]),
   );
-  expect(savedFile.schematic.wires.map((wire) => wire.netName).sort()).toEqual([
-    "GND",
-    "GND",
-    "GND",
-    "GND",
-    "VDD",
-    "VDD",
-    "input",
-    "output",
-  ]);
+  expect(savedFile.schematic.wires.filter((wire) => wire.startLocation).length).toBe(8);
+  expect(savedFile.schematic.wires.filter((wire) => wire.endLocation).length).toBe(8);
+  expect(new Set(savedFile.schematic.wires.flatMap((wire) => wire.netName ? [wire.netName] : []))).toEqual(
+    new Set(["GND", "VDD", "input", "output"]),
+  );
 });
 
 test("app-owned demo preserves the original common-source amplifier geometry", () => {

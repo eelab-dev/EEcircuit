@@ -1,5 +1,5 @@
 {
-  "schema": "EEcircuitV1",
+  "schema": "EEcircuitV2",
   "title": "EEcircuit",
   "description": "EEcircuit Schematic",
   "date": "2026-01-01T21:38:54.046Z",
@@ -352,11 +352,19 @@
         "absolutePath": [
           {
             "x": 17,
-            "y": 0
+            "y": -4
+          },
+          {
+            "x": 20,
+            "y": -4
+          },
+          {
+            "x": 20,
+            "y": 2
           },
           {
             "x": 23,
-            "y": 0
+            "y": 2
           },
           {
             "x": 23,
@@ -368,7 +376,7 @@
           "prop": {
             "junctionPosition": {
               "x": 17,
-              "y": 0
+              "y": -4
             }
           }
         },
@@ -376,7 +384,7 @@
           "type": "terminal",
           "prop": {
             "instanceName": "RL",
-            "terminalName": "2"
+            "terminalName": "1"
           }
         },
         "netName": "out"
@@ -389,11 +397,11 @@
           },
           {
             "x": 31,
-            "y": 0
+            "y": 1
           },
           {
             "x": 23,
-            "y": 0
+            "y": 1
           }
         ],
         "startLocation": {
@@ -408,7 +416,7 @@
           "prop": {
             "junctionPosition": {
               "x": 23,
-              "y": 0
+              "y": 1
             }
           }
         },
@@ -436,7 +444,7 @@
           "type": "terminal",
           "prop": {
             "instanceName": "RL",
-            "terminalName": "1"
+            "terminalName": "2"
           }
         },
         "netName": "GND"
