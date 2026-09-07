@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { test as baseTest } from "@playwright/test";
 
 import { test, expect } from "./fixtures";
 import { demoSchematic } from "../../src/schematic/demoSchematic";
@@ -61,7 +62,7 @@ test("Load Demo restores the original app-owned schematic and save data", async 
   );
 });
 
-test("app-owned demo preserves the original common-source amplifier geometry", () => {
+baseTest("app-owned demo preserves the original common-source amplifier geometry", () => {
   expect(demoSchematic.componentInstances).toHaveLength(9);
   expect(demoSchematic.wires).toHaveLength(8);
 

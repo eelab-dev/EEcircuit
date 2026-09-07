@@ -94,5 +94,12 @@ test('verify noise simulation configuration and plotting', async ({ page }) => {
   // Chakra UI buttons often have `data-active` or similar attribute if using ToggleButton?
   // If not, we might need to rely on the fact that the simulation ran without error.
 
+  await page.getByRole('tab', { name: 'Simulation' }).click();
+  const profiles = page.getByLabel('Saved simulation configuration', { exact: true });
+  await expect(profiles.locator('option[value="0"]')).toHaveText('Noise-1 (Noise)');
+  await expect(page.getByLabel('Output Net Name')).toHaveValue('out');
+  await expect(page.getByLabel('Input Source')).toHaveValue('Iin');
+  await expect(page.getByLabel('Steps')).toHaveValue('20');
+
   console.log('Verification Complete');
 });

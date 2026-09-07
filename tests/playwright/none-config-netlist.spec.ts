@@ -8,12 +8,13 @@ test("None simulation config should respect manual edits and not inject content"
   await page.goto("/");
   await page.waitForSelector("text=Schematic");
 
-  // 2. Go to Simulation tab (defaults to None)
+  // 2. Go to Simulation and explicitly enter manual None mode. The demo now
+  // starts with its saved DC profile selected.
   await page.getByLabel("Simulate Circuit").click();
   await page.waitForSelector("text=Simulation Configuration");
-  
-  // Verify "None" is selected
-  await expect(page.getByText("None", { exact: true })).toBeChecked();
+  const noneRadio = page.getByRole("radio", { name: "None" });
+  await page.getByText("None", { exact: true }).click();
+  await expect(noneRadio).toBeChecked();
 
   // 3. Manually edit the netlist
   // We'll add a comment that shouldn't be there by default
@@ -64,7 +65,6 @@ test("None simulation config should respect manual edits and not inject content"
   expect(normalizedTran).toContain(".tran");
 
   // Switch back to None
-  const noneRadio = page.getByRole("radio", { name: "None" });
   await expect(noneRadio).toBeVisible();
   await noneRadio.click({ force: true });
 

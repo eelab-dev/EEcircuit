@@ -45,7 +45,7 @@ test.describe("file lifecycle", () => {
       }>;
       const { appState } = await loadState();
       return [appState.currentSchematic?.componentInstances.length, appState.allSimulationConfigs.length];
-    })).toEqual([9, 0]);
+    })).toEqual([9, 2]);
     const downloadPromise = page.waitForEvent("download");
     await dialog.getByRole("button", { name: "Convert and download" }).click();
     const download = await downloadPromise;
@@ -123,6 +123,9 @@ test.describe("file lifecycle", () => {
       const { appState } = await loadState();
       return [appState.currentSchematic?.componentInstances.length, appState.allSimulationConfigs.length];
     })).toEqual([9, 1]);
+    for (const dismiss of await page.getByRole("button", { name: "Dismiss message" }).all()) {
+      await dismiss.click();
+    }
     await page.getByRole("button", { name: "Simulate Circuit" }).click();
     await expect(page.getByText("Simulation Configuration", { exact: true })).toBeVisible();
   });
@@ -234,6 +237,10 @@ test.describe("file lifecycle", () => {
     if (downloadPath) {
       const saved = JSON.parse(await readFile(downloadPath, "utf8"));
       expect(saved.schema).toBe("EEcircuitV2");
+      expect(saved.simulations).toEqual([
+        { type: "DC", name: "DC-1", source: "vin", start: "0", stop: "1.8", step: "0.01" },
+        { type: "Transient", name: "Transient-1", stopTime: "10m", timeStep: "10u", initialConditions: false },
+      ]);
     }
   });
 });

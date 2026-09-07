@@ -14,6 +14,17 @@ import { correctNgspiceUnits } from "../utils/unitCorrection";
 import { buildToBePlottedCommands } from "../utils/toBePlotted";
 import { extractValidNetsAndComponents } from "../utils/netlistUtils";
 import { isSubcircuitEnd, isSubcircuitStart, parseSpiceLine } from "../utils/spiceLineParser";
+import {
+  areSimulationConfigsEqual,
+  createEmptySimulationConfig,
+  generateSimulationConfigName,
+  isSimulationConfigComplete,
+  isSimulationConfigNameAvailable,
+  normalizeSimulationConfigs,
+  simulationCommandFor,
+  type SimulationConfig,
+  type SimulationConfigType,
+} from "../simulation/simulationProfiles";
 
 let latestParallelRunId = 0;
 
@@ -53,6 +64,9 @@ export interface SimulationState {
   selectedSimType: SimulationType["type"];
   simulationConfig?: SimulationType;
   allSimulationConfigs: SimulationType[];
+  selectedSimulationConfigIndex: number;
+  simulationConfigDrafts: Record<string, SimulationConfig>;
+  lastSelectedSimulationConfigNames: Partial<Record<SimulationConfigType, string>>;
 
   // Bracket operation state
   bracketOperation?: BracketOperation;
@@ -84,6 +98,13 @@ export interface SimulationActions {
   addSimulationConfig: (config: SimulationType) => void;
   updateSimulationConfig: (index: number, config: SimulationType) => void;
   deleteSimulationConfig: (index: number) => void;
+  selectSimulationConfig: (index: number) => void;
+  selectSimulationType: (type: SimulationType["type"]) => void;
+  updateActiveSimulationConfig: (config: SimulationConfig) => void;
+  commitActiveSimulationConfig: () => boolean;
+  saveActiveSimulationConfigAsNew: () => boolean;
+  renameSelectedSimulationConfig: (name: string) => boolean;
+  deleteSelectedSimulationConfig: () => void;
 
   // Bracket operation actions
   setBracketOperation: (bracketOp?: BracketOperation) => void;
@@ -112,15 +133,29 @@ export type SimulationSlice = SimulationState & SimulationActions;
 export const createSimulationSlice: SliceCreator<
   SimulationSlice & StoreWithTab,
   SimulationSlice
-> = (set, get) => ({
+> = (set, get) => {
+  const initialConfigs = normalizeSimulationConfigs(loadSimulationConfigs());
+  const initialConfig = initialConfigs[0];
+  const configKey = (name: string): string => name.trim().toLowerCase();
+  const newDraftKey = (type: SimulationConfigType): string => `@new:${type}`;
+  const refreshDisplayNetlist = (): void => {
+    if ((get() as SimulationSlice).selectedSimType !== "None") {
+      void (get() as SimulationSlice).generateDisplayNetlist();
+    }
+  };
+
+  return ({
   // Initial state
   rawNetlist: "",
   netList: "",
   netListNeedsRefresh: false,
   results: [],
-  selectedSimType: "None",
-  simulationConfig: undefined,
-  allSimulationConfigs: loadSimulationConfigs(),
+  selectedSimType: initialConfig?.type ?? "None",
+  simulationConfig: initialConfig,
+  allSimulationConfigs: initialConfigs,
+  selectedSimulationConfigIndex: initialConfig ? 0 : -1,
+  simulationConfigDrafts: {},
+  lastSelectedSimulationConfigNames: initialConfig ? { [initialConfig.type]: initialConfig.name } : {},
   bracketOperation: undefined,
   isParallelSimulationRunning: false,
   parallelSimulationProgress: {
@@ -131,7 +166,7 @@ export const createSimulationSlice: SliceCreator<
     threads: [],
   },
   parallelSimulationResults: undefined,
-  simulationCommandString: "",
+  simulationCommandString: correctNgspiceUnits(initialConfig ? simulationCommandFor(initialConfig) : ""),
 
   // Netlist and simulation actions
   setRawNetlist: async (netlist: string) => {
@@ -167,8 +202,19 @@ export const createSimulationSlice: SliceCreator<
     }
   },
   setAllSimulationConfigs: (configs) => {
-    set({ allSimulationConfigs: configs });
-    saveSimulationConfigs(configs);
+    const normalized = normalizeSimulationConfigs(configs);
+    const first = normalized[0];
+    set({
+      allSimulationConfigs: normalized,
+      selectedSimulationConfigIndex: first ? 0 : -1,
+      selectedSimType: first?.type ?? "None",
+      simulationConfig: first ?? { type: "None" },
+      simulationCommandString: correctNgspiceUnits(first ? simulationCommandFor(first) : ""),
+      simulationConfigDrafts: {},
+      lastSelectedSimulationConfigNames: first ? { [first.type]: first.name } : {},
+    });
+    saveSimulationConfigs(normalized);
+    refreshDisplayNetlist();
   },
 
   addSimulationConfig: (config) =>
@@ -195,6 +241,214 @@ export const createSimulationSlice: SliceCreator<
       saveSimulationConfigs(newConfigs);
       return { allSimulationConfigs: newConfigs };
     }),
+
+  selectSimulationConfig: (index) => {
+    const state = get() as SimulationSlice;
+    const saved = state.allSimulationConfigs[index];
+    if (!saved || saved.type === "None") return;
+    const active = state.simulationConfigDrafts[configKey(saved.name ?? "")] ?? saved;
+    set({
+      selectedSimulationConfigIndex: index,
+      selectedSimType: active.type,
+      simulationConfig: active,
+      simulationCommandString: correctNgspiceUnits(simulationCommandFor(active)),
+      lastSelectedSimulationConfigNames: {
+        ...state.lastSelectedSimulationConfigNames,
+        [active.type]: active.name,
+      },
+    });
+    refreshDisplayNetlist();
+  },
+
+  selectSimulationType: (type) => {
+    const state = get() as SimulationSlice;
+    if (type === "None") {
+      set({
+        selectedSimulationConfigIndex: -1,
+        selectedSimType: "None",
+        simulationConfig: { type: "None" },
+        simulationCommandString: "",
+      });
+      return;
+    }
+
+    const lastName = state.lastSelectedSimulationConfigNames[type];
+    const pending = state.simulationConfigDrafts[newDraftKey(type)];
+    if (pending && pending.name === lastName) {
+      set({
+        selectedSimulationConfigIndex: -1,
+        selectedSimType: type,
+        simulationConfig: pending,
+        simulationCommandString: correctNgspiceUnits(simulationCommandFor(pending)),
+      });
+      refreshDisplayNetlist();
+      return;
+    }
+
+    let index = lastName
+      ? state.allSimulationConfigs.findIndex((config) => config.type === type && configKey(config.name ?? "") === configKey(lastName))
+      : -1;
+    if (index < 0) index = state.allSimulationConfigs.findIndex((config) => config.type === type);
+    if (index >= 0) {
+      state.selectSimulationConfig(index);
+      return;
+    }
+
+    const reservedConfigs = [...state.allSimulationConfigs, ...Object.values(state.simulationConfigDrafts)];
+    const draft = pending ?? createEmptySimulationConfig(type, reservedConfigs);
+    set({
+      selectedSimulationConfigIndex: -1,
+      selectedSimType: type,
+      simulationConfig: draft,
+      simulationCommandString: correctNgspiceUnits(simulationCommandFor(draft)),
+      simulationConfigDrafts: { ...state.simulationConfigDrafts, [newDraftKey(type)]: draft },
+      lastSelectedSimulationConfigNames: { ...state.lastSelectedSimulationConfigNames, [type]: draft.name },
+    });
+    refreshDisplayNetlist();
+  },
+
+  updateActiveSimulationConfig: (config) => {
+    const state = get() as SimulationSlice;
+    const selected = state.allSimulationConfigs[state.selectedSimulationConfigIndex];
+    const draftKey = selected && selected.type !== "None"
+      ? configKey(selected.name ?? "")
+      : newDraftKey(config.type);
+    const drafts = { ...state.simulationConfigDrafts };
+    if (selected && areSimulationConfigsEqual(config, selected)) delete drafts[draftKey];
+    else drafts[draftKey] = config;
+    set({
+      selectedSimType: config.type,
+      simulationConfig: config,
+      simulationCommandString: correctNgspiceUnits(simulationCommandFor(config)),
+      simulationConfigDrafts: drafts,
+    });
+    refreshDisplayNetlist();
+  },
+
+  commitActiveSimulationConfig: () => {
+    const state = get() as SimulationSlice;
+    const active = state.simulationConfig;
+    if (!active || !isSimulationConfigComplete(active)) return false;
+    const index = state.selectedSimulationConfigIndex;
+    const pendingDrafts = Object.entries(state.simulationConfigDrafts)
+      .filter(([key]) => key.startsWith("@new:") && key !== newDraftKey(active.type))
+      .map(([, config]) => config);
+    if (
+      !isSimulationConfigNameAvailable(active.name ?? "", state.allSimulationConfigs, index) ||
+      !isSimulationConfigNameAvailable(active.name ?? "", pendingDrafts)
+    ) return false;
+
+    const configs = index >= 0
+      ? state.allSimulationConfigs.map((config, candidateIndex) => candidateIndex === index ? active : config)
+      : [...state.allSimulationConfigs, active];
+    const committedIndex = index >= 0 ? index : configs.length - 1;
+    const oldConfig = index >= 0 ? state.allSimulationConfigs[index] : undefined;
+    const drafts = { ...state.simulationConfigDrafts };
+    delete drafts[index >= 0 ? configKey(oldConfig?.type === "None" ? "" : oldConfig?.name ?? "") : newDraftKey(active.type)];
+    set({
+      allSimulationConfigs: configs,
+      selectedSimulationConfigIndex: committedIndex,
+      simulationConfig: active,
+      simulationConfigDrafts: drafts,
+      lastSelectedSimulationConfigNames: { ...state.lastSelectedSimulationConfigNames, [active.type]: active.name },
+    });
+    saveSimulationConfigs(configs);
+    return true;
+  },
+
+  saveActiveSimulationConfigAsNew: () => {
+    const state = get() as SimulationSlice;
+    const active = state.simulationConfig;
+    if (!active || !isSimulationConfigComplete(active)) return false;
+
+    const reservedConfigs = [...state.allSimulationConfigs, ...Object.values(state.simulationConfigDrafts)];
+    const copy: SimulationConfig = {
+      ...active,
+      name: generateSimulationConfigName(active.type, reservedConfigs),
+    };
+    const configs = [...state.allSimulationConfigs, copy];
+    const drafts = { ...state.simulationConfigDrafts };
+    const selected = state.allSimulationConfigs[state.selectedSimulationConfigIndex];
+    if (selected?.type !== "None") delete drafts[configKey(selected?.name ?? "")];
+    else delete drafts[newDraftKey(active.type)];
+
+    set({
+      allSimulationConfigs: configs,
+      selectedSimulationConfigIndex: configs.length - 1,
+      selectedSimType: copy.type,
+      simulationConfig: copy,
+      simulationCommandString: correctNgspiceUnits(simulationCommandFor(copy)),
+      simulationConfigDrafts: drafts,
+      lastSelectedSimulationConfigNames: { ...state.lastSelectedSimulationConfigNames, [copy.type]: copy.name },
+    });
+    saveSimulationConfigs(configs);
+    refreshDisplayNetlist();
+    return true;
+  },
+
+  renameSelectedSimulationConfig: (name) => {
+    const state = get() as SimulationSlice;
+    const index = state.selectedSimulationConfigIndex;
+    const saved = state.allSimulationConfigs[index];
+    const trimmed = name.trim();
+    const pendingDrafts = Object.entries(state.simulationConfigDrafts)
+      .filter(([key]) => key.startsWith("@new:"))
+      .map(([, config]) => config);
+    if (
+      !saved || saved.type === "None" ||
+      !isSimulationConfigNameAvailable(trimmed, state.allSimulationConfigs, index) ||
+      !isSimulationConfigNameAvailable(trimmed, pendingDrafts)
+    ) return false;
+    const oldKey = configKey(saved.name ?? "");
+    const active = state.simulationConfig?.type === "None" || !state.simulationConfig
+      ? saved
+      : state.simulationConfig;
+    const renamed = { ...active, name: trimmed } as SimulationConfig;
+    const configs = state.allSimulationConfigs.map((config, candidateIndex) => candidateIndex === index
+      ? { ...saved, name: trimmed } as SimulationConfig
+      : config);
+    const drafts = { ...state.simulationConfigDrafts };
+    if (drafts[oldKey]) {
+      delete drafts[oldKey];
+      drafts[configKey(trimmed)] = renamed;
+    }
+    set({
+      allSimulationConfigs: configs,
+      simulationConfig: renamed,
+      simulationConfigDrafts: drafts,
+      lastSelectedSimulationConfigNames: { ...state.lastSelectedSimulationConfigNames, [renamed.type]: trimmed },
+    });
+    saveSimulationConfigs(configs);
+    return true;
+  },
+
+  deleteSelectedSimulationConfig: () => {
+    const state = get() as SimulationSlice;
+    const index = state.selectedSimulationConfigIndex;
+    if (index < 0) return;
+    const deleted = state.allSimulationConfigs[index];
+    const configs = state.allSimulationConfigs.filter((_, candidateIndex) => candidateIndex !== index);
+    const drafts = { ...state.simulationConfigDrafts };
+    if (deleted?.type !== "None") delete drafts[configKey(deleted?.name ?? "")];
+    const nextIndex = configs.length ? (index > 0 ? index - 1 : 0) : -1;
+    const nextSaved = nextIndex >= 0 ? configs[nextIndex] : undefined;
+    const next = nextSaved?.type !== "None"
+      ? drafts[configKey(nextSaved?.name ?? "")] ?? nextSaved
+      : undefined;
+    set({
+      allSimulationConfigs: configs,
+      selectedSimulationConfigIndex: nextIndex,
+      selectedSimType: next?.type ?? "None",
+      simulationConfig: next ?? { type: "None" },
+      simulationCommandString: correctNgspiceUnits(next ? simulationCommandFor(next) : ""),
+      simulationConfigDrafts: drafts,
+      lastSelectedSimulationConfigNames: next
+        ? { ...state.lastSelectedSimulationConfigNames, [next.type]: next.name }
+        : state.lastSelectedSimulationConfigNames,
+    });
+    saveSimulationConfigs(configs);
+    refreshDisplayNetlist();
+  },
 
   // Bracket operation actions
   setBracketOperation: (bracketOp) => set({ bracketOperation: bracketOp }),
@@ -569,4 +823,5 @@ export const createSimulationSlice: SliceCreator<
       if (isCurrentRun()) actions.setParallelSimulationRunning(false);
     }
   },
-});
+  });
+};
