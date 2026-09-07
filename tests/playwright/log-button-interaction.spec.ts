@@ -169,7 +169,9 @@ test('Log button interaction', async ({ page }, testInfo) => {
 
   // Cursor position is shared by both canvases, while snap mode remains
   // independently controllable for each plot.
-  await page.getByRole('button', { name: 'Show', exact: true }).click();
+  const cursorToggle = page.getByRole('button', { name: 'Toggle cursor', exact: true });
+  await cursorToggle.click();
+  await expect(cursorToggle).toHaveAttribute('aria-pressed', 'true');
   const surfaces = page.locator('.plot-surface');
   const firstSurface = surfaces.nth(0);
   const firstBox = await firstSurface.boundingBox();

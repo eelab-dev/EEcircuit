@@ -1,12 +1,17 @@
 <script lang="ts">
   import { Menu } from "@ark-ui/svelte/menu";
-  import { Pencil, Play, Plus, Trash2, X } from "@lucide/svelte";
+  import { CopyPlus, Pencil, Play, Trash2, X } from "@lucide/svelte";
   import type { SimulationAC, SimulationDC, SimulationNoise, SimulationTransient, SimulationType } from "../../types/commonTypes";
   import { detectNetsFromNetlist } from "../../utils/netDetection";
   import { detectSourcesFromNetlist, getDefaultSource, validateSourceInNetlist } from "../../utils/sourceDetection";
   import { correctNgspiceUnits } from "../../utils/unitCorrection";
   import { formatToBePlottedLabel } from "../../utils/toBePlotted";
   import { executeSimulation } from "../../controllers/simulationController";
+  import {
+    areSimulationConfigsEqual,
+    isSimulationConfigComplete,
+    type SimulationConfig,
+  } from "../../simulation/simulationProfiles";
   import { appState, getAppState } from "../state/appState.svelte";
   import MonacoEditor from "./MonacoEditor.svelte";
 
@@ -14,11 +19,12 @@
   let editorValue = $state(appState.netList);
   let lastGeneratedNetlist = $state(appState.netList);
   let running = $state(false);
-  let selectedConfigIndex = $state(-1);
-  let isAddingConfig = $state(false);
-  let newConfigName = $state("");
   let editingConfigIndex = $state(-1);
   let editingConfigName = $state("");
+  let configNameError = $state("");
+  let selectedConfigValue = $derived(
+    appState.selectedSimulationConfigIndex >= 0 ? String(appState.selectedSimulationConfigIndex) : "",
+  );
   let monacoEditor = $state<{ getValue: () => string }>();
 
   let dc = $state<SimulationDC>({ type: "DC", name: "DC-1", source: "", start: "", stop: "", step: "" });
@@ -29,57 +35,21 @@
   let sources = $derived(detectSourcesFromNetlist(appState.netList));
   let nets = $derived(detectNetsFromNetlist(appState.netList));
   let busy = $derived(running || appState.isParallelSimulationRunning);
+  let activeConfigComplete = $derived(!!appState.simulationConfig && isSimulationConfigComplete(appState.simulationConfig));
+  let activeConfigModified = $derived.by(() => {
+    const active = appState.simulationConfig;
+    const saved = appState.allSimulationConfigs[appState.selectedSimulationConfigIndex];
+    return !!active && !!saved && !areSimulationConfigsEqual(active, saved);
+  });
 
   function configName(config: SimulationType, index: number) {
     return config.type !== "None" && config.name?.trim() ? config.name : `Config ${index + 1}`;
-  }
-
-  function generateDefaultConfigName(type: Exclude<SimulationType["type"], "None">) {
-    const names = new Set(appState.allSimulationConfigs
-      .filter((config): config is Exclude<SimulationType, { type: "None" }> => config.type !== "None" && config.type === type)
-      .map((config) => config.name?.trim())
-      .filter((name): name is string => !!name));
-    let counter = 1;
-    while (names.has(`${type}-${counter}`)) counter += 1;
-    return `${type}-${counter}`;
-  }
-
-  function createEmptyConfig(type: Exclude<SimulationType["type"], "None">, name = generateDefaultConfigName(type)): SimulationType {
-    if (type === "DC") return { type, name, source: "", start: "", stop: "", step: "" };
-    if (type === "AC") return { type, name, source: "", frequencyStart: "", frequencyStop: "", stepNumber: "", sweepType: "dec" };
-    if (type === "Transient") return { type, name, stopTime: "", timeStep: "", initialConditions: false };
-    return { type, name, netName: "", source: "", steps: "", startFreq: "", stopFreq: "", sweepType: "dec" };
   }
 
   function resolveStaleSource(config: SimulationType, netlist: string): SimulationType {
     if (config.type === "None" || config.type === "Transient" || !config.source) return config;
     if (validateSourceInNetlist(netlist, config.source)) return config;
     return { ...config, source: getDefaultSource(netlist) } as SimulationType;
-  }
-
-  function isConfigValid(config: SimulationType) {
-    if (config.type === "None") return false;
-    if (config.type === "DC") return !!(config.source.trim() && config.start.trim() && config.stop.trim() && config.step.trim());
-    if (config.type === "AC") return !!(config.source.trim() && config.frequencyStart.trim() && config.frequencyStop.trim() && config.stepNumber.trim());
-    if (config.type === "Transient") return !!(config.stopTime.trim() && config.timeStep.trim());
-    return !!(config.netName.trim() && config.source.trim() && config.steps.trim() && config.startFreq.trim() && config.stopFreq.trim());
-  }
-
-  function commandFor(config: SimulationType) {
-    if (config.type === "DC") return `.dc ${config.source} ${config.start} ${config.stop} ${config.step}`;
-    if (config.type === "AC") return `.ac ${config.sweepType} ${config.stepNumber} ${config.frequencyStart} ${config.frequencyStop}`;
-    if (config.type === "Transient") return `.tran ${config.timeStep} ${config.stopTime}`;
-    if (config.type === "Noise") return `.noise v(${config.netName}) ${config.source} ${config.sweepType} ${config.steps} ${config.startFreq} ${config.stopFreq}`;
-    return "";
-  }
-
-  function activateConfig(config: SimulationType, index: number) {
-    config = resolveStaleSource(config, appState.netList);
-    if (index >= 0 && appState.allSimulationConfigs[index] !== config) appState.updateSimulationConfig(index, config);
-    selectedConfigIndex = index;
-    appState.setSelectedSimType(config.type);
-    appState.setSimulationConfig(config);
-    appState.setSimulationCommandString(correctNgspiceUnits(commandFor(config)));
   }
 
   $effect(() => {
@@ -96,9 +66,7 @@
     const currentConfig = appState.simulationConfig;
     const config = currentConfig ? resolveStaleSource(currentConfig, appState.netList) : undefined;
     if (config && config !== currentConfig) {
-      appState.setSimulationConfig(config);
-      const index = appState.allSimulationConfigs.findIndex((item) => item === currentConfig || (item.type !== "None" && config.type !== "None" && item.type === config.type && item.name === config.name));
-      if (index >= 0) appState.updateSimulationConfig(index, config);
+      if (config.type !== "None") appState.updateActiveSimulationConfig(config);
     }
     if (config?.type === "DC") {
       dc = { ...config };
@@ -115,119 +83,90 @@
     }
   });
 
-  $effect(() => {
-    const configs = appState.allSimulationConfigs;
-    const config = appState.simulationConfig;
-    if (!config && appState.selectedSimType === "None" && configs.length) {
-      activateConfig(configs[0]!, 0);
-      return;
-    }
-    if (!config || config.type === "None") {
-      if (!configs.length) selectedConfigIndex = -1;
-      return;
-    }
-    const matchingIndex = configs.findIndex((item) => item.type !== "None" && item.type === config.type && item.name === config.name);
-    if (matchingIndex >= 0 && matchingIndex !== selectedConfigIndex) selectedConfigIndex = matchingIndex;
-  });
-
-  function publish(config: SimulationType, command: string) {
-    appState.setSimulationConfig(config);
-    appState.setSimulationCommandString(correctNgspiceUnits(command));
-    if (config.type === "None") return;
-    if (!isConfigValid(config)) return;
-    if (selectedConfigIndex >= 0 && selectedConfigIndex < appState.allSimulationConfigs.length) {
-      appState.updateSimulationConfig(selectedConfigIndex, config);
-    } else {
-      appState.addSimulationConfig(config);
-      selectedConfigIndex = appState.allSimulationConfigs.length - 1;
-    }
+  function publish(config: SimulationType) {
+    if (config.type !== "None") appState.updateActiveSimulationConfig(config);
   }
 
   function selectType(type: SimulationType["type"]) {
+    cancelEditingConfigName();
     if (type === "None") {
       // A generated-netlist prop update can still be queued while Monaco is
       // showing the user's manual text. Snapshot the live model so entering
       // manual mode cancels that stale update instead of overwriting the UI.
       editorValue = monacoEditor?.getValue() ?? editorValue;
-      selectedConfigIndex = -1;
-      appState.setSelectedSimType(type);
-      appState.setSimulationConfig({ type: "None" });
-      appState.setSimulationCommandString("");
+      appState.selectSimulationType(type);
       return;
     }
-    const savedIndex = appState.allSimulationConfigs.findIndex((config) => config.type === type && isConfigValid(config));
-    if (savedIndex >= 0) activateConfig(appState.allSimulationConfigs[savedIndex]!, savedIndex);
-    else activateConfig(createEmptyConfig(type), -1);
+    appState.selectSimulationType(type);
   }
 
   function selectConfig(value: string) {
-    if (value === "add-new") { isAddingConfig = true; return; }
+    cancelEditingConfigName();
     if (!value) { selectType(appState.selectedSimType); return; }
     const index = Number.parseInt(value, 10);
-    const config = appState.allSimulationConfigs[index];
-    if (config) activateConfig(config, index);
-  }
-
-  function cancelAddingConfig() {
-    isAddingConfig = false;
-    newConfigName = "";
-  }
-
-  function addNewConfig() {
-    if (appState.selectedSimType === "None") { cancelAddingConfig(); return; }
-    const name = newConfigName.trim() || generateDefaultConfigName(appState.selectedSimType);
-    const config = createEmptyConfig(appState.selectedSimType, name);
-    appState.addSimulationConfig(config);
-    activateConfig(config, appState.allSimulationConfigs.length - 1);
-    cancelAddingConfig();
+    appState.selectSimulationConfig(index);
   }
 
   function startEditingConfigName() {
-    const config = appState.allSimulationConfigs[selectedConfigIndex];
+    const config = appState.allSimulationConfigs[appState.selectedSimulationConfigIndex];
     if (!config || config.type === "None") return;
-    editingConfigIndex = selectedConfigIndex;
+    editingConfigIndex = appState.selectedSimulationConfigIndex;
     editingConfigName = config.name ?? "";
+    configNameError = "";
   }
 
   function cancelEditingConfigName() {
     editingConfigIndex = -1;
     editingConfigName = "";
+    configNameError = "";
   }
 
   function saveEditedConfigName() {
     const name = editingConfigName.trim();
-    const config = appState.allSimulationConfigs[editingConfigIndex];
-    if (!name || !config || config.type === "None") { cancelEditingConfigName(); return; }
-    const renamed = { ...config, name } as SimulationType;
-    appState.updateSimulationConfig(editingConfigIndex, renamed);
-    if (editingConfigIndex === selectedConfigIndex) activateConfig(renamed, editingConfigIndex);
+    if (!name) {
+      configNameError = "Enter a configuration name.";
+      return;
+    }
+    if (!appState.renameSelectedSimulationConfig(name)) {
+      configNameError = "Configuration names must be unique.";
+      return;
+    }
     cancelEditingConfigName();
   }
 
   function deleteSelectedConfig() {
-    if (selectedConfigIndex < 0) return;
-    const deletedIndex = selectedConfigIndex;
-    const remaining = appState.allSimulationConfigs.filter((_, index) => index !== deletedIndex);
-    appState.setAllSimulationConfigs(remaining);
+    if (appState.selectedSimulationConfigIndex < 0) return;
+    appState.deleteSelectedSimulationConfig();
     cancelEditingConfigName();
-    if (!remaining.length) {
-      selectedConfigIndex = -1;
-      appState.setSelectedSimType("None");
-      appState.setSimulationConfig({ type: "None" });
-      appState.setSimulationCommandString("");
-      return;
-    }
-    const nextIndex = deletedIndex > 0 ? deletedIndex - 1 : 0;
-    activateConfig(remaining[nextIndex]!, nextIndex);
   }
 
-  function updateDc() { publish(dc, `.dc ${dc.source} ${dc.start} ${dc.stop} ${dc.step}`); }
-  function updateAc() { publish(ac, `.ac ${ac.sweepType} ${ac.stepNumber} ${ac.frequencyStart} ${ac.frequencyStop}`); }
-  function updateTransient() { publish(transient, `.tran ${transient.timeStep} ${transient.stopTime}`); }
-  function updateNoise() { publish(noise, `.noise v(${noise.netName}) ${noise.source} ${noise.sweepType} ${noise.steps} ${noise.startFreq} ${noise.stopFreq}`); }
+  function updateDc() { publish(dc); }
+  function updateAc() { publish(ac); }
+  function updateTransient() { publish(transient); }
+  function updateNoise() { publish(noise); }
+
+  function activeFormConfig(): SimulationConfig | undefined {
+    if (appState.selectedSimType === "DC") return dc;
+    if (appState.selectedSimType === "AC") return ac;
+    if (appState.selectedSimType === "Transient") return transient;
+    if (appState.selectedSimType === "Noise") return noise;
+    return undefined;
+  }
+
+  function saveAsNew() {
+    const active = activeFormConfig();
+    if (!active) return;
+    appState.updateActiveSimulationConfig(active);
+    appState.saveActiveSimulationConfigAsNew();
+  }
 
   async function run() {
     if (busy) return;
+    const active = activeFormConfig();
+    if (active) {
+      appState.updateActiveSimulationConfig(active as SimulationConfig);
+      if (isSimulationConfigComplete(active)) appState.commitActiveSimulationConfig();
+    }
     running = true;
     try { await executeSimulation(getAppState, editorValue); }
     catch (error) {
@@ -267,35 +206,38 @@
         <section class="config-manager" aria-label="Saved simulation configurations">
           <header class="config-manager-header">
             <strong>Saved Configurations</strong>
-            <button class="compact-icon-button" aria-label="Add configuration" title="Add configuration" onclick={() => isAddingConfig = true}><Plus size={16} /></button>
           </header>
-
-          {#if isAddingConfig}
-            <div class="config-manager-row">
-              <input
-                aria-label="New configuration name"
-                placeholder="Config name"
-                bind:value={newConfigName}
-                onkeydown={(event) => { if (event.key === "Enter") addNewConfig(); else if (event.key === "Escape") cancelAddingConfig(); }}
-              />
-              <button onclick={addNewConfig}>Add</button>
-              <button onclick={cancelAddingConfig}>Cancel</button>
-            </div>
-          {:else}
-            <div class="config-manager-row config-selection-row">
-              <select aria-label="Saved simulation configuration" onchange={(event) => selectConfig(event.currentTarget.value)}>
-                <option value="" selected={selectedConfigIndex < 0}>Select Configuration</option>
-                {#each appState.allSimulationConfigs as config, index (`${index}-${config.type}-${config.type === "None" ? "" : config.name ?? ""}`)}
-                  <option value={index} selected={selectedConfigIndex === index}>{configName(config, index)} ({config.type})</option>
-                {/each}
-                <option value="add-new">+ Add New</option>
-              </select>
-              {#if selectedConfigIndex >= 0}
-                <button class="compact-icon-button" aria-label="Edit configuration name" title="Edit configuration name" onclick={startEditingConfigName}><Pencil size={15} /></button>
-                <button class="compact-icon-button danger-icon-button" aria-label="Delete configuration" title="Delete configuration" onclick={deleteSelectedConfig}><Trash2 size={15} /></button>
+          <div class="config-manager-row config-selection-row">
+            <select
+              aria-label="Saved simulation configuration"
+              bind:value={selectedConfigValue}
+              onchange={(event) => selectConfig(event.currentTarget.value)}
+            >
+              {#if appState.selectedSimulationConfigIndex < 0 && appState.simulationConfig && appState.simulationConfig.type !== "None"}
+                <option value="">{appState.simulationConfig.name} ({appState.simulationConfig.type}, unsaved)</option>
+              {:else}
+                <option value="">Select Configuration</option>
               {/if}
-            </div>
+              {#each appState.allSimulationConfigs as config, index (`${index}-${config.type}-${config.type === "None" ? "" : config.name ?? ""}`)}
+                <option value={String(index)}>{configName(config, index)} ({config.type})</option>
+              {/each}
+            </select>
+            {#if appState.selectedSimulationConfigIndex >= 0}
+              <button class="compact-icon-button" aria-label="Edit configuration name" title="Edit configuration name" onclick={startEditingConfigName}><Pencil size={15} /></button>
+              <button class="compact-icon-button danger-icon-button" aria-label="Delete configuration" title="Delete configuration" onclick={deleteSelectedConfig}><Trash2 size={15} /></button>
+            {/if}
+          </div>
+
+          {#if activeConfigModified}
+            <p class="config-modified-status" role="status">Modified. Run updates this profile; Save as new keeps the original.</p>
           {/if}
+          <button
+            class="save-as-new-button"
+            aria-label={appState.selectedSimulationConfigIndex >= 0 ? "Save as new profile" : "Save profile"}
+            title={activeConfigComplete ? undefined : "Complete all simulation fields before saving this profile"}
+            disabled={!activeConfigComplete}
+            onclick={saveAsNew}
+          ><CopyPlus size={16} />{appState.selectedSimulationConfigIndex >= 0 ? "Save as new" : "Save profile"}</button>
 
           {#if editingConfigIndex >= 0}
             <div class="config-manager-row">
@@ -309,6 +251,7 @@
               <button onclick={cancelEditingConfigName}>Cancel</button>
             </div>
           {/if}
+          {#if configNameError}<p class="config-name-error" role="alert">{configNameError}</p>{/if}
         </section>
       {/if}
 

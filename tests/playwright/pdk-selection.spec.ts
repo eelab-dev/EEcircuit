@@ -153,13 +153,17 @@ test("NFET properties filter models, enforce GF180 geometry, and show process fa
 test("process changes preserve manual netlists in None mode", async ({ page }) => {
   await waitForSchematic(page, "/?clean=true");
   await page.getByRole("button", { name: "Simulate Circuit" }).click();
-  await expect(page.getByText("None", { exact: true })).toBeChecked();
+  const noneRadio = page.getByRole("radio", { name: "None" });
+  await page.getByText("None", { exact: true }).click();
+  await expect(noneRadio).toBeChecked();
   const editor = page.locator(".monaco-editor").first();
   await editor.click();
   await page.keyboard.press("Meta+A");
   await page.keyboard.press("Control+A");
   await page.keyboard.press("Delete");
   await page.keyboard.insertText("* PDK manual sentinel\nV1 out 0 1\nR1 out 0 1k\n.op\n.end");
+  await expect.poll(async () => ((await page.locator(".view-lines").textContent()) ?? "").replace(/\u00a0/g, " "))
+    .toContain("* PDK manual sentinel");
   const before = ((await page.locator(".view-lines").textContent()) ?? "").replace(/\u00a0/g, " ");
 
   await openSimulationSettings(page);

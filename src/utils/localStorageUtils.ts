@@ -1,4 +1,5 @@
 import { SimulationType } from "../types/commonTypes";
+import { createDemoSimulationConfigs, normalizeSimulationConfigs } from "../simulation/simulationProfiles";
 
 const STORAGE_KEY_SIMULATION_CONFIGS = "eecircuit-simulation-configs";
 
@@ -20,8 +21,8 @@ export const saveSimulationConfigs = (configs: SimulationType[]): void => {
 export const loadSimulationConfigs = (): SimulationType[] => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY_SIMULATION_CONFIGS);
-    if (!stored) {
-      return [];
+    if (stored === null) {
+      return createDemoSimulationConfigs();
     }
 
     const parsed = JSON.parse(stored);
@@ -31,7 +32,7 @@ export const loadSimulationConfigs = (): SimulationType[] => {
       return [];
     }
 
-    return parsed.filter((config): config is SimulationType => {
+    return normalizeSimulationConfigs(parsed.filter((config): config is SimulationType => {
       return (
         typeof config === "object" &&
         config !== null &&
@@ -42,7 +43,7 @@ export const loadSimulationConfigs = (): SimulationType[] => {
           config.type === "Transient" ||
           config.type === "Noise")
       );
-    });
+    }));
   } catch (error) {
     console.warn("Failed to load simulation configs from localStorage:", error);
     return [];

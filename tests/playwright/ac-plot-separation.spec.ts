@@ -116,5 +116,12 @@ test('strict verify ac plot signal separation', async ({ page }) => {
   const phaseVar = page.getByText(/v\(output\)\[phase\]|v\(out\)\[phase\]/i).first();
   await expect(phaseVar).toBeVisible();
 
+  await page.getByRole('tab', { name: 'Simulation' }).click();
+  const profiles = page.getByLabel('Saved simulation configuration', { exact: true });
+  await expect(profiles.locator('option[value="2"]')).toHaveText('AC-1 (AC)');
+  await expect(page.getByLabel('Start Frequency')).toHaveValue('1');
+  await expect(page.getByLabel('Stop Frequency')).toHaveValue('1G');
+  await expect(page.getByLabel('Steps Number')).toHaveValue('20');
+
   console.log('Verification Complete');
 });

@@ -8,7 +8,7 @@ const loadExCircuit = async (page: Page) => {
   await page.waitForLoadState('domcontentloaded');
   await expect(page.locator('[data-canvas-ready="true"]')).toBeVisible({ timeout: 15000 });
   await page.locator('input[type="file"]').first().setInputFiles(path.resolve('tests/test-circuit-tia.json'));
-  await waitForImportedCircuit(page, { configCount: 0, componentNames: ['X1', 'CL'] });
+  await waitForImportedCircuit(page, { configCount: 0, componentNames: ['X1', 'Cf'] });
   // Go to Simulate Tab
   const simulateBtn = page.getByLabel("Simulate Circuit");
   await expect(simulateBtn).toBeEnabled({ timeout: 10000 });

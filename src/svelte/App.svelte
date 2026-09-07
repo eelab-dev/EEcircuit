@@ -21,6 +21,7 @@
     type ProcessId,
   } from "../pdk/processCatalog";
   import { incompatibleFetReplacements } from "../pdk/netlistResolver";
+  import { createDemoSimulationConfigs } from "../simulation/simulationProfiles";
 
   type SchematicExports = {
     loadSchematic: (value: unknown) => Promise<void>;
@@ -210,12 +211,8 @@
       }
       if (data.simulations?.length) {
         appState.setAllSimulationConfigs(data.simulations);
-        appState.setSelectedSimType(data.simulations[0]!.type);
-        appState.setSimulationConfig(data.simulations[0]);
       } else {
         appState.setAllSimulationConfigs([]);
-        appState.setSimulationConfig(undefined);
-        appState.setSelectedSimType("None");
       }
     } catch (error) {
       appState.addMessage({ text: error instanceof Error ? error.message : "Unable to load the selected file.", type: "error", category: "Schematic", mLevel: "user" });
@@ -418,8 +415,16 @@
   <p>Start with an empty canvas or load the demonstration circuit. Unsaved work will be replaced.</p>
   {#snippet footer()}
     <button onclick={() => newDialogOpen = false}>Cancel</button>
-    <button class="primary-button" onclick={async () => { await schematic.loadSchematic(createDemoSchematic(appState.processId)); newDialogOpen = false; }}>Load Demo</button>
-    <button class="danger-button" onclick={async () => { await schematic.clear(); newDialogOpen = false; }}>New Empty Schematic</button>
+    <button class="primary-button" onclick={async () => {
+      await schematic.loadSchematic(createDemoSchematic(appState.processId));
+      appState.setAllSimulationConfigs(createDemoSimulationConfigs());
+      newDialogOpen = false;
+    }}>Load Demo</button>
+    <button class="danger-button" onclick={async () => {
+      await schematic.clear();
+      appState.setAllSimulationConfigs([]);
+      newDialogOpen = false;
+    }}>New Empty Schematic</button>
   {/snippet}
 </Modal>
 
