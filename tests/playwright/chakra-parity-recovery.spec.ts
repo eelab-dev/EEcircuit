@@ -80,8 +80,9 @@ test("plot zoom, cursor, snap mode, and GPU line instances survive tab changes",
   const box = await canvas.boundingBox();
   if (!box) throw new Error("Plot canvas is missing");
 
-  const showCursor = page.locator(".plot-toolbar").getByRole("button", { name: "Show", exact: true });
-  await showCursor.click();
+  const cursorToggle = page.locator(".plot-toolbar").getByRole("button", { name: "Toggle cursor" });
+  await cursorToggle.click();
+  await expect(cursorToggle).toHaveAttribute("aria-pressed", "true");
   await canvas.hover({ position: { x: box.width * 0.45, y: box.height * 0.45 } });
   const cursor = page.locator(".crosshair-v").first();
   await expect(cursor).toBeVisible();
@@ -111,7 +112,7 @@ test("plot zoom, cursor, snap mode, and GPU line instances survive tab changes",
 
   await page.getByRole("tab", { name: "simulation config" }).click();
   await page.getByRole("tab", { name: "plot display" }).click();
-  await expect(page.locator(".plot-toolbar").getByRole("button", { name: "Hide", exact: true })).toBeVisible();
+  await expect(page.locator(".plot-toolbar").getByRole("button", { name: "Toggle cursor" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Toggle cursor snapping" }).first()).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Reset zoom" }).first()).toBeVisible();
   await expect(canvas).toHaveAttribute("data-rebuild-count", rebuildsBeforeHover ?? "");
