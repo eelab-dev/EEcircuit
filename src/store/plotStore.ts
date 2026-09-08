@@ -4,6 +4,7 @@ import { ToBePlotted, SimulationType } from "../types/commonTypes";
 import { areToBePlottedItemsEqual } from "../utils/toBePlotted";
 import type { AggregatedResult } from "../simulation/resultAggregator";
 import { transformResultForComplexData } from "../utils/complexUtils";
+import type { ACMagnitudeDisplay } from "../utils/plotUnits";
 
 // Define the store interface that includes both plot and tab slices
 interface StoreWithTabAndSimulation {
@@ -58,6 +59,7 @@ export interface PlotState {
   // Track previous variable names for schema change detection
   previousVariableNames: string[] | null;
   lineThickness: number;
+  acMagnitudeDisplay: ACMagnitudeDisplay;
   showInternalSignals: boolean;
 }
 
@@ -108,6 +110,7 @@ export interface PlotActions {
   resetVariableSelections: () => void;
   resetPlotState: () => void;
   setLineThickness: (thickness: number) => void;
+  setACMagnitudeDisplay: (display: ACMagnitudeDisplay) => void;
   setShowInternalSignals: (show: boolean) => void;
 
   // Combined actions for common operations
@@ -150,6 +153,7 @@ export const createPlotSlice: SliceCreator<
   canvas2IsLogY: false,
   previousVariableNames: null,
   lineThickness: 3,
+  acMagnitudeDisplay: "decade",
   showInternalSignals: false,
 
   // To-be-plotted selection actions
@@ -245,6 +249,7 @@ export const createPlotSlice: SliceCreator<
   }),
 
   setLineThickness: (thickness) => set({ lineThickness: thickness }),
+  setACMagnitudeDisplay: (display) => set({ acMagnitudeDisplay: display }),
   setShowInternalSignals: (show) => set({ showInternalSignals: show }),
 
   // Combined actions for common operations

@@ -1,10 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { axisTransform, plotCoordinate, plotSegments } from "../../src/utils/plotCoordinates";
-import { formatPlotValue, plotAxisLabel, plotUnit } from "../../src/utils/plotUnits";
+import { formatPlotValue, magnitudeDisplayUnit, plotAxisLabel, plotUnit } from "../../src/utils/plotUnits";
 import { createPlotSlice } from "../../src/store/plotStore";
 import type { ResultType } from "eecircuit-engine";
 
 describe("plot coordinate and unit contract", () => {
+  it("uses amplitude dB with explicit references and no engineering prefixes", () => {
+    expect(formatPlotValue(Math.SQRT1_2, "dBV")).toBe("-3.010 dBV");
+    expect(formatPlotValue(1, "dBV")).toBe("0.000 dBV");
+    expect(formatPlotValue(1e-3, "dBA")).toBe("-60.000 dBA");
+    expect(formatPlotValue(1e6, "dBV")).toBe("120.000 dBV");
+    expect(formatPlotValue(1e-3, "dBV, dBA")).toBe("-60.000 dBV / -60.000 dBA");
+    expect(magnitudeDisplayUnit("V", true)).toBe("dBV");
+    expect(magnitudeDisplayUnit("A", true)).toBe("dBA");
+    expect(magnitudeDisplayUnit("°", true)).toBe("°");
+    expect(magnitudeDisplayUnit("Hz", true)).toBe("Hz");
+    expect(magnitudeDisplayUnit("V", false)).toBe("V");
+  });
   it("centers constant linear phase and logarithmic magnitude", () => {
     for (const value of [-90, -3, 2, 0]) {
       const { scale, offset } = axisTransform(value, value);
@@ -56,6 +68,7 @@ describe("accepted plot simulation state", () => {
     expect(state).toMatchObject({ plotGeneration: 1, plotAnalysis: "AC", isLogX: true, isLogY1: true, isLogY2: false });
     state.toggleLogX();
     state.toggleLogY1();
+    state.setACMagnitudeDisplay("dB");
     state.selectedSimType = "Transient";
     state.handleNewResults([acResult], { switchToPlot: false });
     expect(state).toMatchObject({ plotGeneration: 1, plotAnalysis: "AC", isLogX: false, isLogY1: false });
@@ -64,5 +77,6 @@ describe("accepted plot simulation state", () => {
     state.selectedSimType = "AC";
     state.handleNewResults([acResult]);
     expect(state).toMatchObject({ plotGeneration: 2, isLogX: true, isLogY1: true });
+    expect(state.acMagnitudeDisplay).toBe("dB");
   });
 });

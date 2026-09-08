@@ -63,6 +63,7 @@
   let tempResetVariableSelections = $state(appState.resetVariableSelectionsOnNewSim);
   let tempShowInternalSignals = $state(appState.showInternalSignals);
   let tempLineThickness = $state(appState.lineThickness);
+  let tempACMagnitudeDisplay = $state(appState.acMagnitudeDisplay);
   let tempResetPlotState = $state(appState.resetPlotStateOnNewSim);
   let tempProcessId = $state<ProcessId>(appState.processId);
   let tempGf180Corner = $state<Gf180Corner>(appState.gf180Corner);
@@ -156,6 +157,7 @@
     tempResetVariableSelections = appState.resetVariableSelectionsOnNewSim;
     tempShowInternalSignals = appState.showInternalSignals;
     tempLineThickness = appState.lineThickness;
+    tempACMagnitudeDisplay = appState.acMagnitudeDisplay;
     tempResetPlotState = appState.resetPlotStateOnNewSim;
     tempProcessId = appState.processId;
     tempGf180Corner = appState.gf180Corner;
@@ -181,6 +183,7 @@
     appState.setResetVariableSelectionsOnNewSim(tempResetVariableSelections);
     appState.setShowInternalSignals(tempShowInternalSignals);
     appState.setLineThickness(tempLineThickness);
+    appState.setACMagnitudeDisplay(tempACMagnitudeDisplay);
     appState.setResetPlotStateOnNewSim(tempResetPlotState);
     appState.setProcessId(tempProcessId);
     appState.setGf180Corner(tempGf180Corner);
@@ -568,6 +571,13 @@
       {:else}
         <header class="settings-panel-heading"><h3>Plotting</h3><p>Choose signal visibility and the default plot appearance.</p></header>
         <div class="settings-list">
+          <label class="setting-row">
+            <span class="setting-copy"><strong>AC logarithmic magnitude</strong><small>Decade shows V/A. dB shows 20 log₁₀ of magnitude relative to 1 V (dBV) or 1 A (dBA). Frequency stays in Hz; phase stays in degrees.</small></span>
+            <select aria-label="AC logarithmic magnitude" bind:value={tempACMagnitudeDisplay}>
+              <option value="decade">Decade (V/A)</option>
+              <option value="dB">Decibels (dB)</option>
+            </select>
+          </label>
           <label class="setting-row setting-row-inline">
             <span class="setting-copy"><strong>Show internal subcircuit signals</strong><small>Include internal subcircuit nodes in the variable list.</small></span>
             <input type="checkbox" bind:checked={tempShowInternalSignals} />

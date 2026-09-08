@@ -10,6 +10,7 @@ export interface AxisParams {
   isLogX: boolean;
   isLogY: boolean;
   unit?: string;
+  decibels?: boolean;
 }
 
 export const renderXAxis = ({ canvas, scale, offset, isDarkMode, isLogX }: AxisParams): void => {
@@ -26,7 +27,7 @@ export const renderXAxis = ({ canvas, scale, offset, isDarkMode, isLogX }: AxisP
   updateX(ctx, width, height, scale, offset, isDarkMode, isLogX);
 };
 
-export const renderYAxis = ({ canvas, scale, offset, isDarkMode, isLogY, unit }: AxisParams): void => {
+export const renderYAxis = ({ canvas, scale, offset, isDarkMode, isLogY, unit, decibels = false }: AxisParams): void => {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
@@ -37,7 +38,7 @@ export const renderYAxis = ({ canvas, scale, offset, isDarkMode, isLogY, unit }:
   const width = canvas.width;
   const height = canvas.height;
 
-  updateY(ctx, width, height, scale, offset, isDarkMode, isLogY, unit);
+  updateY(ctx, width, height, scale, offset, isDarkMode, isLogY, unit, decibels);
 };
 
   // Function to generate nice tick intervals for linear axes
@@ -343,7 +344,8 @@ const updateY = (
   offset: number,
   isDarkMode: boolean,
   isLogY: boolean,
-  unit?: string
+  unit?: string,
+  decibels = false
 ) => {
     // Clear the canvas
     ctx2d.clearRect(0, 0, width, height);
@@ -385,7 +387,11 @@ const updateY = (
 
     // Generate tick values based on whether Y axis is in log scale
     let tickValues: number[];
-    if (isLogY) {
+    if (isLogY && decibels) {
+      // Geometry remains log10(magnitude). Choose evenly spaced dB labels in
+      // 20*log10 coordinates, then map their positions back to that same geometry.
+      tickValues = generateNiceTicks(minValue * 20, maxValue * 20, maxTicks).map((value) => value / 20);
+    } else if (isLogY) {
       tickValues = generateLogTicks(minValue, maxValue, maxTicks);
     } else {
       tickValues = generateNiceTicks(minValue, maxValue, maxTicks);
@@ -405,7 +411,7 @@ const updateY = (
       if (y >= 0 && y <= height) {
         // For log scale, convert back to linear for display
         const displayValue = convertLogToLinearSpace(tickValue, isLogY);
-        const text = unit === "°" ? displayValue.toFixed(2) : unitConvert2string(displayValue, 2);
+        const text = isLogY && decibels ? (tickValue * 20).toFixed(2) : unit === "°" ? displayValue.toFixed(2) : unitConvert2string(displayValue, 2);
 
         ctx2d.fillText(
           text,

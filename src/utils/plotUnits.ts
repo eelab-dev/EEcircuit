@@ -1,5 +1,12 @@
 import { formatEngineering } from "../components/ScientificPlot/utils/formatUtils";
 
+export type ACMagnitudeDisplay = "decade" | "dB";
+
+/** Absolute amplitudes use explicit 1 V / 1 A references, not an assumed input gain. */
+export function magnitudeDisplayUnit(unit: string, decibels: boolean): string {
+  return decibels && (unit === "V" || unit === "A") ? `dB${unit}` : unit;
+}
+
 /** Phase suffixes override the engine's original voltage/current type. */
 export function plotUnit(name: string, type?: string): string {
   const lower = name.toLowerCase();
@@ -13,6 +20,7 @@ export function plotUnit(name: string, type?: string): string {
 
 export function formatPlotValue(value: number, unit: string, decimals = 3): string {
   if (unit.includes(", ")) return unit.split(", ").map((item) => formatPlotValue(value, item, decimals)).join(" / ");
+  if (unit === "dBV" || unit === "dBA") return `${(20 * Math.log10(value)).toFixed(decimals)} ${unit}`;
   const text = unit === "°" ? value.toFixed(decimals) : formatEngineering(value, decimals);
   if (!unit) return text;
   const prefix = unit === "°" ? undefined : text.match(/([TGMkμmnpf])$/)?.[1];

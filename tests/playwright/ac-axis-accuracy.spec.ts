@@ -3,6 +3,133 @@ import type { Locator } from "@playwright/test";
 import type { AppStore } from "../../src/store/appStoreTypes";
 import type { runSingleSimulation } from "../../src/simulation/parallelSimulation";
 import type { ResultType } from "eecircuit-engine";
+import { gf180Opamp3p3 } from "../../src/Simulate/subcircuits/gf180Opamp3p3";
+import { writeFile } from "node:fs/promises";
+
+async function chooseMagnitudeDisplay(page: Page, display: "decade" | "dB") {
+  await page.getByRole("button", { name: "Simulation Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Plotting Settings", exact: true }).click();
+  await page.getByLabel("AC logarithmic magnitude", { exact: true }).selectOption(display);
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await settle(page);
+}
+
+async function resultSnapshot(page: Page) {
+  return page.evaluate(async () => {
+    const load = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{ appState: AppStore }>;
+    return JSON.stringify((await load()).appState.results);
+  });
+}
+
+test("dB setting preserves the RC curve and zoom with correct ticks and cursor", async ({ page }, testInfo) => {
+  await start(page);
+  await runRC(page);
+  const before = await resultSnapshot(page);
+  const canvas = page.locator('.plot-webgl').first();
+  const pixels = () => canvas.evaluate((node) => (node as HTMLCanvasElement).toDataURL());
+  const originalPixels = await pixels();
+  await chooseMagnitudeDisplay(page, 'dB');
+  expect(await pixels()).toBe(originalPixels);
+  expect(await resultSnapshot(page)).toBe(before);
+  await expect(page.locator('.plot-y-axis').first()).toHaveAttribute('aria-label', 'Magnitude (dBV)');
+  await expect(page.locator('.plot-y-axis').nth(1)).toHaveAttribute('aria-label', 'Phase (°)');
+  const drawing = await page.locator('.plot-y-axis').first().evaluate((node) => ({ height: (node as HTMLCanvasElement).height, ticks: (node as AxisCanvas).recordedTicks ?? [] }));
+  expect(drawing.ticks.length).toBeGreaterThan(2);
+  const minDb = -10 * Math.log10(1 + 1000 ** 2);
+  const maxDb = -10 * Math.log10(1 + .01 ** 2);
+  for (const tick of drawing.ticks) {
+    expect(tick.text).toMatch(/^-?\d+\.\d{2}$/);
+    expect(tick.tickY! / drawing.height).toBeCloseTo(1 - (Number(tick.text) - minDb) / (maxDb - minDb), 4);
+  }
+  await page.getByRole('button', { name: 'Toggle cursor', exact: true }).click();
+  await page.getByRole('button', { name: 'Toggle cursor snapping' }).first().click();
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Missing plot');
+  await page.mouse.move(box.x + box.width * .4, box.y + box.height * .1);
+  await expect(page.locator('.crosshair-label').first()).toContainText(/Y: -3\.0\d+ dBV/);
+  await page.screenshot({ path: testInfo.outputPath('rc-decibels.png') });
+  await canvas.dispatchEvent('wheel', { deltaY: -100, ctrlKey: true });
+  const zoom = await scales(page);
+  await chooseMagnitudeDisplay(page, 'decade');
+  expect(await scales(page)).toEqual(zoom);
+  await expect(page.locator('.plot-y-axis').first()).toHaveAttribute('aria-label', 'Magnitude (V)');
+  await chooseMagnitudeDisplay(page, 'dB');
+  await page.getByRole('button', { name: 'Log Y1', exact: true }).click();
+  await expect(page.locator('.plot-y-axis').first()).toHaveAttribute('aria-label', 'Magnitude (V)');
+  await page.getByRole('button', { name: 'Log Y1', exact: true }).click();
+  await expect(page.locator('.plot-y-axis').first()).toHaveAttribute('aria-label', 'Magnitude (dBV)');
+  expect(await resultSnapshot(page)).toBe(before);
+});
+
+test("GF180 follower and open-loop AC decay matches raw engine samples in decade and dB", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  await start(page);
+  for (const openLoop of [false, true]) {
+    // Preserve DC feedback/bias while opening the AC loop in the diagnostic case.
+    // This is a controlled comparison, not a reconstruction of an unknown reference testbench.
+    const netlist = `GF180 ${openLoop ? 'open-loop' : 'follower'} AC diagnostic
+.include modelcard.GF180.typical
+${gf180Opamp3p3}
+VDD vdd 0 3.3
+VIN inp 0 DC 1.65 AC 1
+${openLoop ? 'LFB out inv 1e12\nCFB inv bias 1e12\nVCM bias 0 1.65' : ''}
+XAMP inp ${openLoop ? 'inv' : 'out'} out vdd 0 gf180_opamp_3p3
+RLOAD out 0 1k
+CLOAD out 0 10p
+.save v(inp) v(out)
+.ac dec 40 1 10G
+.end`;
+    const data = await page.evaluate(async (netlist) => {
+      const loadState = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{ appState: AppStore }>;
+      const loadRunner = new Function("return import('/src/simulation/parallelSimulation.ts')") as () => Promise<{ runSingleSimulation: typeof runSingleSimulation }>;
+      const { appState } = await loadState();
+      appState.selectSimulationType('None');
+      appState.setNetList(netlist);
+      appState.clearResults();
+      const response = await (await loadRunner()).runSingleSimulation(netlist);
+      if (!response.success || !response.result || response.result.dataType !== 'complex') throw new Error(JSON.stringify(response));
+      const frequency = response.result.data[0]!.values.map((v) => v.real);
+      const output = response.result.data.find((s) => s.name === 'v(out)')!.values;
+      const raw = output.map((v) => ({ magnitude: Math.hypot(v.real, v.img), phase: Math.atan2(v.img, v.real) * 180 / Math.PI }));
+      appState.handleNewResults([response.result]);
+      appState.setCanvas1SelectedVariables(['v(out)[mag]']);
+      appState.setCanvas2SelectedVariables(['v(out)[phase]']);
+      return { frequency, raw, plotted: appState.results[0] };
+    }, netlist);
+    const magnitudes = data.raw.map((p) => p.magnitude);
+    expect(magnitudes.every((m) => Number.isFinite(m) && m > 0)).toBe(true);
+    const plottedMagnitudes = data.plotted!.data.find((s) => s.name === 'v(out)[mag]')!.values as number[];
+    magnitudes.forEach((m, i) => expect(plottedMagnitudes[i]! / m).toBeCloseTo(1, 12));
+    if (!openLoop) expect(magnitudes[0]).toBeCloseTo(1, 2);
+    else expect(magnitudes[0]).toBeGreaterThan(1000);
+    const snapshot = await resultSnapshot(page);
+    const min = Math.min(...magnitudes.map(Math.log10));
+    const max = Math.max(...magnitudes.map(Math.log10));
+    const summaries = [1, 10, 100, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10].map((f) => {
+      const i = data.frequency.findIndex((value) => Math.abs(value / f - 1) < 1e-6);
+      expect(i).toBeGreaterThanOrEqual(0);
+      return { frequency: data.frequency[i], magnitude: magnitudes[i], dB: 20 * Math.log10(magnitudes[i]!), phase: data.raw[i]!.phase };
+    });
+    for (const display of ['decade', 'dB'] as const) {
+      await chooseMagnitudeDisplay(page, display);
+      const canvas = page.locator('.plot-webgl').first();
+      // Check actual GPU pixels against independently calculated raw-complex magnitudes.
+      for (let i = 8; i < data.frequency.length - 8; i += 8) {
+        const x = Math.log10(data.frequency[i]!) / 10;
+        const y = 1 - (Math.log10(magnitudes[i]!) - min) / (max - min);
+        if (y < .02 || y > .98) continue;
+        expect(await inkAt(canvas, x, y), `${openLoop ? 'open' : 'follower'} ${display} at ${data.frequency[i]} Hz`).toBe(true);
+      }
+      await expect(page.locator('.plot-y-axis').first()).toHaveAttribute('aria-label', display === 'dB' ? 'Magnitude (dBV)' : 'Magnitude (V)');
+      await expect(page.locator('.plot-y-axis').nth(1)).toHaveAttribute('aria-label', 'Phase (°)');
+      await page.screenshot({ path: testInfo.outputPath(`gf180-${openLoop ? 'open-loop' : 'follower'}-${display}.png`) });
+      expect(await resultSnapshot(page)).toBe(snapshot);
+    }
+    const numericalPath = testInfo.outputPath(`gf180-${openLoop ? 'open-loop' : 'follower'}-numerical.json`);
+    await writeFile(numericalPath, JSON.stringify({ netlist, summaries, ...data }, null, 2));
+    await testInfo.attach('GF180 numerical response', { path: numericalPath, contentType: 'application/json' });
+  }
+});
 
 type Tick = { text: string; x: number; y: number; tickX?: number; tickY?: number };
 type AxisCanvas = HTMLCanvasElement & { recordedTicks?: Tick[] };
@@ -257,6 +384,14 @@ test("AC bracket curves retain units and manual scales during progressive update
   await expect(page.getByRole('button', { name: 'Log Y1', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Log Y2', exact: true })).toHaveAttribute('aria-pressed', 'false');
   await page.screenshot({ path: testInfo.outputPath('ac-bracket-log-axes.png') });
+  const bracketSnapshot = await resultSnapshot(page);
+  await chooseMagnitudeDisplay(page, 'dB');
+  for (const gain of [Math.SQRT1_2, 1 / Math.sqrt(5)]) {
+    expect(await inkAt(page.locator('.plot-webgl').first(), .4, 1 - (Math.log10(gain) - min) / (max - min))).toBe(true);
+  }
+  await expect(page.locator('.plot-y-axis').first()).toHaveAttribute('aria-label', 'Magnitude (dBV)');
+  expect(await resultSnapshot(page)).toBe(bracketSnapshot);
+  await page.screenshot({ path: testInfo.outputPath('ac-bracket-decibels.png') });
   await page.getByRole('button', { name: 'Log X', exact: true }).click();
   await page.getByRole('button', { name: 'Log Y1', exact: true }).click();
   // Replay a progressive publication deterministically after manual interaction.
@@ -267,6 +402,7 @@ test("AC bracket curves retain units and manual scales during progressive update
   });
   await expect(page.getByRole('button', { name: 'Log X', exact: true })).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByRole('button', { name: 'Log Y1', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('.plot-y-axis').first()).toHaveAttribute('aria-label', 'Magnitude (V)');
   await page.evaluate(async () => {
     const load = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{ appState: AppStore }>;
     const { appState } = await load();
@@ -276,4 +412,47 @@ test("AC bracket curves retain units and manual scales during progressive update
   });
   await expect(page.locator('.plot-y-axis').first()).toHaveAttribute('aria-label', 'Magnitude (A)');
   await page.screenshot({ path: testInfo.outputPath('ac-bracket-current-units.png') });
+});
+
+test("dB constant current, zero magnitude and invalid gaps keep physical rendering", async ({ page }) => {
+  await start(page);
+  await runRC(page);
+  await chooseMagnitudeDisplay(page, 'dB');
+  const publish = async (values: number[]) => {
+    await page.evaluate(async (values) => {
+      const load = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{ appState: AppStore }>;
+      const { appState } = await load();
+      appState.clearResults();
+      appState.selectSimulationType('AC');
+      appState.handleNewResults([{
+        header: 'AC current fixture', dataType: 'real', numPoints: values.length, numVariables: 3,
+        variableNames: ['frequency', 'i(v1)[mag]', 'i(v1)[phase]'],
+        data: [
+          { name: 'frequency', type: 'frequency', values: values.map((_, i) => 10 ** i) },
+          { name: 'i(v1)[mag]', type: 'current', values },
+          { name: 'i(v1)[phase]', type: 'current', values: values.map(() => -90) },
+        ],
+      }]);
+    }, values);
+    await settle(page);
+  };
+  await publish([.001, .001, .001, .001, .001, .001]);
+  const canvas = page.locator('.plot-webgl').first();
+  await expect(page.locator('.plot-y-axis').first()).toHaveAttribute('aria-label', 'Magnitude (dBA)');
+  expect(await inkAt(canvas, .5, .5)).toBe(true);
+  expect(await inkAt(page.locator('.plot-webgl').nth(1), .5, .5)).toBe(true);
+  await page.getByRole('button', { name: 'Toggle cursor', exact: true }).click();
+  await page.getByRole('button', { name: 'Toggle cursor snapping' }).first().click();
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Missing plot');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.locator('.crosshair-label').first()).toContainText('Y: -60.000 dBA');
+  await publish([.001, .001, 0, -1, .001, .001]);
+  expect(await inkAt(canvas, .1, .5)).toBe(true);
+  expect(await inkAt(canvas, .5, .5)).toBe(false);
+  expect(await inkAt(canvas, .9, .5)).toBe(true);
+  await page.mouse.move(box.x + box.width * .51, box.y + box.height / 2);
+  await expect(page.locator('[data-snap-marker]').first()).toBeHidden();
+  await publish([0, 0, 0, 0]);
+  await expect(page.getByText('No plottable samples')).toBeVisible();
 });

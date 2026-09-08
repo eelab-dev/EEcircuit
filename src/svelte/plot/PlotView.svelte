@@ -110,6 +110,7 @@
           <WebglPlotCanvas
             {result}
             generation={appState.plotGeneration}
+            acMagnitudeDisplay={appState.acMagnitudeDisplay}
             canvasId={1}
             selectedVariables={selectedForCanvas1()}
             isDarkMode={appState.isDarkMode}
@@ -134,6 +135,7 @@
             <WebglPlotCanvas
               {result}
               generation={appState.plotGeneration}
+              acMagnitudeDisplay={appState.acMagnitudeDisplay}
               canvasId={2}
               selectedVariables={appState.canvas2SelectedVariables}
               isDarkMode={appState.isDarkMode}

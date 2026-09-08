@@ -9,7 +9,7 @@
   import { renderXAxis, renderYAxis } from "../../components/ScientificPlot/plotcanvas/axis/axisRenderer";
   import { generatePlotColor } from "../../components/ScientificPlot/plotcanvas/styling/colorUtils";
   import { axisTransform, plotCoordinate, plotSegments, type SharedPlotTransform } from "../../utils/plotCoordinates";
-  import { plotUnit, plotAxisLabel, formatPlotValue } from "../../utils/plotUnits";
+  import { plotUnit, plotAxisLabel, formatPlotValue, magnitudeDisplayUnit, type ACMagnitudeDisplay } from "../../utils/plotUnits";
   import { interpolateLineAtX } from "../../utils/cursorSnap";
 
   type PlotLine = LineConfig & { variableName: string; parameterIndex?: number };
@@ -21,6 +21,7 @@
     isDarkMode,
     isLogX,
     isLogY,
+    acMagnitudeDisplay,
     inputProfile,
     lineThickness,
     canvasId,
@@ -40,6 +41,7 @@
     isDarkMode: boolean;
     isLogX: boolean;
     isLogY: boolean;
+    acMagnitudeDisplay: ACMagnitudeDisplay;
     inputProfile: "mouse" | "trackpad" | "touchscreen";
     lineThickness: number;
     canvasId: number;
@@ -72,6 +74,7 @@
   let snapPointVisible = false;
   let isZoomed = $state(false);
   let hasVisibleData = $state(false);
+  let decibels = $derived(isLogY && acMagnitudeDisplay === "dB" && selectedVariables.length > 0 && selectedVariables.every((name) => name.endsWith("[mag]") && ["V", "A"].includes(plotUnit(name, result.data.find((series) => series.name === name)?.type))));
   let xUnit = $derived(plotUnit(result.variableNames[0] ?? "", result.data[0]?.type));
   let yUnits = $derived(selectedVariables.map(unitForVariable));
   let yUnit = $derived([...new Set(yUnits.filter(Boolean))].join(", "));
@@ -79,7 +82,7 @@
   let yTitle = $derived(plotAxisLabel(yUnits.length && yUnits.every((unit) => unit === "°") ? "Phase" : selectedVariables.some((name) => name.endsWith("[mag]")) ? "Magnitude" : "Value", yUnits));
 
   function unitForVariable(name: string): string {
-    return plotUnit(name, result.data.find((series) => series.name === name)?.type);
+    return magnitudeDisplayUnit(plotUnit(name, result.data.find((series) => series.name === name)?.type), decibels);
   }
 
   function compatibleTransform() {
@@ -178,7 +181,7 @@
 
   function renderAxes() {
     renderXAxis({ canvas: xAxis, scale: scales.scaleX, offset: scales.offsetX, isDarkMode, isLogX, isLogY });
-    renderYAxis({ canvas: yAxis, scale: scales.scaleY, offset: scales.offsetY, isDarkMode, isLogX, isLogY, unit: yUnit });
+    renderYAxis({ canvas: yAxis, scale: scales.scaleY, offset: scales.offsetY, isDarkMode, isLogX, isLogY, unit: yUnit, decibels });
   }
 
   function clampOffset(scaleX: number, offsetX: number) {
@@ -527,7 +530,7 @@
     bracketData;
     bracketData?.length;
     JSON.stringify(selectedVariables);
-    generation; isLogX; isLogY; resizeVersion;
+    generation; isLogX; isLogY; decibels; resizeVersion;
     const frame = requestAnimationFrame(rebuild);
     return () => cancelAnimationFrame(frame);
   });
