@@ -9,6 +9,7 @@ export interface AxisParams {
   isDarkMode: boolean;
   isLogX: boolean;
   isLogY: boolean;
+  unit?: string;
 }
 
 export const renderXAxis = ({ canvas, scale, offset, isDarkMode, isLogX }: AxisParams): void => {
@@ -25,7 +26,7 @@ export const renderXAxis = ({ canvas, scale, offset, isDarkMode, isLogX }: AxisP
   updateX(ctx, width, height, scale, offset, isDarkMode, isLogX);
 };
 
-export const renderYAxis = ({ canvas, scale, offset, isDarkMode, isLogY }: AxisParams): void => {
+export const renderYAxis = ({ canvas, scale, offset, isDarkMode, isLogY, unit }: AxisParams): void => {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
@@ -36,7 +37,7 @@ export const renderYAxis = ({ canvas, scale, offset, isDarkMode, isLogY }: AxisP
   const width = canvas.width;
   const height = canvas.height;
 
-  updateY(ctx, width, height, scale, offset, isDarkMode, isLogY);
+  updateY(ctx, width, height, scale, offset, isDarkMode, isLogY, unit);
 };
 
   // Function to generate nice tick intervals for linear axes
@@ -341,7 +342,8 @@ const updateY = (
   scale: number,
   offset: number,
   isDarkMode: boolean,
-  isLogY: boolean
+  isLogY: boolean,
+  unit?: string
 ) => {
     // Clear the canvas
     ctx2d.clearRect(0, 0, width, height);
@@ -403,12 +405,13 @@ const updateY = (
       if (y >= 0 && y <= height) {
         // For log scale, convert back to linear for display
         const displayValue = convertLogToLinearSpace(tickValue, isLogY);
-        const text = unitConvert2string(displayValue, 2);
+        const text = unit === "°" ? displayValue.toFixed(2) : unitConvert2string(displayValue, 2);
 
         ctx2d.fillText(
           text,
           5 * (window.devicePixelRatio || 1),
-          y + textHeight / 3 // Offset text vertically to center it on the tick
+          // Keep endpoint labels inside the canvas; the tick itself stays at the exact data position.
+          Math.max(textHeight, Math.min(height - 3 * scaleFactor, y + textHeight / 3))
         );
 
         // Draw tick mark at exact position

@@ -196,7 +196,7 @@ test('Log button interaction', async ({ page }, testInfo) => {
   await page.mouse.move(firstBox.x + firstBox.width * 0.3, firstBox.y + firstBox.height * 0.45);
   await expect(snapMarker).toBeVisible();
   await expect(snapMarker).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-  await expect(coordinatePanel).toContainText(/X: .*(m|μ|n|p|f|k|M|G|T|0), Y: /);
+  await expect(coordinatePanel).toContainText(/X: .* [munpfkMGTμ]?s, Y: /);
   const leftSnapX = Number(await snapMarker.getAttribute('data-snap-x'));
   await page.mouse.move(firstBox.x + firstBox.width * 0.7, firstBox.y + firstBox.height * 0.45);
   await expect.poll(async () => Number(await snapMarker.getAttribute('data-snap-x'))).toBeGreaterThan(60);

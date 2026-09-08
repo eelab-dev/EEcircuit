@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { SharedPlotTransform } from "../../utils/plotCoordinates";
   import { onMount } from "svelte";
   import { ChevronRight, Download, Pin, PinOff, SlidersHorizontal } from "@lucide/svelte";
   import { filterInternalSignals } from "../../components/ScientificPlot/utils/resultFiltering";
@@ -16,12 +17,12 @@
   let snapCanvas1 = $state(false);
   let snapCanvas2 = $state(false);
   let emphasized = $state(0);
-  let sharedXTransform = $state<{ scaleX: number; offsetX: number; revision: number } | undefined>();
+  let sharedXTransform = $state<SharedPlotTransform | undefined>();
   let filteredResults = $derived(filterInternalSignals(appState.results, appState.showInternalSignals));
   let result = $derived(filteredResults[0]);
   let variables = $derived(result?.variableNames.slice(1) ?? []);
-  let acMode = $derived(appState.selectedSimType === "AC" || /^\s*\.ac\s+/im.test(appState.netList));
-  let noiseMode = $derived(appState.selectedSimType === "Noise" || /^\s*\.noise\s+/im.test(appState.netList));
+  let acMode = $derived(appState.plotAnalysis === "AC");
+  let noiseMode = $derived(appState.plotAnalysis === "Noise");
   let canvasCount = $derived(acMode ? 2 : noiseMode ? 1 : appState.numCanvases);
   let canvas1Available = $derived(acMode ? variables.filter((name) => !name.toLowerCase().includes("[phase]")) : variables);
   let canvas2Available = $derived(acMode ? variables.filter((name) => name.toLowerCase().includes("[phase]")) : variables);
@@ -76,6 +77,14 @@
   });
 
   $effect(() => {
+    // A transform belongs to one simulation and one uninterrupted X-axis mode.
+    appState.plotGeneration;
+    appState.isLogX;
+    sharedXTransform = undefined;
+    sharedCursorX = null;
+  });
+
+  $effect(() => {
     const count = appState.bracketOperationResults?.parameterValues?.length ?? 0;
     if (!count) emphasized = 0;
     else if (emphasized >= count) emphasized = count - 1;
@@ -100,6 +109,7 @@
           {#if canvasCount === 2}<h3>{acMode ? "Magnitude" : "Plot 1"}</h3>{/if}
           <WebglPlotCanvas
             {result}
+            generation={appState.plotGeneration}
             canvasId={1}
             selectedVariables={selectedForCanvas1()}
             isDarkMode={appState.isDarkMode}
@@ -123,6 +133,7 @@
             <h3>{acMode ? "Phase" : "Plot 2"}</h3>
             <WebglPlotCanvas
               {result}
+              generation={appState.plotGeneration}
               canvasId={2}
               selectedVariables={appState.canvas2SelectedVariables}
               isDarkMode={appState.isDarkMode}

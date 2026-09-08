@@ -8,13 +8,15 @@
   import { BRACKET_PLOT_STYLES, getBracketTransparency } from "../../components/ScientificPlot/bracketPlotStyles";
   import { renderXAxis, renderYAxis } from "../../components/ScientificPlot/plotcanvas/axis/axisRenderer";
   import { generatePlotColor } from "../../components/ScientificPlot/plotcanvas/styling/colorUtils";
-  import { formatEngineering } from "../../components/ScientificPlot/utils/formatUtils";
+  import { axisTransform, plotCoordinate, plotSegments, type SharedPlotTransform } from "../../utils/plotCoordinates";
+  import { plotUnit, plotAxisLabel, formatPlotValue } from "../../utils/plotUnits";
   import { interpolateLineAtX } from "../../utils/cursorSnap";
 
   type PlotLine = LineConfig & { variableName: string; parameterIndex?: number };
 
   let {
     result,
+    generation,
     selectedVariables,
     isDarkMode,
     isLogX,
@@ -33,6 +35,7 @@
     hoveredVariable,
   }: {
     result: ResultType;
+    generation: number;
     selectedVariables: string[];
     isDarkMode: boolean;
     isLogX: boolean;
@@ -41,8 +44,8 @@
     lineThickness: number;
     canvasId: number;
     emphasizedPlotIndex?: number;
-    externalXTransform?: { scaleX: number; offsetX: number; revision: number };
-    onXTransform?: (transform: { scaleX: number; offsetX: number }) => void;
+    externalXTransform?: SharedPlotTransform;
+    onXTransform?: (transform: Omit<SharedPlotTransform, "revision">) => void;
     cursorEnabled: boolean;
     externalCursorX: number | null;
     onCursorX?: (x: number | null) => void;
@@ -64,8 +67,26 @@
   let cursorLabel: HTMLOutputElement;
   let interactionHintElement: HTMLElement;
   let localCursorVisible = false;
+  let lastCursorPoint: { x: number; y: number } | null = null;
+  let renderedGeneration = -1;
   let snapPointVisible = false;
   let isZoomed = $state(false);
+  let hasVisibleData = $state(false);
+  let xUnit = $derived(plotUnit(result.variableNames[0] ?? "", result.data[0]?.type));
+  let yUnits = $derived(selectedVariables.map(unitForVariable));
+  let yUnit = $derived([...new Set(yUnits.filter(Boolean))].join(", "));
+  let xTitle = $derived(plotAxisLabel(xUnit === "Hz" ? "Frequency" : xUnit === "s" ? "Time" : (result.variableNames[0] ?? "X"), [xUnit]));
+  let yTitle = $derived(plotAxisLabel(yUnits.length && yUnits.every((unit) => unit === "°") ? "Phase" : selectedVariables.some((name) => name.endsWith("[mag]")) ? "Magnitude" : "Value", yUnits));
+
+  function unitForVariable(name: string): string {
+    return plotUnit(name, result.data.find((series) => series.name === name)?.type);
+  }
+
+  function compatibleTransform() {
+    return externalXTransform?.generation === generation && externalXTransform.logX === isLogX
+      ? externalXTransform : undefined;
+  }
+
   const colorCache = new Map<string, [number, number, number, number]>();
   let renderedLines: PlotLine[] = [];
   let scales = { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
@@ -129,7 +150,9 @@
             points[index * 2 + 1] = yValues[index] ?? 0;
           }
           const metadata = { variableName: name, parameterIndex: sweep.parameterIndex };
-          lines.push({ points, ...styleForLine(metadata), enabled: true, ...metadata });
+          for (const segment of plotSegments(points, isLogX, isLogY)) {
+            lines.push({ points: segment, ...styleForLine(metadata), enabled: true, ...metadata });
+          }
         }
       }
       return lines;
@@ -146,14 +169,16 @@
         points[index * 2 + 1] = Number(yValues[index] ?? 0);
       }
       const metadata = { variableName: name };
-      lines.push({ points, ...styleForLine(metadata), enabled: true, ...metadata });
+      for (const segment of plotSegments(points, isLogX, isLogY)) {
+        lines.push({ points: segment, ...styleForLine(metadata), enabled: true, ...metadata });
+      }
     }
     return lines;
   }
 
   function renderAxes() {
     renderXAxis({ canvas: xAxis, scale: scales.scaleX, offset: scales.offsetX, isDarkMode, isLogX, isLogY });
-    renderYAxis({ canvas: yAxis, scale: scales.scaleY, offset: scales.offsetY, isDarkMode, isLogX, isLogY });
+    renderYAxis({ canvas: yAxis, scale: scales.scaleY, offset: scales.offsetY, isDarkMode, isLogX, isLogY, unit: yUnit });
   }
 
   function clampOffset(scaleX: number, offsetX: number) {
@@ -169,12 +194,14 @@
     scales = { ...next, scaleX, offsetX: clampOffset(scaleX, next.offsetX) };
     canvas.dataset.scaleX = String(scales.scaleX);
     canvas.dataset.offsetX = String(scales.offsetX);
+    canvas.dataset.scaleY = String(scales.scaleY);
+    canvas.dataset.offsetY = String(scales.offsetY);
     plot.setGlobalTransform([scales.scaleX, scales.scaleY], [scales.offsetX, scales.offsetY]);
     clearCanvas(gl, [0, 0, 0, 0]);
     plot.draw();
     renderAxes();
     isZoomed = scales.scaleX > baseScales.scaleX * 1.0001;
-    if (notify) onXTransform?.({ scaleX: scales.scaleX, offsetX: scales.offsetX });
+    if (notify) onXTransform?.({ scaleX: scales.scaleX, offsetX: scales.offsetX, generation, logX: isLogX });
   }
 
   function resetZoom() {
@@ -201,7 +228,7 @@
     const previousScales = { ...scales };
     rebuildCount += 1;
     canvas.dataset.rebuildCount = String(rebuildCount);
-    const schema = JSON.stringify([result.variableNames, selectedVariables, isLogX, isLogY]);
+    const schema = JSON.stringify([generation, result.variableNames[0], isLogX]);
     const preserveXView = renderedSchema === schema && previousScales.scaleX > baseScales.scaleX * 1.0001;
     plot?.cleanup();
     const ratio = window.devicePixelRatio || 1;
@@ -213,41 +240,58 @@
     plot = new UnifiedLinePlot(gl, Math.max(1, lines.length));
     plot.initLines(lines.length ? lines : [{ points: new Float32Array([0, 0, 0, 0]), color: [0, 0, 0, 0], enabled: false }]);
     plot.setLogAxis(isLogX, isLogY);
-    const bounds = plot.autoScale();
-    if (bounds) {
-      const xRange = bounds.maxX - bounds.minX;
-      const yRange = bounds.maxY - bounds.minY;
-      scales = {
-        scaleX: xRange > 0 && Number.isFinite(xRange) ? 2 / xRange : 1,
-        scaleY: yRange > 0 && Number.isFinite(yRange) ? 2 / yRange : 1,
-        offsetX: xRange > 0 ? -1 - bounds.minX * (2 / xRange) : 0,
-        offsetY: yRange > 0 ? -1 - bounds.minY * (2 / yRange) : 0,
-      };
-      baseScales = { ...scales };
-      if (externalXTransform) {
-        scales = { ...scales, scaleX: externalXTransform.scaleX, offsetX: clampOffset(externalXTransform.scaleX, externalXTransform.offsetX) };
-      } else if (preserveXView) {
-        scales = { ...scales, scaleX: Math.max(scales.scaleX, previousScales.scaleX), offsetX: clampOffset(Math.max(scales.scaleX, previousScales.scaleX), previousScales.offsetX) };
-      }
+    // X is shared even when a canvas has no selected/valid Y samples.
+    const aggregated = result as AggregatedResult;
+    const xSeries = aggregated.bracketPlotData?.length
+      ? aggregated.bracketPlotData.map((sweep) => sweep.data[0]?.values ?? [])
+      : [result.data[0]?.values ?? []];
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const values of xSeries) for (const value of values) {
+      const coordinate = plotCoordinate(Number(value), isLogX);
+      if (coordinate === null) continue;
+      minX = Math.min(minX, coordinate);
+      maxX = Math.max(maxX, coordinate);
     }
+    for (const line of lines) for (let index = 1; index < line.points.length; index += 2) {
+      const coordinate = plotCoordinate(line.points[index]!, isLogY);
+      if (coordinate === null) continue;
+      minY = Math.min(minY, coordinate);
+      maxY = Math.max(maxY, coordinate);
+    }
+    const x = axisTransform(minX, maxX);
+    const y = axisTransform(minY, maxY);
+    scales = { scaleX: x.scale, offsetX: x.offset, scaleY: y.scale, offsetY: y.offset };
+    baseScales = { ...scales };
+    const external = compatibleTransform();
+    const previous = external ?? (preserveXView ? previousScales : undefined);
+    if (previous) {
+      const scaleX = Math.max(baseScales.scaleX, Math.min(baseScales.scaleX * 1_000_000, previous.scaleX));
+      scales = { ...scales, scaleX, offsetX: clampOffset(scaleX, previous.offsetX) };
+    }
+    hasVisibleData = lines.length > 0;
+    if (renderedGeneration !== generation) lastCursorPoint = null;
+    renderedGeneration = generation;
     renderedSchema = schema;
     canvas.dataset.scaleX = String(scales.scaleX);
     canvas.dataset.offsetX = String(scales.offsetX);
+    canvas.dataset.scaleY = String(scales.scaleY);
+    canvas.dataset.offsetY = String(scales.offsetY);
     plot.setGlobalTransform([scales.scaleX, scales.scaleY], [scales.offsetX, scales.offsetY]);
     clearCanvas(gl, [0, 0, 0, 0]);
     plot.draw();
     renderAxes();
     isZoomed = scales.scaleX > baseScales.scaleX * 1.0001;
+    // A queued rebuild may run after a pointer event; refresh the readout instead of hiding it.
+    if (cursorEnabled && lastCursorPoint) updateCrosshair(lastCursorPoint);
+    else {
+      localCursorVisible = false;
+      hideCursorElements();
+    }
   }
 
   function pointerPosition(event: PointerEvent | WheelEvent) {
     const rect = canvas.getBoundingClientRect();
     return { x: ((event.clientX - rect.left) / rect.width) * 2 - 1, y: 1 - ((event.clientY - rect.top) / rect.height) * 2 };
-  }
-
-  function toCoordinate(value: number, logarithmic: boolean) {
-    if (!logarithmic) return Number.isFinite(value) ? value : null;
-    return value > 0 && Number.isFinite(value) ? Math.log10(value) : null;
   }
 
   function fromCoordinate(value: number, logarithmic: boolean) {
@@ -260,6 +304,10 @@
     targetScreenX: number,
     targetScreenY: number,
   ) {
+    // Segments are separated at invalid samples: do not snap to an endpoint across a gap.
+    const firstX = plotCoordinate(line.points[0]!, isLogX);
+    const lastX = plotCoordinate(line.points[line.points.length - 2]!, isLogX);
+    if (firstX === null || lastX === null || targetCoordinateX < Math.min(firstX, lastX) || targetCoordinateX > Math.max(firstX, lastX)) return null;
     const point = interpolateLineAtX(line.points, targetCoordinateX, isLogX, isLogY);
     if (!point) return null;
     const { coordinateX, coordinateY } = point;
@@ -267,18 +315,21 @@
     const screenY = coordinateY * scales.scaleY + scales.offsetY;
     return {
       ...point,
+      unit: unitForVariable(line.variableName),
       distance: Math.hypot(screenX - targetScreenX, screenY - targetScreenY),
     };
   }
 
   function updateCrosshair(point: { x: number; y: number }) {
     if (!cursorEnabled) return;
+    lastCursorPoint = point;
     const coordinateX = (point.x - scales.offsetX) / scales.scaleX;
     const coordinateY = (point.y - scales.offsetY) / scales.scaleY;
     let x = coordinateX;
     let y = coordinateY;
     let rawX = fromCoordinate(x, isLogX);
     let rawY = fromCoordinate(y, isLogY);
+    let cursorUnit = yUnit;
     snapPointVisible = false;
     if (snapToLines) {
       let nearest: ReturnType<typeof closestLinePoint> = null;
@@ -292,13 +343,14 @@
         rawX = nearest.rawX;
         rawY = nearest.rawY;
         snapPointVisible = true;
+        cursorUnit = nearest.unit;
       }
     }
     localCursorVisible = true;
     const screenX = x * scales.scaleX + scales.offsetX;
     const crosshairX = ((screenX + 1) / 2) * 100;
     const crosshairY = ((1 - (y * scales.scaleY + scales.offsetY)) / 2) * 100;
-    renderCursor(crosshairX, crosshairY, `X: ${formatEngineering(rawX)}, Y: ${formatEngineering(rawY)}`, true, snapPointVisible);
+    renderCursor(crosshairX, crosshairY, `X: ${formatPlotValue(rawX, xUnit)}, Y: ${formatPlotValue(rawY, cursorUnit)}`, true, snapPointVisible);
     // Share normalized screen position so dual-canvas cursor guides stay
     // visually aligned even during a resize or transform synchronization frame.
     onCursorX?.(screenX);
@@ -475,7 +527,7 @@
     bracketData;
     bracketData?.length;
     JSON.stringify(selectedVariables);
-    isLogX; isLogY; resizeVersion;
+    generation; isLogX; isLogY; resizeVersion;
     const frame = requestAnimationFrame(rebuild);
     return () => cancelAnimationFrame(frame);
   });
@@ -488,13 +540,16 @@
 
   $effect(() => {
     externalXTransform?.revision;
-    if (externalXTransform && plot && (Math.abs(scales.scaleX - externalXTransform.scaleX) > 1e-9 || Math.abs(scales.offsetX - externalXTransform.offsetX) > 1e-9)) {
-      applyScales({ ...scales, scaleX: externalXTransform.scaleX, offsetX: externalXTransform.offsetX }, false);
+    const external = compatibleTransform();
+    // A pending rebuild still owns the old coordinate space.
+    if (external && renderedSchema === JSON.stringify([generation, result.variableNames[0], isLogX]) && plot && (Math.abs(scales.scaleX - external.scaleX) > 1e-9 || Math.abs(scales.offsetX - external.offsetX) > 1e-9)) {
+      applyScales({ ...scales, scaleX: external.scaleX, offsetX: external.offsetX }, false);
     }
   });
 
   $effect(() => {
     if (!cursorEnabled) {
+      lastCursorPoint = null;
       localCursorVisible = false;
       snapPointVisible = false;
       hideCursorElements();
@@ -503,12 +558,13 @@
     if (localCursorVisible || externalCursorX === null) return;
     const crosshairX = ((externalCursorX + 1) / 2) * 100;
     const coordinateX = (externalCursorX - scales.offsetX) / scales.scaleX;
-    renderCursor(crosshairX, 0, `X: ${formatEngineering(fromCoordinate(coordinateX, isLogX))}`, false, false);
+    renderCursor(crosshairX, 0, `X: ${formatPlotValue(fromCoordinate(coordinateX, isLogX), xUnit)}`, false, false);
   });
 </script>
 
+<div class="plot-axis-titles"><span>{yTitle}</span><span>{xTitle}</span></div>
 <div class="plot-grid" bind:this={host}>
-  <canvas class="plot-y-axis" bind:this={yAxis}></canvas>
+  <canvas class="plot-y-axis" aria-label={yTitle} bind:this={yAxis}></canvas>
   <div class="plot-surface">
     <canvas
       class="plot-webgl"
@@ -539,9 +595,15 @@
       {#if snapToLines}<MapPin size={14} aria-hidden="true" />Snap{:else}<Crosshair size={14} aria-hidden="true" />Free{/if}
     </button>
     {#if isZoomed}<button class="plot-reset-zoom" aria-label="Reset zoom" onclick={resetZoom}>Reset Zoom</button>{/if}
+    {#if !hasVisibleData}<span class="plot-empty">No plottable samples</span>{/if}
     <small bind:this={interactionHintElement} class="plot-interaction-hint">{interactionHint}</small>
     {#if selecting}<span class="zoom-selection" style:left={`${((Math.min(selectionStartX, selectionEndX) + 1) / 2) * 100}%`} style:width={`${(Math.abs(selectionEndX - selectionStartX) / 2) * 100}%`}></span>{/if}
   </div>
   <span class="plot-axis-corner" aria-hidden="true"></span>
-  <canvas class="plot-x-axis" bind:this={xAxis}></canvas>
+  <canvas class="plot-x-axis" aria-label={xTitle} bind:this={xAxis}></canvas>
 </div>
+
+<style>
+  .plot-axis-titles { display: flex; justify-content: space-between; gap: .5rem; padding: .15rem .5rem; color: var(--fg-muted); font-size: .75rem; }
+  .plot-empty { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--fg-muted); pointer-events: none; }
+</style>

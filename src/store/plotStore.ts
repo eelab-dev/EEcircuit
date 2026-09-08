@@ -22,6 +22,8 @@ interface StoreWithTabAndSimulation {
 
 // Plot state and actions
 export interface PlotState {
+  plotGeneration: number;
+  plotAnalysis: "AC" | "Noise" | "Other" | null;
   // To-be-plotted selection
   isToBePlottedMode: boolean;
   toBePlotted: ToBePlotted[];
@@ -124,6 +126,8 @@ export const createPlotSlice: SliceCreator<
   PlotSlice
 > = (set, get) => ({
   // Initial state
+  plotGeneration: 0,
+  plotAnalysis: null,
   isToBePlottedMode: false,
   toBePlotted: [],
   numCanvases: 1,
@@ -207,13 +211,15 @@ export const createPlotSlice: SliceCreator<
   toggleCanvas2LogY: () => set((state: PlotSlice & StoreWithTabAndSimulation) => ({ canvas2IsLogY: !state.canvas2IsLogY })),
 
   // Clear/reset actions
-  clearResults: () => set({
+  clearResults: () => set((state) => ({
+    plotGeneration: state.plotGeneration + 1,
+    plotAnalysis: null,
     results: [],
     bracketOperationResults: undefined,
     isBracketOperationPlot: false,
     currentParameterValues: undefined,
     emphasizedPlotIndex: 0,
-  }),
+  })),
 
   resetVariableSelections: () => set((state: PlotSlice & StoreWithTabAndSimulation) => {
     const availableVariables = state.results[0]?.variableNames.slice(1) ?? [];
@@ -285,6 +291,21 @@ export const createPlotSlice: SliceCreator<
 
 
 
+      // Result identity takes precedence over controls edited while a worker was running.
+      if (firstResult.dataType.toLowerCase() === "complex" || firstResult.variableNames.some((name) => name.endsWith("[phase]"))) {
+        isACSimulation = true;
+        isNoiseSimulation = false;
+      } else if (firstResult.variableNames.some((name) => /^(i|o)noise_spectrum$/i.test(name))) {
+        isACSimulation = false;
+        isNoiseSimulation = true;
+      } else if (firstResult.data[0]?.type === "time" || firstResult.variableNames[0]?.toLowerCase() === "time") {
+        isACSimulation = false;
+        isNoiseSimulation = false;
+      } else if (currentState.plotAnalysis !== null) {
+        isACSimulation = currentState.plotAnalysis === "AC";
+        isNoiseSimulation = currentState.plotAnalysis === "Noise";
+      }
+
       // Data Transformation for AC
       // If we are in AC mode, we expect complex data that needs to be split into mag/phase
       if (isACSimulation) {
@@ -294,6 +315,7 @@ export const createPlotSlice: SliceCreator<
           // Note: Bracket results are already transformed during aggregation if they were complex
       }
 
+      const firstPublication = currentState.plotAnalysis === null;
       const newVariableNames = firstResult.variableNames.slice(1); // Skip first variable (frequency/time)
       const currentVariableNamesJson = JSON.stringify(newVariableNames);
       const prevVariableNamesJson = JSON.stringify(currentState.previousVariableNames || []);
@@ -388,6 +410,8 @@ export const createPlotSlice: SliceCreator<
         isPlottingTabEnabled: true,
         ...(options?.switchToPlot === false ? {} : { mainTabValue: "plot" as const }),
         
+        plotAnalysis: isACSimulation ? "AC" : isNoiseSimulation ? "Noise" : "Other",
+
         // Canvas mode
         numCanvases: numCanvases as 1 | 2,
         isACModeActive,
@@ -402,7 +426,7 @@ export const createPlotSlice: SliceCreator<
         previousVariableNames: newVariableNames,
         
         // Apply log states
-        ...logState,
+        ...(firstPublication ? logState : {}),
 
         // Set bracket operation specific state
         bracketOperationResults: aggregatedResult,
