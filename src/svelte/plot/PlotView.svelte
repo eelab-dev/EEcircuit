@@ -35,9 +35,6 @@
       thread.totalAssignedSimulations > 0 || thread.completedSimulations > 0 || thread.isRunning
     ),
   );
-  let showParallelStatus = $derived(
-    appState.isParallelSimulationRunning || (appState.isBracketOperationPlot && appState.parallelSimulationProgress.total > 0),
-  );
 
   function toggle(list: string[], name: string, setter: (values: string[]) => void) {
     setter(list.includes(name) ? list.filter((item) => item !== name) : [...list, name]);
@@ -180,9 +177,9 @@
     {/if}
   </div>
 
-  {#if showParallelStatus}
+  {#if appState.isParallelSimulationRunning}
     <aside class="plot-progress-overlay" aria-label="Parallel simulation progress">
-      <header><strong>{appState.isParallelSimulationRunning ? "Parallel Simulation" : "Parallel Simulation Complete"}</strong><span>{appState.parallelSimulationProgress.completed}/{appState.parallelSimulationProgress.total}</span></header>
+      <header><strong>Parallel Simulation</strong><span>{appState.parallelSimulationProgress.completed}/{appState.parallelSimulationProgress.total}</span></header>
       {#if appState.bracketOperation}<small>[{appState.bracketOperation.start}:{appState.bracketOperation.step}:{appState.bracketOperation.stop}]{appState.bracketOperation.unit ?? ""}</small>{/if}
       <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax={appState.parallelSimulationProgress.total} aria-valuenow={appState.parallelSimulationProgress.completed}><span style:width={`${progressPercent}%`}></span></div>
       {#if activeThreads.length}

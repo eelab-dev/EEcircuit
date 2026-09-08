@@ -1,16 +1,13 @@
 import { expect, test } from "./fixtures";
+import type { AppStore } from "../../src/store/appStoreTypes";
 
-test("completed bracket simulation shows truthful full per-thread progress", async ({ page }, testInfo) => {
+test("bracket progress hides on completion while results and thread accounting remain available", async ({ page }, testInfo) => {
   test.setTimeout(60_000);
   await page.goto("/");
   await expect(page.locator('[data-canvas-ready="true"]')).toBeVisible({ timeout: 15_000 });
 
   await page.evaluate(async () => {
-    type TestState = {
-      setMaxWebWorkers: (count: number) => void;
-      runParallelSimulation: (netlist: string) => Promise<void>;
-    };
-    const loadState = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{ appState: TestState }>;
+    const loadState = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{ appState: AppStore }>;
     const { appState } = await loadState();
     appState.setMaxWebWorkers(4);
     await appState.runParallelSimulation(`
@@ -22,27 +19,55 @@ R1 out 0 1k
   });
 
   const progressOverlay = page.getByLabel("Parallel simulation progress");
-  await expect(progressOverlay).toContainText("Parallel Simulation Complete");
-  await expect(progressOverlay).toContainText("10/10");
-  await expect(progressOverlay).toContainText("10 successful");
-  await expect(progressOverlay).toContainText("0 failed");
+  await expect(progressOverlay).toHaveCount(0);
+  await expect(page.locator("canvas[data-canvas-id]").first()).toBeVisible();
+  await expect(page.locator(".bracket-slider input")).toBeVisible();
+  await expect(page.locator(".bracket-slider input")).toHaveAttribute("max", "9");
 
-  const threadStates = await progressOverlay.locator(".thread-progress-list > div").evaluateAll((rows) =>
-    rows.map((row) => {
-      const progress = row.querySelector("progress");
-      const text = row.querySelector("span:last-child")?.textContent?.trim() ?? "";
-      const [completed = -1, assigned = -2] = text.split("/").map(Number);
-      return { completed, assigned, value: progress?.value ?? -1, max: progress?.max ?? -2 };
-    }),
-  );
+  const progress = await page.evaluate(async () => {
+    const loadState = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{ appState: AppStore }>;
+    const { appState } = await loadState();
+    return appState.parallelSimulationProgress;
+  });
 
+  expect(progress).toMatchObject({ total: 10, completed: 10, successful: 10, failed: 0 });
+  const threadStates = progress.threads.filter((thread) => thread.totalAssignedSimulations > 0);
   expect(threadStates.length).toBeGreaterThan(0);
   expect(threadStates.length).toBeLessThanOrEqual(4);
-  expect(threadStates.reduce((sum, thread) => sum + thread.completed, 0)).toBe(10);
+  expect(threadStates.reduce((sum, thread) => sum + thread.completedSimulations, 0)).toBe(10);
   for (const thread of threadStates) {
-    expect(thread.completed).toBe(thread.assigned);
-    expect(thread.value).toBe(thread.max);
+    expect(thread.completedSimulations).toBe(thread.totalAssignedSimulations);
+    expect(thread.isRunning).toBe(false);
+    expect(thread.isCompleted).toBe(true);
   }
 
-  await page.screenshot({ path: testInfo.outputPath("completed-thread-progress.png") });
+  await page.getByRole("tab", { name: "Schematic", exact: true }).click();
+  await page.getByRole("tab", { name: "plot display", exact: true }).click();
+  await expect(page.locator(".bracket-slider input")).toBeVisible();
+  await expect(progressOverlay).toHaveCount(0);
+
+  // Hold a subsequent run in progress so visibility does not depend on worker timing.
+  await page.evaluate(async () => {
+    const loadState = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{ appState: AppStore }>;
+    const { appState } = await loadState();
+    appState.updateParallelSimulationProgress({ total: 10, completed: 3, successful: 2, failed: 1 });
+    appState.setParallelSimulationRunning(true);
+  });
+  await expect(progressOverlay).toBeVisible();
+  await expect(progressOverlay).toContainText("Parallel Simulation");
+  await expect(progressOverlay).toContainText("3/10");
+  await expect(progressOverlay).toContainText("2 successful");
+  await expect(progressOverlay).toContainText("1 failed");
+  await expect(progressOverlay.getByRole("progressbar", { exact: true, name: "" })).toHaveAttribute("aria-valuenow", "3");
+
+  // Ending a run must hide the panel even with partial progress or failed jobs.
+  await page.evaluate(async () => {
+    const loadState = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{ appState: AppStore }>;
+    (await loadState()).appState.setParallelSimulationRunning(false);
+  });
+  await expect(progressOverlay).toHaveCount(0);
+  await expect(page.locator("canvas[data-canvas-id]").first()).toBeVisible();
+  await expect(page.locator(".bracket-slider input")).toBeVisible();
+
+  await page.screenshot({ path: testInfo.outputPath("completed-bracket-plot.png") });
 });
