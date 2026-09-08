@@ -9,7 +9,6 @@
   } from "../../types/componentTypes";
   import {
     compatibleModelFor,
-    effectiveModelFor,
     geometryDescription,
     modelsFor,
     validateGeometry,
@@ -44,10 +43,6 @@
       if (selectedItem.type === "instance" && (selectedItem.typeName === "nFET" || selectedItem.typeName === "pFET")) {
         const polarity: FetPolarity = selectedItem.typeName === "nFET" ? "n" : "p";
         storedModel = "model" in localValues.properties ? localValues.properties.model : undefined;
-        localValues.properties = {
-          ...localValues.properties,
-          model: effectiveModelFor(appState.processId, polarity, storedModel).name,
-        };
       }
       initialValues = copyValues(localValues);
       previousKey = selectedKey;
@@ -71,7 +66,7 @@
         : undefined,
   );
   let selectedFetModel = $derived(fetPolarity
-    ? effectiveModelFor(
+    ? compatibleModelFor(
         appState.processId,
         fetPolarity,
         "model" in localValues.properties ? localValues.properties.model : undefined,
@@ -84,9 +79,9 @@
         "W" in localValues.properties ? localValues.properties.W : undefined,
         "L" in localValues.properties ? localValues.properties.L : undefined,
       )
-    : [],
+    : fetPolarity ? ["Select a transistor model from the circuit process."] : [],
   );
-  let substitutedModel = $derived(!!fetPolarity && !!storedModel && !compatibleModelFor(appState.processId, fetPolarity, storedModel));
+  let incompatibleModel = $derived(!!fetPolarity && !!storedModel && !compatibleModelFor(appState.processId, fetPolarity, storedModel));
 
   function apply(close = false) {
     if (geometryErrors.length > 0) return;
@@ -153,6 +148,7 @@
             onchange={(event) => updateProperty(field.key, event.currentTarget.value)}
             onkeydown={handleInputKeydown}
           >
+            {#if incompatibleModel && storedModel}<option value={storedModel} disabled>{storedModel} (outside selected process)</option>{/if}
             {#each modelsFor(appState.processId, fetPolarity) as model (model.name)}
               <option value={model.name}>{model.label} ({model.name})</option>
             {/each}
@@ -172,8 +168,8 @@
         {/if}
       </label>
     {/each}
-    {#if substitutedModel && selectedFetModel}
-      <p class="property-notice" role="status">{storedModel} is outside the selected process. Generated netlists use {selectedFetModel.name}.</p>
+    {#if incompatibleModel}
+      <p class="property-notice" role="status">{storedModel} is outside the selected process. Choose a replacement model and valid geometry before simulating.</p>
     {/if}
     {#if geometryErrors.length}
       <ul class="property-errors" role="alert">{#each geometryErrors as error (error)}<li>{error}</li>{/each}</ul>

@@ -1,12 +1,11 @@
 import type { Schematic } from "eecircuit-schematic";
-import { defaultFetValue, type ProcessId } from "../pdk/processCatalog";
 
 // Raw v2 representation of the original eecircuit-schematic demo: a
 // common-source NMOS amplifier with a resistive drain load and sine input.
 export const demoSchematic: Schematic = {
   componentInstances: [
     { typeName: "resistor", name: "R1", value: "100k", origin: { x: 0, y: 13 }, rotation: "90", flip: "none" },
-    { typeName: "nFET", name: "M1", value: "nmos_3p3 W=1u L=0.28u", origin: { x: 0, y: 0 }, rotation: "0", flip: "none" },
+    { typeName: "nFET", name: "M1", value: "nmos_3p3 W=0.22u L=0.28u", origin: { x: 0, y: 0 }, rotation: "0", flip: "none" },
     { typeName: "VDD", name: "VDD1", value: "1V", origin: { x: 0, y: 20 }, rotation: "0", flip: "none" },
     { typeName: "GND", name: "GND1", origin: { x: 0, y: -14 }, rotation: "0", flip: "none" },
     { typeName: "GND", name: "GND2", origin: { x: -15, y: -14 }, rotation: "0", flip: "none" },
@@ -67,9 +66,6 @@ export const demoSchematic: Schematic = {
   ],
 };
 
-export function createDemoSchematic(processId: ProcessId): Schematic {
-  const schematic = structuredClone(demoSchematic);
-  const transistor = schematic.componentInstances.find((instance) => instance.name === "M1");
-  if (transistor) transistor.value = defaultFetValue(processId, "n");
-  return schematic;
+export function createDemoSchematic(): Schematic {
+  return structuredClone(demoSchematic);
 }

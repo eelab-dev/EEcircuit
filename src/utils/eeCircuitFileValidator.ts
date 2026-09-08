@@ -1,4 +1,5 @@
 import type { EEcircuitFile, SimulationType } from "../types/commonTypes";
+import { isGf180Corner, isProcessId } from "../pdk/processCatalog";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -41,6 +42,15 @@ function isSimulation(value: unknown): value is SimulationType {
 export function validateEEcircuitFile(value: unknown): { valid: true; file: EEcircuitFile } | { valid: false; error: string } {
   if (!isRecord(value) || value.schema !== "EEcircuitV2") {
     return { valid: false, error: "The file is not an EEcircuitV2 document." };
+  }
+  if (!isProcessId(value.processId)) {
+    return { valid: false, error: "The processId field must name a supported circuit process." };
+  }
+  if (value.gf180Corner !== undefined && !isGf180Corner(value.gf180Corner)) {
+    return { valid: false, error: "The gf180Corner field must name a supported GF180 corner." };
+  }
+  if (value.processId !== "gf180" && value.gf180Corner !== undefined) {
+    return { valid: false, error: "The gf180Corner field is only valid for the GF180 process." };
   }
   for (const field of ["title", "description", "date"]) {
     if (value[field] !== undefined && !isString(value[field])) {

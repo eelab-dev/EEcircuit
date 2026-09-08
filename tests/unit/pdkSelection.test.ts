@@ -10,12 +10,16 @@ import {
   validateGeometry,
 } from "../../src/pdk/processCatalog";
 import {
-  incompatibleFetInstances,
-  incompatibleFetReplacements,
   isEngineProvidedSubcircuit,
   currentProbeExpression,
   resolvePdkNetlist,
 } from "../../src/pdk/netlistResolver";
+import {
+  circuitCompatibilityErrors,
+  inferSchematicProcess,
+  requiredProcessForComponentType,
+  schematicPdkRequirements,
+} from "../../src/pdk/circuitCompatibility";
 
 const schematic = (value: string, typeName: "nFET" | "pFET" = "nFET"): Schematic => ({
   componentInstances: [{
@@ -37,8 +41,8 @@ describe("PDK catalog", () => {
     expect(defaultFetValue("freepdk45", "p")).toBe("PDK45PVTG W=1u L=45n");
     expect(modelCardFor("gf180", "ff")).toBe("modelcard.GF180.ff");
     expect(modelCardFor("ptm90", "ff")).toBe("modelcard.ptm");
-    expect(modelCardsFor("gf180", "ff", ["chang90"]))
-      .toEqual(["modelcard.GF180.ff", "modelcard.ptm"]);
+    expect(modelCardsFor("gf180", "ff"))
+      .toEqual(["modelcard.GF180.ff"]);
   });
 
   it("filters coexistent GF180 models by transistor polarity", () => {
@@ -71,34 +75,25 @@ describe("PDK catalog", () => {
       .toEqual(["Width must be a number with an optional engineering suffix."]);
   });
 
-  it("initializes the app-owned demo from the selected process without changing its layout", () => {
-    const gf180Demo = createDemoSchematic("gf180");
-    const ptm90Demo = createDemoSchematic("ptm90");
-    expect(ptm90Demo.componentInstances.find((instance) => instance.name === "M1")?.value)
-      .toBe("PTM90N W=1u L=0.09u");
-    expect(ptm90Demo.wires).toEqual(gf180Demo.wires);
-    const layouts = (value: Schematic) => value.componentInstances.map((instance) => ({
-      typeName: instance.typeName,
-      name: instance.name,
-      origin: instance.origin,
-      rotation: instance.rotation,
-      flip: instance.flip,
-    }));
-    expect(layouts(ptm90Demo)).toEqual(layouts(gf180Demo));
+  it("keeps the app-owned demo fixed to its tested GF180 device", () => {
+    const demo = createDemoSchematic();
+    expect(demo.componentInstances.find((instance) => instance.name === "M1")?.value)
+      .toBe("nmos_3p3 W=0.22u L=0.28u");
   });
 });
 
 describe("PDK netlist resolution", () => {
-  it("preserves parameters while using GF180 subcircuit names", () => {
+  it("preserves an incompatible transistor instead of silently substituting it", () => {
     const result = resolvePdkNetlist(
       "M1 drain gate source bulk PTM90N W=1u L=0.28u m=2 ad=3p",
       schematic("PTM90N W=1u L=0.28u m=2 ad=3p"),
       "gf180",
     );
-    expect(result.netlist).toBe("XM1 drain gate source bulk nmos_3p3 W=1u L=0.28u m=2 ad=3p");
-    expect(result.componentNameMap.get("M1")).toBe("XM1");
-    expect(currentProbeExpression(result, "M1", "D")).toBe("@m.xm1.m0[id]");
+    expect(result.netlist).toBe("M1 drain gate source bulk PTM90N W=1u L=0.28u m=2 ad=3p");
+    expect(result.componentNameMap.get("M1")).toBe("M1");
+    expect(currentProbeExpression(result, "M1", "D")).toBe("I(M1,D)");
     expect(result.geometryErrors).toEqual([]);
+    expect(result.compatibilityErrors).toEqual([expect.stringContaining("PTM90N is outside GF180 MCU")]);
   });
 
   it("rewrites only FET instances captured by the schematic snapshot", () => {
@@ -108,9 +103,48 @@ describe("PDK netlist resolution", () => {
       "gf180",
     );
     expect(result.netlist.split("\n")).toEqual([
-      "XM1 d g s b nmos_3p3 W=1u L=0.09u",
+      "M1 d g s b PTM90N W=1u L=0.09u",
       "M_EXTERNAL d2 g2 s2 b2 PTM90N W=2u L=0.09u",
     ]);
+  });
+
+  it("infers process requirements and rejects process-specific components", () => {
+    expect(inferSchematicProcess(schematic("PTM90N W=1u L=0.09u"))).toBe("ptm90");
+    expect(requiredProcessForComponentType("OPAMP90")).toBe("ptm90");
+    expect(requiredProcessForComponentType("resistor")).toBeUndefined();
+    expect(requiredProcessForComponentType("voltageSource")).toBeUndefined();
+    expect(circuitCompatibilityErrors(schematic("PTM90N W=1u L=0.09u"), "gf180"))
+      .toEqual([expect.stringContaining("belongs to PTM 90 nm")]);
+    expect(circuitCompatibilityErrors(undefined, "gf180", "X1 a b c d e chang90"))
+      .toEqual([expect.stringContaining("chang90 requires PTM 90 nm")]);
+  });
+
+  it("requires an explicit process for absent or conflicting legacy requirements", () => {
+    const conflicting: Schematic = {
+      componentInstances: [
+        ...schematic("nmos_3p3 W=1u L=0.28u").componentInstances,
+        {
+          typeName: "OPAMP90",
+          name: "U1",
+          value: "chang90",
+          origin: { x: 10, y: 0 },
+          rotation: "0",
+          flip: "none",
+        },
+      ],
+      wires: [],
+    };
+    expect(inferSchematicProcess(undefined)).toBeUndefined();
+    expect(inferSchematicProcess(conflicting)).toBeUndefined();
+    expect(schematicPdkRequirements(conflicting)).toEqual([
+      expect.objectContaining({ componentName: "M1", requiredProcess: "gf180" }),
+      expect.objectContaining({ componentName: "U1", requiredProcess: "ptm90" }),
+    ]);
+  });
+
+  it("blocks catalogued transistor models used with the wrong polarity", () => {
+    expect(circuitCompatibilityErrors(schematic("pmos_3p3 W=1u L=0.28u", "nFET"), "gf180"))
+      .toEqual(["M1: pmos_3p3 is not a valid NMOS model."]);
   });
 
   it("keeps compatible models and reports imported geometry outside known bounds", () => {
@@ -133,14 +167,6 @@ describe("PDK netlist resolution", () => {
     expect(result.netlist).toContain("VPDK_M1_D d __pdk_M1_D 0");
     expect(result.netlist).toContain("XM1 __pdk_M1_D __pdk_M1_G __pdk_M1_S __pdk_M1_B nmos_3p3");
     expect(currentProbeExpression(result, "M1", "B")).toBe("I(VPDK_M1_B,1)");
-  });
-
-  it("finds models that need fallback without mutating schematic data", () => {
-    const source = schematic("PTM90N W=1u L=0.09u");
-    expect(incompatibleFetInstances(source, "gf180")).toEqual(["M1"]);
-    expect(incompatibleFetReplacements(source, "gf180")).toEqual([{ name: "M1", replacement: "nmos_3p3" }]);
-    expect(source.componentInstances[0]?.value).toBe("PTM90N W=1u L=0.09u");
-    expect(incompatibleFetInstances(source, "ptm90")).toEqual([]);
   });
 
   it("recognizes only catalogued engine subcircuits and the built-in op-amp", () => {

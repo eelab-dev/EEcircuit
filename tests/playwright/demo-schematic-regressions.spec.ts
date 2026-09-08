@@ -71,7 +71,7 @@ baseTest("app-owned demo preserves the original common-source amplifier geometry
   );
   expect(instances.get("M1")).toMatchObject({
     typeName: "nFET",
-    value: "nmos_3p3 W=1u L=0.28u",
+    value: "nmos_3p3 W=0.22u L=0.28u",
     origin: { x: 0, y: 0 },
   });
   expect(instances.get("R1")).toMatchObject({

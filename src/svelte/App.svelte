@@ -10,7 +10,12 @@
   import SchematicView from "./schematic/SchematicView.svelte";
   import { appState } from "./state/appState.svelte";
   import { validateEEcircuitFile } from "../utils/eeCircuitFileValidator";
-  import { convertEEcircuitV1ToV2, isEEcircuitV1 } from "../utils/convertEEcircuitV1ToV2";
+  import {
+    assignPdkToEEcircuitV2,
+    convertEEcircuitV1ToV2,
+    isEEcircuitV1,
+    isEEcircuitV2WithoutProcess,
+  } from "../utils/convertEEcircuitV1ToV2";
   import type { EEcircuitFile, SimulationType } from "../types/commonTypes";
   import { createDemoSchematic } from "../schematic/demoSchematic";
   import {
@@ -20,7 +25,11 @@
     type Gf180Corner,
     type ProcessId,
   } from "../pdk/processCatalog";
-  import { incompatibleFetReplacements } from "../pdk/netlistResolver";
+  import {
+    circuitCompatibilityErrors,
+    inferSchematicProcess,
+    schematicPdkRequirements,
+  } from "../pdk/circuitCompatibility";
   import { createDemoSimulationConfigs } from "../simulation/simulationProfiles";
 
   type SchematicExports = {
@@ -37,8 +46,10 @@
   let settingsOpen = $state(false);
   let aboutOpen = $state(false);
   let conversionOpen = $state(false);
-  let conversionSource = $state.raw<{ value: unknown; name: string } | null>(null);
+  let conversionSource = $state.raw<{ value: unknown; name: string; kind: "v1" | "v2" } | null>(null);
   let conversionErrors = $state<string[]>([]);
+  let conversionProcessId = $state<ProcessId | "">("");
+  let conversionGf180Corner = $state<Gf180Corner>("typical");
   let converting = $state(false);
   let settingsCategory = $state<"general" | "simulation" | "plotting">("simulation");
   let dragActive = $state(false);
@@ -55,6 +66,24 @@
   let tempResetPlotState = $state(appState.resetPlotStateOnNewSim);
   let tempProcessId = $state<ProcessId>(appState.processId);
   let tempGf180Corner = $state<Gf180Corner>(appState.gf180Corner);
+
+  function sourceSchematic(value: unknown): Schematic | undefined {
+    if (typeof value !== "object" || value === null) return undefined;
+    const schematicValue = (value as Record<string, unknown>).schematic;
+    return typeof schematicValue === "object" && schematicValue !== null
+      ? schematicValue as Schematic
+      : undefined;
+  }
+
+  let conversionRequirements = $derived(schematicPdkRequirements(sourceSchematic(conversionSource?.value)));
+
+  function beginProcessAssignment(value: unknown, name: string, kind: "v1" | "v2") {
+    conversionSource = { value, name, kind };
+    conversionErrors = [];
+    conversionGf180Corner = "typical";
+    conversionProcessId = inferSchematicProcess(sourceSchematic(value)) ?? "";
+    conversionOpen = true;
+  }
 
   function ensurePrimaryUi(): Promise<void> {
     if (primaryUiPromise) return primaryUiPromise;
@@ -135,12 +164,15 @@
 
   async function saveSettings() {
     if (tempProcessId !== appState.processId) {
-      const incompatible = incompatibleFetReplacements(appState.currentSchematic, tempProcessId);
+      const incompatible = circuitCompatibilityErrors(
+        appState.currentSchematic,
+        tempProcessId,
+        appState.selectedSimType === "None" ? appState.netList : "",
+      );
       if (incompatible.length > 0) {
         const confirmed = window.confirm(
-          `${incompatible.length} transistor${incompatible.length === 1 ? "" : "s"} use models outside ${PROCESS_CATALOG[tempProcessId].label}: ` +
-          `${incompatible.map(({ name, replacement }) => `${name} → ${replacement}`).join(", ")}. ` +
-          "Generated netlists will use those replacements until the stored models are changed. Save this process change?",
+          `Changing to ${PROCESS_CATALOG[tempProcessId].label} makes ${incompatible.length} circuit requirement${incompatible.length === 1 ? "" : "s"} incompatible:\n` +
+          `${incompatible.join("\n")}\nSimulation will remain blocked until these are resolved. Save this process change?`,
         );
         if (!confirmed) return;
       }
@@ -190,11 +222,19 @@
       try { parsed = JSON.parse(await file.text()); }
       catch { throw new Error("The selected file is not valid JSON."); }
       if (isEEcircuitV1(parsed)) {
-        conversionSource = { value: parsed, name: file.name };
-        conversionErrors = [];
-        conversionOpen = true;
+        beginProcessAssignment(parsed, file.name, "v1");
         appState.addMessage({
           text: "EEcircuitV1 is obsolete. Convert this file to EEcircuitV2 before opening it.",
+          type: "warning",
+          category: "Schematic",
+          mLevel: "user",
+        });
+        return;
+      }
+      if (isEEcircuitV2WithoutProcess(parsed)) {
+        beginProcessAssignment(parsed, file.name, "v2");
+        appState.addMessage({
+          text: "This circuit predates process metadata. Assign its PDK before opening it.",
           type: "warning",
           category: "Schematic",
           mLevel: "user",
@@ -209,6 +249,8 @@
         await waitForCanvasReady();
         await schematic.loadSchematic(data.schematic);
       }
+      appState.setGf180Corner(data.processId === "gf180" ? data.gf180Corner ?? "typical" : "typical");
+      appState.setProcessId(data.processId);
       if (data.simulations?.length) {
         appState.setAllSimulationConfigs(data.simulations);
       } else {
@@ -229,6 +271,8 @@
       const simulations = appState.allSimulationConfigs.filter((config: SimulationType) => config.type !== "None");
       const data: EEcircuitFile = {
         schema: "EEcircuitV2",
+        processId: appState.processId,
+        ...(appState.processId === "gf180" ? { gf180Corner: appState.gf180Corner } : {}),
         title: "EEcircuit",
         description: "EEcircuit Schematic",
         date: new Date().toISOString(),
@@ -251,14 +295,17 @@
     conversionOpen = false;
     conversionSource = null;
     conversionErrors = [];
+    conversionProcessId = "";
   }
 
   async function convertLegacyFile() {
-    if (!conversionSource || converting) return;
+    if (!conversionSource || !conversionProcessId || converting) return;
     converting = true;
     conversionErrors = [];
     try {
-      const result = await convertEEcircuitV1ToV2(conversionSource.value);
+      const result = conversionSource.kind === "v1"
+        ? await convertEEcircuitV1ToV2(conversionSource.value, conversionProcessId, conversionGf180Corner)
+        : assignPdkToEEcircuitV2(conversionSource.value, conversionProcessId, conversionGf180Corner);
       if (!result.success) {
         conversionErrors = result.errors;
         return;
@@ -416,7 +463,9 @@
   {#snippet footer()}
     <button onclick={() => newDialogOpen = false}>Cancel</button>
     <button class="primary-button" onclick={async () => {
-      await schematic.loadSchematic(createDemoSchematic(appState.processId));
+      appState.setGf180Corner("typical");
+      appState.setProcessId("gf180");
+      await schematic.loadSchematic(createDemoSchematic());
       appState.setAllSimulationConfigs(createDemoSimulationConfigs());
       newDialogOpen = false;
     }}>Load Demo</button>
@@ -428,9 +477,28 @@
   {/snippet}
 </Modal>
 
-<Modal bind:open={conversionOpen} title="Obsolete EEcircuit file" closeLabel="Cancel V1 conversion">
-  <p>EEcircuitV1 is obsolete. Convert this file to EEcircuitV2 before opening it.</p>
+<Modal bind:open={conversionOpen} title={conversionSource?.kind === "v1" ? "Obsolete EEcircuit file" : "Assign circuit process"} closeLabel="Cancel circuit conversion">
+  {#if conversionSource?.kind === "v1"}<p>EEcircuitV1 is obsolete. Convert this file to EEcircuitV2 before opening it.</p>{:else}<p>This EEcircuitV2 file needs an explicit circuit process before it can be opened.</p>{/if}
   <p>The conversion downloads a new file and does not replace the circuit currently open.</p>
+  <label>Circuit Process
+    <select aria-label="Circuit Process" bind:value={conversionProcessId}>
+      <option value="">Select a process…</option>
+      {#each PROCESS_IDS as processId (processId)}<option value={processId}>{PROCESS_CATALOG[processId].label}</option>{/each}
+    </select>
+  </label>
+  {#if conversionProcessId === "gf180"}
+    <label>GF180 Corner
+      <select aria-label="Conversion GF180 corner" bind:value={conversionGf180Corner}>
+        {#each GF180_CORNERS as corner (corner)}<option value={corner}>{corner}</option>{/each}
+      </select>
+    </label>
+  {/if}
+  {#if conversionRequirements.length}
+    <div class="conversion-requirements">
+      <strong>Detected component requirements</strong>
+      <ul>{#each conversionRequirements as requirement (`${requirement.componentName}:${requirement.requiredProcess}`)}<li>{requirement.componentName}: {requirement.reason}</li>{/each}</ul>
+    </div>
+  {/if}
   {#if conversionErrors.length}
     <div role="alert">
       <strong>Conversion failed</strong>
@@ -439,7 +507,7 @@
   {/if}
   {#snippet footer()}
     <button disabled={converting} onclick={closeConversion}>Cancel</button>
-    <button class="primary-button" disabled={converting} onclick={convertLegacyFile}>
+    <button class="primary-button" disabled={converting || !conversionProcessId} onclick={convertLegacyFile}>
       {converting ? "Converting…" : "Convert and download"}
     </button>
   {/snippet}

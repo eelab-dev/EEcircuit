@@ -1,7 +1,10 @@
 import type { Schematic } from "eecircuit-schematic";
+import type { Gf180Corner, ProcessId } from "../pdk/processCatalog";
 
 export type EEcircuitFile = {
   schema: "EEcircuitV2";
+  processId: ProcessId;
+  gf180Corner?: Gf180Corner;
   title?: string;
   description?: string;
   date?: string;

@@ -1,5 +1,6 @@
 import type { AppStore } from "../store/appStoreTypes";
 import { notifySimulationErrors } from "../utils/simulationErrorNotifier";
+import { circuitCompatibilityErrors } from "../pdk/circuitCompatibility";
 
 let latestSingleRunId = 0;
 
@@ -10,6 +11,15 @@ export async function executeSimulation(
 ): Promise<void> {
   const store = getStore();
   let activeNetlist = editorNetlist;
+  const compatibilityErrors = circuitCompatibilityErrors(
+    store.currentSchematic,
+    store.processId,
+    store.selectedSimType === "None" ? editorNetlist : "",
+  );
+  if (compatibilityErrors.length) {
+    notifySimulationErrors(compatibilityErrors);
+    return;
+  }
 
   if (store.selectedSimType === "None") {
     store.setNetList(activeNetlist);

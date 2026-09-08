@@ -2,8 +2,6 @@ import type { Schematic } from "eecircuit-schematic";
 import { parseComponentProperties } from "../types/componentTypes";
 import {
   compatibleModelFor,
-  defaultModelFor,
-  effectiveModelFor,
   PROCESS_CATALOG,
   type FetPolarity,
   type ProcessId,
@@ -24,6 +22,7 @@ export type PdkResolution = {
   subcircuitComponents: ReadonlySet<string>;
   currentProbeMap: ReadonlyMap<string, string>;
   geometryErrors: string[];
+  compatibilityErrors: string[];
 };
 
 export type CurrentProbeRequest = { componentName: string; terminalName: string };
@@ -48,23 +47,6 @@ function fetInstances(schematic: Schematic | undefined) {
   return instances;
 }
 
-export function incompatibleFetInstances(schematic: Schematic | undefined, processId: ProcessId): string[] {
-  return incompatibleFetReplacements(schematic, processId).map((instance) => instance.name);
-}
-
-export function incompatibleFetReplacements(
-  schematic: Schematic | undefined,
-  processId: ProcessId,
-): Array<{ name: string; replacement: string }> {
-  return [...fetInstances(schematic).values()].filter((instance) => {
-    const properties = parseComponentProperties(instance.polarity === "n" ? "nFET" : "pFET", instance.value ?? "");
-    return !compatibleModelFor(processId, instance.polarity, "model" in properties ? properties.model : undefined);
-  }).map((instance) => ({
-    name: instance.name,
-    replacement: defaultModelFor(processId, instance.polarity).name,
-  }));
-}
-
 export function resolvePdkNetlist(
   netlist: string,
   schematic: Schematic | undefined,
@@ -76,6 +58,7 @@ export function resolvePdkNetlist(
   const subcircuitComponents = new Set<string>();
   const currentProbeMap = new Map<string, string>();
   const geometryErrors: string[] = [];
+  const compatibilityErrors: string[] = [];
   const requestedTerminals = new Map<string, Set<string>>();
   for (const probe of currentProbes) {
     const component = probe.componentName.toUpperCase();
@@ -94,7 +77,12 @@ export function resolvePdkNetlist(
     const type = instance.polarity === "n" ? "nFET" : "pFET";
     const properties = parseComponentProperties(type, instance.value ?? "");
     const storedModel = "model" in properties ? properties.model : undefined;
-    const model = effectiveModelFor(processId, instance.polarity, storedModel);
+    const model = compatibleModelFor(processId, instance.polarity, storedModel);
+    if (!model) {
+      compatibilityErrors.push(`${instance.name}: ${storedModel || "missing transistor model"} is outside ${PROCESS_CATALOG[processId].label}.`);
+      componentNameMap.set(instance.name.toUpperCase(), tokens[0]!);
+      return line;
+    }
     const generatedName = model.invocation === "subcircuit" ? `X${tokens[0]}` : tokens[0]!;
     const instanceKey = instance.name.toUpperCase();
     const sensorLines: string[] = [];
@@ -132,6 +120,7 @@ export function resolvePdkNetlist(
     subcircuitComponents,
     currentProbeMap,
     geometryErrors,
+    compatibilityErrors,
   };
 }
 

@@ -6,6 +6,8 @@ const circuitFile = (simulations?: unknown[]) => ({
   mimeType: "application/json",
   buffer: Buffer.from(JSON.stringify({
     schema: "EEcircuitV2",
+    processId: "gf180",
+    gf180Corner: "typical",
     title: "Profile regression circuit",
     schematic: demoSchematic,
     simulations,

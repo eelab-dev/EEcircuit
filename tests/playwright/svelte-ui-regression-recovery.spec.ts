@@ -65,6 +65,30 @@ test("informational messages stay in history while warnings open a toast", async
   await expect(dialog.getByText("Example schematic warning.")).toBeVisible();
 });
 
+test("toast controls remain interactive without blocking covered application actions", async ({ page }) => {
+  await waitForSchematic(page);
+  const addWarning = (text: string) => page.evaluate(async (message) => {
+    type TestState = { addMessage: (value: { text: string; type: "warning"; category: "Schematic"; mLevel: "user" }) => void };
+    const loadState = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{ appState: TestState }>;
+    (await loadState()).appState.addMessage({ text: message, type: "warning", category: "Schematic", mLevel: "user" });
+  }, text);
+
+  await addWarning("Dismiss control remains interactive.");
+  await page.getByRole("button", { name: "Dismiss message" }).click();
+  await expect(page.getByText("Dismiss control remains interactive.")).toHaveCount(0);
+
+  await addWarning("This toast overlaps the primary action.");
+  await addWarning("Second grouped warning.");
+  await addWarning("Hidden grouped warning.");
+  await expect(page.getByText("Hidden grouped warning.")).toHaveCount(0);
+  await page.getByRole("button", { name: "Show 1 more" }).click();
+  await expect(page.getByText("Hidden grouped warning.")).toBeVisible();
+  await page.getByRole("button", { name: "Hide details" }).click();
+  await expect(page.getByText("Hidden grouped warning.")).toHaveCount(0);
+  await page.getByLabel("Simulate Circuit").click();
+  await expect(page.getByText("Simulation Configuration", { exact: true })).toBeVisible({ timeout: 10_000 });
+});
+
 test("settings and About restore the peripheral controls and external links", async ({ page }) => {
   await waitForSchematic(page);
   await page.getByRole("button", { name: "Simulation Settings" }).click();

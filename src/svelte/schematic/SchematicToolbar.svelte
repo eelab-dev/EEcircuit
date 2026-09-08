@@ -24,6 +24,8 @@
   } from "@lucide/svelte";
   import type { AvailableComponent, EditorMode } from "eecircuit-schematic";
   import type { SchematicEditorCommand } from "../../schematic/schematicCommands";
+  import { requiredProcessForComponentType } from "../../pdk/circuitCompatibility";
+  import { PROCESS_CATALOG } from "../../pdk/processCatalog";
   import { appState } from "../state/appState.svelte";
   import SchematicToolButton from "./SchematicToolButton.svelte";
   type TriggerPropsFn = Parameters<NonNullable<TooltipTriggerProps["asChild"]>>[0];
@@ -80,6 +82,8 @@
   }
 
   function chooseComponent(type: AvailableComponent["type"]) {
+    const requiredProcess = requiredProcessForComponentType(type);
+    if (requiredProcess && requiredProcess !== appState.processId) return;
     onAddComponent(type);
     setPickerOpen(false);
   }
@@ -188,18 +192,23 @@
               <div class="component-grid">
                 {#each components as component (component.type)}
                   {@const index = flattened.indexOf(component)}
+                  {@const requiredProcess = requiredProcessForComponentType(component.type)}
+                  {@const incompatible = !!requiredProcess && requiredProcess !== appState.processId}
                   <button
                     aria-label={`Add ${component.type}`}
                     data-component-index={index}
                     tabindex="-1"
                     class:focused={focusedIndex === index}
                     class="component-card"
+                    disabled={incompatible}
+                    title={incompatible ? `Requires ${PROCESS_CATALOG[requiredProcess].label}` : undefined}
                     onfocus={() => focusedIndex = index}
                     onkeydown={handlePickerKeydown}
                     onclick={() => chooseComponent(component.type)}
                   >
                     <span class="component-symbol"><img src={svgData(component.svg)} alt="" /></span>
                     <span class="component-name">{component.type}</span>
+                    {#if incompatible}<small>Requires {PROCESS_CATALOG[requiredProcess].label}</small>{/if}
                   </button>
                 {/each}
               </div>

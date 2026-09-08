@@ -17,6 +17,10 @@ test('verify ac bracket mode conversion with test file', async ({ page }) => {
   console.log('Step: Load Test Circuit File');
   await page.locator('input[type="file"]').first().setInputFiles(path.resolve('tests/test-circuit-ac.json'));
   await waitForImportedCircuit(page, { configCount: 1 });
+  await expect.poll(async () => page.evaluate(async () => {
+    const loadState = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{ appState: { processId: string } }>;
+    return (await loadState()).appState.processId;
+  })).toBe("ptm90");
   
   // 3. Click Simulate Button
   console.log('Step: Click Simulate Button');

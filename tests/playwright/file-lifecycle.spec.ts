@@ -13,14 +13,22 @@ test.describe("file lifecycle", () => {
     await page.goto("/");
     const input = page.locator('input[type="file"]').first();
 
+    await input.setInputFiles(file("unsupported-process.json", {
+      schema: "EEcircuitV2",
+      processId: "not-a-process",
+    }));
+    await expect(page.getByText("The processId field must name a supported circuit process.")).toBeVisible();
+
     await input.setInputFiles(file("malformed.json", {
       schema: "EEcircuitV2",
+      processId: "gf180",
       schematic: { componentInstances: {}, wires: [] },
     }));
     await expect(page.getByText("The schematic field is malformed.")).toBeVisible();
 
     await input.setInputFiles(file("configuration-only.json", {
       schema: "EEcircuitV2",
+      processId: "gf180",
       title: "Configuration only",
       simulations: [{ type: "None" }],
     }));
@@ -46,6 +54,7 @@ test.describe("file lifecycle", () => {
       const { appState } = await loadState();
       return [appState.currentSchematic?.componentInstances.length, appState.allSimulationConfigs.length];
     })).toEqual([9, 2]);
+    await dialog.getByLabel("Circuit Process").selectOption("gf180");
     const downloadPromise = page.waitForEvent("download");
     await dialog.getByRole("button", { name: "Convert and download" }).click();
     const download = await downloadPromise;
@@ -55,6 +64,7 @@ test.describe("file lifecycle", () => {
     if (downloadPath) {
       const converted = JSON.parse(await readFile(downloadPath, "utf8"));
       expect(converted.schema).toBe("EEcircuitV2");
+      expect(converted.processId).toBe("gf180");
       expect(converted.simulations).toHaveLength(1);
     }
   });
@@ -64,6 +74,7 @@ test.describe("file lifecycle", () => {
     const input = page.locator('input[type="file"]').first();
     await input.setInputFiles(file("invalid-reference.json", {
       schema: "EEcircuitV2",
+      processId: "ptm90",
       schematic: {
         componentInstances: [
           { typeName: "resistor", name: "R1", value: "1k", origin: { x: 0, y: 0 }, rotation: "0", flip: "none" },
@@ -78,11 +89,86 @@ test.describe("file lifecycle", () => {
       .getByText(/saved wire endpoint reference is invalid/i)).toBeVisible();
     await expect.poll(async () => page.evaluate(async () => {
       const loadState = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{
-        appState: { currentSchematic?: { componentInstances: Array<{ name: string }> } };
+        appState: { currentSchematic?: { componentInstances: Array<{ name: string }> }; processId: string };
       }>;
       const { appState } = await loadState();
-      return appState.currentSchematic?.componentInstances.some((component) => component.name === "M1");
-    })).toBe(true);
+      return {
+        keptDemo: appState.currentSchematic?.componentInstances.some((component) => component.name === "M1"),
+        processId: appState.processId,
+      };
+    })).toEqual({ keptDemo: true, processId: "gf180" });
+  });
+
+  test("assigns an inferred process to older V2 files before opening them", async ({ page }) => {
+    await page.goto("/");
+    const input = page.locator('input[type="file"]').first();
+    await input.setInputFiles(file("older-v2.json", {
+      schema: "EEcircuitV2",
+      schematic: {
+        componentInstances: [{
+          typeName: "nFET",
+          name: "M1",
+          value: "PTM90N W=1u L=0.09u",
+          origin: { x: 0, y: 0 },
+          rotation: "0",
+          flip: "none",
+        }],
+        wires: [],
+      },
+    }));
+    const dialog = page.getByRole("dialog", { name: "Assign circuit process" });
+    await expect(dialog.getByLabel("Circuit Process")).toHaveValue("ptm90");
+    const downloadPromise = page.waitForEvent("download");
+    await dialog.getByRole("button", { name: "Convert and download" }).click();
+    const path = await (await downloadPromise).path();
+    expect(path).not.toBeNull();
+    if (path) expect(JSON.parse(await readFile(path, "utf8")).processId).toBe("ptm90");
+  });
+
+  test("reports conflicting legacy PDK requirements and cancellation preserves active state", async ({ page }) => {
+    await page.goto("/");
+    const input = page.locator('input[type="file"]').first();
+    await input.setInputFiles(file("conflicting-pdks.json", {
+      schema: "EEcircuitV2",
+      schematic: {
+        componentInstances: [
+          {
+            typeName: "nFET",
+            name: "M_GF",
+            value: "nmos_3p3 W=1u L=0.28u",
+            origin: { x: 0, y: 0 },
+            rotation: "0",
+            flip: "none",
+          },
+          {
+            typeName: "OPAMP90",
+            name: "U_PTM",
+            value: "chang90",
+            origin: { x: 10, y: 0 },
+            rotation: "0",
+            flip: "none",
+          },
+        ],
+        wires: [],
+      },
+    }));
+
+    const dialog = page.getByRole("dialog", { name: "Assign circuit process" });
+    await expect(dialog.getByLabel("Circuit Process")).toHaveValue("");
+    await expect(dialog).toContainText("M_GF: nmos_3p3 belongs to GF180 MCU");
+    await expect(dialog).toContainText("U_PTM: OPAMP90 requires PTM 90 nm");
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    await expect.poll(async () => page.evaluate(async () => {
+      const loadState = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{
+        appState: { currentSchematic?: { componentInstances: Array<{ name: string }> }; processId: string };
+      }>;
+      const { appState } = await loadState();
+      return {
+        keptDemo: appState.currentSchematic?.componentInstances.some((component) => component.name === "M1"),
+        processId: appState.processId,
+      };
+    })).toEqual({ keptDemo: true, processId: "gf180" });
   });
 
   test("converts uniquely inferable V1 wiring and opens the downloaded V2 file", async ({ page }) => {
@@ -143,6 +229,7 @@ test.describe("file lifecycle", () => {
         wires: [{ absolutePath: [{ x: 0, y: 0 }, { x: 0, y: 3 }] }],
       },
     }));
+    await page.getByLabel("Circuit Process").selectOption("gf180");
     await page.getByRole("button", { name: "Convert and download" }).click();
     await expect(page.getByRole("alert")).toContainText("matches more than one connection");
     await expect(page.locator("canvas")).toHaveCount(1);
@@ -162,6 +249,7 @@ test.describe("file lifecycle", () => {
         wires: [{ absolutePath: [{ x: 20, y: 20 }, { x: 20, y: 25 }], netName: "floating" }],
       },
     }));
+    await page.getByLabel("Circuit Process").selectOption("gf180");
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: "Convert and download" }).click();
     const downloadPath = await (await downloadPromise).path();
@@ -197,6 +285,7 @@ test.describe("file lifecycle", () => {
         }],
       },
     }));
+    await page.getByLabel("Circuit Process").selectOption("gf180");
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: "Convert and download" }).click();
     const downloadPath = await (await downloadPromise).path();
@@ -218,6 +307,7 @@ test.describe("file lifecycle", () => {
         ],
       },
     }));
+    await page.getByLabel("Circuit Process").selectOption("gf180");
     await page.getByRole("button", { name: "Convert and download" }).click();
     await expect(page.getByRole("alert")).toContainText("T-junction must end inside one straight wire segment");
     await expect(page.locator("canvas")).toHaveCount(1);
@@ -237,6 +327,8 @@ test.describe("file lifecycle", () => {
     if (downloadPath) {
       const saved = JSON.parse(await readFile(downloadPath, "utf8"));
       expect(saved.schema).toBe("EEcircuitV2");
+      expect(saved.processId).toBe("gf180");
+      expect(saved.gf180Corner).toBe("typical");
       expect(saved.simulations).toEqual([
         { type: "DC", name: "DC-1", source: "vin", start: "0", stop: "1.8", step: "0.01" },
         { type: "Transient", name: "Transient-1", stopTime: "10m", timeStep: "10u", initialConditions: false },

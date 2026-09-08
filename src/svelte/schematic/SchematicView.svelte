@@ -12,7 +12,8 @@
   } from "eecircuit-schematic";
   import { ArrowBigRight, Cable, CirclePlus, LayoutDashboard, Square } from "@lucide/svelte";
   import { createDemoSchematic } from "../../schematic/demoSchematic";
-  import { defaultFetValue } from "../../pdk/processCatalog";
+  import { defaultFetValue, PROCESS_CATALOG } from "../../pdk/processCatalog";
+  import { requiredProcessForComponentType } from "../../pdk/circuitCompatibility";
   import { executeSchematicEditorCommand, type SchematicEditorCommand } from "../../schematic/schematicCommands";
   import { resolveSchematicShortcut } from "../../schematic/schematicShortcuts";
   import { formatToBePlottedLabel, normalizeTerminalSelection, parseTerminalPointerInfo } from "../../utils/toBePlotted";
@@ -149,6 +150,16 @@
   }
 
   async function addComponent(type: AvailableComponent["type"]) {
+    const requiredProcess = requiredProcessForComponentType(type);
+    if (requiredProcess && requiredProcess !== appState.processId) {
+      appState.addMessage({
+        text: `${type} requires ${PROCESS_CATALOG[requiredProcess].label}.`,
+        type: "error",
+        category: "Schematic",
+        mLevel: "user",
+      });
+      return;
+    }
     const value = type === "nFET"
       ? defaultFetValue(appState.processId, "n")
       : type === "pFET"
@@ -241,9 +252,12 @@
     let sizeObserver: ResizeObserver | undefined;
     readyPromise = new Promise<void>((resolve) => { resolveReady = resolve; });
     canvas.dataset.canvasReady = "false";
-    const initialSchematic = new URLSearchParams(location.search).get("clean") === "true"
-      ? blankSchematic
-      : appState.currentSchematic ?? createDemoSchematic(appState.processId);
+    const cleanStart = new URLSearchParams(location.search).get("clean") === "true";
+    if (!cleanStart && !appState.currentSchematic) {
+      appState.setProcessId("gf180");
+      appState.setGf180Corner("typical");
+    }
+    const initialSchematic = cleanStart ? blankSchematic : appState.currentSchematic ?? createDemoSchematic();
 
     const waitForRenderedSize = () => new Promise<void>((resolve) => {
       if (canvas.clientWidth > 0 && canvas.clientHeight > 0) { resolve(); return; }

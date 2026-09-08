@@ -6,6 +6,7 @@ import {
 } from "eecircuit-schematic";
 import type { EEcircuitFile } from "../types/commonTypes";
 import { validateEEcircuitFile } from "./eeCircuitFileValidator";
+import type { Gf180Corner, ProcessId } from "../pdk/processCatalog";
 
 type JsonObject = Record<string, unknown>;
 type Point = { x: number; y: number };
@@ -39,6 +40,28 @@ const isRecord = (value: unknown): value is JsonObject =>
 
 export const isEEcircuitV1 = (value: unknown): value is JsonObject & { schema: "EEcircuitV1" } =>
   isRecord(value) && value.schema === "EEcircuitV1";
+
+export const isEEcircuitV2WithoutProcess = (value: unknown): value is JsonObject & { schema: "EEcircuitV2" } =>
+  isRecord(value) && value.schema === "EEcircuitV2" && value.processId === undefined;
+
+const processMetadata = (processId: ProcessId, gf180Corner: Gf180Corner) => ({
+  processId,
+  ...(processId === "gf180" ? { gf180Corner } : {}),
+});
+
+export function assignPdkToEEcircuitV2(
+  value: unknown,
+  processId: ProcessId,
+  gf180Corner: Gf180Corner,
+): V1ConversionResult {
+  if (!isEEcircuitV2WithoutProcess(value)) {
+    return { success: false, errors: ["The selected file is not an EEcircuitV2 document without process metadata."] };
+  }
+  const validation = validateEEcircuitFile({ ...structuredClone(value), ...processMetadata(processId, gf180Corner) });
+  return validation.valid
+    ? { success: true, file: validation.file, notes: [`Assigned ${processId} as the circuit process.`] }
+    : { success: false, errors: [validation.error] };
+}
 
 const isPoint = (value: unknown): value is Point =>
   isRecord(value) && typeof value.x === "number" && Number.isFinite(value.x) &&
@@ -110,12 +133,16 @@ const createTemporaryCanvas = (): HTMLCanvasElement => {
 };
 
 /** Convert an obsolete V1 document without changing the active application state. */
-export async function convertEEcircuitV1ToV2(value: unknown): Promise<V1ConversionResult> {
+export async function convertEEcircuitV1ToV2(
+  value: unknown,
+  processId: ProcessId,
+  gf180Corner: Gf180Corner,
+): Promise<V1ConversionResult> {
   if (!isEEcircuitV1(value)) {
     return { success: false, errors: ["The selected file is not an EEcircuitV1 document."] };
   }
 
-  const metadataCandidate: JsonObject = { schema: "EEcircuitV2" };
+  const metadataCandidate: JsonObject = { schema: "EEcircuitV2", ...processMetadata(processId, gf180Corner) };
   for (const field of ["title", "description", "date", "simulations"] as const) {
     if (value[field] !== undefined) metadataCandidate[field] = structuredClone(value[field]);
   }

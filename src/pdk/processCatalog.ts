@@ -198,10 +198,6 @@ export function compatibleModelFor(
   return modelsFor(processId, polarity).find((model) => model.name.toLowerCase() === normalized);
 }
 
-export function effectiveModelFor(processId: ProcessId, polarity: FetPolarity, modelName?: string): FetModel {
-  return compatibleModelFor(processId, polarity, modelName) ?? defaultModelFor(processId, polarity);
-}
-
 export function modelCardFor(processId: ProcessId, corner: Gf180Corner): string {
   const base = PROCESS_CATALOG[processId].modelCard;
   return processId === "gf180" ? `${base}.${corner}` : base;
@@ -210,11 +206,8 @@ export function modelCardFor(processId: ProcessId, corner: Gf180Corner): string 
 export function modelCardsFor(
   processId: ProcessId,
   corner: Gf180Corner,
-  requiredSubcircuits: Iterable<string> = [],
 ): string[] {
-  const cards = new Set([modelCardFor(processId, corner)]);
-  if ([...requiredSubcircuits].some((model) => model.toLowerCase() === "chang90")) cards.add("modelcard.ptm");
-  return [...cards];
+  return [modelCardFor(processId, corner)];
 }
 
 export function defaultFetValue(processId: ProcessId, polarity: FetPolarity): string {

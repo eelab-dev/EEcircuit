@@ -7,6 +7,7 @@
   import { correctNgspiceUnits } from "../../utils/unitCorrection";
   import { formatToBePlottedLabel } from "../../utils/toBePlotted";
   import { executeSimulation } from "../../controllers/simulationController";
+  import { circuitCompatibilityErrors } from "../../pdk/circuitCompatibility";
   import {
     areSimulationConfigsEqual,
     isSimulationConfigComplete,
@@ -41,6 +42,11 @@
     const saved = appState.allSimulationConfigs[appState.selectedSimulationConfigIndex];
     return !!active && !!saved && !areSimulationConfigsEqual(active, saved);
   });
+  let pdkErrors = $derived(circuitCompatibilityErrors(
+    appState.currentSchematic,
+    appState.processId,
+    appState.selectedSimType === "None" ? editorValue : "",
+  ));
 
   function configName(config: SimulationType, index: number) {
     return config.type !== "None" && config.name?.trim() ? config.name : `Config ${index + 1}`;
@@ -85,6 +91,11 @@
 
   function publish(config: SimulationType) {
     if (config.type !== "None") appState.updateActiveSimulationConfig(config);
+  }
+
+  function updateEditorValue(value: string) {
+    editorValue = value;
+    if (appState.selectedSimType === "None") appState.setNetList(value);
   }
 
   function selectType(type: SimulationType["type"]) {
@@ -197,7 +208,7 @@
         {/if}
       </div>
     </header>
-    <MonacoEditor bind:this={monacoEditor} value={editorValue} theme={appState.isDarkMode ? "dark" : "light"} onChange={(value) => editorValue = value} />
+    <MonacoEditor bind:this={monacoEditor} value={editorValue} theme={appState.isDarkMode ? "dark" : "light"} onChange={updateEditorValue} />
   </div>
 
   <aside class="simulation-sidebar">
@@ -291,9 +302,15 @@
       {/if}
     </div>
     <footer class="run-panel">
+      {#if pdkErrors.length}
+        <div class="simulation-compatibility-errors" role="alert">
+          <strong>Resolve process compatibility before running:</strong>
+          <ul>{#each pdkErrors as error (error)}<li>{error}</li>{/each}</ul>
+        </div>
+      {/if}
       {#if appState.bracketOperation && !appState.isParallelSimulationRunning}<p>Bracket sweep: [{appState.bracketOperation.start}:{appState.bracketOperation.step}:{appState.bracketOperation.stop}]{appState.bracketOperation.unit ?? ""}</p>{/if}
       {#if appState.isParallelSimulationRunning}<progress max={appState.parallelSimulationProgress.total} value={appState.parallelSimulationProgress.completed}></progress>{/if}
-      <button class="primary-button run-button" aria-label="Run Simulation" aria-busy={busy} disabled={busy} onclick={run}><Play size={17} />{busy ? "Running simulation" : "Run Simulation"}</button>
+      <button class="primary-button run-button" aria-label="Run Simulation" aria-busy={busy} disabled={busy || pdkErrors.length > 0} onclick={run}><Play size={17} />{busy ? "Running simulation" : "Run Simulation"}</button>
     </footer>
   </aside>
 </section>
