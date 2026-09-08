@@ -156,7 +156,7 @@ test.describe("file lifecycle", () => {
     const dialog = page.getByRole("dialog", { name: "Assign circuit process" });
     await expect(dialog.getByLabel("Circuit Process")).toHaveValue("");
     await expect(dialog).toContainText("M_GF: nmos_3p3 belongs to GF180 MCU");
-    await expect(dialog).toContainText("U_PTM: OPAMP90 requires PTM 90 nm");
+    await expect(dialog).toContainText("U_PTM: chang90 requires PTM 90 nm");
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
 
     await expect.poll(async () => page.evaluate(async () => {

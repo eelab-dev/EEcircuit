@@ -141,5 +141,5 @@ export function currentProbeExpression(
 
 export function isEngineProvidedSubcircuit(modelName: string): boolean {
   const normalized = modelName.toLowerCase();
-  return normalized === "chang90" || engineSubcircuitModels.has(normalized);
+  return engineSubcircuitModels.has(normalized);
 }

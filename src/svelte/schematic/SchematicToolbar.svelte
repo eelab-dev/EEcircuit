@@ -24,8 +24,7 @@
   } from "@lucide/svelte";
   import type { AvailableComponent, EditorMode } from "eecircuit-schematic";
   import type { SchematicEditorCommand } from "../../schematic/schematicCommands";
-  import { requiredProcessForComponentType } from "../../pdk/circuitCompatibility";
-  import { PROCESS_CATALOG } from "../../pdk/processCatalog";
+  import { isComponentTypeSupportedForProcess } from "../../pdk/circuitCompatibility";
   import { appState } from "../state/appState.svelte";
   import SchematicToolButton from "./SchematicToolButton.svelte";
   type TriggerPropsFn = Parameters<NonNullable<TooltipTriggerProps["asChild"]>>[0];
@@ -58,7 +57,8 @@
   let focusedIndex = $state(-1);
   let filtered = $derived(
     availableComponents.filter((component) =>
-      component.type.toLowerCase().includes(search.trim().toLowerCase()),
+      `${component.type} ${component.type === "OPAMP90" ? "Opamp" : ""}`
+        .toLowerCase().includes(search.trim().toLowerCase()),
     ),
   );
   const categoryPriority: Record<AvailableComponent["category"], number> = {
@@ -82,8 +82,7 @@
   }
 
   function chooseComponent(type: AvailableComponent["type"]) {
-    const requiredProcess = requiredProcessForComponentType(type);
-    if (requiredProcess && requiredProcess !== appState.processId) return;
+    if (!isComponentTypeSupportedForProcess(type, appState.processId)) return;
     onAddComponent(type);
     setPickerOpen(false);
   }
@@ -192,23 +191,23 @@
               <div class="component-grid">
                 {#each components as component (component.type)}
                   {@const index = flattened.indexOf(component)}
-                  {@const requiredProcess = requiredProcessForComponentType(component.type)}
-                  {@const incompatible = !!requiredProcess && requiredProcess !== appState.processId}
+                  {@const label = component.type === "OPAMP90" ? "Opamp" : component.type}
+                  {@const incompatible = !isComponentTypeSupportedForProcess(component.type, appState.processId)}
                   <button
-                    aria-label={`Add ${component.type}`}
+                    aria-label={`Add ${label}`}
                     data-component-index={index}
                     tabindex="-1"
                     class:focused={focusedIndex === index}
                     class="component-card"
                     disabled={incompatible}
-                    title={incompatible ? `Requires ${PROCESS_CATALOG[requiredProcess].label}` : undefined}
+                    title={incompatible ? "Requires GF180 MCU or PTM 90 nm" : undefined}
                     onfocus={() => focusedIndex = index}
                     onkeydown={handlePickerKeydown}
                     onclick={() => chooseComponent(component.type)}
                   >
                     <span class="component-symbol"><img src={svgData(component.svg)} alt="" /></span>
-                    <span class="component-name">{component.type}</span>
-                    {#if incompatible}<small>Requires {PROCESS_CATALOG[requiredProcess].label}</small>{/if}
+                    <span class="component-name">{label}</span>
+                    {#if incompatible}<small>Requires GF180 MCU or PTM 90 nm</small>{/if}
                   </button>
                 {/each}
               </div>

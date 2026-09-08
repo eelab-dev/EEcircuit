@@ -20,6 +20,16 @@ import {
   requiredProcessForComponentType,
   schematicPdkRequirements,
 } from "../../src/pdk/circuitCompatibility";
+import {
+  builtinSubcircuitDefinition,
+  defaultOpampModelForProcess,
+  opampDefinitionForModel,
+} from "../../src/pdk/opampRegistry";
+import {
+  getComponentPropertyConfig,
+  parseComponentProperties,
+  serializeComponentProperties,
+} from "../../src/types/componentTypes";
 
 const schematic = (value: string, typeName: "nFET" | "pFET" = "nFET"): Schematic => ({
   componentInstances: [{
@@ -117,6 +127,23 @@ describe("PDK netlist resolution", () => {
       .toEqual([expect.stringContaining("belongs to PTM 90 nm")]);
     expect(circuitCompatibilityErrors(undefined, "gf180", "X1 a b c d e chang90"))
       .toEqual([expect.stringContaining("chang90 requires PTM 90 nm")]);
+    const gf180Opamp: Schematic = {
+      componentInstances: [{
+        typeName: "OPAMP90",
+        name: "XGF",
+        value: "gf180_opamp_3p3",
+        origin: { x: 0, y: 0 },
+        rotation: "0",
+        flip: "none",
+      }],
+      wires: [],
+    };
+    expect(inferSchematicProcess(gf180Opamp)).toBe("gf180");
+    expect(circuitCompatibilityErrors(gf180Opamp, "gf180")).toEqual([]);
+    expect(circuitCompatibilityErrors(gf180Opamp, "ptm90"))
+      .toEqual([expect.stringContaining("gf180_opamp_3p3 requires GF180 MCU")]);
+    expect(circuitCompatibilityErrors(undefined, "ptm90", "X1 a b c d e gf180_opamp_3p3"))
+      .toEqual([expect.stringContaining("gf180_opamp_3p3 requires GF180 MCU")]);
   });
 
   it("requires an explicit process for absent or conflicting legacy requirements", () => {
@@ -169,9 +196,36 @@ describe("PDK netlist resolution", () => {
     expect(currentProbeExpression(result, "M1", "B")).toBe("I(VPDK_M1_B,1)");
   });
 
-  it("recognizes only catalogued engine subcircuits and the built-in op-amp", () => {
+  it("separates engine-provided transistor subcircuits from app-owned opamps", () => {
     expect(isEngineProvidedSubcircuit("nmos_3p3")).toBe(true);
-    expect(isEngineProvidedSubcircuit("chang90")).toBe(true);
+    expect(isEngineProvidedSubcircuit("chang90")).toBe(false);
     expect(isEngineProvidedSubcircuit("nmos_project_specific")).toBe(false);
+    expect(defaultOpampModelForProcess("ptm90")).toBe("chang90");
+    expect(defaultOpampModelForProcess("gf180")).toBe("gf180_opamp_3p3");
+    expect(defaultOpampModelForProcess("freepdk45")).toBeUndefined();
+    expect(opampDefinitionForModel("GF180_OPAMP_3P3")?.processId).toBe("gf180");
+    expect(builtinSubcircuitDefinition("chang90")).toContain(".subckt chang90 inp inn out vdd vss");
+  });
+
+  it("keeps the GF180 opamp definition reusable and free of its source testbench", () => {
+    const definition = builtinSubcircuitDefinition("gf180_opamp_3p3")!;
+    expect(definition).toContain(".subckt gf180_opamp_3p3 inp inn out vdd vss");
+    expect(definition.match(/^X\d+\s/gm)).toHaveLength(20);
+    expect(definition.match(/^Vbias\d+\s/gm)).toHaveLength(6);
+    expect(definition.match(/^Cc\d+\s/gm)).toHaveLength(2);
+    expect(definition).toContain("X4 d4 inn midp vdd pmos_3p3");
+    expect(definition).toContain("X1 d1 inn midn vss nmos_3p3");
+    expect(definition).not.toMatch(/^\.(?:control|op|dc|ac|tran|include|lib)\b/im);
+    expect(definition).not.toMatch(/^(?:Cl|Rl|Vid|Vcm|vdd)\s/im);
+  });
+
+  it("round-trips the explicit opamp model through component properties", () => {
+    expect(getComponentPropertyConfig("OPAMP90")).toEqual([
+      expect.objectContaining({ key: "model", type: "select", required: true }),
+    ]);
+    const properties = parseComponentProperties("OPAMP90", "gf180_opamp_3p3");
+    expect(properties).toMatchObject({ model: "gf180_opamp_3p3" });
+    expect(serializeComponentProperties("OPAMP90", properties)).toBe("gf180_opamp_3p3");
+    expect(parseComponentProperties("OPAMP90", "")).toMatchObject({ model: "chang90" });
   });
 });

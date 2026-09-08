@@ -75,6 +75,10 @@ export interface FETProperties extends BaseComponentProperties {
   temp?: string; // Temperature
 }
 
+export interface OpampProperties extends BaseComponentProperties {
+  model: string;
+}
+
 // Type aliases for backward compatibility
 export type NFETProperties = FETProperties;
 export type PFETProperties = FETProperties;
@@ -96,6 +100,7 @@ export type ComponentProperties =
   | VoltageSourceProperties
   | CurrentSourceProperties
   | FETProperties
+  | OpampProperties
   | PowerNodeProperties
   | PortProperties;
 
@@ -531,7 +536,14 @@ export const componentPropertyConfigs: Record<ComponentType, PropertyField[]> =
         required: true,
       },
     ],
-    OPAMP90: [], // No specific properties for now
+    OPAMP90: [
+      {
+        key: "model",
+        label: "Model",
+        type: "select",
+        required: true,
+      },
+    ],
   };
 
 // Extended types for property management
@@ -683,6 +695,11 @@ export function parseComponentProperties(
     return properties;
   }
 
+  if (componentType === "OPAMP90") {
+    properties.model = valueString.trim() || "chang90";
+    return properties;
+  }
+
   // For port components, the value string is the netName
   if (componentType === "port") {
     properties.netName = valueString;
@@ -821,6 +838,12 @@ export function serializeComponentProperties(
     if (props.as) parts.push(`as=${props.as}`);
 
     return parts.join(" ");
+  }
+
+
+  if (componentType === "OPAMP90") {
+    const props = properties as Partial<OpampProperties>;
+    return props.model || "";
   }
 
   // For port components, serialize the netName

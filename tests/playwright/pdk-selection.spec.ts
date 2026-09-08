@@ -40,7 +40,7 @@ async function clickSchematicPoint(page: Page, schematicX: number, schematicY: n
 async function currentComponents(page: Page) {
   return page.evaluate(async () => {
     const loadState = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{
-      appState: { currentSchematic?: { componentInstances: Array<{ typeName: string; value?: string }> } };
+      appState: { currentSchematic?: { componentInstances: Array<{ typeName: string; value?: string; origin?: { x: number; y: number } }> } };
     }>;
     return (await loadState()).appState.currentSchematic?.componentInstances ?? [];
   });
@@ -164,19 +164,42 @@ test("opening or explicitly loading the startup demo selects GF180 typical", asy
 test("process-specific components stay visible and enable only for their circuit process", async ({ page }) => {
   await waitForSchematic(page, "/?clean=true");
   await page.keyboard.press("a");
-  await page.getByPlaceholder("Search components...").fill("OPAMP90");
-  const opamp = page.getByRole("button", { name: "Add OPAMP90" });
+  await page.getByPlaceholder("Search components...").fill("Opamp");
+  const opamp = page.getByRole("button", { name: "Add Opamp" });
   await expect(opamp).toBeVisible();
-  await expect(opamp).toBeDisabled();
-  await expect(opamp).toContainText("Requires PTM 90 nm");
+  await expect(opamp).toBeEnabled();
+  await opamp.click();
+  const canvasBox = await page.locator("#schematic-canvas").boundingBox();
+  if (!canvasBox) throw new Error("Schematic canvas has no bounding box");
+  await page.mouse.click(canvasBox.x + canvasBox.width / 2, canvasBox.y + canvasBox.height / 2);
+  await page.getByRole("button", { name: "Cancel move" }).click();
+  await expect.poll(async () => (await currentComponents(page)).find((component) => component.typeName === "OPAMP90")?.value)
+    .toBe("gf180_opamp_3p3");
+  await page.locator("#canvas-container").focus();
+  await page.keyboard.press("Shift+z");
+  await expect.poll(() => currentComponents(page)).toEqual([]);
+  await page.keyboard.press("a");
+  await page.getByPlaceholder("Search components...").fill("OPAMP90");
+  await expect(opamp).toBeVisible();
   await page.getByRole("button", { name: "Close component picker" }).click();
 
   await openSimulationSettings(page);
   await page.getByLabel("Process", { exact: true }).selectOption("ptm90");
   await page.getByRole("button", { name: "Save changes" }).click();
+  await page.locator("#canvas-container").focus();
   await page.keyboard.press("a");
-  await page.getByPlaceholder("Search components...").fill("OPAMP90");
+  await page.getByPlaceholder("Search components...").fill("Opamp");
   await expect(opamp).toBeEnabled();
+  await page.getByRole("button", { name: "Close component picker" }).click();
+
+  await openSimulationSettings(page);
+  await page.getByLabel("Process", { exact: true }).selectOption("freepdk45");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.locator("#canvas-container").focus();
+  await page.keyboard.press("a");
+  await page.getByPlaceholder("Search components...").fill("Opamp");
+  await expect(opamp).toBeDisabled();
+  await expect(opamp).toContainText("Requires GF180 MCU or PTM 90 nm");
 });
 
 test("an existing PTM90 op-amp is preserved but blocked after changing to GF180", async ({ page }) => {
@@ -189,7 +212,7 @@ test("an existing PTM90 op-amp is preserved but blocked after changing to GF180"
   await page.getByLabel("Process", { exact: true }).selectOption("gf180");
   page.once("dialog", async (dialog) => {
     expect(dialog.message()).toContain("X1");
-    expect(dialog.message()).toContain("OPAMP90 requires PTM 90 nm");
+    expect(dialog.message()).toContain("chang90 requires PTM 90 nm");
     await dialog.accept();
   });
   await page.getByRole("button", { name: "Save changes" }).click();
@@ -198,7 +221,7 @@ test("an existing PTM90 op-amp is preserved but blocked after changing to GF180"
 
   await page.getByLabel("Simulate Circuit").click();
   await expect(page.locator(".simulation-compatibility-errors"))
-    .toContainText("X1: OPAMP90 requires PTM 90 nm");
+    .toContainText("X1: chang90 requires PTM 90 nm");
   await expect(page.getByRole("button", { name: "Run Simulation" })).toBeDisabled();
   await expect.poll(async () => ((await page.locator(".view-lines").textContent()) ?? "").replace(/\u00a0/g, " "))
     .toContain("chang90");
@@ -206,6 +229,39 @@ test("an existing PTM90 op-amp is preserved but blocked after changing to GF180"
   expect(netlist).toContain("chang90");
   expect(netlist).toContain(".include modelcard.GF180.typical");
   expect(netlist).not.toContain(".include modelcard.ptm");
+});
+
+test("GF180 opamp selection is explicit and its reusable model is included once", async ({ page }) => {
+  await waitForSchematic(page, "/?clean=true");
+  const netlist = await page.evaluate(async () => {
+    type TestState = {
+      netList: string;
+      setCurrentSchematic: (schematic: unknown) => void;
+      setRawNetlist: (netlist: string) => Promise<void>;
+    };
+    const loadState = new Function("return import('/src/svelte/state/appState.svelte.ts')") as () => Promise<{ appState: TestState }>;
+    const { appState } = await loadState();
+    appState.setCurrentSchematic({
+      componentInstances: [
+        { typeName: "OPAMP90", name: "X1", value: "gf180_opamp_3p3", origin: { x: 0, y: 0 }, rotation: "0", flip: "none" },
+        { typeName: "OPAMP90", name: "X2", value: "gf180_opamp_3p3", origin: { x: 20, y: 0 }, rotation: "0", flip: "none" },
+      ],
+      wires: [],
+    });
+    await appState.setRawNetlist([
+      "X1 inp1 inn1 out1 vdd 0 gf180_opamp_3p3",
+      "X2 inp2 inn2 out2 vdd 0 gf180_opamp_3p3",
+      ".end",
+    ].join("\n"));
+    return appState.netList;
+  });
+
+  expect(netlist).toContain(".include modelcard.GF180.typical");
+  expect(netlist.match(/\.subckt gf180_opamp_3p3 inp inn out vdd vss/g)).toHaveLength(1);
+  expect(netlist).toContain("X4 d4 inn midp vdd pmos_3p3");
+  const definition = netlist.match(/\.subckt gf180_opamp_3p3[\s\S]*?\.ends gf180_opamp_3p3/i)?.[0] ?? "";
+  expect(definition).not.toMatch(/^\.(?:control|op|dc|ac|tran|include|lib)\b/im);
+  expect(definition).not.toMatch(/^(?:Cl|Rl|Vid|Vcm|vdd)\s/im);
 });
 
 test("NFET properties enforce geometry and preserve incompatible models across process changes", async ({ page }) => {

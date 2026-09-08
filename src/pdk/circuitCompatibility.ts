@@ -8,6 +8,11 @@ import {
   type FetPolarity,
   type ProcessId,
 } from "./processCatalog";
+import {
+  defaultOpampModelForProcess,
+  isOpampSupportedForProcess,
+  opampDefinitionForModel,
+} from "./opampRegistry";
 
 export type PdkRequirement = {
   componentName: string;
@@ -26,19 +31,32 @@ export function requiredProcessForModel(modelName: string | undefined): ProcessI
   return modelName ? modelProcesses.get(modelName.toLowerCase()) : undefined;
 }
 
-export function requiredProcessForComponentType(typeName: string): ProcessId | undefined {
-  return typeName.toUpperCase() === "OPAMP90" ? "ptm90" : undefined;
+export function requiredProcessForComponentType(
+  typeName: string,
+  value?: string,
+): ProcessId | undefined {
+  if (typeName.toUpperCase() !== "OPAMP90") return undefined;
+  // Empty values in older schematic documents used the symbol's chang90 default.
+  return opampDefinitionForModel(value?.trim() || "chang90")?.processId;
+}
+
+export function isComponentTypeSupportedForProcess(typeName: string, processId: ProcessId): boolean {
+  return typeName.toUpperCase() !== "OPAMP90" || isOpampSupportedForProcess(processId);
+}
+
+export function defaultComponentValueForProcess(typeName: string, processId: ProcessId): string | undefined {
+  return typeName.toUpperCase() === "OPAMP90" ? defaultOpampModelForProcess(processId) : undefined;
 }
 
 export function schematicPdkRequirements(schematic: Schematic | undefined): PdkRequirement[] {
   const requirements: PdkRequirement[] = [];
   for (const instance of schematic?.componentInstances ?? []) {
-    const componentProcess = requiredProcessForComponentType(instance.typeName);
+    const componentProcess = requiredProcessForComponentType(instance.typeName, instance.value);
     if (componentProcess) {
       requirements.push({
         componentName: instance.name,
         requiredProcess: componentProcess,
-        reason: `${instance.typeName} requires ${PROCESS_CATALOG[componentProcess].label}`,
+        reason: `${instance.value?.trim() || "chang90"} requires ${PROCESS_CATALOG[componentProcess].label}`,
       });
       continue;
     }
@@ -72,6 +90,14 @@ export function circuitCompatibilityErrors(
     .map((item) => `${item.componentName}: ${item.reason}; circuit uses ${PROCESS_CATALOG[processId].label}.`);
 
   for (const instance of schematic?.componentInstances ?? []) {
+    if (instance.typeName.toUpperCase() !== "OPAMP90") continue;
+    const modelName = instance.value?.trim() || "chang90";
+    if (!opampDefinitionForModel(modelName)) {
+      errors.push(`${instance.name}: unknown opamp model ${modelName}.`);
+    }
+  }
+
+  for (const instance of schematic?.componentInstances ?? []) {
     if (instance.typeName !== "nFET" && instance.typeName !== "pFET") continue;
     const polarity: FetPolarity = instance.typeName === "nFET" ? "n" : "p";
     const properties = parseComponentProperties(instance.typeName, instance.value ?? "");
@@ -98,7 +124,7 @@ export function circuitCompatibilityErrors(
     const line = rawLine.trim();
     if (!line || line.startsWith("*") || line.startsWith(".")) continue;
     for (const token of line.split(/\s+/)) {
-      const requiredProcess = token.toLowerCase() === "chang90" ? "ptm90" : requiredProcessForModel(token);
+      const requiredProcess = opampDefinitionForModel(token)?.processId ?? requiredProcessForModel(token);
       if (!requiredProcess || requiredProcess === processId) continue;
       const message = `${token} requires ${PROCESS_CATALOG[requiredProcess].label}; circuit uses ${PROCESS_CATALOG[processId].label}.`;
       if (!seenManual.has(message)) {

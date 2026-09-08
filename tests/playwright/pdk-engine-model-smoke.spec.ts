@@ -23,6 +23,10 @@ test("all supported PDK models pass the engine smoke gate", async () => {
     "PASS GF180 statistical",
     "PASS GF180 nmos_6p0_nat",
     "PASS GF180 pmos_6p0_sab",
+    "PASS GF180 opamp typical operating point",
+    "PASS GF180 opamp sf transient",
+    "PASS GF180 opamp shifted VSS and instance isolation",
+    "PASS GF180 opamp statistical convergence",
   ]) {
     expect(stdout).toContain(expected);
   }

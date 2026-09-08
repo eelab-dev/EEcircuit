@@ -36,7 +36,7 @@ describe("simulation compatibility controller guard", () => {
     }
 
     expect(messages).toEqual(expect.arrayContaining([
-      expect.stringContaining("U1: OPAMP90 requires PTM 90 nm"),
+      expect.stringContaining("U1: chang90 requires PTM 90 nm"),
       expect.stringContaining("chang90 requires PTM 90 nm"),
     ]));
     expect(setNetList).not.toHaveBeenCalled();

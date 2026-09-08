@@ -15,6 +15,10 @@
     type FetPolarity,
   } from "../../pdk/processCatalog";
   import { appState } from "../state/appState.svelte";
+  import {
+    opampDefinitionForModel,
+    opampDefinitionsForProcess,
+  } from "../../pdk/opampRegistry";
 
   let {
     selectedItem,
@@ -40,8 +44,8 @@
     if (selectedKey !== previousKey) {
       localValues = getPropertiesFromSelectedItem(selectedItem);
       storedModel = undefined;
-      if (selectedItem.type === "instance" && (selectedItem.typeName === "nFET" || selectedItem.typeName === "pFET")) {
-        const polarity: FetPolarity = selectedItem.typeName === "nFET" ? "n" : "p";
+      if (selectedItem.type === "instance" &&
+          (selectedItem.typeName === "nFET" || selectedItem.typeName === "pFET" || selectedItem.typeName === "OPAMP90")) {
         storedModel = "model" in localValues.properties ? localValues.properties.model : undefined;
       }
       initialValues = copyValues(localValues);
@@ -82,9 +86,21 @@
     : fetPolarity ? ["Select a transistor model from the circuit process."] : [],
   );
   let incompatibleModel = $derived(!!fetPolarity && !!storedModel && !compatibleModelFor(appState.processId, fetPolarity, storedModel));
+  let isOpamp = $derived(selectedItem.type === "instance" && selectedItem.typeName === "OPAMP90");
+  let selectedOpampModel = $derived(isOpamp && "model" in localValues.properties
+    ? localValues.properties.model
+    : undefined);
+  let incompatibleOpampModel = $derived(isOpamp &&
+    opampDefinitionForModel(selectedOpampModel)?.processId !== appState.processId);
+  let propertyErrors = $derived([
+    ...geometryErrors,
+    ...(incompatibleOpampModel ? [
+      `${selectedOpampModel || "Missing opamp model"} is not compatible with the selected process.`,
+    ] : []),
+  ]);
 
   function apply(close = false) {
-    if (geometryErrors.length > 0) return;
+    if (propertyErrors.length > 0) return;
     if (selectedItem.type === "wire") {
       onApply("name", localValues.name);
     } else if (selectedItem.type === "instance") {
@@ -128,7 +144,7 @@
   }
 }}>
   <header>
-    <strong>{selectedItem.type === "instance" ? selectedItem.typeName : "Wire"}</strong>
+    <strong>{selectedItem.type === "instance" ? (selectedItem.typeName === "OPAMP90" ? "Opamp" : selectedItem.typeName) : "Wire"}</strong>
     <button class="icon-button" aria-label="Close properties" onclick={onClose}><X size={17} /></button>
   </header>
   <form onsubmit={(event) => { event.preventDefault(); apply(true); }}>
@@ -141,7 +157,26 @@
     {/if}
     {#each fields as field (field.key)}
       <label>{field.label}{field.unit ? ` (${field.unit})` : ""}{field.required ? " *" : ""}
-        {#if field.key === "model" && fetPolarity}
+        {#if field.key === "model" && isOpamp}
+          <select
+            aria-label="Model"
+            value={(localValues.properties as Record<string, string>)[field.key] ?? ""}
+            onchange={(event) => updateProperty(field.key, event.currentTarget.value)}
+            onkeydown={handleInputKeydown}
+          >
+            {#if selectedOpampModel && !opampDefinitionForModel(selectedOpampModel)}
+              <option value={selectedOpampModel} disabled>{selectedOpampModel} (unknown model)</option>
+            {:else if incompatibleOpampModel && selectedOpampModel}
+              <option value={selectedOpampModel} disabled>{selectedOpampModel} (outside selected process)</option>
+            {/if}
+            {#each opampDefinitionsForProcess(appState.processId) as model (model.model)}
+              <option value={model.model}>{model.label} ({model.model})</option>
+            {/each}
+          </select>
+          {#if opampDefinitionForModel(selectedOpampModel)?.description}
+            <small>{opampDefinitionForModel(selectedOpampModel)?.description}</small>
+          {/if}
+        {:else if field.key === "model" && fetPolarity}
           <select
             aria-label="Model"
             value={(localValues.properties as Record<string, string>)[field.key] ?? ""}
@@ -168,15 +203,15 @@
         {/if}
       </label>
     {/each}
-    {#if incompatibleModel}
-      <p class="property-notice" role="status">{storedModel} is outside the selected process. Choose a replacement model and valid geometry before simulating.</p>
+    {#if incompatibleModel || incompatibleOpampModel}
+      <p class="property-notice" role="status">{storedModel || "The saved model"} is outside the selected process. Choose a compatible replacement before simulating.</p>
     {/if}
-    {#if geometryErrors.length}
-      <ul class="property-errors" role="alert">{#each geometryErrors as error (error)}<li>{error}</li>{/each}</ul>
+    {#if propertyErrors.length}
+      <ul class="property-errors" role="alert">{#each propertyErrors as error (error)}<li>{error}</li>{/each}</ul>
     {/if}
     <div class="form-actions">
       {#if hasChanges}
-        <button class="primary-button" type="submit" disabled={geometryErrors.length > 0}>Apply</button><button type="button" onclick={cancel}>Cancel</button>
+        <button class="primary-button" type="submit" disabled={propertyErrors.length > 0}>Apply</button><button type="button" onclick={cancel}>Cancel</button>
       {:else}
         <button class="properties-close-button" type="button" onclick={onClose}>Close</button>
       {/if}

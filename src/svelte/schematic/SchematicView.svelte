@@ -13,7 +13,10 @@
   import { ArrowBigRight, Cable, CirclePlus, LayoutDashboard, Square } from "@lucide/svelte";
   import { createDemoSchematic } from "../../schematic/demoSchematic";
   import { defaultFetValue, PROCESS_CATALOG } from "../../pdk/processCatalog";
-  import { requiredProcessForComponentType } from "../../pdk/circuitCompatibility";
+  import {
+    defaultComponentValueForProcess,
+    isComponentTypeSupportedForProcess,
+  } from "../../pdk/circuitCompatibility";
   import { executeSchematicEditorCommand, type SchematicEditorCommand } from "../../schematic/schematicCommands";
   import { resolveSchematicShortcut } from "../../schematic/schematicShortcuts";
   import { formatToBePlottedLabel, normalizeTerminalSelection, parseTerminalPointerInfo } from "../../utils/toBePlotted";
@@ -150,10 +153,9 @@
   }
 
   async function addComponent(type: AvailableComponent["type"]) {
-    const requiredProcess = requiredProcessForComponentType(type);
-    if (requiredProcess && requiredProcess !== appState.processId) {
+    if (!isComponentTypeSupportedForProcess(type, appState.processId)) {
       appState.addMessage({
-        text: `${type} requires ${PROCESS_CATALOG[requiredProcess].label}.`,
+        text: `Opamp is not available for ${PROCESS_CATALOG[appState.processId].label}.`,
         type: "error",
         category: "Schematic",
         mLevel: "user",
@@ -164,7 +166,7 @@
       ? defaultFetValue(appState.processId, "n")
       : type === "pFET"
         ? defaultFetValue(appState.processId, "p")
-        : undefined;
+        : defaultComponentValueForProcess(type, appState.processId);
     try { await editor?.addComponent(type, value ? { value } : undefined); } catch (error) { reportError("component placement", error); }
   }
 

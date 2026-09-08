@@ -8,7 +8,6 @@ import type {
 } from "../simulation/parallelSimulation";
 import { saveSimulationConfigs, loadSimulationConfigs } from "../utils/localStorageUtils";
 import { notifySimulationErrors } from "../utils/simulationErrorNotifier";
-import { chang90 } from "../Simulate/subcircuits/chang90";
 import { addAcParameterToSource } from "../utils/sourceDetection";
 import { correctNgspiceUnits } from "../utils/unitCorrection";
 import { buildToBePlottedCommands } from "../utils/toBePlotted";
@@ -17,6 +16,7 @@ import { isSubcircuitEnd, isSubcircuitStart, parseSpiceLine } from "../utils/spi
 import type { Schematic } from "eecircuit-schematic";
 import { modelCardsFor, type Gf180Corner, type ProcessId } from "../pdk/processCatalog";
 import { currentProbeExpression, isEngineProvidedSubcircuit, resolvePdkNetlist } from "../pdk/netlistResolver";
+import { builtinSubcircuitDefinition } from "../pdk/opampRegistry";
 import {
   areSimulationConfigsEqual,
   createEmptySimulationConfig,
@@ -554,10 +554,6 @@ export const createSimulationSlice: SliceCreator<
     }
 
     // 2. Resolve models
-    const availableModels: Record<string, string> = {
-      chang90: chang90,
-    };
-
     const lines = processedNetlist.split("\n");
     const requiredModels = new Set<string>();
     const definedSubckts = new Set<string>();
@@ -584,10 +580,11 @@ export const createSimulationSlice: SliceCreator<
     requiredModels.forEach((modelName) => {
       const normalizedModelName = modelName.toLowerCase();
       if (definedSubckts.has(normalizedModelName)) return;
-      if (isEngineProvidedSubcircuit(modelName) && modelName.toLowerCase() !== "chang90") return;
-      const modelContent = availableModels[normalizedModelName];
+      const modelContent = builtinSubcircuitDefinition(normalizedModelName);
       if (modelContent) {
         modelsToAppend.push(modelContent);
+      } else if (isEngineProvidedSubcircuit(modelName)) {
+        return;
       } else {
         missingModels.push(modelName);
       }
