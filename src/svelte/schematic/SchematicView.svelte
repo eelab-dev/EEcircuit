@@ -252,6 +252,10 @@
         initialSchematic,
         theme: appState.isDarkMode ? "dark" : "light",
         inputProfile: appState.inputProfile,
+        wheelPanDirections: {
+          horizontal: appState.reverseHorizontalWheelPan ? "reversed" : "system",
+          vertical: appState.reverseVerticalWheelPan ? "reversed" : "system",
+        },
         onEvent: onEditorEvent,
       });
       if (cancelled) { await instance.destroy(); return; }

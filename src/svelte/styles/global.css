@@ -145,6 +145,7 @@ input, select, textarea { min-width: 0; border: 1px solid var(--border); border-
 .setting-copy strong { color: var(--fg); font-size: .88rem; font-weight: 620; }
 .setting-copy small, .number-control small { color: var(--fg-muted); font-size: .76rem; line-height: 1.4; }
 .setting-row input[type="checkbox"] { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--accent); }
+.settings-reload-note { margin: -.15rem 0 0; color: var(--warning); font-size: .76rem; line-height: 1.4; }
 .number-control { display: flex; align-items: center; gap: .65rem; }
 .number-control input { width: 5rem; }
 .range-control { display: grid; grid-template-columns: minmax(0, 1fr) 3.25rem; align-items: center; gap: .8rem; }

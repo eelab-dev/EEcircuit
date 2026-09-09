@@ -2,6 +2,44 @@ import type { SliceCreator } from "./storeTypes";
 import { getRecommendedInputProfile } from "../utils/deviceDetection";
 import { SettingsCategory } from "../types/commonTypes";
 
+const WHEEL_PAN_DIRECTIONS_STORAGE_KEY = "eecircuit-wheel-pan-directions";
+
+type WheelPanDirectionPreferences = {
+  reverseHorizontalWheelPan: boolean;
+  reverseVerticalWheelPan: boolean;
+};
+
+const defaultWheelPanDirectionPreferences = (): WheelPanDirectionPreferences => ({
+  reverseHorizontalWheelPan: false,
+  reverseVerticalWheelPan: false,
+});
+
+function loadWheelPanDirectionPreferences(): WheelPanDirectionPreferences {
+  if (typeof window === "undefined") return defaultWheelPanDirectionPreferences();
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(WHEEL_PAN_DIRECTIONS_STORAGE_KEY) ?? "null");
+    if (typeof parsed === "object" && parsed !== null) {
+      const value = parsed as Record<string, unknown>;
+      return {
+        reverseHorizontalWheelPan: value.reverseHorizontalWheelPan === true,
+        reverseVerticalWheelPan: value.reverseVerticalWheelPan === true,
+      };
+    }
+  } catch (error) {
+    console.warn("Failed to load wheel pan direction settings from localStorage:", error);
+  }
+  return defaultWheelPanDirectionPreferences();
+}
+
+function saveWheelPanDirectionPreferences(preferences: WheelPanDirectionPreferences) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(WHEEL_PAN_DIRECTIONS_STORAGE_KEY, JSON.stringify(preferences));
+  } catch (error) {
+    console.warn("Failed to save wheel pan direction settings to localStorage:", error);
+  }
+}
+
 // UI state and actions
 export interface UiState {
   inputProfile: "mouse" | "trackpad" | "touchscreen";
@@ -13,6 +51,8 @@ export interface UiState {
   maxWebWorkers: number;
   resetVariableSelectionsOnNewSim: boolean;
   resetPlotStateOnNewSim: boolean;
+  reverseHorizontalWheelPan: boolean;
+  reverseVerticalWheelPan: boolean;
   // Schematic error tracking
   hasSchematicErrors: boolean;
   // One-shot override flag to allow navigating to Simulate despite errors
@@ -34,6 +74,7 @@ export interface UiActions {
   setMaxWebWorkers: (count: number) => void;
   setResetVariableSelectionsOnNewSim: (reset: boolean) => void;
   setResetPlotStateOnNewSim: (reset: boolean) => void;
+  setWheelPanDirectionPreferences: (preferences: WheelPanDirectionPreferences) => void;
   // Schematic error actions
   setHasSchematicErrors: (hasErrors: boolean) => void;
   resetSchematicErrors: () => void;
@@ -72,6 +113,7 @@ export const createUiSlice: SliceCreator<UiSlice, UiSlice> = (
   get
 ) => {
   const initialTheme = getInitialTheme();
+  const initialWheelPanDirections = loadWheelPanDirectionPreferences();
   
   // Apply initial theme to document
   applyThemeToDocument(initialTheme);
@@ -104,6 +146,8 @@ export const createUiSlice: SliceCreator<UiSlice, UiSlice> = (
     maxWebWorkers: Math.min(4, navigator.hardwareConcurrency || 4),
     resetVariableSelectionsOnNewSim: false,
     resetPlotStateOnNewSim: false,
+    reverseHorizontalWheelPan: initialWheelPanDirections.reverseHorizontalWheelPan,
+    reverseVerticalWheelPan: initialWheelPanDirections.reverseVerticalWheelPan,
     hasSchematicErrors: false,
     overrideSimulateOnNetlistErrorsOnce: false,
     activeSettingsCategory: "simulation",
@@ -154,6 +198,10 @@ export const createUiSlice: SliceCreator<UiSlice, UiSlice> = (
     // Plot reset configuration actions
     setResetVariableSelectionsOnNewSim: (reset) => set({ resetVariableSelectionsOnNewSim: reset }),
     setResetPlotStateOnNewSim: (reset) => set({ resetPlotStateOnNewSim: reset }),
+    setWheelPanDirectionPreferences: (preferences) => {
+      set(preferences);
+      saveWheelPanDirectionPreferences(preferences);
+    },
 
     // Schematic error actions
     setHasSchematicErrors: (hasErrors) => set({ hasSchematicErrors: hasErrors }),

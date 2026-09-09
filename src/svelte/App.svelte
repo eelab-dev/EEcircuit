@@ -45,6 +45,8 @@
   let tempShowInternalSignals = $state(appState.showInternalSignals);
   let tempLineThickness = $state(appState.lineThickness);
   let tempResetPlotState = $state(appState.resetPlotStateOnNewSim);
+  let tempReverseHorizontalWheelPan = $state(appState.reverseHorizontalWheelPan);
+  let tempReverseVerticalWheelPan = $state(appState.reverseVerticalWheelPan);
 
   function ensurePrimaryUi(): Promise<void> {
     if (primaryUiPromise) return primaryUiPromise;
@@ -118,6 +120,8 @@
     tempShowInternalSignals = appState.showInternalSignals;
     tempLineThickness = appState.lineThickness;
     tempResetPlotState = appState.resetPlotStateOnNewSim;
+    tempReverseHorizontalWheelPan = appState.reverseHorizontalWheelPan;
+    tempReverseVerticalWheelPan = appState.reverseVerticalWheelPan;
     settingsOpen = true;
   }
 
@@ -127,6 +131,10 @@
     appState.setShowInternalSignals(tempShowInternalSignals);
     appState.setLineThickness(tempLineThickness);
     appState.setResetPlotStateOnNewSim(tempResetPlotState);
+    appState.setWheelPanDirectionPreferences({
+      reverseHorizontalWheelPan: tempReverseHorizontalWheelPan,
+      reverseVerticalWheelPan: tempReverseVerticalWheelPan,
+    });
     settingsOpen = false;
   }
 
@@ -434,12 +442,21 @@
     </nav>
     <section class="settings-panel">
       {#if settingsCategory === "general"}
-        <header class="settings-panel-heading"><h3>General</h3><p>Control interface diagnostics and developer feedback.</p></header>
+        <header class="settings-panel-heading"><h3>General</h3><p>Control input behavior and developer feedback.</p></header>
         <div class="settings-list">
           <label class="setting-row setting-row-inline">
             <span class="setting-copy"><strong>Developer messages</strong><small>Show technical status messages alongside user-facing notifications.</small></span>
             <input type="checkbox" checked={appState.showDevMessages} onchange={(event) => appState.setShowDevMessages(event.currentTarget.checked)} />
           </label>
+          <label class="setting-row setting-row-inline">
+            <span class="setting-copy"><strong>Reverse horizontal panning</strong><small>Reverse horizontal wheel and trackpad panning on the schematic.</small></span>
+            <input aria-label="Reverse horizontal panning" type="checkbox" bind:checked={tempReverseHorizontalWheelPan} />
+          </label>
+          <label class="setting-row setting-row-inline">
+            <span class="setting-copy"><strong>Reverse vertical panning</strong><small>Reverse vertical wheel and trackpad panning on the schematic.</small></span>
+            <input aria-label="Reverse vertical panning" type="checkbox" bind:checked={tempReverseVerticalWheelPan} />
+          </label>
+          <p class="settings-reload-note">Reload required for pan-direction changes.</p>
           <div class="setting-row">
             <span class="setting-copy"><strong>Data management</strong><small>Clear locally stored settings and simulation state from this browser.</small></span>
             <button class="danger-outline-button" onclick={clearLocalData}>Clear Local Storage</button>
