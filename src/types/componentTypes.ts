@@ -1,4 +1,4 @@
-// Component property type definitions for EEsim
+// Component property type definitions for EEcircuit
 import type { AvailableComponent, SelectedItem } from "eecircuit-schematic";
 
 export interface BaseComponentProperties {

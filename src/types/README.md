@@ -1,6 +1,6 @@
 # Component Property Type System
 
-This document explains the new TypeScript type system for component properties in EEsim.
+This document explains the new TypeScript type system for component properties in EEcircuit.
 
 ## Overview
 
