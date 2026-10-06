@@ -8,7 +8,8 @@
   import Modal from "./components/Modal.svelte";
   import Notifications from "./components/Notifications.svelte";
   import SchematicView from "./schematic/SchematicView.svelte";
-  import { appState } from "./state/appState.svelte";
+  import { appState, setProjectMetadata, resetProjectSimulation } from "./state/appState.svelte";
+  import { browserProject, restoredWorkspace } from "./state/browserSession";
   import { validateEEcircuitFile } from "../utils/eeCircuitFileValidator";
   import { convertEEcircuitV1ToV2, isEEcircuitV1 } from "../utils/convertEEcircuitV1ToV2";
   import type { EEcircuitFile, SimulationType } from "../types/commonTypes";
@@ -19,6 +20,7 @@
     loadSchematic: (value: unknown) => Promise<void>;
     getSchematic: () => Promise<Schematic>;
     clear: () => Promise<void>;
+    synchronizeSimulationNetlist: () => Promise<boolean>;
   };
 
   let schematic: SchematicExports;
@@ -88,7 +90,21 @@
     void ensurePrimaryUi().catch(() => undefined);
   }
 
-  function handleSchematicReady() {
+  async function handleSchematicReady() {
+    try {
+      const workspace = restoredWorkspace();
+      if (workspace === "simulate" || workspace === "plot") {
+        if (appState.selectedSimType === "None" && appState.manualNetlistDirty) {
+          if (appState.hasSchematicDocument) await schematic.synchronizeSimulationNetlist();
+          appState.setIsSimulationTabEnabled(true);
+          appState.setMainTabValue("simulate");
+        } else if (!await schematic.synchronizeSimulationNetlist()) appState.setMainTabValue("schematic");
+      }
+    } catch (error) {
+      appState.setMainTabValue("schematic");
+      appState.addMessage({ text: error instanceof Error ? error.message : String(error), type: "warning", category: "Simulation", mLevel: "user" });
+    }
+    browserProject.start();
     if ("requestIdleCallback" in window) {
       window.requestIdleCallback(loadPrimaryUi, { timeout: 1_500 });
     } else {
@@ -163,7 +179,6 @@
       appState.addMessage({ text: "Choose a JSON or text EEcircuit file.", type: "error", category: "Schematic", mLevel: "user" });
       return;
     }
-    appState.setMainTabValue("schematic");
     appState.setIsSchematicLoading(true);
     appState.setSchematicLoadingMessage("Processing file...");
     try {
@@ -186,16 +201,20 @@
       const validation = validateEEcircuitFile(parsed);
       if (!validation.valid) throw new Error(validation.error);
       const data = validation.file;
-      if (data.schematic) {
-        appState.setSchematicLoadingMessage("Loading schematic...");
-        await waitForCanvasReady();
-        await schematic.loadSchematic(data.schematic);
-      }
-      if (data.simulations?.length) {
-        appState.setAllSimulationConfigs(data.simulations);
-      } else {
-        appState.setAllSimulationConfigs([]);
-      }
+      await browserProject.transaction(async () => {
+        if (data.schematic) {
+          appState.setSchematicLoadingMessage("Loading schematic...");
+          await waitForCanvasReady();
+          await schematic.loadSchematic(data.schematic);
+          resetProjectSimulation();
+          appState.setIsSimulationTabEnabled(false);
+          appState.setIsPlottingTabEnabled(false);
+        }
+        // Configuration-only imports continue to keep the current schematic.
+        setProjectMetadata({ title: data.title, description: data.description, date: data.date });
+        appState.setMainTabValue("schematic");
+        appState.setAllSimulationConfigs(data.simulations ?? []);
+      }, true);
     } catch (error) {
       appState.addMessage({ text: error instanceof Error ? error.message : "Unable to load the selected file.", type: "error", category: "Schematic", mLevel: "user" });
     } finally { appState.setIsSchematicLoading(false); }
@@ -290,6 +309,7 @@
 
   function clearLocalData() {
     if (!window.confirm("Are you sure you want to clear all local storage? This will reset all application settings and data.")) return;
+    browserProject.stop();
     localStorage.clear();
     location.reload();
   }
@@ -303,7 +323,7 @@
   onMount(() => {
     const onFullscreenChange = () => { fullscreen = !!document.fullscreenElement; };
     document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+    return () => { browserProject.stop(); document.removeEventListener("fullscreenchange", onFullscreenChange); };
   });
 
   $effect(() => {
@@ -398,14 +418,28 @@
   {#snippet footer()}
     <button onclick={() => newDialogOpen = false}>Cancel</button>
     <button class="primary-button" onclick={async () => {
-      await schematic.loadSchematic(demoSchematic);
-      appState.setAllSimulationConfigs(createDemoSimulationConfigs());
-      newDialogOpen = false;
+      await browserProject.transaction(async () => {
+        await schematic.loadSchematic(demoSchematic);
+        setProjectMetadata({});
+        resetProjectSimulation();
+        appState.setMainTabValue("schematic");
+        appState.setIsSimulationTabEnabled(false);
+        appState.setIsPlottingTabEnabled(false);
+        appState.setAllSimulationConfigs(createDemoSimulationConfigs());
+        newDialogOpen = false;
+      }, true);
     }}>Load Demo</button>
     <button class="danger-button" onclick={async () => {
-      await schematic.clear();
-      appState.setAllSimulationConfigs([]);
-      newDialogOpen = false;
+      await browserProject.transaction(async () => {
+        await schematic.clear();
+        setProjectMetadata({});
+        resetProjectSimulation();
+        appState.setMainTabValue("schematic");
+        appState.setIsSimulationTabEnabled(false);
+        appState.setIsPlottingTabEnabled(false);
+        appState.setAllSimulationConfigs([]);
+        newDialogOpen = false;
+      }, true);
     }}>New Empty Schematic</button>
   {/snippet}
 </Modal>

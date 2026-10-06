@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "project": {
+    "schema": "EEcircuitV2",
+    "title": "Browser compatibility fixture",
+    "description": "V2 schematic and manual simulation session",
+    "date": "2026-10-06",
+    "schematic": {
+      "componentInstances": [
+        {
+          "typeName": "resistor",
+          "name": "R_FIXTURE",
+          "value": "4.7k",
+          "origin": {
+            "x": 0,
+            "y": 0
+          },
+          "rotation": "0",
+          "flip": "none"
+        }
+      ],
+      "wires": [
+        {
+          "absolutePath": [
+            {
+              "x": -5,
+              "y": 0
+            },
+            {
+              "x": -10,
+              "y": 0
+            }
+          ],
+          "startLocation": {
+            "type": "terminal",
+            "prop": {
+              "instanceName": "R_FIXTURE",
+              "terminalName": "1"
+            }
+          },
+          "netName": "input"
+        }
+      ],
+      "text": [
+        {
+          "text": "Saved V2 circuit",
+          "origin": {
+            "x": 20,
+            "y": 20
+          },
+          "rotation": "0",
+          "fontSize": 2
+        }
+      ]
+    },
+    "simulations": [
+      {
+        "type": "Transient",
+        "name": "Fast",
+        "stopTime": "1m",
+        "timeStep": "1u"
+      }
+    ]
+  },
+  "session": {
+    "selectedSimType": "None",
+    "simulationConfig": {
+      "type": "None"
+    },
+    "selectedSimulationConfigIndex": -1,
+    "simulationConfigDrafts": {
+      "@new:AC": {
+        "type": "AC",
+        "name": "Draft AC",
+        "source": "vin",
+        "frequencyStart": "1",
+        "frequencyStop": "",
+        "stepNumber": "10",
+        "sweepType": "dec"
+      }
+    },
+    "lastSelectedSimulationConfigNames": {
+      "Transient": "Fast"
+    },
+    "manualNetlistDirty": true,
+    "manualNetlist": "* authored deck\nV1 input 0 1\nR1 input 0 4.7k\n.tran 1u 1m\n.end",
+    "mainTabValue": "simulate",
+    "toBePlotted": [
+      {
+        "type": "voltage",
+        "netName": "input"
+      }
+    ],
+    "numCanvases": 2,
+    "selectedVariables": [
+      "v(input)"
+    ],
+    "canvas1SelectedVariables": [
+      "v(input)"
+    ],
+    "canvas2SelectedVariables": [
+      "i(v1)"
+    ],
+    "isLogX": false,
+    "isLogY": false,
+    "isLogY1": false,
+    "isLogY2": false,
+    "canvas1IsLogY": false,
+    "canvas2IsLogY": false,
+    "lineThickness": 3,
+    "showInternalSignals": false,
+    "resetVariableSelectionsOnNewSim": false,
+    "resetPlotStateOnNewSim": false,
+    "maxWebWorkers": 2
+  }
+}

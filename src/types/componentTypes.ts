@@ -164,7 +164,8 @@ const baseFETConfig: PropertyField[] = [
 ];
 
 // Component property configuration
-export const componentPropertyConfigs: Record<ComponentType, PropertyField[]> =
+// The shared editor can expose component families this application does not offer.
+export const componentPropertyConfigs: Partial<Record<ComponentType, PropertyField[]>> =
   {
     resistor: [
       {

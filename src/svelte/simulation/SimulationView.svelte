@@ -57,7 +57,7 @@
       lastGeneratedNetlist = appState.netList;
       // "None" is the manual-editor mode. A configuration update that was
       // queued just before switching to None must not overwrite those edits.
-      if (appState.selectedSimType !== "None") editorValue = appState.netList;
+      if (appState.selectedSimType !== "None" || !appState.manualNetlistDirty) editorValue = appState.netList;
       if (appState.netListNeedsRefresh) appState.acknowledgeNetListRefresh();
     }
   });
@@ -85,6 +85,11 @@
 
   function publish(config: SimulationType) {
     if (config.type !== "None") appState.updateActiveSimulationConfig(config);
+  }
+
+  function updateEditorValue(value: string) {
+    editorValue = value;
+    if (appState.selectedSimType === "None") appState.setNetList(value);
   }
 
   function selectType(type: SimulationType["type"]) {
@@ -197,7 +202,7 @@
         {/if}
       </div>
     </header>
-    <MonacoEditor bind:this={monacoEditor} value={editorValue} theme={appState.isDarkMode ? "dark" : "light"} onChange={(value) => editorValue = value} />
+    <MonacoEditor bind:this={monacoEditor} value={editorValue} theme={appState.isDarkMode ? "dark" : "light"} onChange={updateEditorValue} />
   </div>
 
   <aside class="simulation-sidebar">

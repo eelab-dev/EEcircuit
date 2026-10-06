@@ -16,6 +16,7 @@
   import { resolveSchematicShortcut } from "../../schematic/schematicShortcuts";
   import { formatToBePlottedLabel, normalizeTerminalSelection, parseTerminalPointerInfo } from "../../utils/toBePlotted";
   import { appState, getAppState } from "../state/appState.svelte";
+  import { browserProject, hasBrowserProject, resetBrowserRecovery } from "../state/browserSession";
   import ExportImageModal from "./ExportImageModal.svelte";
   import PropertiesPanel from "./PropertiesPanel.svelte";
   import SchematicToolbar from "./SchematicToolbar.svelte";
@@ -40,6 +41,13 @@
   let svgContent = $state<string | null>(null);
   let svgLoading = $state(false);
   let readyPromise: Promise<void> = Promise.resolve();
+  let replacingDocument = false;
+  let lastSimulationSnapshot = "";
+  // The shared worker seeds history with a blank document. Keep Undo inside
+  // this session's opened document without persisting or exposing that seed.
+  let undoDepth = 0;
+  let navigatingHistory = false;
+  let editorTask: Promise<void> = Promise.resolve();
   let resolveReady: () => void = () => undefined;
 
   function reportError(operation: string, error: unknown) {
@@ -50,13 +58,20 @@
   }
 
   async function command(value: SchematicEditorCommand) {
-    if (!editor) return;
-    try {
-      await executeSchematicEditorCommand(editor, value);
-      canvas.dataset.lastEditorCommand = value;
-    } catch (error) {
-      reportError(value, error);
-    }
+    editorTask = editorTask.then(async () => {
+      if (!editor || (value === "undo" && undoDepth === 0)) return;
+      try {
+        if (value === "undo" || value === "redo") {
+          navigatingHistory = true;
+          const changed = value === "undo" ? await editor.undo() : await editor.redo();
+          if (changed) undoDepth += value === "undo" ? -1 : 1;
+        } else await executeSchematicEditorCommand(editor, value);
+        canvas.dataset.lastEditorCommand = value;
+      } catch (error) {
+        reportError(value, error);
+      } finally { navigatingHistory = false; }
+    });
+    await editorTask;
   }
 
   function setMode(mode: EditorMode) {
@@ -103,7 +118,11 @@
   function onEditorEvent(message: EditorEvent) {
     switch (message.type) {
       case "change":
-        appState.setCurrentSchematic(message.schematic);
+        if (!replacingDocument) {
+          if (!navigatingHistory) undoDepth++;
+          appState.setHasSchematicDocument(true);
+          appState.setCurrentSchematic(message.schematic);
+        }
         break;
       case "pointerCoords":
         coord = message.pointerCoords;
@@ -151,22 +170,43 @@
     try { await editor?.addComponent(type); } catch (error) { reportError("component placement", error); }
   }
 
-  async function sendToSimulation(shiftPressed: boolean) {
+  async function synchronizeSimulation(force: boolean, shiftPressed = false): Promise<boolean> {
     await readyPromise;
-    if (!editor) return;
+    await editorTask;
+    if (!editor) return false;
     appState.setOverrideSimulateOnNetlistErrorsOnce(shiftPressed);
     try {
+      const schematicSnapshot = await editor.getSchematic();
+      appState.setCurrentSchematic(schematicSnapshot);
+      const snapshot = JSON.stringify(schematicSnapshot);
+      if (!force && snapshot === lastSimulationSnapshot) {
+        appState.setOverrideSimulateOnNetlistErrorsOnce(false);
+        return true;
+      }
       const { netList, success } = await editor.getNetList();
       if (success || getAppState().overrideSimulateOnNetlistErrorsOnce) {
         await appState.exportNetlist(netList);
+        lastSimulationSnapshot = JSON.stringify(schematicSnapshot);
         appState.setOverrideSimulateOnNetlistErrorsOnce(false);
+        return true;
       } else {
         appState.addMessage({ text: "Netlist Generation Failed — fix errors before simulating, or hold Shift to proceed.", type: "error", category: "Schematic", mLevel: "user" });
         appState.setOverrideSimulateOnNetlistErrorsOnce(false);
+        return false;
       }
     } catch (error) {
       reportError("netlist generation", error);
+      appState.setOverrideSimulateOnNetlistErrorsOnce(false);
+      return false;
     }
+  }
+
+  async function sendToSimulation(shiftPressed: boolean) {
+    await synchronizeSimulation(true, shiftPressed);
+  }
+
+  export async function synchronizeSimulationNetlist(): Promise<boolean> {
+    return synchronizeSimulation(false);
   }
 
   async function openExport() {
@@ -206,22 +246,39 @@
 
   export async function loadSchematic(schematic: unknown) {
     await readyPromise;
+    await editorTask;
     if (!editor) throw new Error("Schematic editor is not ready");
-    await editor.loadSchematic(schematic);
+    replacingDocument = true;
+    try {
+      await editor.loadSchematic(JSON.parse(JSON.stringify(schematic)));
+      appState.setCurrentSchematic(await editor.getSchematic());
+      appState.setHasSchematicDocument(true);
+      lastSimulationSnapshot = "";
+      undoDepth = 0;
+    } finally { replacingDocument = false; }
     await editor.fitView();
     appState.setHasViewedSchematic(true);
   }
 
   export async function getSchematic(): Promise<Schematic> {
     await readyPromise;
+    await editorTask;
     if (!editor) throw new Error("Schematic editor is not ready");
     return editor.getSchematic();
   }
 
   export async function clear() {
     await readyPromise;
+    await editorTask;
     if (!editor) throw new Error("Schematic editor is not ready");
-    await editor.clear();
+    replacingDocument = true;
+    try {
+      await editor.clear();
+      appState.setCurrentSchematic(await editor.getSchematic());
+      appState.setHasSchematicDocument(false);
+      lastSimulationSnapshot = "";
+      undoDepth = 0;
+    } finally { replacingDocument = false; }
   }
 
   onMount(() => {
@@ -247,9 +304,11 @@
     void (async () => {
       await waitForRenderedSize();
       if (cancelled) return;
+      replacingDocument = true;
       const instance = await createSchematicEditor({
         canvas,
-        initialSchematic,
+        // Validate restored documents in a usable blank editor so rejection can recover.
+        initialSchematic: blankSchematic,
         theme: appState.isDarkMode ? "dark" : "light",
         inputProfile: appState.inputProfile,
         wheelPanDirections: {
@@ -259,9 +318,18 @@
         onEvent: onEditorEvent,
       });
       if (cancelled) { await instance.destroy(); return; }
+      try { await instance.loadSchematic(JSON.parse(JSON.stringify(initialSchematic))); }
+      catch (error) {
+        if (!hasBrowserProject()) { await instance.destroy(); throw error; }
+        resetBrowserRecovery(error);
+      }
+      if (cancelled) { await instance.destroy(); return; }
       editor = instance;
       resolveReady();
       appState.setCurrentSchematic(await instance.getSchematic());
+      appState.setHasSchematicDocument(hasBrowserProject() ? appState.hasSchematicDocument && !browserProject.recovering : new URLSearchParams(location.search).get("clean") !== "true");
+      replacingDocument = false;
+      undoDepth = 0;
       availableComponents = await instance.getAvailableComponents();
       if (!appState.hasViewedSchematic) {
         await instance.fitView();

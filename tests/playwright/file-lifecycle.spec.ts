@@ -137,10 +137,15 @@ test.describe("file lifecycle", () => {
       schema: "EEcircuitV1",
       schematic: {
         componentInstances: [
-          { typeName: "GND", name: "G1", origin: { x: 0, y: 0 }, rotation: "0", flip: "none" },
-          { typeName: "GND", name: "G2", origin: { x: 0, y: 0 }, rotation: "0", flip: "none" },
+          { typeName: "resistor", name: "R1", value: "1k", origin: { x: 0, y: 0 }, rotation: "0", flip: "none" },
         ],
-        wires: [{ absolutePath: [{ x: 0, y: 0 }, { x: 0, y: 3 }] }],
+        // A terminal and a declared junction compete for the same legacy
+        // endpoint, without invalid overlapping components masking ambiguity.
+        wires: [
+          { absolutePath: [{ x: -5, y: 0 }, { x: -10, y: 0 }] },
+          { absolutePath: [{ x: -5, y: -5 }, { x: -5, y: 0 }],
+            endLocation: { type: "junction", prop: { junctionPosition: { x: -5, y: 0 } } } },
+        ],
       },
     }));
     await page.getByRole("button", { name: "Convert and download" }).click();
@@ -205,21 +210,23 @@ test.describe("file lifecycle", () => {
     const converted = JSON.parse(await readFile(downloadPath, "utf8"));
     expect(converted.schematic.wires[0].startLocation).toEqual(explicitReference);
 
-    await input.setInputFiles(file("corner-junction.json", {
+    await input.setInputFiles(file("unattached-junction.json", {
       schema: "EEcircuitV1",
       schematic: {
         componentInstances: [],
         wires: [
           { absolutePath: [{ x: 0, y: 0 }, { x: 0, y: 5 }, { x: 5, y: 5 }] },
           {
-            absolutePath: [{ x: -5, y: 5 }, { x: 0, y: 5 }],
-            endLocation: { type: "junction", prop: { junctionPosition: { x: 0, y: 5 } } },
+            // A bend junction is supported by the current editor; a reference
+            // with no parent wire at its coordinate remains invalid.
+            absolutePath: [{ x: -5, y: 7 }, { x: 0, y: 7 }],
+            endLocation: { type: "junction", prop: { junctionPosition: { x: 0, y: 7 } } },
           },
         ],
       },
     }));
     await page.getByRole("button", { name: "Convert and download" }).click();
-    await expect(page.getByRole("alert")).toContainText("T-junction must end inside one straight wire segment");
+    await expect(page.getByRole("alert")).toContainText("A T-junction must connect to one wire with two existing arms.");
     await expect(page.locator("canvas")).toHaveCount(1);
   });
 

@@ -8,6 +8,7 @@ export interface SchematicState {
   hasResizedSinceSchematicView: boolean;
   hasViewedSchematic: boolean;
   currentSchematic?: SchematicType;
+  hasSchematicDocument: boolean;
   // Active editor mode (single source of truth)
   editorMode: EditorMode;
 }
@@ -16,6 +17,7 @@ export interface SchematicActions {
   setShouldFitToScreen: (should: boolean) => void;
   setHasResizedSinceSchematicView: (has: boolean) => void;
   setHasViewedSchematic: (has: boolean) => void;
+  setHasSchematicDocument: (present: boolean) => void;
   setCurrentSchematic: (schematic?: SchematicType) => void;
   // Mode controls (generic + convenience wrappers)
   setEditorMode: (mode: EditorMode) => void;
@@ -30,6 +32,7 @@ export const createSchematicSlice: SliceCreator<SchematicSlice, SchematicSlice> 
   hasResizedSinceSchematicView: false,
   hasViewedSchematic: false,
   currentSchematic: undefined,
+  hasSchematicDocument: false,
   editorMode: "none",
 
   // Actions
@@ -37,6 +40,7 @@ export const createSchematicSlice: SliceCreator<SchematicSlice, SchematicSlice> 
   setHasResizedSinceSchematicView: (has) =>
     set({ hasResizedSinceSchematicView: has }),
   setHasViewedSchematic: (has) => set({ hasViewedSchematic: has }),
+  setHasSchematicDocument: (present) => set({ hasSchematicDocument: present }),
   setCurrentSchematic: (schematic) => set({ currentSchematic: schematic }),
   setEditorMode: (mode) => set({ editorMode: mode }),
   resetSchematicModes: () => set({ editorMode: "none" }),

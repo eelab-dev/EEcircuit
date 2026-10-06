@@ -181,8 +181,8 @@ test("Run creates and updates independent profiles while type switching restores
   await page.getByLabel("Configuration name", { exact: true }).fill("Primary sweep");
   await page.getByLabel("Configuration name", { exact: true }).press("Enter");
   await page.reload();
-  await expect(page.locator('[data-canvas-ready="true"]')).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Simulate Circuit" }).click();
+  await expect(page.locator("#schematic-canvas")).toHaveAttribute("data-canvas-ready", "true", { timeout: 15_000 });
+  await expect(page.getByRole("group", { name: "Simulation Configuration" })).toBeVisible({ timeout: 10_000 });
   await expect(page.getByLabel("Saved simulation configuration", { exact: true }).locator('option[value="0"]')).toHaveText("Primary sweep (DC)");
   await expect(page.getByLabel("Stop Value")).toHaveValue("1.4");
 

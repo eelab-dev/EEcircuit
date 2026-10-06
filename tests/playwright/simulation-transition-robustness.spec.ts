@@ -41,7 +41,9 @@ const runNoise = async (page: Page, round: number) => {
 
   console.log(`Step: Verify Noise Plot State (Round ${round})`);
   const plotTab = page.getByRole('tab', { name: 'Plot' });
-  await expect(plotTab).toBeVisible();
+  // The header tab is always visible. Wait for this run's first result,
+  // including slower transient sweeps, before inspecting the plot.
+  await expect(plotTab).toHaveAttribute('aria-selected', 'true', { timeout: 45_000 });
   
   await expect(page.getByText('onoise_spectrum')).toBeVisible({timeout: 10000});
   
@@ -73,7 +75,9 @@ const runTransient = async (page: Page, round: number) => {
 
   console.log(`Step: Verify Transient Plot State (Round ${round})`);
   const plotTab = page.getByRole('tab', { name: 'Plot' });
-  await expect(plotTab).toBeVisible();
+  // The header tab is always visible. Wait for this run's first result,
+  // including slower transient sweeps, before inspecting the plot.
+  await expect(plotTab).toHaveAttribute('aria-selected', 'true', { timeout: 45_000 });
   
   // Verify 'v(out)' and NO 'onoise_spectrum'
   await expect(page.getByText('v(out)')).toBeVisible();
@@ -116,7 +120,9 @@ const runAC = async (page: Page) => {
 
   console.log('Step: Verify AC Plot State');
   const plotTab = page.getByRole('tab', { name: 'Plot' });
-  await expect(plotTab).toBeVisible();
+  // The header tab is always visible. Wait for this run's first result,
+  // including slower transient sweeps, before inspecting the plot.
+  await expect(plotTab).toHaveAttribute('aria-selected', 'true', { timeout: 45_000 });
 
   // Dual plot headers
   await expect(page.getByText('Magnitude').first()).toBeVisible({ timeout: 10000 });

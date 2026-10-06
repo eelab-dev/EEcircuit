@@ -23,6 +23,18 @@ The application reads and writes `EEcircuitV2` documents. V2 schematic connectio
 
 `EEcircuitV1` is obsolete and cannot be opened directly. When a V1 file is selected, the application offers to convert and download a separate V2 file. The converter rejects ambiguous or invalid wiring rather than changing the circuit by guessing.
 
+### Browser project autosave
+
+The latest committed schematic and simulation setup are saved synchronously as a versioned snapshot under `eecircuit-browser-project`. Refreshing or reopening restores empty canvases, wires/text, project metadata, profiles and unfinished drafts, authored manual netlists, plot selections/settings, and the workspace. Plot restores Simulation because results are not saved. Camera, pointer/preview state, undo history and simulation results are excluded; exported files remain EEcircuitV2.
+
+Invalid or unsupported snapshots and failed imports retain the saved value. Autosave pauses during recovery until an explicit successful opening or creation. Storage failures produce one notification. `?clean=true` neither restores nor writes the browser project; clearing local data stops persistence before reload.
+
+This is a selective port of EEcircuit-Next commit `a8d4c6b5e958314e89886493ae60e17e643fcef8`. The shared `BrowserProjectPersistence` controller and its transaction/lifecycle interfaces are retained. V2 capture, validation and hydration intentionally omit Next's layout, PDK/process/corners, Monte Carlo, transmission-line models/library and shared parameters, plus their session settings.
+
+For eventual integration, retain `tests/fixtures/browser-project-v2.json`: Next's reader must upgrade its `project` with the existing V2-to-V3 converter and default newly introduced session fields before hydration. This port does not implement that reader upgrade or a merge, and does not guarantee a conflict-free future merge.
+
+The current shared schematic package also exposes component families absent from this application. The property map allows a subset of the editor's types and the picker filters to that supported subset; this keeps dependency type checks valid without adding those features. An application history boundary prevents Undo from reaching the editor's startup blank entry after restoring or replacing a document; no history is serialized.
+
 ## SPICE
 
 To learn more about SPICE netlists, refer to the [ngspice manual](http://ngspice.sourceforge.net/docs/ngspice-manual.pdf).

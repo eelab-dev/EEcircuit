@@ -24,6 +24,7 @@
   } from "@lucide/svelte";
   import type { AvailableComponent, EditorMode } from "eecircuit-schematic";
   import type { SchematicEditorCommand } from "../../schematic/schematicCommands";
+  import { isValidComponentType } from "../../types/componentTypes";
   import { appState } from "../state/appState.svelte";
   import SchematicToolButton from "./SchematicToolButton.svelte";
   type TriggerPropsFn = Parameters<NonNullable<TooltipTriggerProps["asChild"]>>[0];
@@ -56,10 +57,10 @@
   let focusedIndex = $state(-1);
   let filtered = $derived(
     availableComponents.filter((component) =>
-      component.type.toLowerCase().includes(search.trim().toLowerCase()),
+      isValidComponentType(component.type) && component.type.toLowerCase().includes(search.trim().toLowerCase()),
     ),
   );
-  const categoryPriority: Record<AvailableComponent["category"], number> = {
+  const categoryPriority: Partial<Record<AvailableComponent["category"], number>> = {
     passive: 1,
     transistor: 2,
     source: 3,
@@ -71,7 +72,7 @@
   let grouped = $derived.by(() => {
     const groups = new SvelteMap<AvailableComponent["category"], AvailableComponent[]>();
     for (const component of filtered) groups.set(component.category, [...(groups.get(component.category) ?? []), component]);
-    return [...groups.entries()].sort(([categoryA], [categoryB]) => categoryPriority[categoryA] - categoryPriority[categoryB]);
+    return [...groups.entries()].sort(([categoryA], [categoryB]) => (categoryPriority[categoryA] ?? 99) - (categoryPriority[categoryB] ?? 99));
   });
   let flattened = $derived(grouped.flatMap(([, components]) => components));
 

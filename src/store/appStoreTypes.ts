@@ -10,4 +10,4 @@ export type AppStore = TabSlice &
   SimulationSlice &
   PlotSlice &
   UiSlice &
-  MessageSlice;
+  MessageSlice & { projectMetadata: { title?: string; description?: string; date?: string } };

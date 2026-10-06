@@ -58,6 +58,7 @@ export interface SimulationState {
   rawNetlist: string; // The base netlist from schematic without sim commands
   netList: string;    // The full netlist for simulation/display
   netListNeedsRefresh: boolean;
+  manualNetlistDirty: boolean;
   results: ResultType[];
 
   // Simulation configuration
@@ -149,6 +150,7 @@ export const createSimulationSlice: SliceCreator<
   rawNetlist: "",
   netList: "",
   netListNeedsRefresh: false,
+  manualNetlistDirty: false,
   results: [],
   selectedSimType: initialConfig?.type ?? "None",
   simulationConfig: initialConfig,
@@ -173,7 +175,8 @@ export const createSimulationSlice: SliceCreator<
     set({ rawNetlist: netlist });
     await (get() as SimulationSlice).generateDisplayNetlist();
   },
-  setNetList: (netList) => set({ netList }),
+  setNetList: (netList) => set((state: SimulationSlice) => ({ netList,
+    manualNetlistDirty: state.selectedSimType === "None" && netList !== state.netList ? true : state.manualNetlistDirty })),
   setResults: (results) => set({ results }),
   acknowledgeNetListRefresh: () => set({ netListNeedsRefresh: false }),
   setSimulationCommandString: (command: string) => {
@@ -186,7 +189,7 @@ export const createSimulationSlice: SliceCreator<
 
   // Simulation configuration actions
   setSelectedSimType: (type) => {
-    set({ selectedSimType: type });
+    set({ selectedSimType: type, ...(type === "None" ? { manualNetlistDirty: false } : {}) });
     if (type !== "None") {
         void (get() as SimulationSlice).generateDisplayNetlist();
     }
@@ -266,6 +269,7 @@ export const createSimulationSlice: SliceCreator<
       set({
         selectedSimulationConfigIndex: -1,
         selectedSimType: "None",
+        manualNetlistDirty: false,
         simulationConfig: { type: "None" },
         simulationCommandString: "",
       });
@@ -512,6 +516,8 @@ export const createSimulationSlice: SliceCreator<
     }),
 
   generateDisplayNetlist: async () => {
+    // Authored manual decks survive schematic synchronization and restoration.
+    if ((get() as SimulationSlice).selectedSimType === "None" && (get() as SimulationSlice).manualNetlistDirty) return;
     const { rawNetlist, selectedSimType, simulationConfig, simulationCommandString } = get() as SimulationSlice;
     if (!rawNetlist) {
         set({ netList: "", netListNeedsRefresh: true });
@@ -627,7 +633,10 @@ export const createSimulationSlice: SliceCreator<
     }
 
     const finalNetlist = netlistSections.join("\n\n");
-    set({ netList: finalNetlist, netListNeedsRefresh: true });
+    // A pending generation must not replace a manually edited deck.
+    if ((get() as SimulationSlice).selectedSimType !== "None" || !(get() as SimulationSlice).manualNetlistDirty) {
+      set({ netList: finalNetlist, netListNeedsRefresh: true });
+    }
   },
 
   // Combined actions for common operations
